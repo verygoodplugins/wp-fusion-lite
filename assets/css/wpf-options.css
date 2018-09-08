@@ -1,0 +1,360 @@
+
+.error.validation-error {
+	padding: 4px 10px 8px;
+	margin-top: 20px !important;
+	margin-bottom: 0px !important;
+}
+
+.table>thead>tr>th, .table>tbody>tr>th, .table>tfoot>tr>th, .table>thead>tr>td, .table>tbody>tr>td, .table>tfoot>tr>td {
+	vertical-align: middle;
+}
+
+input[type="checkbox"] {
+	margin-right: 7px;
+}
+
+input#app_name {
+	width: 80px;
+}
+
+input.api_key, input#license_key, input#ac_url {
+	display: inline-block;
+	margin-right: 5px;
+	width: 300px;
+}
+
+input.wpf_type {
+	background-color: transparent !important;
+	border: none;
+	box-shadow: none;
+	padding: 0px;
+	color: #000;
+}
+
+button.verify-button {
+	position: relative;
+	margin-right: 5px;
+}
+
+button.create-button {
+	position: relative;
+}
+
+button.btn-verifying {
+	padding-left: 30px;
+}
+
+form#wpf-settings .tab-content {
+	padding: 0 10px;
+}
+
+form#wpf-settings #setup .form-table {
+	margin-top: 0px;
+}
+
+button.btn-verifying i.fa {
+	left: 2px;
+	top: 7px;
+	font-size: 14px;
+}
+
+a#test-connection, a#edd-license, a#export-btn {
+	min-width: 150px;
+	text-align: center;
+	position: relative;
+}
+
+form#wpf-settings .tooltip .tooltip-inner {
+	background-color: #333;
+	opacity: 1;
+	color: #fff;
+	line-height: 1.5;
+	padding: 6px 10px;
+	border: 1px solid #333;
+	max-width: 300px;
+	text-align: left;
+}
+
+form#wpf-settings .tooltip .tooltip-arrow {
+	border-right-color: #333;
+}
+
+#s2id_import_role {
+	margin-left: 5px;
+	min-width: 180px;
+}
+
+a#import-users-btn {
+	margin-left: 5px;
+	min-width: 150px;
+	position: relative;
+	border-color: #ccc;
+	
+}
+
+th.import-date, td.import-date {
+	width: 150px;
+}
+
+tr.import-group-row {
+	position: relative;
+}
+
+tr.import-group-row .progress-bar {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 0;
+	-webkit-animation: progress-bar-stripes 2s linear infinite;
+	-o-animation: progress-bar-stripes 2s linear infinite;
+	animation: progress-bar-stripes 2s linear infinite;
+	background-image: -webkit-linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+	background-image: -o-linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+	background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+	-webkit-background-size: 40px 40px;
+	background-size: 40px 40px;
+	-webkit-transition: width 3s ease;
+	transition: width 3s ease;
+	z-index: 99;
+}
+
+a#test-connection i.fa, a#edd-license i.fa, a#import-users-btn i.fa, a#export-btn i.fa {
+	left: 0px;
+	top: 7px;
+	font-size: 18px;
+}
+
+a#test-connection span, a#export-btn span, a#import-users-btn span {
+	padding-left: 24px;
+}
+
+#wpf-settings li#tab-batch-process {
+	display: none;
+}
+
+#wpf-settings #logs.tab-pane h3 {
+	display: none;
+}
+
+#wpf-settings.setup ul.nav-tabs, #wpf-settings.setup .tab-content .tab-pane {
+	display: none;
+}
+
+#wpf-settings.setup ul.nav-tabs li#tab-setup, #wpf-settings.setup .tab-content .tab-pane#setup {
+	display: block;
+}
+
+#wpf-batch-status {
+	position: relative;
+	width: 100%;
+}
+
+#wpf-batch-status.hidden {
+	display: none !important;
+}
+
+#wpf-batch-status i.fa {
+	left: 2px;
+		font-size: 18px;
+		top: 10px;
+		opacity: 0.75;
+}
+
+#wpf-batch-status span.title {
+	display: inline-block;
+	padding-left: 22px;
+}
+
+#wpf-batch-status a#cancel-batch {
+	float: right;
+		position: relative;
+		top: -2px;
+}
+
+/* Select 2 */
+
+.select4-container.select4-container-disabled .select4-choice .select4-arrow {
+	display: none;
+}
+
+#wpf-settings input[type="number"] {
+    height: 34px;
+    line-height: 1.42857143;
+    width: 300px !important;
+}
+
+#wpf-settings h4 {
+	border-bottom: 1px solid #ddd;
+	padding-bottom: 5px;
+	padding-top: 25px;
+	font-weight: normal;
+}
+
+#wpf-settings h4:first-of-type {
+	padding-top: 0px;
+}
+
+th.sync {
+	width: 30px;
+}
+
+#contact-fields tr.group-header td {
+	padding: 10px 15px;
+    border: 1px solid #ccc;
+    font-weight: bold;
+    box-shadow: 0px 2px 4px rgba(0,0,0,0.2);
+    z-index: 999;
+    position: relative;
+}
+
+#contact-fields tr.group-header td .group-header-title {
+	font-weight: bold;
+	width: 100%;
+}
+
+#contact-fields tr.group-header td .group-header-title i.fa {
+	float: right;
+    font-size: 24px;
+    line-height: 20px;
+    padding-right: 10px;
+}
+
+#contact-fields tr.group-header td .group-header-title i.fa.fa-angle-down {
+	display: none;
+}
+
+#contact-fields tr.group-header td .group-header-title.collapsed i.fa.fa-angle-down {
+	display: block;
+}
+
+#contact-fields tr.group-header td .group-header-title.collapsed i.fa.fa-angle-up {
+	display: none;
+}
+
+#contact-fields tr.group-header td input {
+	display: none;
+}
+
+#contact-fields td, #import-groups td {
+	padding: 4px 8px;
+}
+
+#contact-fields td.wp_field_label label {
+	position: relative;
+	top: -2px;
+}
+
+#contact-fields td .checkbox {
+	margin-left: 7px;
+}
+
+#wpf-settings input[type="text"], #wpf-settings input[type="password"] {
+	width: 300px;
+}
+
+#wpf-settings input[type="text"]#woo_error_message {
+	width: 800px;
+	max-width: 100%;
+}
+
+#wpf-settings input[type="text"], #wpf-settings input[type="password"] {
+    width: 300px;
+}
+
+
+#wp-restricted_message-wrap {
+	width: 60%;
+	min-width: 600px;
+}
+
+#wpf-settings i.fa-info-circle{
+	padding-left: 4px;
+	font-size: 16px;
+	line-height: 1.5;
+	vertical-align: middle;
+	color: #666;
+}
+
+#wpf-settings i.tooltip:hover {
+	color: #333;
+}
+
+/* Log viewer */
+
+/**
+* Add color to levels
+*
+* Descending severity:
+*   emergency, alert -> red
+*   critical, error  -> orange
+*   warning, notice  -> yellow
+*   info             -> blue
+*   debug            -> gree
+*/
+
+.wp-list-table.wpf-logs ul {
+	margin-top: 5px;
+    line-height: 1.25;
+    list-style-type: circle;
+    padding-left: 20px;
+}
+
+.wp-list-table.wpf-logs .log-level:empty {
+	display: none;
+}
+
+.wp-list-table.wpf-logs .log-level--emergency,
+.wp-list-table.wpf-logs .log-level--alert {
+	background-color: #ff4136;
+}
+
+.wp-list-table.wpf-logs .log-level--critical,
+.wp-list-table.wpf-logs .log-level--error {
+	background-color: #ff851b;
+}
+
+.wp-list-table.wpf-logs .log-level--warning,
+.wp-list-table.wpf-logs .log-level--notice {
+	color: #222;
+	background-color: #ffdc00;
+}
+
+.wp-list-table.wpf-logs .log-level--info {
+	background-color: #0074d9;
+}
+
+.wp-list-table.wpf-logs .log-level--debug {
+	background-color: #3d9970;
+}
+
+.wp-list-table.wpf-logs .log-level {
+	display: inline;
+	padding: 5px 10px;
+	font-size: 80%;
+	font-weight: bold;
+	line-height: 1;
+	color: #fff;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: baseline;
+	border-radius: .2em;
+}
+
+
+@media screen and (min-width: 783px) {
+	.wp-list-table.wpf-logs .column-timestamp {
+		width: 18%;
+	}
+	.wp-list-table.wpf-logs .column-level {
+		width: 10%;
+	}
+	.wp-list-table.wpf-logs .column-source {
+		width: 10%;
+	}
+	.wp-list-table.wpf-logs .column-user {
+		width: 20%
+	}
+	.wp-list-table.wpf-logs .column-level {
+		width: 10%;
+	}
+}

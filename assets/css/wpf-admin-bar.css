@@ -1,0 +1,27 @@
+#wpadminbar .wpf-category-header:hover {
+	background: rgba(255,255,255,0.1);
+}
+
+#wp-admin-bar-wpf > .ab-sub-wrapper {
+    position: fixed !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow-y: scroll;
+    bottom: 0px;
+    top: 32px;
+}
+
+#wp-admin-bar-wpf > .ab-sub-wrapper > ul {
+	width: 250px;
+    background: #32373c;
+    -webkit-box-shadow: 0 3px 5px rgba(0,0,0,.2);
+    box-shadow: 0 3px 5px rgba(0,0,0,.2);
+}
+
+#wp-admin-bar-wpf > .ab-sub-wrapper > ul > li > .ab-item {
+    white-space: normal !important;
+    height: auto !important;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    line-height: 22px !important;
+}

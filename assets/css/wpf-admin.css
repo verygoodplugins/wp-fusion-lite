@@ -1,0 +1,366 @@
+/* Widget Tags Filter Classes */
+
+.wpf-widget-controls {
+	border: 1px solid #e5e5e5;
+	margin: 0 -16px 12px;
+	padding: 8px 15px 0px;
+}
+
+.wpf-widget-controls p {
+	margin: 0 0 8px 0;
+}
+
+.wpf-widget-controls span.description {
+	font-size: 85%;
+	padding-bottom: 8px;
+	line-height: 2 !important;
+	padding-left: 0px !important;
+}
+
+.wpf-widget-controls .hide {
+	display: none;
+}
+
+.wpf-widget-controls .widgets-tags-conditional input.widget-filter-by-tag {
+	float:right;
+	margin-top:3px !important;
+}
+
+.wpf-widget-controls span.select4-container {
+	min-width: 100%;
+}
+
+/* Bulk editing */
+
+.inline-edit-row .inline-edit-col-wpf {
+	border: 1px solid #ddd;
+    padding: 10px !important;
+    float: left;
+    box-sizing: border-box;
+    clear: both;
+    margin-top: 10px
+}
+
+.inline-edit-row .inline-edit-col-wpf p {
+    vertical-align: middle;
+    padding: 0 8px;
+}
+
+.inline-edit-row .inline-edit-col-wpf p.wpf-restrict-content-checkbox {
+	width: 20%;
+}
+
+.manage-column.column-wpf_settings {
+	width: 80px;
+}
+
+/* User Filter */
+
+#wpf-user-filter select {
+	display: none;
+}
+
+#wpf-user-filter span.select4-container {
+	top: -2px;
+}
+
+#wpf-user-filter span.select4-container .select4-selection {
+	min-height: 32px;
+    height: 32px;
+}
+
+#wpf-user-filter span.select4-container .select4-selection__rendered {
+	max-height: 32px;
+	white-space: nowrap;
+}
+
+#wpf-user-filter .select4-container .select4-search--inline {
+	float: none;
+}
+
+/* Taxonomy settings */
+
+body.term-php .wpf-page-redirect-select label {
+	display: none;
+}
+
+/* WPF center column meta boxes */
+
+#post-body #postbox-container-2 .select4-container, #wpf-coursewre-levels-table .select4-container {
+	min-width: 400px;
+}
+
+/* WPF side meta box */
+
+#wpf-meta input[type=text] {
+	width: 100%;
+	line-height: 24px;
+	margin-top: 5px;
+	height: 34px;
+}
+
+#wpf-meta input[type=text][disabled] {
+	background-color: #eee;
+}
+
+#wp_fusion_tab .select4-container {
+	min-width: 377px;
+}
+
+body .select4-drop.select4-drop-active {
+	z-index: 999999999999!important;
+}
+
+#wpf-tags-td > .select4-container {
+	min-width: 25em;
+    max-width: 40em;
+}
+
+#wpf-um-meta .select4-container {
+	width: 100% !important;
+	margin-top: 5px !important;
+	display: block;
+}
+
+/* Formidable */
+.frm_form_settings #wp_fusion_settings table td {
+	vertical-align: middle;
+	padding: 5px 10px;
+}
+
+
+.frm_form_settings #wp_fusion_settings h3 {
+	margin: 15px -15px 0;
+	padding: 8px 15px;
+	font-size: 14px;
+}
+
+.frm_form_settings #wp_fusion_settings table td .select4-container {
+	width: 300px !important;
+}
+
+/* RCP */
+#rcp-edit-subscription .select4-container {
+	min-width: 300px !important;
+}
+
+
+/* WP Job Manager */
+
+#settings-job_submission .select4 {
+	min-width: 350px;
+}
+
+/* Lifter */
+
+.llms-mb-container .tab-content span.select4 {
+	margin-top: 10px;
+	min-width: 500px;
+}
+
+.llms-mb-container .tab-content span.select4 ul li.select4-search {
+	padding: 0px !important;
+}
+
+/* select4 */
+
+.select4.select4-container li {
+	margin-bottom: 0px;
+}
+
+.select4-container--disabled li.select4-search {
+	display: none;
+}
+
+#wpf-meta .select4-container {
+	width: 100% !important;
+	margin-top: 5px;
+	display: block;
+}
+
+.select4-container--default .select4-selection--multiple .select4-selection__choice {
+	padding: 4px 10px 4px 5px!important;
+	margin: 2px 4px 2px 0 !important;
+	position: relative;
+	line-height: 14px;
+	font-size: 14px;
+	color: #666;
+	cursor: default;
+	border: 1px solid #ddd;
+	-moz-border-radius: 2px;
+	-webkit-border-radius: 2px;
+	border-radius: 2px;
+	box-shadow: none!important;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	background: none!important;
+	background-color: #f9f9f9!important;
+}
+
+#wpf-meta .select4-container .select4-selection {
+	border-radius: 0px;
+}
+
+.select4-container .select4-selection ul {
+	vertical-align: middle;
+	min-height: 32px;
+}
+
+.select4-container--default .select4-selection--single .select4-selection__arrow {
+	top: 4px;
+	right: 4px;
+}
+
+.select4-container--default .select4-selection--single .select4-selection__clear {
+	background-color: #fff;
+	display: block;
+	z-index: 99;
+	position: relative;
+	left: -1px;
+	color: #888;
+}
+
+.select4-container--default .select4-selection--single {
+	min-height: 34px;
+}
+
+#wpf-settings .select4-container-multi {
+	min-width: 500px;
+}
+
+a#wpf-select4-tags-resync {
+	cursor: pointer;
+	width: 100%;
+	text-align: center;
+	display: inline-block;
+}
+
+#select4-tags-loading {wpf-
+	width: 100%;
+	text-align: center;
+	display: inline-block;
+}
+
+#wpf-settings .select4-container {
+	min-width: 300px;
+    max-width: 400px;
+    margin-right: 5px;
+    width: auto !important;
+}
+
+.select4-container:focus, .select4-container:active, .select4-container .select4-selection {
+	outline: none;
+}
+
+.select4-container .select4-selection {
+	border-color: #ddd;
+	box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+    -webkit-transition: 50ms border-color ease-in-out;
+    transition: 50ms border-color ease-in-out;
+}
+
+#wpf-settings .select4-container--focus .select4-selection {
+	border-color: #5b9dd9;
+}
+
+#wpf-settings .select4-container.error .select4-selection {
+	border-color: #a94442;
+}
+
+.select4-container .select4-selection > .select4-selection__rendered {
+	padding: 2px 8px 2px;
+}
+
+/* PMPro */
+
+body.memberships_page_pmpro-discountcodes .select4-container {
+	min-width: 300px;
+	width: auto !important;
+}
+
+/* MemberPress */
+
+.product_options_page.wp-fusion .select4-container {
+	display: inline-block;
+	margin-top: 5px;
+	min-width: 300px;
+    max-width: 100%px;
+    width: auto !important;
+}
+
+/* CF7 */
+
+#contact-form-editor #wp-fusion-tab table#wpf-cf7-table {
+	width: 100%;
+    max-width: 600px;
+    margin-bottom: 20px;
+}
+
+#contact-form-editor #wp-fusion-tab table#wpf-cf7-table td.crm-field {
+	width: 300px;
+}
+
+#contact-form-editor #wp-fusion-tab table#wpf-cf7-table .select4-container {
+	width: 100% !important;
+}
+
+#contact-form-editor #wp-fusion-tab p.description label {
+	margin-bottom: 5px;
+    display: inline-block;
+}
+
+#contact-form-editor #wp-fusion-tab p.description .select4-container {
+	width: 300px !important;
+}
+
+/* User Profile */
+
+#wpf-tags-td .select4 {
+	width: 500px !important;
+}
+
+/* Woo / EDD select4 */
+
+.select4-search {
+	width: auto;
+	padding-bottom: 0px;
+}
+
+.select4-search input {
+	background-image: none !important;
+}
+
+.options_group.wpf-product small {
+	display: block;
+	margin-top: 5px;
+}
+
+.select4 + span.description {
+	display: block;
+	margin-top: 4px;
+	margin-left: 0px;
+	line-height: 1.5;
+}
+
+/* Fix for X theme messing up woo descriptions */
+.options_group.wpf-product span.description {
+	padding: 0;
+	border: none;
+	background: none;
+	box-shadow: none;
+}
+
+.options_group.wpf-product input[type="checkbox"] + span.description {
+	margin: 0 0 0 7px;
+	display: inline;
+	clear: none;
+}
+
+.woocommerce_variable_attributes .select4-container {
+	display: block;
+	width: 100% !important;
+	margin-top: 5px;
+}

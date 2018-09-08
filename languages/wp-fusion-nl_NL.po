@@ -1,0 +1,760 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WP Fusion\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-06-01 18:54+0000\n"
+"PO-Revision-Date: 2017-08-15 14:01-0500\n"
+"Last-Translator: Bart van den Belt | Zakelijk Succes Academy\n"
+"Language-Team: Dutch\n"
+"Language: nl_NL\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.0.1\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: includes/integrations/class-affiliate-wp.php:68
+msgid "Apply these tags to new affiliates registered through AffiliateWP."
+msgstr ""
+"Voeg deze tags toe aan gebruikers die geregistreerd zijn via AffiliateWP."
+
+#: includes/integrations/class-bbpress.php:71
+msgid ""
+"If the user doesn't have any of the tags specified, they will be redirected "
+"to the URL below. You must specify a redirect for forum restriction to work."
+msgstr ""
+"Wanneer de gebruiker geen van deze tags heeft toegepast, worden ze "
+"doorgestuurd naar onderstaande URL. Het is verplicht om een redirect toe te "
+"wijzen voor forums. Zonder doorverwijzing werkt de beperking niet."
+
+#: includes/integrations/class-s2member.php:102
+msgid ""
+"For each membership level you can configure tags to be applied to the user "
+"at registration."
+msgstr ""
+"Voor ieder membership niveau kun je tags configureren die worden toegepast "
+"op een gebruiker tijdens de registratie."
+
+#: includes/integrations/class-um.php:81
+msgid "Defer Until Activation"
+msgstr "Uitstellen tot activatie"
+
+#: includes/integrations/class-userpro.php:52
+msgid ""
+"Update the local profile data for a given user from the CRM before "
+"displaying. May slow down profile load times."
+msgstr ""
+"Update de lokale profielgegevens voor een specifieke gebruiker, vanuit de "
+"CRM voor weergave. Let op: kan het laden van de profiel vertragen."
+
+#: includes/integrations/class-woocommerce.php:136
+msgid "Hide restricted products"
+msgstr "Verberg niet toegankelijke producten"
+
+#: includes/integrations/class-woocommerce.php:137
+msgid "If a user can't access a product, hide it from the Shop page."
+msgstr ""
+"Wanneer een gebruiker niet bij een product kan, het product verbergen op de "
+"winkel pagina"
+
+#: includes/integrations/class-woocommerce.php:144
+msgid "Restricted product error message"
+msgstr "Foutmelding bij een niet toegankelijk product"
+
+#: includes/integrations/class-woocommerce.php:145
+msgid ""
+"This message will be displayed if a customer attempts to add a restricted "
+"product to their cart."
+msgstr ""
+"Dit bericht wordt weergegeven wanneer een klant een product in zijn/haar "
+"winkelmandje te stoppen, terwijl hij/zij er geen toegang toe heeft."
+
+#: includes/integrations/class-woocommerce.php:153
+msgid "Asynchronous Checkout"
+msgstr "Asynchone checkout"
+
+#: includes/integrations/class-woocommerce.php:154
+msgid ""
+"Runs WP Fusion post-checkout actions asynchronously to speed up load times."
+msgstr ""
+"Draait WP Fusion post-checkout acties asynchroon. Hierdoor worden de laadt-"
+"tijden versnelt."
+
+#: includes/integrations/class-formidable-forms.php:64
+msgid "Field Mapping"
+msgstr "Veld toewijzing"
+
+#: includes/integrations/class-restrict-content-pro.php:130
+msgid ""
+"This tag will be applied to the user when they register. You can also grant "
+"any user this subscription level by manually applying the tag."
+msgstr ""
+"Deze tag zal worden toegepast op een gebruiker tijdens de registratie. Je "
+"kun iedere gebruiker dit toegangsniveau geven door handmatig de tag toe te "
+"passen."
+
+#: includes/crms/drip/class-drip.php:183
+msgid "Access denied: Invalid API token."
+msgstr "Toegang geweigerd: API token werkt niet."
+
+#: includes/crms/drip/class-drip.php:194
+msgid "Access denied: Your API token doesn't have access to this account."
+msgstr "Toegang geweigerd: je API token heeft geen toegang tot dit account."
+
+#: includes/crms/activecampaign/class-activecampaign.php:169
+msgid "Access denied: Invalid credentials (URL and/or API key)."
+msgstr "Toegang geweigerd: ongeldige gegevens (URL en/of API key)."
+
+#: includes/crms/ontraport/admin/class-admin.php:69
+msgid ""
+"Enter the App ID for your Ontraport account (find it under Settings >> "
+"Administration >> Ontraport API in your account)."
+msgstr ""
+"Vul de App ID in van je Ontraport account (te vinden onder Settings >> "
+"Administration >> Ontraport API in je account)."
+
+#: includes/crms/ontraport/admin/class-admin.php:77
+msgid "The API key will appear next to the App ID on the API Keys page."
+msgstr "Deze API key zal verschijnen naast de App ID op de API Keys pagina."
+
+#: includes/crms/drip/admin/class-admin.php:69
+msgid ""
+"Enter the Account ID for your Drip account (find it under Settings >> Site "
+"Setup >> 3rd Party Integrations)."
+msgstr ""
+"Vul je Account ID in voor je Drip account (te vinden onder Settings >> Site "
+"Setup >> 3rd Party Integrations)."
+
+#: includes/crms/drip/admin/class-admin.php:77
+msgid ""
+"Enter your Drip API token. You can find it in your Drip account <a href="
+"\"https://www.getdrip.com/user/edit\" target=\"_blank\">here</a>."
+msgstr ""
+"Vul je Drip API token in. Deze is <a href=\"https://www.getdrip.com/user/edit"
+"\" target=\"_blank\">hier</a> te vinden in je Drip account."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:70
+msgid "Enter the name of your Infusionsoft application (i.e. \"ab123\")."
+msgstr "Vul de naam in van je Infusionsoft applicatie (bijv. \"1b123\")."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:78
+msgid ""
+"For help generating an API key, please read <a target=\"_blank\" href="
+"\"http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key"
+"\">this knowledgebase article</a>."
+msgstr ""
+"Voor hulp bij het genereren van de API sleutel, lees <a target=\"_blank\" "
+"href=\"http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/"
+"api-key\">dit artikel</a>."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:102
+msgid ""
+"Check this box to make an API call when a profile is updated. See <a target="
+"\"_blank\" href=\"https://wpfusion.com/documentation/tutorials/custom-"
+"api-calls/\">the documentation</a> for more info."
+msgstr ""
+"Check deze box om een API call in te stellen wanneer een profiel is "
+"geupdated. Bekijk <a target=\"_blank\" href=\"https://wpfusion.com/"
+"documentation/tutorials/custom-api-calls/\">de documentatie</a> voor meer "
+"info."
+
+#: includes/crms/agilecrm/admin/class-admin.php:69
+msgid ""
+"Enter the base domain name for your AgileCRM account (http://{domain}."
+"agilcrm.com)."
+msgstr ""
+"Vul de rootdomein in voor je AgileCRM account (http://{domain}.agilcrm.com)."
+
+#: includes/crms/agilecrm/admin/class-admin.php:85
+msgid ""
+"The API key will appear under Admin Settings &raquo; API &raquo; REST API."
+msgstr ""
+"Deze API sleutel verschijnt onder de Admin Settings &raquo; API &raquo; REST "
+"API."
+
+#: includes/crms/activecampaign/admin/class-admin.php:64
+msgid "ActiveCampaign Configuration"
+msgstr "ActiveCampaign Configuratie"
+
+#: includes/crms/activecampaign/admin/class-admin.php:72
+msgid ""
+"Enter the API URL for your ActiveCampaign account (find it under Settings >> "
+"Developer in your account)."
+msgstr ""
+"Vul de API URL in voor je ActiveCampaign account (te vinden onder Settings "
+">> Developer in je account)."
+
+#: includes/crms/activecampaign/admin/class-admin.php:80
+msgid ""
+"The API key will appear beneath the API URL on the Developer settings page."
+msgstr ""
+"De API sleutel verschijnt onder de API URL op de Developer settings pagina."
+
+#: includes/crms/convertkit/admin/class-admin.php:99
+msgid ""
+"Configuring the fields below allows ConvertKit to add new users to your site "
+"and update existing users when specific tags are applied from within "
+"ConvertKit. Read our <a href=\"https://wpfusion.com/documentation/"
+"webhooks/convertkit-webhooks/\" target=\"_blank\">documentation</a> for more "
+"information."
+msgstr ""
+"Wanneer je de velden hieronder configureert kan ConvertKit nieuwe gebruikers "
+"toevoegen op je website en huidige gebruikers updaten wanneer specifieke "
+"tags worden toegewezen in ConvertKit. Lees dit <a href=\"https://"
+"wpfusion.com/documentation/webhooks/convertkit-webhooks/\" target="
+"\"_blank\">artikel</a> voor meer informatie."
+
+#: includes/crms/convertkit/admin/class-admin.php:106
+msgid ""
+"When this tag is applied to a contact in Convertkit, their tags and meta "
+"data will be updated in WordPress."
+msgstr ""
+"Wanneer deze tag is toegevoegd aan een contact in Convertkit wordt de tags "
+"en metadata geüpdatet in Wordpress."
+
+#: includes/admin/class-settings.php:811
+msgid "You must use this key when sending data back to WP Fusion."
+msgstr ""
+"Deze sleutel dient gebruikt te worden wanneer er data wordt teruggezonden "
+"naar WP Fusion."
+
+#: includes/admin/class-settings.php:818
+msgid ""
+"Send new users' passwords back to your CRM after import (field must be "
+"mapped in the <a href=\"#contact-fields\">Contact Fields</a> settings)."
+msgstr ""
+"Stuur gebruikerswachtwoord terug naar je CRM na importeren (veld moet zijn "
+"gedefinieerd in de<a href=\"#contact-fields\">Contact Fields</a> settings)."
+
+#: includes/admin/class-settings.php:840
+msgid ""
+"This feature allows you to import your CRM contacts as new WordPress users. "
+"Any fields configured on the <strong>Contact Fields</strong> tab will be "
+"imported."
+msgstr ""
+"Deze optie staat je toe om CRM contacten te importeren als nieuwe Wordpress "
+"gebruikers. Velden die zijn geconfigureerd in de <strong> Contact Fields</"
+"strong> tab zullen worden geimporteerd."
+
+#: includes/admin/class-settings.php:847
+msgid "Contacts with the selected tags will be imported as new users."
+msgstr ""
+"Contacten met de geselecteerde tags zullen worden geïmporteerd als nieuwe "
+"gebruikers."
+
+#: includes/admin/class-settings.php:854
+msgid "Enable Notifications"
+msgstr "Zet notificaties aan"
+
+#: includes/admin/class-settings.php:855
+msgid ""
+"Send a <a href=\"https://wpfusion.com/documentation/tutorials/import-"
+"users/\" target=\"_blank\">welcome email</a> to new users containing their "
+"username, password, and login link."
+msgstr ""
+"Stuur een <a href=\"https://wpfusion.com/documentation/tutorials/"
+"import-users/\" target=\"_blank\">welkom email</a> naar nieuwe gebruikers "
+"met hun gebruikersnaam, wachtwoord en login link."
+
+#: includes/admin/class-settings.php:862
+msgid "Import Groups"
+msgstr "Importeer Groepen"
+
+#: includes/admin/class-settings.php:873
+msgid "API Configuration"
+msgstr "API Configuratie"
+
+#: includes/admin/class-settings.php:879
+msgid "Select CRM"
+msgstr "Selecteer CRM"
+
+#: includes/admin/class-settings.php:900
+msgid "License Key"
+msgstr "Licentie sleutel"
+
+#: includes/admin/class-settings.php:918
+msgid "Experimental Features"
+msgstr "Experimentele functies"
+
+#: includes/admin/class-settings.php:925
+msgid "Allow URL Login"
+msgstr "Sta login via een URL toe"
+
+#: includes/admin/class-settings.php:926
+msgid ""
+"Track user activity and unlock content by passing a Contact ID in a URL. See "
+"<a href=\"https://wpfusion.com/documentation/tutorials/auto-login-"
+"links/\" target=\"_blank\">this tutorial</a> for more info."
+msgstr ""
+"Volg de activiteiten van de gebruiker en unlock content door een Contact ID "
+"toe te voegen in een URL. Bekijk <a href=\"https://wpfusion.com/"
+"documentation/tutorials/auto-login-links/\" target=\"_blank\">deze uitleg</"
+"a> voor meer informatie."
+
+#: includes/admin/class-settings.php:933
+msgid "Link Tracking"
+msgstr "Links volgen"
+
+#: includes/admin/class-settings.php:934
+msgid ""
+"Enqueue the scripts to handle link click tracking. See <a href=\"https://"
+"wpfusion.com/documentation/tutorials/link-click-tracking/\" target="
+"\"_blank\">this tutorial</a> for more info."
+msgstr ""
+"Activeer de scripts om link-tracking te gebruiken. Bekijk <a href=\"https://"
+"wpfusion.com/documentation/tutorials/link-click-tracking/\" target="
+"\"_blank\">deze tutorial (engels)</a> voor meer informatie."
+
+#: includes/admin/class-settings.php:941
+msgid "System Settings"
+msgstr "Systeem settings"
+
+#: includes/admin/class-settings.php:948
+msgid "Staging Mode"
+msgstr "Test Modus"
+
+#: includes/admin/class-settings.php:949
+msgid ""
+"When staging mode is active, all normal WP Fusion features will be "
+"available, but no API calls will be sent to your CRM."
+msgstr ""
+"Wanneer de test modus actief is zullen alle gewone WP Fusion opties "
+"beschikbaar zijn, maar worden er geen API calls gemaakt naar je CRM."
+
+#: includes/admin/class-settings.php:956
+msgid "Batch Operations"
+msgstr "Batch Operations"
+
+#: includes/admin/class-settings.php:963
+msgid "Operation"
+msgstr "Operation"
+
+#: includes/admin/class-settings.php:971
+msgid "Debugging"
+msgstr "Debugging"
+
+#: includes/admin/class-settings.php:978
+msgid "Enable Debug Log"
+msgstr "Enable Debug Log"
+
+#: includes/admin/class-settings.php:979
+msgid ""
+"The WP Fusion debug log will log all API calls to the <code>wp-fusion.log</"
+"code> file in your <code>/wp-content/</code> directory."
+msgstr ""
+"De WP Fudion debug log, beschrijft alle API calls naar het <code>wp-fusion."
+"log</code>-bestand. Deze file is te vinden in je <code>/wp-content/</code> "
+"directory."
+
+#: includes/admin/class-settings.php:986
+msgid "Debug Log Output"
+msgstr "Debug Log Output"
+
+#: includes/admin/class-settings.php:992 includes/admin/class-settings.php:999
+msgid "Reset"
+msgstr "Reset"
+
+#: includes/admin/class-settings.php:1000
+msgid ""
+"Check this box and click \"Save Changes\" below to reset all options to "
+"their defaults."
+msgstr ""
+"Vink deze box aan en klik op 'Opslaan' hieronder om alle opties terug te "
+"zetten naar de oorspronkelijke instellingen."
+
+#: includes/integrations/class-gforms.php:377
+msgid "Name"
+msgstr "Naam"
+
+#: includes/integrations/class-gforms.php:378
+msgid "Applies Tags"
+msgstr "Voegt tags toe"
+
+#: includes/integrations/class-pmp.php:65
+#: includes/integrations/class-affiliate-wp.php:67
+#: includes/integrations/class-wp-job-manager.php:45
+msgid "Apply Tags"
+msgstr "Voeg tags toe"
+
+#: includes/integrations/class-pmp.php:75
+msgid "Remove Tags"
+msgstr "Verwijder tags"
+
+#: includes/integrations/class-pmp.php:83
+msgid "Link With Tag"
+msgstr "Link met tag"
+
+#: includes/integrations/class-pmp.php:95
+msgid "Apply Tags - Expired"
+msgstr "Tags toevoegen - niet meer geldig (expired)"
+
+#: includes/integrations/class-affiliate-wp.php:43
+#: includes/integrations/class-bbpress.php:122
+#: includes/integrations/class-s2member.php:75
+#: includes/integrations/class-um.php:102
+#: includes/integrations/class-userpro.php:72
+#: includes/integrations/class-woocommerce.php:112
+msgid "Integrations"
+msgstr "Integraties"
+
+#: includes/integrations/class-affiliate-wp.php:60
+msgid "AffiliateWP Integration"
+msgstr "AffiliateWP integratie"
+
+#: includes/integrations/class-bbpress.php:46
+msgid "bbPress Integration"
+msgstr "bbPress Integratie"
+
+#: includes/integrations/class-bbpress.php:53
+msgid "Restrict Access"
+msgstr "Beperk toegang"
+
+#: includes/integrations/class-bbpress.php:62
+msgid "Restrict Forums"
+msgstr "Beperk toegang tot forums"
+
+#: includes/integrations/class-bbpress.php:63
+msgid "Restrict access to all forums in addition to the archive"
+msgstr "Beperk toegang tot alle forums die onder het archief hangen"
+
+#: includes/integrations/class-bbpress.php:78
+msgid "Redirect URL"
+msgstr "Redirect URL"
+
+#: includes/integrations/class-s2member.php:92
+msgid "s2Member Integration"
+msgstr "s2Member Integratie"
+
+#: includes/integrations/class-um.php:66
+msgid "Ultimate Member Integration"
+msgstr "Ultimate Member Integratie"
+
+#: includes/integrations/class-um.php:73
+#: includes/integrations/class-userpro.php:51
+msgid "Pull"
+msgstr "Pull"
+
+#: includes/integrations/class-userpro.php:44
+msgid "UserPro Integration"
+msgstr "UserPro Integratie"
+
+#: includes/integrations/class-woocommerce.php:129
+msgid "WooCommerce Integration"
+msgstr "WooCommerce Integratie"
+
+#: includes/crms/ontraport/admin/class-admin.php:68
+msgid "App ID"
+msgstr "App ID"
+
+#: includes/crms/ontraport/admin/class-admin.php:76
+#: includes/crms/infusionsoft/admin/class-admin.php:77
+#: includes/crms/agilecrm/admin/class-admin.php:84
+#: includes/crms/activecampaign/admin/class-admin.php:79
+msgid "API Key"
+msgstr "API Key"
+
+#: includes/crms/drip/admin/class-admin.php:61
+msgid "Drip Configuration"
+msgstr "Drip Configuratie"
+
+#: includes/crms/drip/admin/class-admin.php:68
+msgid "Account ID"
+msgstr "Account ID"
+
+#: includes/crms/drip/admin/class-admin.php:76
+msgid "API Token"
+msgstr "API Token"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:62
+msgid "Infusionsoft Configuration"
+msgstr "Infusionsoft Instellingen"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:69
+msgid "Application Name"
+msgstr "Applicatie naam"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:101
+msgid "API Call"
+msgstr "API Call"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:110
+msgid "Integration"
+msgstr "Integratie"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:118
+msgid "Call Name"
+msgstr "Call Name"
+
+#: includes/crms/agilecrm/admin/class-admin.php:61
+msgid "AgileCRM Configuration"
+msgstr "AgileCRM Configuratie"
+
+#: includes/crms/activecampaign/admin/class-admin.php:71
+msgid "API URL"
+msgstr "API URL"
+
+#: includes/crms/activecampaign/admin/class-admin.php:103
+msgid "Lists"
+msgstr "Lijsten"
+
+#: includes/admin/class-admin-interfaces.php:237
+msgid "Or enter a URL"
+msgstr "Of vul een URL in"
+
+#: includes/admin/class-settings.php:576
+msgid "General Settings"
+msgstr "Algemene instellingen"
+
+#: includes/admin/class-settings.php:577 includes/admin/class-settings.php:828
+msgid "Contact Fields"
+msgstr "Contact velden"
+
+#: includes/admin/class-settings.php:579 includes/admin/class-settings.php:846
+msgid "Import Users"
+msgstr "Importeer gebruikers"
+
+#: includes/admin/class-settings.php:580
+msgid "Setup"
+msgstr "Setup"
+
+#: includes/admin/class-settings.php:581
+msgid "Advanced"
+msgstr "Geavanceerd"
+
+#: includes/admin/class-settings.php:685
+msgid "Automatically Create Contact Records for New Users"
+msgstr "Creëer automatisch contact records voor nieuwe gebruikers"
+
+#: includes/admin/class-settings.php:692
+msgid "Create Users"
+msgstr "Creëer gebruikers"
+
+#: includes/admin/class-settings.php:693
+msgid "Create new contacts when users are added in WordPress."
+msgstr ""
+"Creëer nieuwe contacten wanneer gebruikers worden toegevoegd in Wordpress."
+
+#: includes/admin/class-settings.php:702
+msgid "User Roles"
+msgstr "Gebruikersrollen"
+
+#: includes/admin/class-settings.php:703
+msgid ""
+"You can choose to create new contacts only when users are added to a certain "
+"role. Leave blank for all roles."
+msgstr ""
+"Je kunt kiezen om alleen nieuwe contacten te creëren wanneer gebruikers zijn "
+"toegewezen aan een specifieke rol. Laat blanco om alle rollen te kiezen."
+
+#: includes/admin/class-settings.php:711
+msgid "Assign Tags"
+msgstr "Wijs tags toe"
+
+#: includes/admin/class-settings.php:712
+msgid "The selected tags will be applied to new contacts."
+msgstr "De geselecteerde tags zullen worden toegevoegd aan nieuwe contacten."
+
+#: includes/admin/class-settings.php:725
+msgid "Synchronize Contact Data"
+msgstr "Synchroniseer contact data"
+
+#: includes/admin/class-settings.php:732
+msgid "Push"
+msgstr "Push"
+
+#: includes/admin/class-settings.php:733
+msgid ""
+"When a user profile is modified, update their contact record in your CRM to "
+"match."
+msgstr ""
+"Update de contactrecord in je CRM wanneer de gebruikersprofiel is aangepast. "
+"Op deze manier matchen ze."
+
+#: includes/admin/class-settings.php:740
+msgid "Push All"
+msgstr "Push all"
+
+#: includes/admin/class-settings.php:741
+msgid ""
+"Push meta data whenever a single \"user_meta\" entry is added or modified."
+"<br /><small>(Useful if using non-supported plugins or manual user_meta "
+"updates, but may result in duplicate API calls and slower performance)</"
+"small>"
+msgstr ""
+"Verstuur meta data wanneer een enkele \"user_meta\" is toegevoegd of "
+"aangepast.<br /><small>(Handig wanneer je plugins gebruikt die niet worden "
+"ondersteund of bij handmatige user_meta updates. Let op: kan zorgen voor een "
+"dubbele API call en langzamere prestaties.</small>"
+
+#: includes/admin/class-settings.php:752
+msgid "Restrict Page Access"
+msgstr "Beperk toegang tot pagina's"
+
+#: includes/admin/class-settings.php:759
+msgid "Hide Restricted Content"
+msgstr "Verberg content die niet toegankelijk is"
+
+#: includes/admin/class-settings.php:760
+msgid "Content that the user cannot access will be removed from menus."
+msgstr ""
+"Content waar een gebruiker niet bij kan zal worden verwijderd van de menus."
+
+#: includes/admin/class-settings.php:767
+msgid "Exclude Administrators"
+msgstr "Sluit administrators uit"
+
+#: includes/admin/class-settings.php:768
+msgid ""
+"Users with Administrator accounts will be able to view all content, "
+"regardless of restrictions."
+msgstr ""
+"Gebruikers met een admin account kunnen alle content bekijken, ongeacht de "
+"beperkte toegang."
+
+#: includes/admin/class-settings.php:775
+msgid "Default Redirect"
+msgstr "Standaard redirect"
+
+#: includes/admin/class-settings.php:776
+msgid ""
+"Default redirect URL for when access is denied. This can be overridden on a "
+"per-page basis. Leave blank to display error message below."
+msgstr ""
+"Standaard redirect URL wanneer iemand geen toegang heeft. Dit kan worden "
+"overschreven per pagina. Laat leeg om onderstaande foutmelding weer te geven."
+
+#: includes/admin/class-settings.php:783
+msgid "Restricted Content Message"
+msgstr "Bericht bij beperkte toegang"
+
+#: includes/admin/class-settings.php:784
+msgid "Restricted content message for when a redirect hasn't been specified."
+msgstr ""
+"Bericht bij beperkte toegang. (wanneer een redirect niet is gespecificeerd)"
+
+#: includes/admin/class-settings.php:796
+msgid "Webhooks"
+msgstr "Webhooks"
+
+#: includes/admin/class-admin-interfaces.php:213
+#: includes/integrations/class-bbpress.php:70
+msgid "Required tags (any)"
+msgstr "Benodigde tags (elke)"
+
+#: includes/admin/class-admin-interfaces.php:228
+msgid "Redirect if access is denied"
+msgstr "Redirect als er geen toegang is"
+
+#: includes/admin/class-settings.php:806
+msgid ""
+"Webhooks allow you to send from your CRM back to your website. See <a href="
+"\"http://wpfusion.com/documentation/tutorials/webhooks/\" target="
+"\"_blank\">our documentation</a> for more information on creating webhooks."
+msgstr ""
+"Webhooks geven je de mogelijkheid om informatie van je CRM terug te sturen "
+"naar je site. Bekijk <a href=\"http://wpfusion.com/documentation/"
+"tutorials/webhooks/\" target=\"_blank\">onze documentatie</a> voor meer "
+"informatie over het creëren van webhooks."
+
+#: includes/admin/class-settings.php:810
+msgid "Access Key"
+msgstr "Toegangs Sleutel"
+
+#: includes/admin/class-settings.php:817
+msgid "Return Password"
+msgstr "Stuur wachtwoord terug"
+
+#: wp-fusion.php:184 wp-fusion.php:196
+msgid "Cheatin&#8217; huh?"
+msgstr "Aan het valsspelen? ;)"
+
+#: includes/admin/class-admin-interfaces.php:107
+msgid "Filter by tag"
+msgstr "Filter via een tag"
+
+#: includes/admin/class-admin-interfaces.php:197
+msgid "Restrict access to archives"
+msgstr "Beperk toegang tot archief"
+
+#: includes/admin/class-admin-interfaces.php:204
+msgid "Restrict access to all posts"
+msgstr "Beperk toegang tot alle posts"
+
+#: includes/crms/ontraport/admin/class-admin.php:61
+msgid "Ontraport Configuration"
+msgstr "Ontraport Configuratie"
+
+#: includes/crms/agilecrm/admin/class-admin.php:68
+msgid "Domain"
+msgstr "Domein"
+
+#: includes/crms/agilecrm/admin/class-admin.php:76
+msgid "User Email"
+msgstr "Gebruik Email"
+
+#: includes/crms/agilecrm/admin/class-admin.php:77
+msgid "Enter the email address for your AgileCRM account."
+msgstr "Vul het email adres in voor je AgileCRM account."
+
+#: includes/crms/activecampaign/admin/class-admin.php:104
+msgid "New users will be automatically added to the selected lists."
+msgstr ""
+"Nieuwe gebruikers worden automatisch toegevoegd tot de geselecteerde lijsten."
+
+#: includes/crms/convertkit/admin/class-admin.php:64
+msgid "ConvertKit Configuration"
+msgstr "ConvertKit Configuratie"
+
+#: includes/crms/convertkit/admin/class-admin.php:71
+msgid "API Secret"
+msgstr "API Secret"
+
+#: includes/crms/convertkit/admin/class-admin.php:72
+msgid ""
+"Enter the API Secret for your ConvertKit account (you can find your API "
+"Secret in the ConvertKit Account page)."
+msgstr ""
+"Vul de API Secret in voor je ConverKit account. (je kunt de API Secret "
+"vinden op je ConvertKit Account page)."
+
+#: includes/crms/convertkit/admin/class-admin.php:105
+msgid "Update Trigger"
+msgstr "Update Trigger"
+
+#: includes/crms/convertkit/admin/class-admin.php:121
+msgid "Import Trigger"
+msgstr "Import Trigger"
+
+#: includes/crms/convertkit/admin/class-admin.php:122
+msgid ""
+"When this tag is applied to a contact in Convertkit, they will be imported "
+"as a new WordPres user."
+msgstr ""
+"Wanneer deze tag wordt toegevoegd aan een contact in Convertkit, worden ze "
+"geïmporteerd als nieuwe Wordpress gebruiker."
+
+#. Name of the plugin
+msgid "WP Fusion"
+msgstr "WP Fusion"
+
+#. Description of the plugin
+msgid ""
+"WP Fusion connects your website to your CRM, with support for several CRMs "
+"and dozens of plugins."
+msgstr ""
+"WP Fusion verbindt je website met je CRM-systeem, met ondersteuning van "
+"diverse CRM-systemen en tientallen plugins."
+
+#. URI of the plugin
+msgid "https://wpfusion.com/"
+msgstr "https://wpfusion.com/"
+
+#. Author of the plugin
+msgid "Very Good Plugins"
+msgstr "Very Good Plugins"
+
+#. Author URI of the plugin
+msgid "http://verygoodplugins.com/"
+msgstr "http://verygoodplugins.com/"

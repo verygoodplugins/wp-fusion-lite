@@ -1,0 +1,866 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"Project-Id-Version: WP Fusion\n"
+"POT-Creation-Date: 2017-08-15 14:00-0500\n"
+"PO-Revision-Date: 2017-08-15 13:44-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.0.1\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-Flags-xgettext: --add-comments=translators:\n"
+"X-Poedit-WPHeader: wp-fusion.php\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;"
+"esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;"
+"_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: *.js\n"
+
+#: includes/admin/batch/class-background-process.php:481
+#, php-format
+msgid "Every %d Minutes"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:107
+msgid "Filter by tag"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:123
+#: includes/admin/logging/class-log-table-list.php:226
+msgid "Filter"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:245
+msgid "Restrict access to archives"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:252
+msgid "Restrict access to all posts"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:261
+#: includes/integrations/class-bbpress.php:70
+msgid "Required tags (any)"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:283
+msgid "Redirect if access is denied"
+msgstr ""
+
+#: includes/admin/class-admin-interfaces.php:292
+msgid "Or enter a URL"
+msgstr ""
+
+#: includes/admin/class-settings.php:580
+msgid "General Settings"
+msgstr ""
+
+#: includes/admin/class-settings.php:581 includes/admin/class-settings.php:832
+msgid "Contact Fields"
+msgstr ""
+
+#: includes/admin/class-settings.php:583 includes/admin/class-settings.php:850
+msgid "Import Users"
+msgstr ""
+
+#: includes/admin/class-settings.php:584
+msgid "Setup"
+msgstr ""
+
+#: includes/admin/class-settings.php:585
+msgid "Advanced"
+msgstr ""
+
+#: includes/admin/class-settings.php:689
+msgid "Automatically Create Contact Records for New Users"
+msgstr ""
+
+#: includes/admin/class-settings.php:696
+msgid "Create Contacts"
+msgstr ""
+
+#: includes/admin/class-settings.php:697
+msgid "Create new contacts when users are added in WordPress."
+msgstr ""
+
+#: includes/admin/class-settings.php:706
+msgid "User Roles"
+msgstr ""
+
+#: includes/admin/class-settings.php:707
+msgid ""
+"You can choose to create new contacts only when users are added to a certain "
+"role. Leave blank for all roles."
+msgstr ""
+
+#: includes/admin/class-settings.php:715
+msgid "Assign Tags"
+msgstr ""
+
+#: includes/admin/class-settings.php:716
+msgid "The selected tags will be applied to new contacts."
+msgstr ""
+
+#: includes/admin/class-settings.php:729
+msgid "Synchronize Contact Data"
+msgstr ""
+
+#: includes/admin/class-settings.php:736
+msgid "Push"
+msgstr ""
+
+#: includes/admin/class-settings.php:737
+msgid ""
+"When a user profile is modified, update their contact record in your CRM to "
+"match."
+msgstr ""
+
+#: includes/admin/class-settings.php:744
+msgid "Push All"
+msgstr ""
+
+#: includes/admin/class-settings.php:745
+msgid ""
+"Push meta data whenever a single \"user_meta\" entry is added or modified."
+"<br /><small>(Useful if using non-supported plugins or manual user_meta "
+"updates, but may result in duplicate API calls and slower performance)</"
+"small>"
+msgstr ""
+
+#: includes/admin/class-settings.php:756
+msgid "Restrict Page Access"
+msgstr ""
+
+#: includes/admin/class-settings.php:763
+msgid "Hide Restricted Content"
+msgstr ""
+
+#: includes/admin/class-settings.php:764
+msgid "Content that the user cannot access will be removed from menus."
+msgstr ""
+
+#: includes/admin/class-settings.php:771
+msgid "Exclude Administrators"
+msgstr ""
+
+#: includes/admin/class-settings.php:772
+msgid ""
+"Users with Administrator accounts will be able to view all content, "
+"regardless of restrictions."
+msgstr ""
+
+#: includes/admin/class-settings.php:779
+msgid "Default Redirect"
+msgstr ""
+
+#: includes/admin/class-settings.php:780
+msgid ""
+"Default redirect URL for when access is denied. This can be overridden on a "
+"per-page basis. Leave blank to display error message below."
+msgstr ""
+
+#: includes/admin/class-settings.php:787
+msgid "Restricted Content Message"
+msgstr ""
+
+#: includes/admin/class-settings.php:788
+msgid "Restricted content message for when a redirect hasn't been specified."
+msgstr ""
+
+#: includes/admin/class-settings.php:800
+msgid "Webhooks"
+msgstr ""
+
+#: includes/admin/class-settings.php:810
+msgid ""
+"Webhooks allow you to send from your CRM back to your website. See <a href="
+"\"http://wpfusion.com/documentation/tutorials/webhooks/\" target="
+"\"_blank\">our documentation</a> for more information on creating webhooks."
+msgstr ""
+
+#: includes/admin/class-settings.php:814
+msgid "Access Key"
+msgstr ""
+
+#: includes/admin/class-settings.php:815
+msgid "You must use this key when sending data back to WP Fusion."
+msgstr ""
+
+#: includes/admin/class-settings.php:821
+msgid "Return Password"
+msgstr ""
+
+#: includes/admin/class-settings.php:822
+msgid ""
+"Send new users' passwords back to your CRM after import (field must be "
+"mapped in the <a href=\"#contact-fields\">Contact Fields</a> settings)."
+msgstr ""
+
+#: includes/admin/class-settings.php:844
+msgid ""
+"This feature allows you to import your CRM contacts as new WordPress users. "
+"Any fields configured on the <strong>Contact Fields</strong> tab will be "
+"imported."
+msgstr ""
+
+#: includes/admin/class-settings.php:851
+msgid "Contacts with the selected tags will be imported as new users."
+msgstr ""
+
+#: includes/admin/class-settings.php:858
+msgid "Enable Notifications"
+msgstr ""
+
+#: includes/admin/class-settings.php:859
+msgid ""
+"Send a <a href=\"https://wpfusion.com/documentation/tutorials/import-"
+"users/\" target=\"_blank\">welcome email</a> to new users containing their "
+"username, password, and login link."
+msgstr ""
+
+#: includes/admin/class-settings.php:866
+msgid "Import Groups"
+msgstr ""
+
+#: includes/admin/class-settings.php:877
+msgid "API Configuration"
+msgstr ""
+
+#: includes/admin/class-settings.php:883
+msgid "Select CRM"
+msgstr ""
+
+#: includes/admin/class-settings.php:904
+msgid "License Key"
+msgstr ""
+
+#: includes/admin/class-settings.php:922
+msgid "Experimental Features"
+msgstr ""
+
+#: includes/admin/class-settings.php:929
+msgid "Allow URL Login"
+msgstr ""
+
+#: includes/admin/class-settings.php:930
+msgid ""
+"Track user activity and unlock content by passing a Contact ID in a URL. See "
+"<a href=\"https://wpfusion.com/documentation/tutorials/auto-login-"
+"links/\" target=\"_blank\">this tutorial</a> for more info."
+msgstr ""
+
+#: includes/admin/class-settings.php:937
+msgid "Link Tracking"
+msgstr ""
+
+#: includes/admin/class-settings.php:938
+msgid ""
+"Enqueue the scripts to handle link click tracking. See <a href=\"https://"
+"wpfusion.com/documentation/tutorials/link-click-tracking/\" target="
+"\"_blank\">this tutorial</a> for more info."
+msgstr ""
+
+#: includes/admin/class-settings.php:945
+msgid "System Settings"
+msgstr ""
+
+#: includes/admin/class-settings.php:952
+msgid "Staging Mode"
+msgstr ""
+
+#: includes/admin/class-settings.php:953
+msgid ""
+"When staging mode is active, all normal WP Fusion features will be "
+"available, but no API calls will be sent to your CRM."
+msgstr ""
+
+#: includes/admin/class-settings.php:960
+msgid "Enable Logging"
+msgstr ""
+
+#: includes/admin/class-settings.php:961
+msgid "Access detailed activity logs for WP Fusion."
+msgstr ""
+
+#: includes/admin/class-settings.php:968
+msgid "Batch Operations"
+msgstr ""
+
+#: includes/admin/class-settings.php:975
+msgid "Operation"
+msgstr ""
+
+#: includes/admin/class-settings.php:982 includes/admin/class-settings.php:989
+msgid "Reset"
+msgstr ""
+
+#: includes/admin/class-settings.php:990
+msgid ""
+"Check this box and click \"Save Changes\" below to reset all options to "
+"their defaults."
+msgstr ""
+
+#: includes/admin/class-updater.php:213
+#, php-format
+msgid ""
+"There is a new version of %1$s available. %2$sView version %3$s details%4$s."
+msgstr ""
+
+#: includes/admin/class-updater.php:221
+#, php-format
+msgid ""
+"There is a new version of %1$s available. %2$sView version %3$s details%4$s "
+"or %5$supdate now%6$s."
+msgstr ""
+
+#: includes/admin/class-updater.php:399
+msgid "You do not have permission to install plugin updates"
+msgstr ""
+
+#: includes/admin/class-updater.php:399
+#: includes/admin/logging/class-log-table-list.php:41
+#: includes/admin/logging/class-log-table-list.php:111
+msgid "Error"
+msgstr ""
+
+#: includes/admin/logging/class-log-handler.php:131
+msgid "Logs"
+msgstr ""
+
+#: includes/admin/logging/class-log-handler.php:202
+msgid "WP Fusion Activity Log"
+msgstr ""
+
+#: includes/admin/logging/class-log-handler.php:208
+msgid "Flush all logs"
+msgstr ""
+
+#: includes/admin/logging/class-log-handler.php:373
+msgid "Action failed. Please refresh the page and retry."
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:42
+#: includes/admin/logging/class-log-table-list.php:112
+msgid "Warning"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:43
+#: includes/admin/logging/class-log-table-list.php:113
+msgid "Notice"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:44
+#: includes/admin/logging/class-log-table-list.php:114
+msgid "Info"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:49
+msgid "Filter by level"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:51
+msgid "All levels"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:71
+msgid "Timestamp"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:72
+#: includes/integrations/class-s2member.php:106
+msgid "Level"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:73
+msgid "User"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:74
+msgid "Message"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:75
+msgid "Source"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:211
+msgid "Delete"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:263
+msgid "Filter by source"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:265
+msgid "All sources"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:296
+msgid "Filter by user"
+msgstr ""
+
+#: includes/admin/logging/class-log-table-list.php:298
+msgid "All users"
+msgstr ""
+
+#: includes/admin/options/class-options.php:1159
+msgid "Invalid phone number."
+msgstr ""
+
+#: includes/admin/options/class-options.php:1168
+msgid "Invalid ZIP code."
+msgstr ""
+
+#: includes/admin/options/class-options.php:1468
+msgid "Number must be greater than or equal to "
+msgstr ""
+
+#: includes/admin/options/class-options.php:1471
+msgid "Number must be less than or equal to "
+msgstr ""
+
+#: includes/admin/options/class-options.php:1770
+msgid "Invalid color code."
+msgstr ""
+
+#: includes/admin/options/class-options.php:1999
+msgid "You do not have sufficient permissions to edit templates for this site."
+msgstr ""
+
+#: includes/admin/options/class-options.php:2002
+msgid "Error Downloading file."
+msgstr ""
+
+#: includes/admin/options/class-options.php:2052
+msgid "Error importing settings. Check your import file and try again."
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:64
+msgid "ActiveCampaign Configuration"
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:71
+msgid "API URL"
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:72
+msgid ""
+"Enter the API URL for your ActiveCampaign account (find it under Settings >> "
+"Developer in your account)."
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:79
+#: includes/crms/agilecrm/admin/class-admin.php:84
+#: includes/crms/infusionsoft/admin/class-admin.php:77
+#: includes/crms/ontraport/admin/class-admin.php:76
+msgid "API Key"
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:80
+msgid ""
+"The API key will appear beneath the API URL on the Developer settings page."
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:103
+msgid "Lists"
+msgstr ""
+
+#: includes/crms/activecampaign/admin/class-admin.php:104
+msgid "New users will be automatically added to the selected lists."
+msgstr ""
+
+#: includes/crms/activecampaign/class-activecampaign.php:170
+msgid "Access denied: Invalid credentials (URL and/or API key)."
+msgstr ""
+
+#: includes/crms/agilecrm/admin/class-admin.php:61
+msgid "Agile CRM Configuration"
+msgstr ""
+
+#: includes/crms/agilecrm/admin/class-admin.php:68
+msgid "Subdomain"
+msgstr ""
+
+#: includes/crms/agilecrm/admin/class-admin.php:69
+msgid "Enter your Agile CRM account subdomain (not the full URL)."
+msgstr ""
+
+#: includes/crms/agilecrm/admin/class-admin.php:76
+msgid "User Email"
+msgstr ""
+
+#: includes/crms/agilecrm/admin/class-admin.php:77
+msgid "Enter the email address for your AgileCRM account."
+msgstr ""
+
+#: includes/crms/agilecrm/admin/class-admin.php:85
+msgid ""
+"The API key will appear under Admin Settings &raquo; API &raquo; REST API."
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:64
+msgid "ConvertKit Configuration"
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:71
+msgid "API Secret"
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:72
+msgid ""
+"Enter the API Secret for your ConvertKit account (you can find your API "
+"Secret in the ConvertKit Account page)."
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:99
+msgid ""
+"Configuring the fields below allows ConvertKit to add new users to your site "
+"and update existing users when specific tags are applied from within "
+"ConvertKit. Read our <a href=\"https://wpfusion.com/documentation/"
+"webhooks/convertkit-webhooks/\" target=\"_blank\">documentation</a> for more "
+"information."
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:105
+msgid "Update Trigger"
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:106
+msgid ""
+"When this tag is applied to a contact in Convertkit, their tags and meta "
+"data will be updated in WordPress."
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:121
+msgid "Import Trigger"
+msgstr ""
+
+#: includes/crms/convertkit/admin/class-admin.php:122
+msgid ""
+"When this tag is applied to a contact in Convertkit, they will be imported "
+"as a new WordPres user."
+msgstr ""
+
+#: includes/crms/drip/admin/class-admin.php:61
+msgid "Drip Configuration"
+msgstr ""
+
+#: includes/crms/drip/admin/class-admin.php:68
+msgid "Account ID"
+msgstr ""
+
+#: includes/crms/drip/admin/class-admin.php:69
+msgid ""
+"Enter the Account ID for your Drip account (find it under Settings >> Site "
+"Setup >> 3rd Party Integrations)."
+msgstr ""
+
+#: includes/crms/drip/admin/class-admin.php:76
+msgid "API Token"
+msgstr ""
+
+#: includes/crms/drip/admin/class-admin.php:77
+msgid ""
+"Enter your Drip API token. You can find it in your Drip account <a href="
+"\"https://www.getdrip.com/user/edit\" target=\"_blank\">here</a>."
+msgstr ""
+
+#: includes/crms/drip/class-drip.php:212
+msgid "Access denied: Your API token doesn't have access to this account."
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:62
+msgid "Infusionsoft Configuration"
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:69
+msgid "Application Name"
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:70
+msgid "Enter the name of your Infusionsoft application (i.e. \"ab123\")."
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:78
+msgid ""
+"For help generating an API key, please read <a target=\"_blank\" href="
+"\"http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key"
+"\">this knowledgebase article</a>."
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:101
+msgid "API Call"
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:102
+msgid ""
+"Check this box to make an API call when a profile is updated. See <a target="
+"\"_blank\" href=\"https://wpfusion.com/documentation/tutorials/custom-"
+"api-calls/\">the documentation</a> for more info."
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:110
+msgid "Integration"
+msgstr ""
+
+#: includes/crms/infusionsoft/admin/class-admin.php:118
+msgid "Call Name"
+msgstr ""
+
+#: includes/crms/infusionsoft/class-infusionsoft.php:219
+msgid ". Please verify your connection details are correct."
+msgstr ""
+
+#: includes/crms/infusionsoft/class-infusionsoft.php:698
+msgid "Error establishing connection to Infusionsoft."
+msgstr ""
+
+#: includes/crms/ontraport/admin/class-admin.php:61
+msgid "Ontraport Configuration"
+msgstr ""
+
+#: includes/crms/ontraport/admin/class-admin.php:68
+msgid "App ID"
+msgstr ""
+
+#: includes/crms/ontraport/admin/class-admin.php:69
+msgid ""
+"Enter the App ID for your Ontraport account (find it under Settings >> "
+"Administration >> Ontraport API in your account)."
+msgstr ""
+
+#: includes/crms/ontraport/admin/class-admin.php:77
+msgid "The API key will appear next to the App ID on the API Keys page."
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:61
+msgid "Salesforce Configuration"
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:68
+msgid "Username"
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:69
+msgid ""
+"Enter the username for the administrator of your Salesforce account (usually "
+"an email address)."
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:76
+msgid "Password"
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:83
+msgid "Security Token"
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:84
+msgid ""
+"You can generate a security token by visiting the My Settings page and "
+"navigating to Personal >> Reset My Security Token."
+msgstr ""
+
+#: includes/crms/salesforce/admin/class-admin.php:94
+msgid "Salesforce Tag Type"
+msgstr ""
+
+#: includes/integrations/class-affiliate-wp.php:44
+#: includes/integrations/class-bbpress.php:129
+#: includes/integrations/class-s2member.php:73
+#: includes/integrations/class-ultimate-member.php:103
+#: includes/integrations/class-userpro.php:73
+#: includes/integrations/class-woocommerce.php:120
+msgid "Integrations"
+msgstr ""
+
+#: includes/integrations/class-affiliate-wp.php:61
+msgid "AffiliateWP Integration"
+msgstr ""
+
+#: includes/integrations/class-affiliate-wp.php:68
+#: includes/integrations/class-formidable-forms.php:89
+#: includes/integrations/class-pmpro.php:73
+#: includes/integrations/class-wp-job-manager.php:45
+msgid "Apply Tags"
+msgstr ""
+
+#: includes/integrations/class-affiliate-wp.php:69
+msgid "Apply these tags to new affiliates registered through AffiliateWP."
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:46
+msgid "bbPress Integration"
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:53
+msgid "Restrict Access"
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:54
+msgid "Restrict access to forums archive ("
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:62
+msgid "Restrict Forums"
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:63
+msgid "Restrict access to all forums in addition to the archive"
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:71
+msgid ""
+"If the user doesn't have any of the tags specified, they will be redirected "
+"to the URL below. You must specify a redirect for forum restriction to work."
+msgstr ""
+
+#: includes/integrations/class-bbpress.php:78
+msgid "Redirect URL"
+msgstr ""
+
+#: includes/integrations/class-formidable-forms.php:64
+msgid "Field Mapping"
+msgstr ""
+
+#: includes/integrations/class-gravity-forms.php:383
+msgid "Name"
+msgstr ""
+
+#: includes/integrations/class-gravity-forms.php:384
+msgid "Applies Tags"
+msgstr ""
+
+#: includes/integrations/class-pmpro.php:69
+msgid "Settings"
+msgstr ""
+
+#: includes/integrations/class-pmpro.php:83
+msgid "Remove Tags"
+msgstr ""
+
+#: includes/integrations/class-pmpro.php:91
+msgid "Link With Tag"
+msgstr ""
+
+#: includes/integrations/class-pmpro.php:116
+msgid "Apply Tags - Expired"
+msgstr ""
+
+#: includes/integrations/class-restrict-content-pro.php:186
+msgid "Link with "
+msgstr ""
+
+#: includes/integrations/class-restrict-content-pro.php:212
+msgid ""
+"This tag will be applied to the user when they register. You can also grant "
+"any user this subscription level by manually applying the tag."
+msgstr ""
+
+#: includes/integrations/class-s2member.php:90
+msgid "s2Member Integration"
+msgstr ""
+
+#: includes/integrations/class-s2member.php:100
+msgid ""
+"For each membership level you can configure tags to be applied to the user "
+"at registration."
+msgstr ""
+
+#: includes/integrations/class-ultimate-member.php:67
+msgid "Ultimate Member Integration"
+msgstr ""
+
+#: includes/integrations/class-ultimate-member.php:74
+#: includes/integrations/class-userpro.php:52
+msgid "Pull"
+msgstr ""
+
+#: includes/integrations/class-ultimate-member.php:75
+msgid "Update the local profile data for a given user from "
+msgstr ""
+
+#: includes/integrations/class-ultimate-member.php:82
+msgid "Defer Until Activation"
+msgstr ""
+
+#: includes/integrations/class-ultimate-member.php:83
+msgid "Don't send any data to "
+msgstr ""
+
+#: includes/integrations/class-userpro.php:45
+msgid "UserPro Integration"
+msgstr ""
+
+#: includes/integrations/class-userpro.php:53
+msgid ""
+"Update the local profile data for a given user from the CRM before "
+"displaying. May slow down profile load times."
+msgstr ""
+
+#. Plugin Name of the plugin/theme
+#: includes/integrations/class-woo-memberships.php:147
+msgid "WP Fusion"
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:137
+msgid "WooCommerce Integration"
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:144
+msgid "Hide restricted products"
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:145
+msgid "If a user can't access a product, hide it from the Shop page."
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:152
+msgid "Restricted product error message"
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:153
+msgid ""
+"This message will be displayed if a customer attempts to add a restricted "
+"product to their cart."
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:161
+msgid "Asynchronous Checkout"
+msgstr ""
+
+#: includes/integrations/class-woocommerce.php:162
+msgid ""
+"Runs WP Fusion post-checkout actions asynchronously to speed up load times."
+msgstr ""
+
+#: includes/integrations/class-wp-job-manager.php:46
+msgid "These tags will be applied in "
+msgstr ""
+
+#: wp-fusion.php:195 wp-fusion.php:207
+msgid "Cheatin&#8217; huh?"
+msgstr ""
+
+#. Plugin URI of the plugin/theme
+msgid "https://wpfusion.com/"
+msgstr ""
+
+#. Description of the plugin/theme
+msgid ""
+"WP Fusion connects your website to your CRM, with support for several CRMs "
+"and dozens of plugins."
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "Very Good Plugins"
+msgstr ""
+
+#. Author URI of the plugin/theme
+msgid "http://verygoodplugins.com/"
+msgstr ""

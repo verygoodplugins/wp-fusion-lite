@@ -1,0 +1,632 @@
+<?php
+
+class WPF_Zoho {
+
+	/**
+	 * Lets pluggable functions know which features are supported by the CRM
+	 */
+
+	public $supports;
+
+	/**
+	 * Contains API params
+	 */
+
+	public $params;
+
+	/**
+	 * Zoho OAuth stuff
+	 */
+
+	public $client_id;
+
+	public $client_secret_us;
+
+	public $client_secret_eu;
+
+	public $api_domain;
+
+	/**
+	 * Lets outside functions override the object type (Leads for example)
+	 */
+
+	public $object_type;
+
+	/**
+	 * Get things started
+	 *
+	 * @access  public
+	 * @since   2.0
+	 */
+
+	public function __construct() {
+
+		$this->slug     = 'zoho';
+		$this->name     = 'Zoho';
+		$this->supports = array();
+
+		// OAuth
+		$this->client_id 		= '1000.BC6W0X67OT9F47300RAHN6TOPDG0E3';
+		$this->client_secret_us = '3618d9156bc0e54d177585fcc0d6443c6791460c2a';
+		$this->client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
+
+		$this->object_type = 'Contacts';
+
+		// Set up admin options
+		if ( is_admin() ) {
+			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			new WPF_Zoho_Admin( $this->slug, $this->name, $this );
+		}
+
+		// Error handling
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+	}
+
+	/**
+	 * Sets up hooks specific to this CRM
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function init() {
+
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+
+	}
+
+
+	/**
+	 * Formats user entered data to match Zoho field formats
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+
+			// Adjust formatting for date fields
+			$date = date( 'Y-m-d', $value );
+
+			return $date;
+
+		} else {
+
+			return $value;
+
+		}
+
+	}
+
+	/**
+	 * Gets params for API calls
+	 *
+	 * @access  public
+	 * @return  array Params
+	 */
+
+	public function get_params( $access_token = null ) {
+
+		// Get saved data from DB
+		if ( empty( $access_token ) ) {
+			$access_token = wp_fusion()->settings->get( 'zoho_token' );
+		}
+
+		$this->api_domain = wp_fusion()->settings->get( 'zoho_api_domain' );
+
+		$this->params = array(
+			'timeout'     => 120,
+			'httpversion' => '1.1',
+			'headers'     => array(
+				'Authorization' => 'Zoho-oauthtoken ' . $access_token
+			)
+		);
+
+		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
+
+		return $this->params;
+	}
+
+	/**
+	 * Refresh an access token from a refresh token
+	 *
+	 * @access  public
+	 * @return  bool
+	 */
+
+	public function refresh_token() {
+
+		$refresh_token = wp_fusion()->settings->get( 'zoho_refresh_token' );
+		$location = wp_fusion()->settings->get( 'zoho_location' );
+
+		if( $location == 'eu' ) {
+			$client_secret = $this->client_secret_eu;
+			$accounts_server = 'https://accounts.zoho.eu';
+		} else {
+			$client_secret = $this->client_secret_us;
+			$accounts_server = 'https://accounts.zoho.com';
+		}
+
+		$request = $accounts_server . '/oauth/v2/token?client_id=' . $this->client_id . '&grant_type=refresh_token&client_secret=' . $client_secret . '&refresh_token=' . $refresh_token;
+		$response = wp_remote_post( $request );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$this->get_params( $body_json->access_token );
+
+		wp_fusion()->settings->set( 'zoho_token', $body_json->access_token );
+
+		return $body_json->access_token;
+
+	}
+
+	/**
+	 * Check HTTP Response for errors and return WP_Error if found
+	 *
+	 * @access public
+	 * @return HTTP Response
+	 */
+
+	public function handle_http_response( $response, $args, $url ) {
+
+		if( strpos($url, 'zoho') !== false ) {
+
+			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( isset( $body_json->code ) && $body_json->code == 'INVALID_TOKEN' ) {
+
+				$access_token = $this->refresh_token();
+				$args['headers']['Authorization'] = 'Zoho-oauthtoken ' . $access_token;
+
+				$response = wp_remote_request( $url, $args );
+
+			} elseif( isset( $body_json->code ) && $body_json->code == 'INVALID_DATA' ) {
+
+				$response = new WP_Error( 'error', '<strong>Invalid Data</strong> error: <strong>' . $body_json->message . '</strong>.' );
+
+			} elseif( !empty( $body_json->data ) && isset( $body_json->data[0]->code ) && $body_json->data[0]->code == 'INVALID_DATA' ) {
+
+				$response = new WP_Error( 'error', 'Invalid data passed for field <strong>' . $body_json->data[0]->details->api_name . '</strong>, expected data type: <strong>' . $body_json->data[0]->details->expected_data_type . '</strong>' );
+
+			} elseif( wp_remote_retrieve_response_code( $response ) == 429 ) {
+
+				$response = new WP_Error( 'error', 'Number of API requests per minute/day has exceeded the limit.' );
+
+			} elseif( wp_remote_retrieve_response_code( $response ) == 500 ) {
+
+				$response = new WP_Error( 'error', 'Unexpected Zoho server error.' );
+
+			} elseif( wp_remote_retrieve_response_code( $response ) == 500 ) {
+
+				$response = new WP_Error( 'error', 'Bad request. Please contact support.' );
+
+			}
+
+		}
+
+		return $response;
+
+	}
+
+
+
+	/**
+	 * Initialize connection
+	 *
+	 * @access  public
+	 * @return  bool
+	 */
+
+	public function connect( $access_token = null, $refresh_token = null, $test = false ) {
+
+		if ( $test == false ) {
+			return true;
+		}
+
+		if ( ! $this->params ) {
+			$this->get_params( $access_token );
+		}
+
+		$request  = $this->api_domain . '/crm/v2/contacts';
+		$response = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+
+	}
+
+
+	/**
+	 * Performs initial sync once connection is configured
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function sync() {
+
+		$this->connect();
+
+		$this->sync_tags();
+		$this->sync_crm_fields();
+
+		do_action( 'wpf_sync' );
+
+		return true;
+
+	}
+
+
+	/**
+	 * Gets all available tags and saves them to options
+	 *
+	 * @access public
+	 * @return array Lists
+	 */
+
+	public function sync_tags() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.all';
+		$response = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$available_tags = array();
+
+		if( ! empty( $response->tags ) ) {
+
+			foreach( $response->tags as $tag ) {
+
+				$available_tags[ $tag->name ] = $tag->name;
+
+			}
+
+		}
+
+		wp_fusion()->settings->set( 'available_tags', $available_tags );
+
+		return $available_tags;
+	}
+
+
+	/**
+	 * Loads all custom fields from CRM and merges with local list
+	 *
+	 * @access public
+	 * @return array CRM Fields
+	 */
+
+	public function sync_crm_fields() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request    = $this->api_domain . '/crm/v2/settings/fields?module=' . $this->object_type;
+		$response   = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$built_in_fields = array();
+		$custom_fields = array();
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if( ! empty( $body_json->fields ) ) {
+
+			foreach( $body_json->fields as $field ) {
+
+				if( $field->custom_field == false ) {
+					$built_in_fields[ $field->api_name ] = $field->field_label;
+				} else {
+					$custom_fields[ $field->api_name ] = $field->field_label;
+				}
+
+			}
+
+		}
+
+		asort( $built_in_fields );
+		asort( $custom_fields );
+
+		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+
+		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+
+		return $crm_fields;
+	}
+
+
+	/**
+	 * Gets contact ID for a user based on email address
+	 *
+	 * @access public
+	 * @return int Contact ID
+	 */
+
+	public function get_contact_id( $email_address ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?email=' . urlencode( $email_address );
+		$response     = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if( empty( $body_json ) ) {
+			return false;
+		}
+
+		return $body_json->data[0]->id;
+
+	}
+
+
+	/**
+	 * Gets all tags currently applied to the user, also update the list of available tags
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function get_tags( $contact_id ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		$response     = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$tags = array();
+
+		if( empty( $body_json ) || empty( $body_json->data[0]->Tag ) ) {
+			return $tags;
+		}
+
+		foreach( $body_json->data[0]->Tag as $tag ) {
+			$tags[] = $tag->name;
+		}
+
+		return $tags;
+	}
+
+	/**
+	 * Applies tags to a contact
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function apply_tags( $tags, $contact_id ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/add_tags?tag_names=' . implode(',', $tags) . '&over_write=false';
+		$response     = wp_remote_post( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+
+	}
+
+	/**
+	 * Removes tags from a contact
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function remove_tags( $tags, $contact_id ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/remove_tags?tag_names=' . implode(',', $tags) . '&over_write=false';
+		$response     = wp_remote_post( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+
+	}
+
+
+	/**
+	 * Adds a new contact
+	 *
+	 * @access public
+	 * @return int Contact ID
+	 */
+
+	public function add_contact( $data, $map_meta_fields = true ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		if ( $map_meta_fields == true ) {
+			$data = wp_fusion()->crm_base->map_meta_fields( $data );
+		}
+
+		$params 		= $this->params;
+		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
+
+		$request 		= $this->api_domain . '/crm/v2/' . $this->object_type;
+		$response     	= wp_remote_post( $request, $params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return $body_json->data[0]->details->id;
+
+	}
+
+	/**
+	 * Update contact
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		if ( $map_meta_fields == true ) {
+			$data = wp_fusion()->crm_base->map_meta_fields( $data );
+		}
+
+		if( empty( $data ) ) {
+			return false;
+		}
+
+		$params 		= $this->params;
+		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
+		$params['method'] = 'PUT';
+
+		$request 		= $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		$response     	= wp_remote_request( $request, $params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Loads a contact and updates local user meta
+	 *
+	 * @access public
+	 * @return array User meta data that was returned
+	 */
+
+	public function load_contact( $contact_id ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$url      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		$response = wp_remote_get( $url, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$user_meta      = array();
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$body_json      = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if( empty( $body_json->data ) ) {
+			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Zoho.' );
+		}
+
+		foreach ( $contact_fields as $field_id => $field_data ) {
+
+			if ( $field_data['active'] == true && isset( $body_json->data[0]->{$field_data['crm_field']} ) ) {
+				$user_meta[ $field_id ] = $body_json->data[0]->{$field_data['crm_field']};
+			}
+
+		}
+
+		return $user_meta;
+	}
+
+
+	/**
+	 * Gets a list of contact IDs based on tag
+	 *
+	 * @access public
+	 * @return array Contact IDs returned
+	 */
+
+	public function load_contacts( $tag ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$contact_ids = array();
+		$page = 1;
+		$proceed = true;
+
+		while( $proceed == true ) {
+
+			$url     	= $this->api_domain . '/crm/v2/' . $this->object_type . '/search?word=' . urlencode($tag) . '&page=' . $page;
+			$response 	= wp_remote_get( $url, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( empty( $body_json->data ) ) {
+				return $contact_ids;
+			}
+
+			foreach ( $body_json->data as $contact ) {
+				$contact_ids[] = $contact->id;
+			}
+
+			if( $body_json->info->more_records == false ) {
+				$proceed = false;
+			} else {
+				$page++;
+			}
+
+		}
+
+		return $contact_ids;
+
+	}
+
+
+}

@@ -1,0 +1,55 @@
+#tab_wpfgforms .select4.select4-container {
+	min-width: 300px;
+	max-width: 400px;
+}
+
+#tab_wpfgforms .select4-container .select4-search--inline .select4-search__field {
+	margin-top: 0px;
+}
+
+#tab_wpfgforms .select4-container .select4-selection {
+	outline: none;
+}
+
+table.wpf-field-map th {
+	padding-left: 0px !important;
+}
+
+table.wpf-field-map .select4-container {
+	max-width: 300px;
+}
+
+table.wpf-field-map i.fa {
+	padding: 0 20px;
+}
+
+#tab_wpfgforms .alert.danger {
+	padding: 15px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: #f2dede;
+    border-color: #ebccd1;
+    color: #b94a48;
+    display: inline-block;
+}
+
+#tab_wpfgforms span.label {
+	display: inline;
+	padding: .2em .6em .3em;
+	font-size: 75%;
+	font-weight: bold;
+	line-height: 1;
+	color: #fff;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: baseline;
+	border-radius: .25em;
+}
+
+#tab_wpfgforms span.label.label-default {
+	background-color: #999;
+}
+
+#tab_wpfgforms span.label.label-danger {
+    background-color: #d9534f;
+}
