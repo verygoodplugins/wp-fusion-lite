@@ -1,4 +1,41 @@
 
+#wpf-pro {
+	position:absolute;
+	right:30px;
+	margin-top:-40px;
+    background: #fff;
+    padding: 15px 30px 25px;
+    box-shadow: 0px 1px 5px rgba(0,0,0,0.25);
+    z-index: 999;
+    max-width: 360px;
+}
+
+#wpf-pro #wpf-pro-top {
+	margin-top: -15px;
+	margin-left: -30px;
+	margin-right: -30px;
+	padding: 25px 30px;
+    background-color: #20242a;;
+}
+
+#wpf-pro img {
+	width: 100%;
+}
+
+#wpf-pro ul {
+	list-style: initial;
+	padding-left: 30px;
+}
+
+#wpf-pro a.button-primary {
+	margin-left: 15px;
+	margin-top: 5px;
+}
+
+#wpf-pro hr {
+	margin: 15px 0;
+}
+
 .error.validation-error {
 	padding: 4px 10px 8px;
 	margin-top: 20px !important;

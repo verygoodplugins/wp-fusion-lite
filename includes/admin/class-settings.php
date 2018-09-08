@@ -87,8 +87,50 @@ class WPF_Settings {
 			
 		}
 
+		add_action( 'show_field_users_header_begin', array( $this, 'upgrade_notice' ), 10, 2 );
+
 		// Fire up the options framework
 		new WPF_Options( $this->get_setup(), $this->get_settings(), $this->get_sections() );
+
+	}
+
+
+	/**
+	 * Display upgrade prompt
+	 *
+	 * @since 1.0
+	 * @return mixed
+	 */
+
+	public function upgrade_notice( $id, $field ) {
+
+		?>
+
+			</table>
+
+			<div id="wpf-pro">
+				<div id="wpf-pro-top">
+					<img src="<?php echo WPF_DIR_URL ?>assets/img/logo.png" />
+				</div>
+
+				<p>You're running the <strong>Lite</strong> version of WP Fusion. A paid license includes:</p>
+
+				<ul>
+					<li>50+ plugin integrations</li>
+					<li>Hundreds of tag triggers</li>
+					<li>Sync data back to WordPress via webhooks</li>
+					<li>Premium support</li>
+				</ul>
+
+				<a class="button-primary" href="https://wpfusion.com/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">Learn More</a>
+
+				<hr />
+
+				Happy with the free version? Consider <a href="https://wordpress.org/plugins/wp-fusion-lite/#reviews" target="_blank">leaving us a review</a>.
+
+			</div>
+
+		<?php
 
 	}
 
@@ -98,7 +140,6 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return void
 	 */
-
 
 	private function includes() {
 
