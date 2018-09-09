@@ -586,8 +586,17 @@ class WPF_Settings {
 
 		// Reset table headers
 		if( isset( $_POST['wpf_options'] ) ) {
+
 			if( isset( $_POST['wpf_options']['table_headers'] )) {
-				$options['table_headers'] = $_POST['wpf_options']['table_headers'];
+
+				$table_headers = array();
+
+				foreach( (array) $_POST['wpf_options']['table_headers'] as $section => $value ) {
+					$table_headers[ $section ] = true;
+				}
+
+				$options['table_headers'] = $table_headers;
+
 			} else {
 				$options['table_headers'] = array();
 			}
@@ -1250,10 +1259,10 @@ class WPF_Settings {
 
 			echo '<tbody class="labels">';
 				echo '<tr class="group-header"><td colspan="5">';
-					echo '<label for="' . $group_slug . '" class="group-header-title ' . ($this->options['table_headers'][ $group_slug ] == "on" ? "collapsed" : "") . '">' . $group_data['title'] . '<i class="fa fa-angle-down"></i><i class="fa fa-angle-up"></i></label><input type="checkbox" ' . checked( $this->options['table_headers'][ $group_slug ], 'on', false ) . ' name="wpf_options[table_headers][' . $group_slug . ']" id="' . $group_slug . '" data-toggle="toggle">';
+					echo '<label for="' . $group_slug . '" class="group-header-title ' . ($this->options['table_headers'][ $group_slug ] == true ? "collapsed" : "") . '">' . $group_data['title'] . '<i class="fa fa-angle-down"></i><i class="fa fa-angle-up"></i></label><input type="checkbox" ' . checked( $this->options['table_headers'][ $group_slug ], true, false ) . ' name="wpf_options[table_headers][' . $group_slug . ']" id="' . $group_slug . '" data-toggle="toggle">';
 				echo '</td></tr>';
 			echo '</tbody>';
-			echo '<tbody class="table-collapse ' . ($this->options['table_headers'][ $group_slug ] == "on" ? "hide" : "") . '">';
+			echo '<tbody class="table-collapse ' . ($this->options['table_headers'][ $group_slug ] == true ? "hide" : "") . '">';
 
 			foreach ( $group_data['fields'] as $user_meta => $data ) {
 

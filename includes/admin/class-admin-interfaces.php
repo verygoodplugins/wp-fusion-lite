@@ -657,10 +657,12 @@ class WPF_Admin_Interfaces {
 
 	public function save_changes_to_children( $post_id, $data ) {
 
-		// Apply settings to children if required
-		if ( ! empty( $data['apply_children'] ) ) {
+		$post_type = sanitize_text_field( $_POST['post_type'] );
 
-			$children = get_pages( array( 'child_of' => $post_id, 'post_type' => $_POST['post_type'] ) );
+		// Apply settings to children if required
+		if ( ! empty( $data['apply_children'] ) && post_type_exists( $post_type ) ) {
+
+			$children = get_pages( array( 'child_of' => $post_id, 'post_type' => $post_type ) );
 
 			if( ! empty( $children ) ) {
 
