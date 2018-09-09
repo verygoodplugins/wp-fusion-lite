@@ -54,6 +54,9 @@ class WPF_Admin_Interfaces {
         add_action( 'in_widget_form', array( $this, 'widget_form' ), 5, 3 );
         add_filter( 'widget_update_callback', array( $this, 'widget_form_update' ), 5, 4 );
 
+        // Sanitize meta box inputs
+        add_filter( 'wpf_sanitize_meta_box', array( $this, 'sanitize_meta_box' ) );
+
 	}
 
 	/**
@@ -313,13 +316,10 @@ class WPF_Admin_Interfaces {
 
 		if ( isset( $_POST['wpf-settings'] ) ) {
 
-			$wpf_settings = $_POST['wpf-settings'];
-
-			if(!isset($wpf_settings['lock_content']))
-				$wpf_settings['lock_content'] = false;
+			$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
 
 			$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
-			$taxonomy_rules[$term_id] = $wpf_settings;
+			$taxonomy_rules[$term_id] = $settings;
 
 			// Save the option array.
 			update_option( "wpf_taxonomy_rules", $taxonomy_rules );
@@ -426,7 +426,7 @@ class WPF_Admin_Interfaces {
 
 	public function bulk_edit_save() {
 
-		$post_ids = ( ! empty( $_POST['post_ids'] ) ) ? $_POST['post_ids'] : null;
+		$post_ids = ( ! empty( $_POST['post_ids'] ) ) ? array_map('intval', $_POST['post_ids'] )  : null;
 
 		// if we have post IDs
 		if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
@@ -434,9 +434,11 @@ class WPF_Admin_Interfaces {
 			// if it has a value, doesn't update if empty on bulk
 			if ( ! empty( $_POST['wpf_settings'] ) ) {
 
+				$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
+
 				// update for each post ID
 				foreach ( $post_ids as $post_id ) {
-					update_post_meta( $post_id, 'wpf-settings', $_POST['wpf_settings'] );
+					update_post_meta( $post_id, 'wpf-settings', $settings );
 				}
 
 			}
@@ -725,39 +727,23 @@ class WPF_Admin_Interfaces {
 			return;
 		}
 
-
 		// Don't update on revisions
 		if ( $_POST['post_type'] == 'revision' ) {
 			return;
 		}
 
-
 		if ( isset( $_POST['wpf-settings'] ) ) {
 
-			$data = $_POST['wpf-settings'];
+			$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
 
-			// Sanitize
-			if ( isset( $data['apply_delay'] ) ) {
-				$data['apply_delay'] = sanitize_text_field( $data['apply_delay'] );
-			}
+			// Allow other plugins to save their own data
+			do_action( 'wpf_meta_box_save', $post_id, $settings );
 
-			if ( isset( $data['redirect_url'] ) ) {
-				$data['redirect_url'] = sanitize_text_field( $data['redirect_url'] );
-			}
+			// Update the meta field in the database.
+			update_post_meta( $post_id, 'wpf-settings', $settings );
 
-		} else {
-			$data = array();
 		}
 
-		if ( ! isset( $data['lock_content'] ) ) {
-			$data['lock_content'] = 0;
-		}
-
-		// Allow other plugins to save their own data
-		do_action( 'wpf_meta_box_save', $post_id, $data );
-
-		// Update the meta field in the database.
-		update_post_meta( $post_id, 'wpf-settings', $data );
 	}
 
 	/**
@@ -877,6 +863,35 @@ class WPF_Admin_Interfaces {
     	}
 
         return $instance;
+    }
+
+	/**
+	 * Sanitizes user data input from WPF meta box
+	 *
+	 * @access public
+	 * @return array Settings
+	 */
+
+    public function sanitize_meta_box( $settings ) {
+
+		if( ! isset( $settings['lock_content'] ) ) {
+			$settings['lock_content'] = false;
+		}
+
+		if( isset( $settings['redirect'] ) ) {
+			$settings['redirect'] = intval( $settings['redirect'] );
+		}
+
+		if( isset( $settings['redirect_url'] ) ) {
+			$settings['redirect_url'] = wp_sanitize_redirect( $settings['redirect_url'] );
+		}
+
+		if ( isset( $settings['apply_delay'] ) ) {
+			$settings['apply_delay'] = intval( $settings['apply_delay'] );
+		}
+
+		return $settings;
+
     }
 
 

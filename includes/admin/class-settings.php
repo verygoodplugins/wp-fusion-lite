@@ -77,17 +77,11 @@ class WPF_Settings {
 		// Plugin action links and messages
 		add_filter( 'plugin_action_links_' . WPF_PLUGIN_PATH, array( $this, 'add_action_links' ) );
 
-		if( ! empty( wp_fusion()->get_integrations() ) ) {
+		if( empty( wp_fusion()->get_integrations() ) ) {
 
-			add_action( 'show_field_edd_license_begin', array( $this, 'show_field_edd_license_begin' ), 10, 2 );
-			add_action( 'show_field_edd_license', array( $this, 'show_field_edd_license' ), 10, 2 );
-
-			add_action( 'wp_ajax_edd_activate', array( $this, 'edd_activate' ) );
-			add_action( 'wp_ajax_edd_deactivate', array( $this, 'edd_deactivate' ) );
+			add_action( 'show_field_users_header_begin', array( $this, 'upgrade_notice' ), 10, 2 );
 			
 		}
-
-		add_action( 'show_field_users_header_begin', array( $this, 'upgrade_notice' ), 10, 2 );
 
 		// Fire up the options framework
 		new WPF_Options( $this->get_setup(), $this->get_settings(), $this->get_sections() );
@@ -96,7 +90,7 @@ class WPF_Settings {
 
 
 	/**
-	 * Display upgrade prompt
+	 * Display upgrade prompt in free version
 	 *
 	 * @since 1.0
 	 * @return mixed
@@ -133,6 +127,7 @@ class WPF_Settings {
 		<?php
 
 	}
+
 
 	/**
 	 * Include options and batch libraries
@@ -461,7 +456,7 @@ class WPF_Settings {
 
 	public function delete_import_group() {
 
-		$import_group  = $_POST['group_id'];
+		$import_group  = intval($_POST['group_id']);
 		$import_groups = get_option( 'wpf_import_groups' );
 
 		global $current_user;
@@ -481,185 +476,6 @@ class WPF_Settings {
 
 		die();
 
-	}
-
-
-	/**
-	 * Check EDD license
-	 *
-	 * @access public
-	 * @return string License Status
-	 */
-
-	public function edd_check_license( $license_key ) {
-
-		$status = get_transient( 'wpf_license_check' );
-
-		// Run the license check a maximum of once per day
-		if ( false === $status ) {
-
-			$integrations = array();
-			foreach(wp_fusion()->integrations as $slug => $object) {
-				$integrations[] = $slug;
-			}
-
-			if( class_exists('GFForms') ) {
-				$integrations[] = 'gravity-forms';
-			}
-
-			// data to send in our API request
-			$api_params = array(
-				'edd_action' => 'check_license',
-				'license'    => $license_key,
-				'item_name'  => urlencode( 'WP Fusion' ),
-				'author'	 => 'Very Good Plugins',
-				'url'        => home_url(),
-				'crm'		 => wp_fusion()->crm->name,
-				'integrations' => $integrations,
-				'version'	 => WP_FUSION_VERSION
-			);
-			// Call the custom API.
-			$response = wp_remote_post( WPF_STORE_URL, array(
-				'timeout'   => 30,
-				'sslverify' => false,
-				'body'      => $api_params
-			) );
-
-			// make sure the response came back okay
-			if ( is_wp_error( $response ) ) {
-				set_transient( 'wpf_license_check', true, 60 * 60 * 24 * 3 );
-				return 'error';
-			}
-
-			$license_data = json_decode( wp_remote_retrieve_body( $response ) );
-
-			$this->set( 'license_status', $license_data->license );
-
-			set_transient( 'wpf_license_check', true, 60 * 60 * 24 * 3 );
-
-			return $license_data->license;
-
-		} else {
-
-			// Return stored license data
-			return $this->get( 'license_status' );
-
-		}
-
-	}
-
-
-	/**
-	 * Activate EDD license
-	 *
-	 * @access public
-	 * @return bool
-	 */
-
-	public function edd_activate() {
-
-		$license_key = trim( $_POST['key'] );
-
-		// data to send in our API request
-		$api_params = array(
-			'edd_action' => 'activate_license',
-			'license'    => $license_key,
-			'item_name'  => urlencode( 'WP Fusion' ), // the name of our product in EDD
-			'url'        => home_url(),
-			'version'	 => WP_FUSION_VERSION
-		);
-
-		if( wp_fusion()->settings->get( 'connection_configured' ) == true ) {
-
-			$integrations = array();
-			foreach(wp_fusion()->integrations as $slug => $object) {
-				$integrations[] = $slug;
-			}
-
-			if( class_exists('GFForms') ) {
-				$integrations[] = 'gravity-forms';
-			}
-
-			$api_params['crm'] = wp_fusion()->crm->name;
-			$api_params['integrations'] = $integrations;
-
-		}
-
-		// Call the custom API.
-		$response = wp_remote_post( WPF_STORE_URL, array(
-			'timeout'   => 15,
-			'sslverify' => false,
-			'body'      => $api_params
-		) );
-
-		// make sure the response came back okay
-		if ( is_wp_error( $response ) ) {
-			wp_send_json_error( $response->get_error_message() . '&ndash; Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a> for further assistance.' );
-			die();
-		}
-
-		// decode the license data
-		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
-
-		// $license_data->license will be either "valid" or "invalid"
-
-		// Store the options locally
-		$this->set( 'license_status', $license_data->license );
-		$this->set( 'license_key', $license_key );
-
-		if ( $license_data->license == 'valid' ) {
-			wp_send_json_success( 'activated' );
-		} else {
-			wp_send_json_error( '<pre>' . print_r( $license_data, true ) . '</pre>' );
-		}
-
-		die();
-	}
-
-
-	/**
-	 * Deactivate EDD license
-	 *
-	 * @access public
-	 * @return bool
-	 */
-
-	public function edd_deactivate() {
-
-		$license_key = trim( $_POST['key'] );
-
-		// data to send in our API request
-		$api_params = array(
-			'edd_action' => 'deactivate_license',
-			'license'    => $license_key,
-			'item_name'  => urlencode( 'WP Fusion' ), // the name of our product in EDD
-			'url'        => home_url()
-		);
-
-		// Call the custom API.
-		$response = wp_remote_post( WPF_STORE_URL, array(
-			'timeout'   => 15,
-			'sslverify' => false,
-			'body'      => $api_params
-		) );
-
-		// make sure the response came back okay
-		if ( is_wp_error( $response ) ) {
-			wp_send_json_error( $response->get_error_message() );
-			die();
-		}
-
-		// decode the license data
-		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( $license_data->license == 'deactivated' ) {
-			$this->set( 'license_status', 'invalid' );
-			wp_send_json_success( 'deactivated' );
-		} else {
-			wp_send_json_error( '<pre>' . print_r( $license_data, true ) . '</pre>' );
-		}
-
-		wp_die();
 	}
 
 
@@ -864,6 +680,85 @@ class WPF_Settings {
 		);
 
 		/*
+		// RESTRICT PAGE ACCESS
+		*/
+
+		$settings['restrict_access_header'] = array(
+			'title'   => __( 'Restrict Content Access', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'heading',
+			'section' => 'main'
+		);
+
+		$settings['hide_restricted'] = array(
+			'title'   => __( 'Hide From Menus', 'wp-fusion' ),
+			'desc'    => __( 'Content that the user cannot access will be removed from menus.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$settings['hide_archives'] = array(
+			'title'   => __( 'Filter Queries', 'wp-fusion' ),
+			'desc'    => __( 'Content that the user cannot access will be completely hidden from all post listings, grids, and archives.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$settings['exclude_admins'] = array(
+			'title'   => __( 'Exclude Administrators', 'wp-fusion' ),
+			'desc'    => __( 'Users with Administrator accounts will be able to view all content, regardless of restrictions.', 'wp-fusion' ),
+			'std'     => 1,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$settings['default_redirect'] = array(
+			'title'   => __( 'Default Redirect', 'wp-fusion' ),
+			'desc'    => __( 'Default redirect URL for when access is denied. This can be overridden on a per-page basis. Leave blank to display error message below.', 'wp-fusion' ),
+			'std'     => '',
+			'type'    => 'text',
+			'section' => 'main'
+		);
+
+		$settings['restricted_message'] = array(
+			'title'         => __( 'Restricted Content Message', 'wp-fusion' ),
+			'desc'          => __( 'Restricted content message for when a redirect hasn\'t been specified.', 'wp-fusion' ),
+			'std'           => "<h2 style='text-align:center'>Oops!</h2><p style='text-align:center'>You don't have permission to view this page! Make sure you're logged in and try again, or contact support.</p>",
+			'type'          => 'editor',
+			'section'       => 'main',
+			'textarea_rows' => 10
+		);
+
+		/*
+		// SEO
+		*/		
+
+		$settings['seo_header'] = array(
+			'title'   => __( 'SEO', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'heading',
+			'section' => 'main'
+		);
+
+		$settings['seo_enabled'] = array(
+			'title'   => __( 'Show Excerpts', 'wp-fusion' ),
+			'desc'    => __( 'Show an excerpt of your restricted content to search engine spiders.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'std'	  => 0,
+			'unlock'  => array( 'seo_excerpt_length' )
+		);
+
+		$settings['seo_excerpt_length'] = array(
+			'title'   => __( 'Excerpt Length', 'wp-fusion' ),
+			'desc'    => __( 'Show the first X words of your content to search engines. Leave blank for default, which is usually 55 words.', 'wp-fusion' ),
+			'type'    => 'number',
+			'section' => 'main'
+		);
+
+		/*
 		// CONTACT FIELDS
 		*/
 
@@ -932,6 +827,7 @@ class WPF_Settings {
 			'type'    => 'hidden',
 			'section' => 'setup'
 		);
+
 
 		/*
 		// ADVANCED

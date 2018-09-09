@@ -155,7 +155,7 @@ class WPF_Capsule_Admin {
 
 	public function test_connection() {
 
-		$api_key = $_POST['capsule_key'];
+		$api_key = sanitize_text_field( $_POST['capsule_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 

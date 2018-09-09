@@ -316,8 +316,7 @@ class WPF_MailerLite_Admin {
 
 	public function test_connection() {
 
-		// $api_url = $_POST['op_url'];
-		$api_key = $_POST['mailerlite_key'];
+		$api_key = sanitize_text_field( $_POST['mailerlite_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 
@@ -328,8 +327,7 @@ class WPF_MailerLite_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			// $options['op_url']                = $api_url;
-			$options['mailerlite_key']                = $api_key;
+			$options['mailerlite_key']        = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 			wp_fusion()->settings->set_all( $options );

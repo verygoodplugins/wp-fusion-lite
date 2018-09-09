@@ -220,8 +220,8 @@ class WPF_HubSpot_Admin {
 
 	public function test_connection() {
 
-		$access_token = $_POST['hubspot_token'];
-		$refresh_token = $_POST['hubspot_refresh_token'];
+		$access_token = sanitize_text_field( $_POST['hubspot_token'] );
+		$refresh_token = sanitize_text_field( $_POST['hubspot_refresh_token'] );
 
 		$connection = $this->crm->connect( $access_token, $refresh_token, true );
 

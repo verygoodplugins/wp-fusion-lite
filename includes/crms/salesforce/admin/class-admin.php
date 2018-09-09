@@ -41,7 +41,7 @@ class WPF_Salesforce_Admin {
 
 	public function init() {
 
-		//add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 
 	}
 
@@ -184,9 +184,9 @@ class WPF_Salesforce_Admin {
 
 	public function test_connection() {
 
-		$username 		= $_POST['sf_username'];
-		$token 			= $_POST['sf_token'];
-		$combined_token = $_POST['sf_pass'] . $_POST['sf_token'];
+		$username 		= sanitize_text_field( $_POST['sf_username'] );
+		$token 			= sanitize_text_field( $_POST['sf_token'] );
+		$combined_token = sanitize_text_field( $_POST['sf_pass'] ) . $token;
 
 		$connection = $this->crm->connect( $username, $combined_token, true );
 

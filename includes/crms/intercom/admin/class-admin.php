@@ -159,7 +159,7 @@ class WPF_Intercom_Admin {
 
 	public function test_connection() {
 
-		$access_key = $_POST['intercom_key'];
+		$access_key = sanitize_text_field( $_POST['intercom_key'] );
 
 		$connection = $this->crm->connect( $access_key, true );
 

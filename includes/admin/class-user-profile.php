@@ -58,6 +58,8 @@ class WPF_User_Profile {
                 $posted_tags = array();
             }
 
+            $posted_tags = array_map( 'sanitize_text_field', $posted_tags );
+
 			$user_tags = wp_fusion()->user->get_tags( $user_id );
 
 			// Apply new tags
@@ -102,7 +104,7 @@ class WPF_User_Profile {
 
 	public function resync_contact() {
 
-		$user_id = $_POST['user_id'];
+		$user_id = intval($_POST['user_id']);
 
 		// Force reset contact ID and search for new match
 		$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );

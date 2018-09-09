@@ -219,8 +219,8 @@ class WPF_Zoho_Admin {
 
 	public function test_connection() {
 
-		$access_token = $_POST['zoho_token'];
-		$refresh_token = $_POST['zoho_refresh_token'];
+		$access_token = sanitize_text_field( $_POST['zoho_token'] );
+		$refresh_token = sanitize_text_field( $_POST['zoho_refresh_token'] );
 
 		$connection = $this->crm->connect( $access_token, $refresh_token, true );
 

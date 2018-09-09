@@ -274,8 +274,8 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 	public function test_connection() {
 
-		$app_name = $_POST['app_name'];
-		$api_key  = $_POST['api_key'];
+		$app_name = sanitize_text_field( $_POST['app_name'] );
+		$api_key  = sanitize_text_field( $_POST['api_key'] );
 
 		$connection = $this->crm->connect( $app_name, $api_key, true );
 

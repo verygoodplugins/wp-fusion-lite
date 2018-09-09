@@ -171,9 +171,9 @@ class WPF_AgileCRM_Admin {
 
 	public function test_connection() {
 
-		$agile_domain = $_POST['agile_domain'];
-		$user_email   = $_POST['agile_user_email'];
-		$api_key      = $_POST['agile_key'];
+		$agile_domain = sanitize_text_field( $_POST['agile_domain'] );
+		$user_email   = sanitize_email( $_POST['agile_user_email'] );
+		$api_key      = sanitize_text_field( $_POST['agile_key'] );
 
 		$connection = $this->crm->connect( $agile_domain, $user_email, $api_key, true );
 

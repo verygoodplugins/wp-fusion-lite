@@ -166,8 +166,8 @@ class WPF_Flexie_Admin {
 
 	public function test_connection() {
 
-		$flexie_url       = $_POST['flexie_url'];
-		$api_key		  = $_POST['flexie_key'];
+		$flexie_url       = esc_url_raw( $_POST['flexie_url'] );
+		$api_key		  = sanitize_text_field( $_POST['flexie_key'] );
 	
 
 		$connection = $this->crm->connect( $flexie_url, $api_key, true );

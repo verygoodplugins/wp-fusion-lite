@@ -63,7 +63,7 @@ function wpf_render_tag_multiselect( $args ) {
 				foreach ( $available_tags as $id => $field_data ) {
 
 					if ( $field_data['category'] == $tag_category ) {
-						echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"] [ $args["field_sub_id"] ] ), false ) ) . '>' . $field_data['label'] . '</option>';
+						echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"] [ $args["field_sub_id"] ] ), false ) ) . '>' . esc_html($field_data['label']) . '</option>';
 					}
 
 				}
@@ -76,12 +76,13 @@ function wpf_render_tag_multiselect( $args ) {
 
 		// Handling for single level select (no categories)
 
-		echo '<select ' . ( $args["disabled"] == true ? ' disabled' : '' ) . ' data-placeholder="' . $args["placeholder"] . '" multiple="multiple" id="' . $args["field_id"] . ( ! is_null( $args["field_sub_id"] ) ? '-' . $args["field_sub_id"] : '' ) . '" data-limit="' . $args["limit"] . '" class="select4-wpf-tags ' . $args['class'] . '" name="' . $args["meta_name"] . ( ! is_null( $args["field_id"] ) ? '[' . $args["field_id"] . ']' : '' ) . ( ! is_null( $args["field_sub_id"] ) ? '[' . $args["field_sub_id"] . ']' : '' ) . '[]"' . ( ! empty( $args["no_dupes"] ) ? ' data-no-dupes="' . implode(',', $args["no_dupes"]) . '"' : '' ) . '>';
+		echo '<select ' . ( $args["disabled"] == true ? ' disabled' : '' );
+		echo ' data-placeholder="' . $args["placeholder"] . '" multiple="multiple" id="' . $args["field_id"] . ( ! is_null( $args["field_sub_id"] ) ? '-' . $args["field_sub_id"] : '' ) . '" data-limit="' . $args["limit"] . '" class="select4-wpf-tags ' . $args['class'] . '" name="' . $args["meta_name"] . ( ! is_null( $args["field_id"] ) ? '[' . $args["field_id"] . ']' : '' ) . ( ! is_null( $args["field_sub_id"] ) ? '[' . $args["field_sub_id"] . ']' : '' ) . '[]"' . ( ! empty( $args["no_dupes"] ) ? ' data-no-dupes="' . implode(',', $args["no_dupes"]) . '"' : '' ) . '>';
 
 			if( ! empty( $args['prepend'] ) )  {
 				
 				foreach( $args['prepend'] as $id => $tag ) {
-					echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ] ), false ) ) . '>' . $tag . '</option>';
+					echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ] ), false ) ) . '>' . esc_html($tag) . '</option>';
 				}
 			}
 
@@ -121,7 +122,7 @@ function wpf_render_tag_multiselect( $args ) {
 					continue;
 				}
 
-				echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ] ), false ) ) . '>' . $tag . '</option>';
+				echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ] ), false ) ) . '>' . esc_html($tag) . '</option>';
 
 			}
 
@@ -163,7 +164,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id, $field_su
 						$label = $label['label'];
 					}
 
-					echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . $field . '">' . $label . '</option>';
+					echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . esc_attr($field) . '">' . esc_html($label) . '</option>';
 				}
 
 
@@ -174,7 +175,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id, $field_su
 				$field = $group_header;
 				$label = $fields;
 
-				echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . $field . '">' . $label . '</option>';
+				echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . esc_attr($field) . '">' . esc_html($label) . '</option>';
 
 
 			}
@@ -219,7 +220,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id, $field_su
 
 			}
 
-			echo '<option value="' . $setting_value . '" selected="selected">' . $setting . '</option>';
+			echo '<option value="' . esc_attr($setting_value) . '" selected="selected">' . esc_html($setting) . '</option>';
 
 			if( isset( $crm_fields['Custom Fields'] ) ) {
 

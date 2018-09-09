@@ -269,7 +269,7 @@ class WPF_ConvertKit_Admin {
 
 	public function test_connection() {
 
-		$api_secret = $_POST['ck_secret'];
+		$api_secret = sanitize_text_field( $_POST['ck_secret'] );
 
 		$connection = $this->crm->connect( $api_secret, true );
 

@@ -35,7 +35,7 @@ class WPF_AJAX {
 		$tags = $_POST['tags'];
 
 		if( isset( $_POST['user_id'] ) ) {
-			$user_id = $_POST['user_id'];
+			$user_id = intval($_POST['user_id']);
 		} else {
 			$user_id = get_current_user_id();
 		}
@@ -43,6 +43,8 @@ class WPF_AJAX {
 		if( ! is_array( $tags ) ) {
 			$tags = explode(',', $tags);
 		}
+
+		$tags = array_map('sanitize_text_field', $tags);
 
 		wp_fusion()->user->apply_tags( $tags, $user_id );
 
@@ -62,7 +64,7 @@ class WPF_AJAX {
 		$update_data = json_decode( stripslashes( $_POST['data'] ), true );
 
 		if( isset( $_POST['user_id'] ) ) {
-			$user_id = $_POST['user_id'];
+			$user_id = intval($_POST['user_id']);
 		} else {
 			$user_id = get_current_user_id();
 		}

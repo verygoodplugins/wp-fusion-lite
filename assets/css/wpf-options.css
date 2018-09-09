@@ -225,6 +225,8 @@ a#test-connection span, a#export-btn span, a#import-users-btn span {
 	padding-bottom: 5px;
 	padding-top: 25px;
 	font-weight: normal;
+	width: 975px;
+    max-width: 100%;
 }
 
 #wpf-settings h4:first-of-type {

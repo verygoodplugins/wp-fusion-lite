@@ -409,7 +409,7 @@ class WPF_ConvertKit {
 			return false;
 		}
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . $email_address );
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

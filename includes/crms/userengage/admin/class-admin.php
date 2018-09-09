@@ -41,8 +41,7 @@ class WPF_UserEngage_Admin {
 
 	public function init() {
 
-		//add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
-		//add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 
 	}
 
@@ -178,7 +177,7 @@ class WPF_UserEngage_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/UserEngage-fields.php';
+			require_once dirname( __FILE__ ) . '/userengage-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -246,8 +245,7 @@ class WPF_UserEngage_Admin {
 
 	public function test_connection() {
 
-		// $api_url = $_POST['op_url'];
-		$api_key = $_POST['userengage_key'];
+		$api_key = sanitize_text_field( $_POST['userengage_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 
@@ -258,8 +256,7 @@ class WPF_UserEngage_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			// $options['op_url']                = $api_url;
-			$options['userengage_key']                = $api_key;
+			$options['userengage_key']        = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 			wp_fusion()->settings->set_all( $options );

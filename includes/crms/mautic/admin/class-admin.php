@@ -174,9 +174,9 @@ class WPF_Mautic_Admin {
 
 	public function test_connection() {
 
-		$mautic_url       = $_POST['mautic_url'];
-		$mautic_username  = $_POST['mautic_username'];
-		$mautic_password  = $_POST['mautic_password'];
+		$mautic_url       = esc_url_raw( $_POST['mautic_url'] );
+		$mautic_username  = sanitize_text_field( $_POST['mautic_username'] );
+		$mautic_password  = sanitize_text_field( $_POST['mautic_password'] );
 
 		$connection = $this->crm->connect( $mautic_url, $mautic_username, $mautic_password, true );
 

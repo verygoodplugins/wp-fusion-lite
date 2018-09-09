@@ -162,8 +162,7 @@ class WPF_Nimble_Admin {
 
 	public function test_connection() {
 
-		// $api_url = $_POST['op_url'];
-		$api_key = $_POST['nimble_key'];
+		$api_key = sanitize_text_field( $_POST['nimble_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 
@@ -174,8 +173,7 @@ class WPF_Nimble_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			// $options['op_url']                = $api_url;
-			$options['nimble_key']                = $api_key;
+			$options['nimble_key']            = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 			wp_fusion()->settings->set_all( $options );

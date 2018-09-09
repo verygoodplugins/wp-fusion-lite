@@ -232,8 +232,8 @@ class WPF_Ontraport_Admin {
 
 	public function test_connection() {
 
-		$api_url = $_POST['op_url'];
-		$api_key = $_POST['op_key'];
+		$api_url = sanitize_text_field( $_POST['op_url'] );
+		$api_key = sanitize_text_field( $_POST['op_key'] );
 
 		$connection = $this->crm->connect( $api_url, $api_key, true );
 

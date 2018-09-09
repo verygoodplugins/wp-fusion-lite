@@ -199,8 +199,8 @@ class WPF_Kartra_Admin {
 
 	public function test_connection() {
 
-		$api_key 		= $_POST['kartra_api_key'];
-		$api_password 	= $_POST['kartra_api_password'];
+		$api_key 		= sanitize_text_field( $_POST['kartra_api_key'] );
+		$api_password 	= sanitize_text_field( $_POST['kartra_api_password'] );
 
 		$connection = $this->crm->connect( $api_key, $api_password, true );
 

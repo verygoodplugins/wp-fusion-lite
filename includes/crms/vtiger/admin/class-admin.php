@@ -171,9 +171,9 @@ class WPF_Vtiger_Admin {
 
 	public function test_connection() {
 
-		$vtiger_domain 	= $_POST['vtiger_domain'];
-		$username   	= $_POST['vtiger_username'];
-		$api_key      	= $_POST['vtiger_key'];
+		$vtiger_domain 	= esc_url_raw( $_POST['vtiger_domain'] );
+		$username   	= sanitize_text_field( $_POST['vtiger_username'] );
+		$api_key      	= sanitize_text_field( $_POST['vtiger_key'] );
 
 		$connection = $this->crm->connect( $vtiger_domain, $username, $api_key, true );
 

@@ -275,8 +275,8 @@ class WPF_ActiveCampaign_Admin {
 
 	public function test_connection() {
 
-		$api_url = $_POST['ac_url'];
-		$api_key = $_POST['ac_key'];
+		$api_url = esc_url_raw( $_POST['ac_url'] );
+		$api_key = sanitize_text_field( $_POST['ac_key'] );
 
 		$connection = $this->crm->connect( $api_url, $api_key, true );
 

@@ -44,7 +44,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			array( 'value' => 'info',      'label' => __( 'Info',      'wp-fusion' ) )
 		);
 
-		$selected_level = isset( $_REQUEST['level'] ) ? $_REQUEST['level'] : '';
+		$selected_level = isset( $_REQUEST['level'] ) ? esc_attr( $_REQUEST['level'] ) : '';
 		?>
 			<label for="filter-by-level" class="screen-reader-text"><?php _e( 'Filter by level', 'wp-fusion' ); ?></label>
 			<select name="level" id="filter-by-level">
@@ -274,7 +274,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		" );
 
 		if ( ! empty( $sources ) ) {
-			$selected_source = isset( $_REQUEST['source'] ) ? $_REQUEST['source'] : '';
+			$selected_source = isset( $_REQUEST['source'] ) ? esc_attr( $_REQUEST['source'] ) : '';
 			?>
 				<label for="filter-by-source" class="screen-reader-text"><?php _e( 'Filter by source', 'wp-fusion' ); ?></label>
 				<select name="source" id="filter-by-source">
@@ -308,7 +308,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		if ( ! empty( $users ) ) {
 
-			$selected_user = isset( $_REQUEST['user'] ) ? $_REQUEST['user'] : '';
+			$selected_user = isset( $_REQUEST['user'] ) ? intval( $_REQUEST['user'] ) : '';
 			$users_list = array();
 
 			foreach ( $users as $u ) {
@@ -418,7 +418,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		$valid_orders = array( 'level', 'source', 'timestamp', 'user' );
 		if ( ! empty( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], $valid_orders ) ) {
 			//$by = wc_clean( $_REQUEST['orderby'] );
-			$by = $_REQUEST['orderby'];
+			$by = esc_attr( $_REQUEST['orderby'] );
 		} else {
 			$by = 'timestamp';
 		}
@@ -452,13 +452,13 @@ class WPF_Log_Table_List extends WP_List_Table {
 		if ( ! empty( $_REQUEST['source'] ) ) {
 			$where_conditions[] = 'source = %s';
 			//$where_values[]     = wc_clean( $_REQUEST['source'] );
-			$where_values[]     = $_REQUEST['source'];
+			$where_values[]     = esc_attr( $_REQUEST['source'] );
 		}
 
 		if ( ! empty( $_REQUEST['user'] ) ) {
 			$where_conditions[] = 'user = %s';
 			//$where_values[]     = wc_clean( $_REQUEST['user'] );
-			$where_values[]     = $_REQUEST['user'];
+			$where_values[]     = esc_attr( $_REQUEST['user'] );
 		}
 
 		if ( ! empty( $where_conditions ) ) {

@@ -154,7 +154,7 @@ class WPF_ConvertFox_Admin {
 
 	public function test_connection() {
 
-		$api_key = $_POST['convertfox_key'];
+		$api_key = sanitize_text_field( $_POST['convertfox_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 

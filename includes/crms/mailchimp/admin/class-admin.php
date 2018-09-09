@@ -189,8 +189,8 @@ class WPF_MailChimp_Admin {
 
 	public function test_connection() {
 
-		$data_server 	= $_POST['mailchimp_dc'];
-		$api_key 		= $_POST['mailchimp_key'];
+		$data_server 	= sanitize_text_field( $_POST['mailchimp_dc'] );
+		$api_key 		= sanitize_text_field( $_POST['mailchimp_key'] );
 
 		$connection = $this->crm->connect( $data_server, $api_key, true );
 

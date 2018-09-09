@@ -58,8 +58,34 @@ class WPF_Salesforce {
 
 	public function init() {
 
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 10, 3 );
+
+	}
+
+	/**
+	 * Formats POST data received from HTTP Posts into standard format
+	 *
+	 * @access public
+	 * @return array
+	 */
+
+	public function format_post_data( $post_data ) {
+
+		if( isset( $post_data['contact_id'] ) ) {
+			return $post_data;
+		}
+
+		$payload = simplexml_load_string( file_get_contents( 'php://input' ) );
+
+		$data = (string) $xml->children('http://schemas.xmlsoap.org/soap/envelope/')->Body->children('http://soap.sforce.com/2005/09/outbound')->notifications->Notification->sObject->children('urn:sobject.enterprise.soap.sforce.com')->Id;
+
+		if( ! empty( $data ) ) {
+			$post_data['contact_id'] = $data;
+		}
+
+		return $post_data;
 
 	}
 

@@ -184,9 +184,9 @@ class WPF_Maropost_Admin {
 
 	public function test_connection() {
 
-		$account_id = $_POST['account_id'];
-		$api_key 	= $_POST['maropost_key'];
-		$mp_list    = $_POST['mp_list'];
+		$account_id = sanitize_text_field( $_POST['account_id'] );
+		$api_key 	= sanitize_text_field( $_POST['maropost_key'] );
+		$mp_list    = sanitize_text_field( $_POST['mp_list'] );
 
 
 		$connection = $this->crm->connect( $account_id, $api_key, true );
@@ -198,11 +198,12 @@ class WPF_Maropost_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			$options['account_id']                	= $account_id;
-			$options['mp_list']               		= $mp_list;
-			$options['maropost_key']                = $api_key;
+			$options['account_id']            = $account_id;
+			$options['mp_list']               = $mp_list;
+			$options['maropost_key']          = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
+			
 			wp_fusion()->settings->set_all( $options );
 
 			wp_send_json_success();

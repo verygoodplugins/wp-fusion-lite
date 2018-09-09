@@ -153,8 +153,7 @@ class WPF_SendinBlue_Admin {
 
 	public function test_connection() {
 
-		// $api_url = $_POST['op_url'];
-		$api_key = $_POST['sendinblue_key'];
+		$api_key = sanitize_text_field( $_POST['sendinblue_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 
@@ -165,8 +164,7 @@ class WPF_SendinBlue_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			// $options['op_url']                = $api_url;
-			$options['sendinblue_key']                = $api_key;
+			$options['sendinblue_key']        = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 			wp_fusion()->settings->set_all( $options );

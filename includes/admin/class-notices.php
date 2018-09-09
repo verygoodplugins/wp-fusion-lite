@@ -46,7 +46,7 @@ class WPF_Admin_Notices {
 	public function dismiss_notice() {
 
 		if( isset( $_POST['notice'] ) ) {
-			update_option( 'noticed_dismissed_' . $_POST['notice'], true );
+			update_option( 'noticed_dismissed_' . sanitize_key($_POST['notice']), true );
 		}
 
 		die();

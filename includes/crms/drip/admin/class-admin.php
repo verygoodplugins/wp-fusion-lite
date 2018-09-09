@@ -189,8 +189,8 @@ class WPF_Drip_Admin {
 
 	public function test_connection() {
 
-		$api_token  = $_POST['drip_token'];
-		$account_id = $_POST['drip_account'];
+		$api_token  = sanitize_text_field( $_POST['drip_token'] );
+		$account_id = intval( $_POST['drip_account'] );
 
 		$connection = $this->crm->connect( $api_token, $account_id, true );
 

@@ -4,7 +4,7 @@
 Plugin Name: WP Fusion Lite
 Description: WP Fusion connects your website to your CRM or marketing automation system
 Plugin URI: https://wpfusion.com/
-Version: 3.17
+Version: 3.17.1
 Author: Very Good Plugins
 Author URI: http://verygoodplugins.com/
 Text Domain: wp-fusion
@@ -30,7 +30,7 @@ Text Domain: wp-fusion
  *
  */
 
-define( 'WP_FUSION_VERSION', '3.17' );
+define( 'WP_FUSION_VERSION', '3.17.1' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {

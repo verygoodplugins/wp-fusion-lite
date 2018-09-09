@@ -155,8 +155,7 @@ class WPF_Tubular_Admin {
 
 	public function test_connection() {
 
-		// $api_url = $_POST['op_url'];
-		$api_key = $_POST['tubular_key'];
+		$api_key = sanitize_text_field( $_POST['tubular_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
 

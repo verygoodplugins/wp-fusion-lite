@@ -185,7 +185,6 @@ class WPF_Vtiger {
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if( isset( $body->error ) ) {
-				error_log(print_r($body, true));
 				$response = new WP_Error( 'error', $body->error->message );
 			}
 
