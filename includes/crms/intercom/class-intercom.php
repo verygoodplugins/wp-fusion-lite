@@ -53,6 +53,7 @@ class WPF_Intercom {
 		//add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'set_country_names' ), 10, 2 );
 
 	}
 
@@ -98,6 +99,28 @@ class WPF_Intercom {
 		}
 
 		return $response;
+
+	}
+
+
+	/**
+	 * Use full country names instead of abbreviations with WooCommerce
+	 *
+	 * @access public
+	 * @return array Customer data
+	 */
+
+	public function set_country_names( $customer_data, $order ) {
+
+		if( isset( $customer_data['billing_country'] ) ) {
+			$customer_data['billing_country'] = WC()->countries->countries[ $customer_data['billing_country'] ];
+		}
+
+		if( isset( $customer_data['shipping_country'] ) ) {
+			$customer_data['shipping_country'] = WC()->countries->countries[ $customer_data['shipping_country'] ];
+		}
+
+		return $customer_data;
 
 	}
 
@@ -237,6 +260,25 @@ class WPF_Intercom {
 			'phone'		=> 'Phone',
 			'name'		=> 'Name'
 		);
+
+		$request  = 'https://api.intercom.io/data_attributes/customer';
+		$response = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		foreach( $response->data_attributes as $field ) {
+
+			if( $field->api_writable == true ) {
+				$crm_fields[ $field->name ] = $field->label;
+			}
+
+		}
+
+		asort($crm_fields);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -462,6 +504,8 @@ class WPF_Intercom {
 			unset( $data['name'] );
 		}
 
+		error_log(print_r($data, true));
+
 		// All other custom fields
 		$body['custom_attributes'] = $data;
 
@@ -470,6 +514,8 @@ class WPF_Intercom {
 		$params['body'] 	= json_encode( $body );
 
 		$response = wp_remote_post( $url, $params );
+
+		error_log(print_r($response, true));
 
 		if( is_wp_error( $response ) ) {
 			return $response;

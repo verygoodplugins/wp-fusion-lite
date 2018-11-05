@@ -50,7 +50,7 @@ jQuery(document).ready(function($){
 			};
 
 			var args = {
-				'tag'		: $( 'select#import_users option:selected' ).val(),
+				'tag'		: $( 'select#wpf_options-import_users option:selected' ).val(),
 				'role'		: $('#import_role').val(),
 				'notify'	: $('#email_notifications').is(':checked')
 			}

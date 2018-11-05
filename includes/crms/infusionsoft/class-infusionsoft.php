@@ -560,7 +560,6 @@ class WPF_Infusionsoft_iSDK {
 			return false;
 		}
 
-
 		$result = $this->app->updateCon( $contact_id, $data );
 
 		if ( is_wp_error( $result ) ) {

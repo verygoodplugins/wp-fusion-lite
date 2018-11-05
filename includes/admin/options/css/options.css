@@ -741,6 +741,10 @@ a {
 }
 
 
+.label-success {
+    background-color: #46b450;
+}
+
 .label-default {
     background-color: #999;
 }

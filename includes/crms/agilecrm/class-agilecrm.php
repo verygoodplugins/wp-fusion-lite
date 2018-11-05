@@ -57,9 +57,11 @@ class WPF_AgileCRM {
 	public function init() {
 
 		add_filter( 'wpf_pre_send_contact_data', array( $this, 'format_contact_api_payload' ) );
-		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 
 	}
 
@@ -81,7 +83,14 @@ class WPF_AgileCRM {
 			$user = get_user_by( 'email', $post_data['email'] );
 
 			if ( $user != false ) {
+
 				$post_data['contact_id'] = get_user_meta( $user->ID, 'agilecrm_contact_id', true );
+
+			} else {
+
+				$contact_id = $this->get_contact_id( $post_data['email'] );
+				$post_data['contact_id'] = $contact_id;
+
 			}
 
 		} else {
@@ -95,6 +104,19 @@ class WPF_AgileCRM {
 		}
 
 		return $post_data;
+
+	}
+
+	/**
+	 * Sends a JSON success after Agile API actions so they show as success in the app
+	 *
+	 * @access public
+	 * @return array
+	 */
+
+	public function api_success( $user_id, $method ) {
+
+		wp_send_json_success();
 
 	}
 

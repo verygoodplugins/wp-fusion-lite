@@ -1,4 +1,3 @@
-
 #wpf-pro {
 	position:absolute;
 	right:30px;
@@ -281,6 +280,10 @@ th.sync {
 #contact-fields td.wp_field_label label {
 	position: relative;
 	top: -2px;
+}
+
+#contact-fields td.wp_field_type input[type="text"] {
+	width: auto;
 }
 
 #contact-fields td .checkbox {

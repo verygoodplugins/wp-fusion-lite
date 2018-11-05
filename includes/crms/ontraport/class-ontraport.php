@@ -486,6 +486,7 @@ class WPF_Ontraport {
 		// Referral data
 		if( isset( $_COOKIE['aff_'] ) ) {
 			$data['freferrer'] = $_COOKIE['aff_'];
+			$data['lreferrer'] = $_COOKIE['aff_'];
 		}
 
 		$urlp              = "https://api.ontraport.com/1/objects";

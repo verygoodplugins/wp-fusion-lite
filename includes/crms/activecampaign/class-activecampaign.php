@@ -93,6 +93,10 @@ class WPF_ActiveCampaign {
 
 			return str_replace(',', '||', $value);
 
+		} elseif( $field_type == 'checkboxes' && empty( $value ) ) {
+
+			$value = null;
+
 		} else {
 
 			return $value;

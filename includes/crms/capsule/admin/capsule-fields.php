@@ -39,7 +39,7 @@ $capsule_fields[] = array(
 
 $capsule_fields['billing_address_1'] = array(
 	'crm_label' => 'Street Address (Postal)',
-	'crm_field' => 'addresses+Postal+street'
+	'crm_field' => 'address+Postal+street'
 );
 
 $capsule_fields['billing_city'] = array(
@@ -58,11 +58,11 @@ $capsule_fields['billing_state'] = array(
 );
 
 $capsule_fields['billing_street'] = array(
-	'crm_label' => 'Street (Postal)',
+	'crm_label' => 'Street Address (Postal)',
 	'crm_field' => 'address+Postal+street'
 );
 
-$capsule_fields['billing_zip'] = array(
+$capsule_fields['billing_postcode'] = array(
 	'crm_label' => 'Zip (Postal)',
 	'crm_field' => 'address+Postal+zip'
 );
@@ -89,12 +89,12 @@ $capsule_fields['shipping_state'] = array(
 );
 
 $capsule_fields['shipping_street'] = array(
-	'crm_label' => 'Street (Postal)',
+	'crm_label' => 'Street (Home)',
 	'crm_field' => 'address+Home+street'
 );
 
-$capsule_fields['shipping_zip'] = array(
-	'crm_label' => 'City (Zip)',
+$capsule_fields['shipping_postcode'] = array(
+	'crm_label' => 'Zip (Home)',
 	'crm_field' => 'address+Home+zip'
 );
 

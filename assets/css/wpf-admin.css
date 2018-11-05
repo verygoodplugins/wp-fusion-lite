@@ -99,6 +99,10 @@ body.term-php .wpf-page-redirect-select label {
 	height: 34px;
 }
 
+#wpf-meta hr {
+	margin-top: 20px;
+}
+
 #wpf-meta input[type=text][disabled] {
 	background-color: #eee;
 }
@@ -343,6 +347,12 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	margin-top: 4px;
 	margin-left: 0px;
 	line-height: 1.5;
+}
+
+/* WC addons */
+
+#post-body #postbox-container-2 .woocommerce_product_addon .select4-container {
+	min-width: 250px;
 }
 
 /* Fix for X theme messing up woo descriptions */

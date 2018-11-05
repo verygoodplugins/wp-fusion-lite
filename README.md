@@ -51,12 +51,12 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Maropost
 * Mautic
 * Ontraport
+* Platform.ly
 * Salesflare
 * Salesforce
 * SendinBlue
 * Tubular
 * UserEngage
-* Vtiger
 * Zoho
 
 ## Installation ##

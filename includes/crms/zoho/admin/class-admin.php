@@ -46,6 +46,7 @@ class WPF_Zoho_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -139,6 +140,32 @@ class WPF_Zoho_Admin {
 		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
+
+		return $settings;
+
+	}
+
+	/**
+	 * Adds Zoho specific setting fields
+	 *
+	 * @access  public
+	 * @since   1.0
+	 */
+
+	public function register_settings( $settings, $options ) {
+
+		$new_settings = array();
+
+		$new_settings['zoho_layout'] = array(
+			'title'       => __( 'Contact Layout', 'wp-fusion' ),
+			'desc'        => __( 'Select a layout to be used for new contacts.', 'wp-fusion' ),
+			'type'        => 'select',
+			'placeholder' => 'Select layout',
+			'section'     => 'main',
+			'choices'     => $options['zoho_layouts']
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'create_users', $settings, $new_settings );
 
 		return $settings;
 

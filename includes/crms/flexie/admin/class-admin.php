@@ -75,7 +75,7 @@ class WPF_Flexie_Admin {
 
 		$new_settings['flexie_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the account settings sidebar under API settings in your Flexie account' ),
+			'desc'        => __( 'You can find your API key in the account settings sidebar under API settings in your Flexie account.' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

@@ -77,7 +77,9 @@ class WPF_Settings {
 		// Plugin action links and messages
 		add_filter( 'plugin_action_links_' . WPF_PLUGIN_PATH, array( $this, 'add_action_links' ) );
 
-		if( empty( wp_fusion()->get_integrations() ) ) {
+		$integrations = wp_fusion()->get_integrations();
+
+		if( empty( $integrations ) ) {
 
 			add_action( 'show_field_users_header_begin', array( $this, 'upgrade_notice' ), 10, 2 );
 			
@@ -680,6 +682,14 @@ class WPF_Settings {
 			'section' => 'main'
 		);
 
+		$settings['login_sync'] = array(
+			'title'   => __( 'Login Sync', 'wp-fusion' ),
+			'desc'    => __( 'Load the user\'s latest tags from your CRM on login.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
 		$settings['profile_update_tags'] = array(
 			'title'   => __( 'Update Tag', 'wp-fusion' ),
 			'desc'    => __( 'Apply this tag when a contact record has been updated (useful for triggering data to be sent to other WP Fusion installs).', 'wp-fusion' ),
@@ -836,7 +846,6 @@ class WPF_Settings {
 			'type'    => 'hidden',
 			'section' => 'setup'
 		);
-
 
 		/*
 		// ADVANCED
@@ -1032,39 +1041,6 @@ class WPF_Settings {
 
 	}
 
-	/**
-	 * Opens EDD license field
-	 *
-	 * @access public
-	 * @return mixed
-	 */
-
-	public function show_field_edd_license_begin( $id, $field ) {
-		echo '<tr valign="top">';
-		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label></th>';
-		echo '<td>';
-	}
-
-
-	/**
-	 * Displays EDD license field
-	 *
-	 * @access public
-	 * @return mixed
-	 */
-
-	public function show_field_edd_license( $id, $field ) {
-
-		echo '<input id="' . $id . '" class="form-control" type="text" name="wpf_options[' . $id . ']" placeholder="' . $field['std'] . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
-
-		if ( $field['license_status'] == "invalid" ) {
-			echo '<a id="edd-license" data-action="edd_activate" class="btn btn-default">Activate License</a>';
-		} else {
-			echo '<a id="edd-license" data-action="edd_deactivate" class="btn btn-default">Deactivate License</a>';
-		}
-		echo '<span class="description">Enter your license key for automatic updates and support.</span>';
-		echo '<div id="connection-output-edd"></div>';
-	}
 
 	/**
 	 * Displays import users field
@@ -1376,9 +1352,14 @@ class WPF_Settings {
 
 		$options = array(
 			'users_sync' => array(
-				'label'     => 'Resync tags',
+				'label'     => 'Resync contact IDs and tags',
 				'title'     => 'Users (contact IDs and tags)',
 				'tooltip'   => sprintf( __( 'All WordPress users will have their contact IDs checked / updated based on email address and tags will be updated based on their %s contact record', 'wp-fusion' ), wp_fusion()->crm->name )
+			),
+			'users_tags_sync' => array(
+				'label'     => 'Resync tags',
+				'title'     => 'Users (tags)',
+				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID', 'wp-fusion' ) )
 			),
 			'users_register' => array(
 				'label'     => 'Export users',
@@ -1426,6 +1407,7 @@ class WPF_Settings {
 			if ( ! isset( $data['active'] ) ) {
 				$input[ $field ]['active'] = 0;
 			}
+
 		}
 
 		if( $input['user_email']['active'] == false || empty( $input['user_email']['crm_field'] ) ) {

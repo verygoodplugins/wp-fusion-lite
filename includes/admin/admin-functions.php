@@ -46,7 +46,7 @@ function wpf_render_tag_multiselect( $args ) {
 
 		$tag_categories = array_unique( $tag_categories );
 
-		echo '<select ' . ( $args["disabled"] == true ? ' disabled' : '' ) . ' data-placeholder="' . $args["placeholder"] . '" multiple="multiple" ' . ( $args["limit"] != null ? ' data-limit="' . $args["limit"] . '"' : '' ) . ' id="' . $args["field_id"] . ( ! is_null( $args["field_sub_id"] ) ? '-' . $args["field_sub_id"] : '' ) . '" class="select4-wpf-tags ' . $args['class'] . '" name="' . $args["meta_name"] . ( ! is_null( $args["field_id"] ) ? '[' . $args["field_id"] . ']' : '' ) . ( ! is_null( $args["field_sub_id"] ) ? '[' . $args["field_sub_id"] . ']' : '' ) . '[]"' . ( ! empty( $args["no_dupes"] ) ? ' data-no-dupes="' . implode(',', $args["no_dupes"]) . '"' : '' ) . '>';
+		echo '<select ' . ( $args["disabled"] == true ? ' disabled' : '' ) . ' data-placeholder="' . $args["placeholder"] . '" multiple="multiple" ' . ( $args["limit"] != null ? ' data-limit="' . $args["limit"] . '"' : '' ) . ' id="' . $args['meta_name'] . '-' . $args["field_id"] . ( ! is_null( $args["field_sub_id"] ) ? '-' . $args["field_sub_id"] : '' ) . '" class="select4-wpf-tags ' . $args['class'] . '" name="' . $args["meta_name"] . ( ! is_null( $args["field_id"] ) ? '[' . $args["field_id"] . ']' : '' ) . ( ! is_null( $args["field_sub_id"] ) ? '[' . $args["field_sub_id"] . ']' : '' ) . '[]"' . ( ! empty( $args["no_dupes"] ) ? ' data-no-dupes="' . implode(',', $args["no_dupes"]) . '"' : '' ) . '>';
 
 			if( ! empty( $args['prepend'] ) )  {
 
@@ -77,7 +77,7 @@ function wpf_render_tag_multiselect( $args ) {
 		// Handling for single level select (no categories)
 
 		echo '<select ' . ( $args["disabled"] == true ? ' disabled' : '' );
-		echo ' data-placeholder="' . $args["placeholder"] . '" multiple="multiple" id="' . $args["field_id"] . ( ! is_null( $args["field_sub_id"] ) ? '-' . $args["field_sub_id"] : '' ) . '" data-limit="' . $args["limit"] . '" class="select4-wpf-tags ' . $args['class'] . '" name="' . $args["meta_name"] . ( ! is_null( $args["field_id"] ) ? '[' . $args["field_id"] . ']' : '' ) . ( ! is_null( $args["field_sub_id"] ) ? '[' . $args["field_sub_id"] . ']' : '' ) . '[]"' . ( ! empty( $args["no_dupes"] ) ? ' data-no-dupes="' . implode(',', $args["no_dupes"]) . '"' : '' ) . '>';
+		echo ' data-placeholder="' . $args["placeholder"] . '" multiple="multiple" id="' . $args['meta_name'] . '-' . $args["field_id"] . ( ! is_null( $args["field_sub_id"] ) ? '-' . $args["field_sub_id"] : '' ) . '" data-limit="' . $args["limit"] . '" class="select4-wpf-tags ' . $args['class'] . '" name="' . $args["meta_name"] . ( ! is_null( $args["field_id"] ) ? '[' . $args["field_id"] . ']' : '' ) . ( ! is_null( $args["field_sub_id"] ) ? '[' . $args["field_sub_id"] . ']' : '' ) . '[]"' . ( ! empty( $args["no_dupes"] ) ? ' data-no-dupes="' . implode(',', $args["no_dupes"]) . '"' : '' ) . '>';
 
 			if( ! empty( $args['prepend'] ) )  {
 				

@@ -51,8 +51,19 @@ class WPF_CRM_Queue {
 
 	public function __call( $method, $args ) {
 
+		$args = apply_filters( 'wpf_api_' . $method . '_args', $args );
+
 		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || defined( 'WPF_STAGING_MODE' ) ) {
-			return new WP_Error('notice', '<strong>Staging Mode Enabled</strong>' );
+			
+			wp_fusion()->logger->handle( 'notice', 0, 'Staging mode enabled. Method ' . $method . ':', array( 'source' => $this->crm->slug, 'args' => $args ) );
+
+			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
+			$staging_crm = new WPF_Staging;
+
+			$result = call_user_func_array( array( $staging_crm, $method ), $args );
+
+			return $result;
+
 		}
 
 		// Queue sending data

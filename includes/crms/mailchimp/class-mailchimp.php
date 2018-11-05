@@ -328,7 +328,7 @@ class WPF_MailChimp {
 
 		$available_tags = array();
 
-		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/';
+		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=200';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {

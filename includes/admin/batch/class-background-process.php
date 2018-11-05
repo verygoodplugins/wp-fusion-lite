@@ -89,6 +89,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return $this
 		 */
 		public function push_to_queue( $data ) {
+
 			$this->data[] = $data;
 
 			return $this;
@@ -283,6 +284,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return stdClass Return the first batch from the queue
 		 */
 		protected function get_batch() {
+
 			global $wpdb;
 
 			$table        = $wpdb->options;
@@ -312,6 +314,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			$batch->data = maybe_unserialize( $query->$value_column );
 
 			return $batch;
+
 		}
 
 		/**
@@ -347,9 +350,13 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 				// Update or delete current batch.
 				if ( ! empty( $batch->data ) && $this->is_process_running() ) {
+
 					$this->update( $batch->key, $batch->data );
+
 				} else {
+
 					$this->delete( $batch->key );
+
 				}
 
 			} while( ! $this->time_exceeded() && ! $this->memory_exceeded() && ! $this->is_queue_empty() && ! $this->is_cancelled() );

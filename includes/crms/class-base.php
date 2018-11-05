@@ -94,7 +94,9 @@ class WPF_CRM_Base {
 
 		if( wp_fusion()->settings->get('connection_configured') == true && ! empty( $slug ) ) {
 
-			require_once WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php';
+			if( file_exists( WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php' ) ) {
+				require_once WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php';
+			}
 
 		} else {
 

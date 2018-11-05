@@ -37,7 +37,7 @@ class WPF_Kartra {
 
 		$this->slug     = 'kartra';
 		$this->name     = 'Kartra';
-		$this->supports = array('add_tags');
+		$this->supports = array();
 
 		// WP Fusion app ID
 		$this->app_id 	= 'EoPIrcjdRhQl';
@@ -596,7 +596,16 @@ class WPF_Kartra {
 
 		$response = wp_remote_post( $this->api_url, $params );
 
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		// Save to local buffer
+		$kartra_email_buffer = get_option( 'wpf_kartra_email_buffer', array() );
+		$kartra_email_buffer[ $body->actions[0]->create_lead->lead_details->id ] = $data['email'];
+		update_option( 'wpf_kartra_email_buffer', $kartra_email_buffer );
 
 		return $body->actions[0]->create_lead->lead_details->id;
 

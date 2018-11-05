@@ -4,7 +4,7 @@
 Plugin Name: WP Fusion Lite
 Description: WP Fusion connects your website to your CRM or marketing automation system
 Plugin URI: https://wpfusion.com/
-Version: 3.17.1
+Version: 3.18
 Author: Very Good Plugins
 Author URI: http://verygoodplugins.com/
 Text Domain: wp-fusion
@@ -30,7 +30,7 @@ Text Domain: wp-fusion
  *
  */
 
-define( 'WP_FUSION_VERSION', '3.17.1' );
+define( 'WP_FUSION_VERSION', '3.18' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -190,8 +190,9 @@ final class WP_Fusion {
 				self::$instance->ajax   	= new WPF_AJAX;
 				self::$instance->batch  	= new WPF_Batch;
 
-				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ) );
 				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
+				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes' ) );
+				
 			}
 
 		}
@@ -322,7 +323,9 @@ final class WP_Fusion {
 			'mailchimp'			=> 'WPF_MailChimp',
 			'sendinblue'		=> 'WPF_SendinBlue',
 			'maropost'			=> 'WPF_Maropost',
-			'hubspot'			=> 'WPF_HubSpot'
+			'hubspot'			=> 'WPF_HubSpot',
+			'platformly'		=> 'WPF_Platformly',
+			'staging'			=> 'WPF_Staging',
 		) );
 
 	}
@@ -401,7 +404,7 @@ final class WP_Fusion {
 		// Integrations autoloader
 		foreach ( wp_fusion()->get_integrations() as $filename => $dependency_class ) {
 
-			if( class_exists( $dependency_class ) ) {
+			if( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
 					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';

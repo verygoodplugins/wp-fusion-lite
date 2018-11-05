@@ -34,7 +34,7 @@ class WPF_Maropost {
 			new WPF_Maropost_Admin( $this->slug, $this->name, $this );
 		}
 
-		add_filter( 'http_response', array( $this, 'handle_http_response' ), 10, 3 );
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 100, 3 );
 
 	}
 

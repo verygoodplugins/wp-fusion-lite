@@ -149,7 +149,7 @@ class WPF_Kartra_Admin {
 
 
 	/**
-	 * Puts a div around the Infusionsoft configuration section so it can be toggled
+	 * Puts a div around the Kartra configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -163,13 +163,13 @@ class WPF_Kartra_Admin {
 
 	}
 
+
 	/**
-	 * Close out Active Campaign section
+	 * Close out Kartra section
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
-
 
 	public function show_field_kartra_api_password_end( $id, $field ) {
 

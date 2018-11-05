@@ -3,8 +3,7 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, crm, marketing automation, user meta, sync, woocommerce
 Requires at least: 4.0
 Tested up to: 4.9.8
-Stable tag: 3.17.1
-WC tested up to: 3.3.5
+Stable tag: 3.18
 
 WP Fusion connects your website to your CRM or marketing automation system.
 
@@ -46,12 +45,12 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 * Maropost
 * Mautic
 * Ontraport
+* Platform.ly
 * Salesflare
 * Salesforce
 * SendinBlue
 * Tubular
 * UserEngage
-* Vtiger
 * Zoho
 
 == Screenshots ==
@@ -70,4 +69,22 @@ See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
 
-See the [changelog](https://wpfusion.com/documentation/faq/changelog/?utm_campaign=free-plugin&utm_source=wp-org).
+= 3.18 - 11/5/2018 =
+* Added Platform.ly CRM support
+* Added support for Salesforce topics
+* More flexible staging mode
+* Added logged in / logged out shortcode
+* Added option to sync tags on user login
+* Capsule bugfixes
+* Added option to choose contact layout for new contacts with Zoho
+* Added custom fields support for Intercom
+* Fix for "restrict access" checkbox not unlocking inputs correctly
+* Fix for import button not working in admin
+
+= 3.17.1 - 9/9/2018 =
+* Additional sanitizing of user input data
+
+= 3.17 - 9/8/2018 =
+* Initial release of Lite version
+
+For previous release notes see the [changelog](https://wpfusion.com/documentation/faq/changelog/?utm_campaign=free-plugin&utm_source=wp-org).

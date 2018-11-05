@@ -259,6 +259,7 @@ class WPF_Zoho {
 
 		$this->sync_tags();
 		$this->sync_crm_fields();
+		$this->sync_layouts();
 
 		do_action( 'wpf_sync' );
 
@@ -354,6 +355,44 @@ class WPF_Zoho {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
+
+	}
+
+
+	/**
+	 * Syncs available contact layouts
+	 *
+	 * @access public
+	 * @return array Layouts
+	 */
+
+	public function sync_layouts() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request    = $this->api_domain . '/crm/v2/settings/layouts?module=' . $this->object_type;
+		$response   = wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$available_layouts = array();
+
+		foreach( $body_json->layouts as $layout ) {
+
+			$available_layouts[ $layout->id ] = $layout->name;
+
+		}
+
+		wp_fusion()->settings->set( 'zoho_layouts', $available_layouts );
+
+		return $available_layouts;
+
 	}
 
 
@@ -487,6 +526,12 @@ class WPF_Zoho {
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
+		}
+
+		$layout = wp_fusion()->settings->get( 'zoho_layout', false );
+
+		if( ! empty( $layout ) ) {
+			$data['Layout'] = $layout;
 		}
 
 		$params 		= $this->params;

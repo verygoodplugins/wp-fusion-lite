@@ -105,3 +105,33 @@ $wp_fields['utm_medium'] = array(
 	'label' => 'Google Analytics Medium',
 	'group' => 'leadsource'
 );
+
+$wp_fields['utm_term'] = array(
+	'type'  => 'text',
+	'label' => 'Google Analytics Term',
+	'group' => 'leadsource'
+);
+
+$wp_fields['utm_content'] = array(
+	'type'  => 'text',
+	'label' => 'Google Analytics Content',
+	'group' => 'leadsource'
+);
+
+$wp_fields['gclid'] = array(
+	'type'  => 'text',
+	'label' => 'Google Click Identifier',
+	'group' => 'leadsource'
+);
+
+$wp_fields['original_ref'] = array(
+	'type'  => 'text',
+	'label' => 'Original Referrer',
+	'group' => 'leadsource'
+);
+
+$wp_fields['landing_page'] = array(
+	'type'  => 'text',
+	'label' => 'Landing Page',
+	'group' => 'leadsource'
+);

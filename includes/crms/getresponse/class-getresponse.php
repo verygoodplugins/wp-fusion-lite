@@ -398,8 +398,6 @@ class WPF_GetResponse {
 
 	public function get_tags( $contact_id ) {
 
-		
-
 		if ( ! $this->params ) {
 			$this->get_params();
 		}

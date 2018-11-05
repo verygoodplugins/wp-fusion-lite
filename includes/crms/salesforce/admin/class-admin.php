@@ -92,13 +92,15 @@ class WPF_Salesforce_Admin {
 
 			$new_settings['sf_tag_type'] = array(
 				'title'   => __( 'Salesforce Tag Type', 'wp-fusion' ),
-				'std'     => 'Personal',
+				'std'     => 'Topics',
 				'type'    => 'radio',
 				'section' => 'setup',
 				'choices' => array(
-					'Personal'	=> 'Personal',
-					'Public'	=> 'Public'
-					)
+					'Topics'	=> 'Topics',
+					'Personal'	=> 'Personal tags',
+					'Public'	=> 'Public tags'
+					),
+				'desc'	  => __( 'After changing the tag type, save the settings page and click Resynchronize above.', 'wp-fusion' ),
 			);
 
 		}

@@ -251,7 +251,7 @@ class WPF_Admin_Interfaces {
                 <tr class="form-field">
                     <th scope="row" valign="top"><label for="lock_content"><?php _e( 'Restrict access to archives', 'wp-fusion' ); ?></label></th>
                     <td>
-                        <input class="checkbox" type="checkbox" data-unlock="lock_posts allow_tags wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
+                        <input class="checkbox" type="checkbox" data-unlock="lock_posts wpf-settings-allow_tags wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
                     </td>
                 </tr>
 
@@ -434,7 +434,7 @@ class WPF_Admin_Interfaces {
 			// if it has a value, doesn't update if empty on bulk
 			if ( ! empty( $_POST['wpf_settings'] ) ) {
 
-				$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
+				$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf_settings'] );
 
 				// update for each post ID
 				foreach ( $post_ids as $post_id ) {
@@ -481,7 +481,7 @@ class WPF_Admin_Interfaces {
 
 		$post_type_object = get_post_type_object( $post->post_type );
 
-		echo '<span class="wpf-restrict-content-checkbox"><input class="checkbox" type="checkbox" data-unlock="allow_tags wpf-redirect wpf-redirect-url" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <strong>Restrict access to this ' . strtolower( $post_type_object->labels->singular_name ) . '</strong></p>';
+		echo '<input class="checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-redirect wpf-redirect-url" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <strong>Restrict access to this ' . strtolower( $post_type_object->labels->singular_name ) . '</strong></p>';
 
 	}
 
@@ -649,7 +649,7 @@ class WPF_Admin_Interfaces {
 
 
 	/**
-	 * Shows apply settings to children textbox
+	 * Saves settings to children if "apply to children" is checked
 	 *
 	 * @access public
 	 * @return void

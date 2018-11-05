@@ -39,6 +39,10 @@ class WPF_Batch {
 		add_filter( 'wpf_batch_users_sync_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_sync', array( $this, 'users_sync_step' ) );
 
+		// Sync users (just tags)
+		add_filter( 'wpf_batch_users_tags_sync_init', array( $this, 'users_tags_sync_init' ) );
+		add_action( 'wpf_batch_users_tags_sync', array( $this, 'users_tags_sync_step' ) );
+
 		// Import contacts
 		add_filter( 'wpf_batch_import_users_init', array( $this, 'import_users_init' ) );
 		add_action( 'wpf_batch_import_users', array( $this, 'import_users_step' ), 10, 2 );
@@ -130,7 +134,7 @@ class WPF_Batch {
 	 * @return int Count
 	 */
 
-	public function batch_init($hook = false, $args = array()) {
+	public function batch_init( $hook = false, $args = array() ) {
 
 		if( isset( $_POST['hook'] ) ) {
 			$hook = $_POST['hook'];
@@ -278,7 +282,7 @@ class WPF_Batch {
 
 		$users = get_users( $args );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Resync Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Resync Contact IDs and Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
 
 		return $users;
 
@@ -292,6 +296,52 @@ class WPF_Batch {
 	 */
 
 	public function users_sync_step( $user_id ) {
+
+		wp_fusion()->user->get_tags( $user_id, true );
+
+	}
+
+	/**
+	 * Users (just tags) sync batch process init
+	 *
+	 * @since 3.0
+	 * @return array Users
+	 */
+
+	public function users_tags_sync_init() {
+
+		$args = array(
+			'fields'     => 'ID',
+			'meta_query' => array(
+				'relation'   => 'AND',
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'compare' => 'EXISTS'
+				),
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'value'   => false,
+					'compare' => '!='
+				)
+			)
+		);
+
+		$users = get_users( $args );
+
+		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Resync Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+
+		return $users;
+
+	}
+
+	/**
+	 * Users (just tags) sync batch process - single step
+	 *
+	 * @since 3.0
+	 * @return void
+	 */
+
+	public function users_tags_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_tags( $user_id, true );
 

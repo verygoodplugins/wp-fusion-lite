@@ -71,7 +71,7 @@ class WPF_Access_Control {
 
 		// If not logged in
 		if ( ! is_user_logged_in() ) {
-			return false;
+			return apply_filters( 'wpf_user_can_access', false, false, $post_id );
 		}
 
 		// If no tags specified for restriction, but user is logged in, allow access
@@ -618,6 +618,11 @@ class WPF_Access_Control {
 	public function exclude_restricted_posts( $posts, $query ) {
 
 		if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ( $query->is_main_query() && ! $query->is_archive() ) || wp_fusion()->settings->get( 'hide_archives' ) != true ) {
+			return $posts;
+		}
+
+		// Woo variations fixed
+		if( isset( $_REQUEST['action'] ) && $_REQUEST['action'] == 'woocommerce_load_variations' ) {
 			return $posts;
 		}
 

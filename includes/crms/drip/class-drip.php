@@ -531,13 +531,13 @@ class WPF_Drip {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
-			return false;
-		}
-
 		if( isset( $data['email'] ) ) {
 			$provided_email = $data['email'];
 			unset($data['email']);
+		}
+
+		if( empty( $data ) ) {
+			return false;
 		}
 
 		$params = array(
@@ -597,6 +597,10 @@ class WPF_Drip {
 		$user_meta      = array();
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
+
+			if( empty( $field_data['crm_field'] ) ) {
+				continue;
+			}
 
 			if ( $field_data['active'] == true && isset( $result['custom_fields'][ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $result['custom_fields'][ $field_data['crm_field'] ];

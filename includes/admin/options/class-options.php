@@ -1079,7 +1079,7 @@ class WPF_Options {
 	 *
 	 */
 	private function show_field_paragraph($id, $field) {
-		if($field['title']) {
+		if( isset( $field['title'] ) )  {
 			echo '<h3 class="title">'.$field['title'].'</h3>';
 		}
 		echo '<p>'.$field['desc'].'</p>';

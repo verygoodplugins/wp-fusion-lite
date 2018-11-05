@@ -13,6 +13,9 @@ class WPF_Shortcodes {
 		add_shortcode( 'wpf_update_tags', array( $this, 'shortcode_update_tags' ) );
 		add_shortcode( 'wpf_update_meta', array( $this, 'shortcode_update_meta' ) );
 
+		add_shortcode( 'wpf_loggedin', array( $this, 'shortcode_loggedin' ) );
+		add_shortcode( 'wpf_loggedout', array( $this, 'shortcode_loggedout' ) );
+
 		if( ! shortcode_exists( 'user_meta' ) ) {
 			add_shortcode( 'user_meta', array( $this, 'shortcode_user_meta' ), 10, 2 );
 		}
@@ -175,7 +178,7 @@ class WPF_Shortcodes {
 
 	public function shortcode_update_tags( $atts ) {
 
-		if ( is_user_logged_in() ) {
+		if ( is_user_logged_in() && ! is_admin() ) {
 			wp_fusion()->user->get_tags( get_current_user_id(), true );
 		}
 
@@ -190,7 +193,7 @@ class WPF_Shortcodes {
 
 	public function shortcode_update_meta( $atts ) {
 
-		if ( is_user_logged_in() ) {
+		if ( is_user_logged_in() && ! is_admin() ) {
 			wp_fusion()->user->pull_user_meta( get_current_user_id() );
 		}
 
@@ -230,6 +233,37 @@ class WPF_Shortcodes {
 			return do_shortcode($content);
 		} else {
 			return $value;
+		}
+
+	}
+
+	/**
+	 * Show content only for logged in users 
+	 *
+	 * @access public
+	 * @return string Content
+	 */
+
+	public function shortcode_loggedin( $atts, $content = null ) {
+
+		if ( ( is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
+			return do_shortcode( $content );
+		}
+
+	}
+
+
+	/**
+	 * Show content only for logged out users 
+	 *
+	 * @access public
+	 * @return string Content
+	 */
+
+	public function shortcode_loggedout( $atts, $content = null ) {
+
+		if ( ( ! is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
+			return do_shortcode( $content );
 		}
 
 	}

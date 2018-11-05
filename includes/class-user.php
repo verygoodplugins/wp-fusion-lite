@@ -17,7 +17,8 @@ class WPF_User {
 		add_action( 'profile_update', array( $this, 'profile_update'), 10, 2);
 		add_action( 'delete_user', array( $this, 'user_delete') );
 		add_action( 'password_reset', array( $this, 'password_reset' ), 10, 2 );
-		add_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3);		
+		add_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3);
+		add_action( 'wp_login', array( $this, 'login' ), 10, 2 );
 
 		add_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		add_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
@@ -26,6 +27,7 @@ class WPF_User {
 
 		// Lead source tracking
 		add_action( 'init', array( $this, 'set_lead_source' ) );
+		add_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source' ) );
 
 		// Profile update tags
 		add_action( 'wpf_pushed_user_meta', array( $this, 'pushed_user_meta_tags' ), 10, 2 );
@@ -53,40 +55,90 @@ class WPF_User {
 
 	function set_lead_source() {
 
-		if ( empty( $_GET['leadsource'] ) && empty( $_GET['utm_campaign'] ) && empty( $_GET['utm_medium'] ) && empty( $_GET['utm_source'] ) )
-			return;
+		$leadsource_vars = array(
+			'leadsource',
+			'utm_campaign',
+			'utm_medium',
+			'utm_source',
+			'utm_term',
+			'utm_content',
+			'gclid',
+		);
 
-		$enabled = false;
+		$alt_vars = array(
+			'original_ref',
+			'landing_page'
+		);
+
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
-		if( isset($contact_fields['leadsource']) && $contact_fields['leadsource']['active'] == true ) {
-			$enabled = true;
-		} elseif( isset($contact_fields['utm_source']) && $contact_fields['utm_source']['active'] == true ) {
-			$enabled = true;
-		} elseif( isset($contact_fields['utm_medium']) && $contact_fields['utm_medium']['active'] == true ) {
-			$enabled = true;
-		} elseif( isset($contact_fields['utm_campaign']) && $contact_fields['utm_campaign']['active'] == true ) {
-			$enabled = true;
+		foreach( $leadsource_vars as $var ) {
+
+			if( isset($_GET[ $var ]) && isset( $contact_fields[ $var ] ) && $contact_fields[ $var ]['active'] == true ) {
+				setcookie( 'wpf_leadsource[' . $var . ']', $_GET[ $var ], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+			}
+
 		}
 
-		if($enabled == false)
-			return;
+		if( ! is_admin() && empty( $_COOKIE['wpf_ref'] ) ) {
 
-		if ( ! empty( $_GET['leadsource'] ) ) {
-			setcookie( 'wpf_leadsource[leadsource]', $_GET['leadsource'], time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+			if( isset( $contact_fields['original_ref'] ) && $contact_fields['original_ref']['active'] == true && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+				setcookie( 'wpf_ref[original_ref]', $_SERVER['HTTP_REFERER'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+			}
+
+			if( isset( $contact_fields['landing_page'] ) && $contact_fields['landing_page']['active'] == true ) {
+				setcookie( 'wpf_ref[landing_page]', $_SERVER['REQUEST_URI'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+			}
+
 		}
 
-		if ( ! empty( $_GET['utm_campaign'] ) ) {
-			setcookie( 'wpf_leadsource[utm_campaign]', $_GET['utm_campaign'], time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+	}
+
+	/**
+	 * Merges lead source variables on contact add
+	 *
+	 * @access  public
+	 * @return  array Args
+	 */
+
+	function merge_lead_source( $args ) {
+
+		if( ! isset( $_COOKIE['wpf_leadsource'] ) && ! isset( $_COOKIE['wpf_ref'] ) ) {
+			return $args;
 		}
 
-		if ( ! empty( $_GET['utm_source'] ) ){
-			setcookie( 'wpf_leadsource[utm_source]', $_GET['utm_source'], time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+
+		// Possibly set lead sources from cookie
+		if( isset($_COOKIE['wpf_leadsource']) && is_array( $_COOKIE['wpf_leadsource'] ) ) {
+
+			foreach( $_COOKIE['wpf_leadsource'] as $key => $value ) {
+
+				if( isset( $contact_fields[$key] ) && $contact_fields[$key]['active'] == true ) {
+
+					$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
+
+				}
+
+			}
+
 		}
 
-		if ( ! empty( $_GET['utm_medium'] ) ) {
-			setcookie( 'wpf_leadsource[utm_medium]', $_GET['utm_medium'], time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+		if( isset($_COOKIE['wpf_ref']) && is_array( $_COOKIE['wpf_ref'] ) ) {
+
+			foreach( $_COOKIE['wpf_ref'] as $key => $value ) {
+
+				if( isset( $contact_fields[$key] ) && $contact_fields[$key]['active'] == true ) {
+
+					$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
+
+				}
+
+			}
+
 		}
+
+		return $args;
 
 	}
 
@@ -149,15 +201,6 @@ class WPF_User {
 		// Get password from Admin >> Add New user screen
 		if ( ! empty( $post_data['pass1'] ) ) {
 			$post_data['user_pass'] = $post_data['pass1'];
-		}
-
-		// Possibly set lead sources
-		if(isset($_COOKIE['wpf_leadsource'])) {
-
-			if(is_array($_COOKIE['wpf_leadsource'])) {
-				$post_data = array_merge( $post_data, $_COOKIE['wpf_leadsource'] );
-			}
-
 		}
 
 		// Allow outside modification of this data
@@ -662,6 +705,27 @@ class WPF_User {
 	}
 
 	/**
+	 * Update tags on login
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function login( $user_login, $user ) {
+
+		if( wp_fusion()->settings->get( 'login_sync' ) == true ) {
+
+			$cid = $this->get_contact_id( $user->ID );
+
+			if( ! empty( $cid ) ) {
+				$this->get_tags( $user->ID, true );
+			}
+
+		}
+
+	}
+
+	/**
 	 * Gets user ID from contact ID
 	 *
 	 * @access public
@@ -740,6 +804,8 @@ class WPF_User {
 	 */
 
 	public function get_tag_id( $tag_name ) {
+
+		$tag_name = trim( $tag_name );
 
 		foreach ( wp_fusion()->settings->get( 'available_tags' ) as $id => $data ) {
 

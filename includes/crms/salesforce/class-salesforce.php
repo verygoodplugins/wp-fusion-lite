@@ -60,7 +60,8 @@ class WPF_Salesforce {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-		add_filter( 'http_response', array( $this, 'handle_http_response' ), 10, 3 );
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 
 	}
 
@@ -77,7 +78,7 @@ class WPF_Salesforce {
 			return $post_data;
 		}
 
-		$payload = simplexml_load_string( file_get_contents( 'php://input' ) );
+		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
 
 		$data = (string) $xml->children('http://schemas.xmlsoap.org/soap/envelope/')->Body->children('http://soap.sforce.com/2005/09/outbound')->notifications->Notification->sObject->children('urn:sobject.enterprise.soap.sforce.com')->Id;
 
@@ -86,6 +87,31 @@ class WPF_Salesforce {
 		}
 
 		return $post_data;
+
+	}
+
+	/**
+	 * Sends a SOAP success after Salesforce API actions so they show as success in the app
+	 *
+	 * @access public
+	 * @return mixed SOAP message
+	 */
+
+	public function api_success( $user_id, $method ) {
+
+		if( ! isset( $_GET['contact_id'] ) ) {
+
+			echo '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">';
+	    	echo '<soap:Body>';
+			echo '<notificationsResponse xmlns:ns2="urn:sobject.enterprise.soap.sforce.com" xmlns="http://soap.sforce.com/2005/09/outbound">';
+			echo '<Ack>true</Ack>';
+	        echo '</notificationsResponse>';
+	    	echo '</soap:Body>';
+			echo '</soap:Envelope>';
+
+			die();
+
+		}
 
 	}
 
@@ -169,7 +195,7 @@ class WPF_Salesforce {
 
 	public function get_params() {
 
-		// Get saved data from D
+		// Get saved data from DB
 		$access_token = wp_fusion()->settings->get( 'sf_access_token' );
 
 		$this->params = array(
@@ -272,28 +298,65 @@ class WPF_Salesforce {
 
 		$available_tags = array();
 
-		$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20TagDefinition' );
+		$tag_type = wp_fusion()->settings->get('sf_tag_type', 'Topics');
 
-		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v20.0/query');
+		if( $tag_type == 'Topics' ) {
 
-		$response = wp_remote_get( $request, $this->params );
+			$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20Topic' );
 
-		if( is_wp_error( $response ) ) {
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
 
-			// For accounts without tags
-			if( strpos( $response->get_error_message(), "'TagDefinition' is not supported" ) !== false ) {
-				return array();
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+
+				// For accounts without topics
+				if( strpos( $response->get_error_message(), "'Topic' is not supported" ) !== false ) {
+					return array();
+				}
+
+				return $response;
 			}
 
-			return $response;
-		}
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$response = json_decode(wp_remote_retrieve_body( $response ));
+			if( ! empty( $response->records ) ) {
 
-		if(!empty($response->records)) {
-			foreach($response->records as $tag) {
-				$available_tags[$tag->Id] = $tag->Name;
+				foreach($response->records as $tag) {
+					$available_tags[$tag->Id] = $tag->Name;
+				}
+
 			}
+
+		} else {
+
+
+			$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20TagDefinition' );
+
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
+
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+
+				// For accounts without tags
+				if( strpos( $response->get_error_message(), "'TagDefinition' is not supported" ) !== false ) {
+					return array();
+				}
+
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( ! empty( $response->records ) ) {
+
+				foreach($response->records as $tag) {
+					$available_tags[$tag->Id] = $tag->Name;
+				}
+
+			}
+
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -318,7 +381,7 @@ class WPF_Salesforce {
 
 		$crm_fields = array();
 
-		$request  = $this->instance_url . '/services/data/v20.0/sobjects/' . $this->object_type . '/describe/';
+		$request  = $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/describe/';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -359,7 +422,7 @@ class WPF_Salesforce {
 
 		$query_args = array( 'q' => "SELECT Id from " . $this->object_type . " WHERE Email = '" . $email_address . "'" );
 
-		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v20.0/query');
+		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
 
 		$response = wp_remote_get( $request, $this->params );
 
@@ -393,36 +456,73 @@ class WPF_Salesforce {
 
 		$contact_tags = array();
 
-		$query_args = array( 'q' => "SELECT TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
+		$tag_type = wp_fusion()->settings->get('sf_tag_type', 'Topics');
 
-		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v20.0/query');
+		if( $tag_type == 'Topics' ) {
 
-		$response = wp_remote_get( $request, $this->params );
+			$query_args = array( 'q' => "SELECT TopicId from TopicAssignment WHERE EntityId = '" . $contact_id . "'" );
 
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
 
-		$response = json_decode(wp_remote_retrieve_body( $response ));
+			$response = wp_remote_get( $request, $this->params );
 
-		if(empty($response) || empty($response->records))  {
-			return false;
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( empty( $response ) || empty( $response->records ) ) {
+				return false;
+			}
+
+			foreach($response->records as $tag) {
+
+				$contact_tags[] = $tag->TopicId;
+
+			}
+
+		} else {
+
+			$query_args = array( 'q' => "SELECT TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
+
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
+
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( empty( $response ) || empty( $response->records ) ) {
+				return false;
+			}
+
+			foreach($response->records as $tag) {
+
+				$contact_tags[] = $tag->TagDefinitionId;
+
+			}
+
 		}
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
 		$needs_tag_sync = false;
 
-		foreach($response->records as $tag) {
+		foreach( $contact_tags as $tag_id ) {
 
-			$contact_tags[] = $tag->TagDefinitionId;
-
-			if(!isset($available_tags[$tag->TagDefinitionId]))
+			if( ! isset( $available_tags[$tag_id] ) ) {
 				$needs_tag_sync = true;
+				break;
+			}
 
 		}
 
-		if($needs_tag_sync)
+		if( $needs_tag_sync ) {
 			$this->sync_tags();
+		}
 
 		return $contact_tags;
 	}
@@ -439,22 +539,47 @@ class WPF_Salesforce {
 		$params = $this->get_params();
 		$params['headers']['Content-Type'] = 'application/json';
 
-		foreach($tags as $tag_id) {
+		$tag_type = wp_fusion()->settings->get('sf_tag_type', 'Topics');
 
-			$label = wp_fusion()->user->get_tag_label( $tag_id );
+		if( $tag_type == 'Topics' ) {
 
-			$body = array(
-				'Type'		=> wp_fusion()->settings->get('sf_tag_type', 'Personal'),
-				'ItemID'	=> $contact_id,
-				'Name'		=> $label
+			foreach($tags as $tag_id) {
+
+				$body = array(
+					'EntityId'	=> $contact_id,
+					'TopicId'	=> $tag_id
 				);
 
-			$params['body'] = json_encode($body);
+				$params['body'] = json_encode($body);
 
-			$response = wp_remote_post($this->instance_url . '/services/data/v20.0/sobjects/ContactTag/', $params);
+				$response = wp_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/TopicAssignment/', $params );
 
-			if( is_wp_error( $response ) ) {
-				return $response;
+				if( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+			}
+
+		} else {
+
+			foreach($tags as $tag_id) {
+
+				$label = wp_fusion()->user->get_tag_label( $tag_id );
+
+				$body = array(
+					'Type'		=> $tag_type,
+					'ItemID'	=> $contact_id,
+					'Name'		=> $label
+					);
+
+				$params['body'] = json_encode($body);
+
+				$response = wp_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/ContactTag/', $params );
+
+				if( is_wp_error( $response ) ) {
+					return $response;
+				}
+
 			}
 
 		}
@@ -476,45 +601,94 @@ class WPF_Salesforce {
 
 		// First get the tag relationship IDs
 
-		$query_args = array( 'q' => "SELECT Id, TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
-		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v20.0/query');
+		$tag_type = wp_fusion()->settings->get('sf_tag_type', 'Topics');
 
-		$response = wp_remote_get( $request, $this->params );
+		if( $tag_type == 'Topics' ) {
 
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
+			$query_args = array( 'q' => "SELECT Id, TopicId from TopicAssignment WHERE EntityId = '" . $contact_id . "'" );
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
 
-		$response = json_decode(wp_remote_retrieve_body( $response ));
+			$response = wp_remote_get( $request, $this->params );
 
-		if(empty($response) || empty($response->records))  {
-			return false;
-		}
-
-
-		foreach($response->records as $tag) {
-
-			if(in_array($tag->TagDefinitionId, $tags)) {
-				$sf_tag_ids_to_remove[] = $tag->Id;
+			if( is_wp_error( $response ) ) {
+				return $response;
 			}
 
-		}
+			$response = json_decode(wp_remote_retrieve_body( $response ));
 
-		if(!empty( $sf_tag_ids_to_remove )) {
+			if(empty($response) || empty($response->records))  {
+				return false;
+			}
 
-			$params['method'] = 'DELETE';
 
-			foreach( $sf_tag_ids_to_remove as $tag_id ) {
+			foreach($response->records as $tag) {
 
-				$response = wp_remote_request($this->instance_url . '/services/data/v20.0/sobjects/ContactTag/' . $tag_id, $params );
+				if(in_array($tag->TopicId, $tags)) {
+					$sf_tag_ids_to_remove[] = $tag->Id;
+				}
 
-				if( is_wp_error( $response ) ) {
-					return $response;
+			}
+
+			if( ! empty( $sf_tag_ids_to_remove ) ) {
+
+				$params['method'] = 'DELETE';
+
+				foreach( $sf_tag_ids_to_remove as $tag_id ) {
+
+					$response = wp_remote_request($this->instance_url . '/services/data/v42.0/sobjects/TopicAssignment/' . $tag_id, $params );
+
+					if( is_wp_error( $response ) ) {
+						return $response;
+					}
+
+				}
+
+			}
+
+		} else {
+
+			$query_args = array( 'q' => "SELECT Id, TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
+
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode(wp_remote_retrieve_body( $response ));
+
+			if(empty($response) || empty($response->records))  {
+				return false;
+			}
+
+
+			foreach($response->records as $tag) {
+
+				if(in_array($tag->TagDefinitionId, $tags)) {
+					$sf_tag_ids_to_remove[] = $tag->Id;
+				}
+
+			}
+
+			if(!empty( $sf_tag_ids_to_remove )) {
+
+				$params['method'] = 'DELETE';
+
+				foreach( $sf_tag_ids_to_remove as $tag_id ) {
+
+					$response = wp_remote_request($this->instance_url . '/services/data/v42.0/sobjects/ContactTag/' . $tag_id, $params );
+
+					if( is_wp_error( $response ) ) {
+						return $response;
+					}
+
 				}
 
 			}
 
 		}
+
 
 		return true;
 
@@ -538,7 +712,7 @@ class WPF_Salesforce {
 		}
 
 		$params['body'] = json_encode( $data );
-		$response = wp_remote_post( $this->instance_url . '/services/data/v20.0/sobjects/' . $this->object_type . '/', $params );
+		$response = wp_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -572,7 +746,8 @@ class WPF_Salesforce {
 
 		$params['body'] = json_encode( $data );
 		$params['method'] = 'PATCH';
-		$response = wp_remote_request( $this->instance_url . '/services/data/v20.0/sobjects/' . $this->object_type . '/' . $contact_id, $params );
+
+		$response = wp_remote_request( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -594,7 +769,7 @@ class WPF_Salesforce {
 			$this->get_params();
 		}
 
-		$response = wp_remote_get( $this->instance_url . '/services/data/v20.0/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
+		$response = wp_remote_get( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -633,7 +808,7 @@ class WPF_Salesforce {
 
 		$query_args = array( 'q' => "SELECT ItemId, TagDefinitionId from ContactTag where TagDefinitionId = '" . $tag . "'" );
 
-		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v20.0/query');
+		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
 
 		$response = wp_remote_get( $request, $this->params );
 
