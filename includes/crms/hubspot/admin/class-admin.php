@@ -65,10 +65,12 @@ class WPF_HubSpot_Admin {
 					'grant_type'	=> 'authorization_code',
 					'client_id'		=> $this->crm->client_id,
 					'client_secret' => $this->crm->client_secret,
-					'redirect_uri'	=> get_admin_url() . './options-general.php?page=wpf-settings&crm=hubspot',
+					'redirect_uri'	=> get_admin_url() . 'options-general.php?page=wpf-settings&crm=hubspot',
 					'code'			=> $_GET['code']
 				)
 			);
+
+			$params['body']['redirect_uri'] = str_replace('http://', 'https://', $params['body']['redirect_uri']);
 
 			$response = wp_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
 
@@ -114,9 +116,11 @@ class WPF_HubSpot_Admin {
 
 		if( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
 
+			$admin_url = str_replace('http://', 'https://', get_admin_url());
+
 			$new_settings['hubspot_header']['desc'] = '<table class="form-table"><tr>';
 			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="https://app.hubspot.com/oauth/authorize?redirect_uri=' .  urlencode( get_admin_url() . './options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts">Authorize with HubSpot</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="https://app.hubspot.com/oauth/authorize?redirect_uri=' .  urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts">Authorize with HubSpot</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['hubspot_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {

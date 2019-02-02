@@ -64,6 +64,12 @@ class WPF_Platformly {
 			return $post_data;
 		}
 
+		if( isset( $post_data['contactID'] ) ) {
+			$post_data['contact_id'] = $post_data['contactID'];
+		}
+
+		return $post_data;
+
 	}
 
 	/**
@@ -149,7 +155,7 @@ class WPF_Platformly {
 		$params = array(
 			'timeout'   => 30,
 			'headers'	=> array(
-				'content-type' => 'application/x-www-form-urlencoded'
+				'Content-type' => 'application/x-www-form-urlencoded'
 			),
 			'body'		=> array(
 				'api_key' 	=> $api_key,
@@ -353,8 +359,14 @@ class WPF_Platformly {
 
 		$response = $this->request( 'fetch_contact', array( 'email' => $email_address ) );
 
-		if( is_wp_error( $response ) ) {
+		if( is_wp_error( $response ) && $response->get_error_message() == 'Contact Not Found' ) {
+
+			return false;
+
+		} elseif( is_wp_error( $response ) ) {
+
 			return $response;
+
 		}
 
 		if( ! isset( $response->id ) ) {

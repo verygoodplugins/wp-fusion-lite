@@ -468,7 +468,7 @@ class WPF_GetResponse {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		//Currently not Possible
+		// Currently not Possible
 
 		return true;
 

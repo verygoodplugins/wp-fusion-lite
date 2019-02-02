@@ -470,7 +470,25 @@ class WPF_Infusionsoft_iSDK {
 			$result = $this->app->grpAssign( $contact_id, $tag );
 
 			if ( is_wp_error( $result ) ) {
-				return $result;
+
+				// If CID changed
+
+				if( strpos($result->get_error_message(), 'Error loading contact') !== false ) {
+
+					$user_id = wp_fusion()->user->get_user_id($contact_id);
+					$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
+
+					if( ! empty( $contact_id ) ) {
+
+						$this->apply_tags( $tags, $contact_id );
+						break;
+
+					}
+
+				} else {
+					return $result;
+				}
+
 			}
 
 		}
@@ -498,7 +516,25 @@ class WPF_Infusionsoft_iSDK {
 			$result = $this->app->grpRemove( $contact_id, $tag );
 
 			if ( is_wp_error( $result ) ) {
-				return $result;
+
+				// If CID changed
+
+				if( strpos($result->get_error_message(), 'Error loading contact') !== false ) {
+
+					$user_id = wp_fusion()->user->get_user_id($contact_id);
+					$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
+
+					if( ! empty( $contact_id ) ) {
+
+						$this->remove_tags( $tags, $contact_id );
+						break;
+
+					}
+
+				} else {
+					return $result;
+				}
+
 			}
 
 		}
@@ -563,27 +599,33 @@ class WPF_Infusionsoft_iSDK {
 		$result = $this->app->updateCon( $contact_id, $data );
 
 		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
 
-		// If CID changed, try and update
-		if(empty($result)) {
+			if( strpos($result->get_error_message(), 'Record not found') !== false ) {
 
-			$user_id = wp_fusion()->user->get_user_id($contact_id);
-			$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
+				// If CID changed, try and update
 
-			if ( $contact_id !== false ) {
+				$user_id = wp_fusion()->user->get_user_id($contact_id);
+				$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
 
-				$this->update_contact( $contact_id, $data, false );
+				if ( $contact_id !== false ) {
+
+					$this->update_contact( $contact_id, $data, false );
+
+				} else {
+
+					// If contact has been deleted, re-add
+					$contact_id = $this->add_contact( $data, false );
+
+				}
 
 			} else {
 
-				// If contact has been deleted, re-add
-				$contact_id = $this->add_contact( $data, false );
+				return $result;
 
 			}
 
 		}
+
 
 		do_action( 'wpf_contact_updated', $contact_id );
 

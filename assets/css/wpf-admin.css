@@ -78,6 +78,14 @@
 	float: none;
 }
 
+#aa-pagination {
+	border: 1px solid #ddd;
+    text-align: center;
+    padding: 5px;
+    margin-bottom: 10px;
+    margin-top: -20px;
+}
+
 /* Taxonomy settings */
 
 body.term-php .wpf-page-redirect-select label {
@@ -86,7 +94,7 @@ body.term-php .wpf-page-redirect-select label {
 
 /* WPF center column meta boxes */
 
-#post-body #postbox-container-2 .select4-container, #wpf-coursewre-levels-table .select4-container {
+#post-body #postbox-container-2 .select4-container, #wpf-coursewre-levels-table .select4-container, #wpf-learndash-meta .select4-container {
 	min-width: 400px;
 }
 
@@ -127,20 +135,20 @@ body .select4-drop.select4-drop-active {
 }
 
 /* Formidable */
-.frm_form_settings #wp_fusion_settings table td {
+.frm_form_settings #wp_fusion_settings table td, .frm_single_wpfusion_settings table td {
 	vertical-align: middle;
 	padding: 5px 10px;
 }
 
 
-.frm_form_settings #wp_fusion_settings h3 {
+.frm_form_settings #wp_fusion_settings h3, .frm_single_wpfusion_settings h3 {
 	margin: 15px -15px 0;
 	padding: 8px 15px;
 	font-size: 14px;
 }
 
-.frm_form_settings #wp_fusion_settings table td .select4-container {
-	width: 300px !important;
+.frm_form_settings #wp_fusion_settings table td .select4-container, .frm_single_wpfusion_settings table td .select4-container {
+	min-width: 300px !important;
 }
 
 /* RCP */
@@ -278,6 +286,10 @@ a#wpf-select4-tags-resync {
 	padding: 2px 8px 2px;
 }
 
+#wpf-settings-message {
+	width: 100%;
+}
+
 /* PMPro */
 
 body.memberships_page_pmpro-discountcodes .select4-container {
@@ -320,6 +332,16 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	width: 300px !important;
 }
 
+/* WPForms */
+
+.wpforms-provider-fields table .select4-container {
+	width: 100% !important;
+}
+
+.wpforms-provider-options .select4-container {
+	min-width: 400px;
+}
+
 /* User Profile */
 
 #wpf-tags-td .select4 {
@@ -349,10 +371,60 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	line-height: 1.5;
 }
 
+/* Popup Maker */
+
+.pum-field-select.select4-wpf-tags-wrapper input.select4-search__field {
+	height: 28px;
+}
+
+/* wpForo / Private Messages / Generic */
+
+#wpf-settings-table .select4-container {
+	width: 100% !important;
+	max-width: 380px;
+}
+
 /* WC addons */
 
 #post-body #postbox-container-2 .woocommerce_product_addon .select4-container {
 	min-width: 250px;
+}
+
+#post-body #postbox-container-2 .wc-pao-addon-option-row {
+	grid-auto-rows: auto;
+}
+
+.wc-pao-addon-content-option-inner .wc-pao-addon-content-option-header {
+	grid-column: 1/span 5;
+}
+
+.wc-pao-addon-content-option-inner .wc-pao-addon-content-price-header {
+	grid-column: 6/10;
+}
+
+.wc-pao-addon-content-option-inner .wc-pao-addon-content-tags-header {
+	padding-top: 8px;
+    grid-column: 10/-1;
+    background-color: #f5f5f5;
+    margin-right: -15px;
+}
+
+.wc-pao-addon-content-option-inner .wc-pao-addon-content-label.full {
+	grid-column: 2/6;
+}
+
+.wc-pao-addon-content-option-inner .wc-pao-addon-content-price-type {
+	grid-column: 6/8;
+}
+
+.wc-pao-addon-content-option-inner .wc-pao-addon-content-price {
+	grid-column: 8/10;
+}
+
+#post-body #postbox-container-2 .wc-pao-addon-content-option-inner span.select4-container {
+	min-width: 0;
+	width: auto !important;
+	grid-column: 10/13;
 }
 
 /* Fix for X theme messing up woo descriptions */

@@ -71,18 +71,28 @@ class WPF_Settings {
 		add_filter( 'wpf_initialize_options', array( $this, 'initialize_options' ) );
 		add_action( 'wpf_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
+		// Set tag labels
+		add_action( 'wpf_sync', array( $this, 'save_tag_labels' ) );
+		add_filter( 'gettext', array( $this, 'set_tag_labels' ), 10, 3 );
+
 		// Validation
 		add_filter( 'validate_field_contact_fields', array( $this, 'validate_field_contact_fields' ), 10, 3 );
 
 		// Plugin action links and messages
 		add_filter( 'plugin_action_links_' . WPF_PLUGIN_PATH, array( $this, 'add_action_links' ) );
 
-		$integrations = wp_fusion()->get_integrations();
+		if( wp_fusion()->is_full_version() ) {
 
-		if( empty( $integrations ) ) {
+			add_action( 'show_field_edd_license_begin', array( $this, 'show_field_edd_license_begin' ), 10, 2 );
+			add_action( 'show_field_edd_license', array( $this, 'show_field_edd_license' ), 10, 2 );
+
+			add_action( 'wp_ajax_edd_activate', array( $this, 'edd_activate' ) );
+			add_action( 'wp_ajax_edd_deactivate', array( $this, 'edd_deactivate' ) );
+			
+		} else {
 
 			add_action( 'show_field_users_header_begin', array( $this, 'upgrade_notice' ), 10, 2 );
-			
+
 		}
 
 		// Fire up the options framework
@@ -106,7 +116,7 @@ class WPF_Settings {
 
 			<div id="wpf-pro">
 				<div id="wpf-pro-top">
-					<img src="<?php echo WPF_DIR_URL ?>assets/img/logo.png" />
+					<img src="<?php echo WPF_DIR_URL ?>assets/img/logo-wide.png" />
 				</div>
 
 				<p>You're running the <strong>Lite</strong> version of WP Fusion. A paid license includes:</p>
@@ -286,6 +296,52 @@ class WPF_Settings {
 	}
 
 	/**
+	 * Saves any tag label overrides on initial sync
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function save_tag_labels() {
+
+		if( isset( wp_fusion()->crm_base->tag_type ) ) {
+			$this->set( 'crm_tag_type', wp_fusion()->crm_base->tag_type );
+		}
+
+	}
+
+	/**
+	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
+	 *
+	 * @access public
+	 * @return string Text
+	 */
+
+	public function set_tag_labels( $translation, $text, $domain ) {
+
+		if( $domain == 'wp-fusion' ) {
+
+			if( $this->options['connection_configured'] == true && isset( $this->options['crm_tag_type'] ) ) {
+
+				if( strpos($translation, ' Tag') !== false ) {
+
+					$translation = str_replace(' Tag', ' ' . $this->options['crm_tag_type'], $translation );
+
+				} elseif( strpos($translation, ' tag') !== false ) {
+
+					$translation = str_replace(' tag', ' ' . strtolower( $this->options['crm_tag_type'] ), $translation );
+
+				}
+
+			}
+
+		}
+
+		return $translation;
+
+	}
+
+	/**
 	 * Filters out internal WordPress fields from showing up in syncable meta fields list and sets labels and types for built in fields
 	 *
 	 * @since 1.0
@@ -302,7 +358,6 @@ class WPF_Settings {
 			'admin_color',
 			'use_ssl',
 			'show_admin_bar_front',
-			'wp_capabilities',
 			'wp_user_level',
 			'dismissed_wp_pointers',
 			'show_welcome_panel',
@@ -478,6 +533,190 @@ class WPF_Settings {
 
 		die();
 
+	}
+
+
+	/**
+	 * Check EDD license
+	 *
+	 * @access public
+	 * @return string License Status
+	 */
+
+	public function edd_check_license( $license_key ) {
+
+		$status = get_transient( 'wpf_license_check' );
+
+		// Run the license check a maximum of once per day
+		if ( false === $status ) {
+
+			$integrations = array();
+
+			if( ! empty( wp_fusion()->integrations ) ) {
+
+				foreach( wp_fusion()->integrations as $slug => $object ) {
+					$integrations[] = $slug;
+				}
+
+			}
+
+			if( class_exists('GFForms') ) {
+				$integrations[] = 'gravity-forms';
+			}
+
+			// data to send in our API request
+			$api_params = array(
+				'edd_action' => 'check_license',
+				'license'    => $license_key,
+				'item_name'  => urlencode( 'WP Fusion' ),
+				'author'	 => 'Very Good Plugins',
+				'url'        => home_url(),
+				'crm'		 => wp_fusion()->crm->name,
+				'integrations' => $integrations,
+				'version'	 => WP_FUSION_VERSION
+			);
+			// Call the custom API.
+			$response = wp_remote_post( WPF_STORE_URL, array(
+				'timeout'   => 30,
+				'sslverify' => false,
+				'body'      => $api_params
+			) );
+
+			// make sure the response came back okay
+			if ( is_wp_error( $response ) ) {
+				set_transient( 'wpf_license_check', true, 60 * 60 * 24 * 3 );
+				return 'error';
+			}
+
+			$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+
+			$this->set( 'license_status', $license_data->license );
+
+			set_transient( 'wpf_license_check', true, 60 * 60 * 24 * 10 );
+
+			return $license_data->license;
+
+		} else {
+
+			// Return stored license data
+			return $this->get( 'license_status' );
+
+		}
+
+	}
+
+
+	/**
+	 * Activate EDD license
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function edd_activate() {
+
+		$license_key = trim( $_POST['key'] );
+
+		// data to send in our API request
+		$api_params = array(
+			'edd_action' => 'activate_license',
+			'license'    => $license_key,
+			'item_name'  => urlencode( 'WP Fusion' ), // the name of our product in EDD
+			'url'        => home_url(),
+			'version'	 => WP_FUSION_VERSION
+		);
+
+		if( wp_fusion()->settings->get( 'connection_configured' ) == true ) {
+
+			$integrations = array();
+			foreach(wp_fusion()->integrations as $slug => $object) {
+				$integrations[] = $slug;
+			}
+
+			if( class_exists('GFForms') ) {
+				$integrations[] = 'gravity-forms';
+			}
+
+			$api_params['crm'] = wp_fusion()->crm->name;
+			$api_params['integrations'] = $integrations;
+
+		}
+
+		// Call the custom API.
+		$response = wp_remote_post( WPF_STORE_URL, array(
+			'timeout'   => 15,
+			'sslverify' => false,
+			'body'      => $api_params
+		) );
+
+		// make sure the response came back okay
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error( $response->get_error_message() . '&ndash; Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a> for further assistance.' );
+			die();
+		}
+
+		// decode the license data
+		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+
+		// $license_data->license will be either "valid" or "invalid"
+
+		// Store the options locally
+		$this->set( 'license_status', $license_data->license );
+		$this->set( 'license_key', $license_key );
+
+		if ( $license_data->license == 'valid' ) {
+			wp_send_json_success( 'activated' );
+		} else {
+			wp_send_json_error( '<pre>' . print_r( $license_data, true ) . '</pre>' );
+		}
+
+		die();
+	}
+
+
+	/**
+	 * Deactivate EDD license
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function edd_deactivate() {
+
+		$license_key = trim( $_POST['key'] );
+
+		// data to send in our API request
+		$api_params = array(
+			'edd_action' => 'deactivate_license',
+			'license'    => $license_key,
+			'item_name'  => urlencode( 'WP Fusion' ), // the name of our product in EDD
+			'url'        => home_url()
+		);
+
+		// Call the custom API.
+		$response = wp_remote_post( WPF_STORE_URL, array(
+			'timeout'   => 15,
+			'sslverify' => false,
+			'body'      => $api_params
+		) );
+
+		// make sure the response came back okay
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error( $response->get_error_message() );
+			die();
+		}
+
+		// decode the license data
+		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( $license_data->license == 'deactivated' ) {
+			$this->set( 'license_status', 'invalid' );
+			wp_send_json_success( 'deactivated' );
+		} else {
+			wp_send_json_error( '<pre>' . print_r( $license_data, true ) . '</pre>' );
+		}
+
+		wp_die();
 	}
 
 
@@ -687,7 +926,8 @@ class WPF_Settings {
 			'desc'    => __( 'Load the user\'s latest tags from your CRM on login.', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
+			'tooltip' => __( 'Note: this is only necessary if you are applying tags via automations in your CRM and haven\'t set up webhooks to send the data back. Any tags applied via WP Fusion are available in WordPress immediately.' )
 		);
 
 		$settings['profile_update_tags'] = array(
@@ -750,6 +990,14 @@ class WPF_Settings {
 			'textarea_rows' => 10
 		);
 
+		$settings['per_post_messages'] = array(
+			'title'   => __( 'Per Post Messages', 'wp-fusion' ),
+			'desc'    => __( 'Enable this setting to allow confuguring a different restricted content message for each page or post.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'std'	  => 0,
+		);
+
 		/*
 		// SEO
 		*/		
@@ -775,6 +1023,51 @@ class WPF_Settings {
 			'desc'    => __( 'Show the first X words of your content to search engines. Leave blank for default, which is usually 55 words.', 'wp-fusion' ),
 			'type'    => 'number',
 			'section' => 'main'
+		);
+
+		/*
+		// ACCESS KEY
+		*/
+
+		$settings['access_key_header'] = array(
+			'title'   => __( 'Webhooks', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'heading',
+			'section' => 'main'
+		);
+
+		if( wp_fusion()->is_full_version() ) {
+
+			$settings['access_key_desc'] = array(
+				'std'     => 0,
+				'type'    => 'paragraph',
+				'section' => 'main',
+				'desc'    => __( 'Webhooks allow you to send data from your CRM back to your website. See <a href="http://wpfusion.com/documentation/#webhooks" target="_blank">our documentation</a> for more information on creating webhooks.', 'wp-fusion' ),
+			);
+
+			$settings['access_key'] = array(
+				'title'   => __( 'Access Key', 'wp-fusion' ),
+				'desc'    => __( 'You must use this key when sending data back to WP Fusion.', 'wp-fusion' ),
+				'type'    => 'text',
+				'section' => 'main'
+			);
+
+		}
+
+		$settings['return_password'] = array(
+			'title'   => __( 'Return Password', 'wp-fusion' ),
+			'desc'    => __( 'Send new users\' passwords back to your CRM after import.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'std'	  => 1
+		);
+
+		$settings['return_password_field'] = array(
+				'title'   => __('Return Password Field', 'wp-fusion' ),
+				'desc'    => __('Select a field in your CRM where generated passwords will be stored for imported users.', 'wp-fusion' ),
+				'std'     => false,
+				'type'    => 'crm_field',
+				'section' => 'main'
 		);
 
 		/*
@@ -846,6 +1139,30 @@ class WPF_Settings {
 			'type'    => 'hidden',
 			'section' => 'setup'
 		);
+
+		if( wp_fusion()->is_full_version() ) {
+
+			$settings['license_heading'] = array(
+				'title'   => 'WP Fusion License',
+				'section' => 'setup',
+				'type'    => 'heading'
+			);
+
+			$settings['license_key'] = array(
+				'title'          => __( 'License Key', 'wp-fusion' ),
+				'std'            => '',
+				'type'           => 'edd_license',
+				'section'        => 'setup',
+				'license_status' => 'invalid'
+			);
+
+			$settings['license_status'] = array(
+				'type'    => 'hidden',
+				'section' => 'setup',
+				'std'     => 'invalid'
+			);
+
+		}
 
 		/*
 		// ADVANCED
@@ -978,6 +1295,10 @@ class WPF_Settings {
 
 			global $wp_roles;
 
+			if( ! isset( $options['available_tags'] ) ) {
+				$options['available_tags'] = array();
+			}
+
 			$settings['user_roles']['choices']  = $wp_roles->role_names;
 			$settings['user_roles']['disabled'] = ( $options['create_users'] == 0 ? true : false );
 
@@ -1031,7 +1352,7 @@ class WPF_Settings {
 
 		if ( $this->options['connection_configured'] == true ) {
 
-			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-success" data-toggle="tooltip" data-placement="right" title="Reload all custom fields and available tags from your CRM">Resynchronize</a>';
+			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-success" data-toggle="tooltip" data-placement="right" title="' . __( 'Reload all custom fields and available tags from your CRM', 'wp-fusion') . '">Resynchronize</a>';
 
 		} else {
 
@@ -1041,6 +1362,39 @@ class WPF_Settings {
 
 	}
 
+	/**
+	 * Opens EDD license field
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function show_field_edd_license_begin( $id, $field ) {
+		echo '<tr valign="top">';
+		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label></th>';
+		echo '<td>';
+	}
+
+
+	/**
+	 * Displays EDD license field
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function show_field_edd_license( $id, $field ) {
+
+		echo '<input id="' . $id . '" class="form-control" type="text" name="wpf_options[' . $id . ']" placeholder="' . $field['std'] . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+
+		if ( $field['license_status'] == "invalid" ) {
+			echo '<a id="edd-license" data-action="edd_activate" class="btn btn-default">Activate License</a>';
+		} else {
+			echo '<a id="edd-license" data-action="edd_deactivate" class="btn btn-default">Deactivate License</a>';
+		}
+		echo '<span class="description">Enter your license key for automatic updates and support.</span>';
+		echo '<div id="connection-output-edd"></div>';
+	}
 
 	/**
 	 * Displays import users field
@@ -1058,7 +1412,7 @@ class WPF_Settings {
 		$args = array(
 			'meta_name' 	=> 'wpf_options',
 			'field_id'		=> $id,
-			'placeholder'	=> 'Select Tag',
+			'placeholder'	=> __('Select Tag', 'wp-fusion'),
 			'limit'			=> 1
 		);
 
@@ -1111,11 +1465,13 @@ class WPF_Settings {
 			$this->options[ $id ] = array();
 		}
 
-		if(!isset($field['placeholder']))
-			$field['placeholder'] = 'Select tags';
+		if( ! isset($field['placeholder'] ) ) {
+			$field['placeholder'] = __( 'Select tags', 'wp-fusion' );
+		}
 
-		if(!isset($field['limit']))
+		if( ! isset( $field['limit'] ) ) {
 			$field['limit'] = null;
+		}
 
 		$args = array(
 			'setting' 		=> $this->options[ $id ],
@@ -1352,24 +1708,29 @@ class WPF_Settings {
 
 		$options = array(
 			'users_sync' => array(
-				'label'     => 'Resync contact IDs and tags',
-				'title'     => 'Users (contact IDs and tags)',
+				'label'     => __( 'Resync contact IDs and tags', 'wp-fusion' ),
+				'title'     => __( 'Users (contact IDs and tags)', 'wp-fusion' ),
 				'tooltip'   => sprintf( __( 'All WordPress users will have their contact IDs checked / updated based on email address and tags will be updated based on their %s contact record', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 			'users_tags_sync' => array(
-				'label'     => 'Resync tags',
-				'title'     => 'Users (tags)',
+				'label'     => __( 'Resync tags', 'wp-fusion' ),
+				'title'     => __( 'Users (tags)', 'wp-fusion' ),
 				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID', 'wp-fusion' ) )
 			),
 			'users_register' => array(
-				'label'     => 'Export users',
-				'title'     => 'Users',
+				'label'     => __( 'Export users', 'wp-fusion' ),
+				'title'     => __( 'Users', 'wp-fusion' ),
 				'tooltip'   => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 			'users_meta'     => array(
-				'label'     => 'Push user meta',
-				'title'     => 'Users',
+				'label'     => __( 'Push user meta', 'wp-fusion' ),
+				'title'     => __( 'Users', 'wp-fusion' ),
 				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data pushed to %s, overriding any data on the contact record with the values from WordPress', 'wp-fusion' ), wp_fusion()->crm->name )
+			),
+			'pull_users_meta'     => array(
+				'label'     => __( 'Pull user meta', 'wp-fusion' ),
+				'title'     => __( 'Users', 'wp-fusion' ),
+				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data loaded from %s, overriding any data in their user meta with the values from their contact record', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 		);
 

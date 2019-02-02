@@ -745,6 +745,10 @@ a {
     background-color: #46b450;
 }
 
+.label-danger {
+    background-color: #d9534f;
+}
+
 .label-default {
     background-color: #999;
 }

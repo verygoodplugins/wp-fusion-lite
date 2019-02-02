@@ -125,7 +125,7 @@ class WPF_Flexie {
 
 			if( isset( $body_json->error ) ) {
 
-				$response = new WP_Error( 'errors', $body_json->error );
+				$response = new WP_Error( 'error', $body_json->error );
 
 			}
 

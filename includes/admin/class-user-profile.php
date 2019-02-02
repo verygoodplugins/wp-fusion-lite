@@ -58,6 +58,8 @@ class WPF_User_Profile {
                 $posted_tags = array();
             }
 
+            $posted_tags = stripslashes_deep( $posted_tags );
+
             $posted_tags = array_map( 'sanitize_text_field', $posted_tags );
 
 			$user_tags = wp_fusion()->user->get_tags( $user_id );
@@ -73,6 +75,7 @@ class WPF_User_Profile {
 			}
 
 			if ( ! empty( $apply_tags ) ) {
+
 				wp_fusion()->user->apply_tags( $apply_tags, $user_id );
 			}
 
@@ -150,8 +153,10 @@ class WPF_User_Profile {
 				$post_data['user_email'] = $post_data['email'];
 				unset( $post_data['email'] );
 
-				$post_data['user_url'] = $post_data['url'];
-				unset( $post_data['url'] );
+				if( isset( $post_data['url'] ) ) {
+					$post_data['user_url'] = $post_data['url'];
+					unset( $post_data['url'] );
+				}
 
 				if ( isset( $post_data['pass1-text'] ) ) {
 					$post_data['user_pass'] = $post_data['pass1-text'];
@@ -183,8 +188,13 @@ class WPF_User_Profile {
 
 	public function user_profile( $user ) { 
 
-		if(!current_user_can('manage_options'))
+		if( ! current_user_can('manage_options') ) {
 			return;
+		}
+
+		if( isset( $_GET['wpf_register'] ) ) {
+			wp_fusion()->user->user_register( $user->ID );
+		}
 
 		?>
         <h3>WP Fusion</h3>
@@ -215,7 +225,7 @@ class WPF_User_Profile {
 			<?php if ( wp_fusion()->user->get_contact_id( $user->ID ) ) : ?>
 				
                 <tr id="wpf-tags-row">
-                    <th><label for="wpf_tags"><?php echo wp_fusion()->crm->name ?> Tags</label></th>
+                    <th><label for="wpf_tags"><?php echo sprintf( __('%s Tags', 'wp-fusion'), wp_fusion()->crm->name ); ?></label></th>
                     <td id="wpf-tags-td">
                     
 						<?php 
@@ -231,17 +241,17 @@ class WPF_User_Profile {
 						?>
 
                         <input type="hidden" id="wpf-tags-field-edited" name="wpf_tags_field_edited" value="false" />
-                        <p class="description">These tags are currently applied to the user in <?php echo wp_fusion()->crm->name ?>. <a id="wpf-profile-edit-tags" href="#">Edit Tags</a></p>
+                        <p class="description"><?php _e( 'These tags are currently applied to the user in', 'wp-fusion' ) ?> <?php echo wp_fusion()->crm->name ?> <a id="wpf-profile-edit-tags" href="#"><?php _e('Edit Tags', 'wp-fusion'); ?></a></p>
 
                     </td>
                 </tr>
 			<?php endif; ?>
             <tr>
-                <th><label for="resync_contact">Resync Tags</label></th>
+                <th><label for="resync_contact"><?php _e( 'Resync Tags', 'wp-fusion' ) ?></label></th>
                 <td>
 
                     <a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID ?>">Resync Tags</a>
-                    <p class="description">If the contact ID or tags aren't in sync, click here to reset the local data and load from the <?php echo wp_fusion()->crm->name ?> contact record.</p>
+                    <p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and load from the %s contact record.', 'wp-fusion' ), wp_fusion()->crm->name ); ?></p>
 
                 </td>
             </tr>

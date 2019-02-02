@@ -111,45 +111,49 @@ class WPF_MailerLite_Admin {
 
 		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
 
-		$settings['access_key_desc'] = array(
-			'std'     => 0,
-			'type'    => 'paragraph',
-			'section' => 'main',
-			'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in MailerLite. Read our <a href="https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
-		);
+		if( wp_fusion()->is_full_version() ) {
 
-		$settings['access_key']['type'] = 'hidden';
-
-		$new_settings['mailerlite_update_trigger'] = array(
-			'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
-			'desc'		=> __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion' ),
-			'std'		=> 0,
-			'type'		=> 'checkbox',
-			'section'	=> 'main'
+			$settings['access_key_desc'] = array(
+				'std'     => 0,
+				'type'    => 'paragraph',
+				'section' => 'main',
+				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in MailerLite. Read our <a href="https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
 			);
 
-		$new_settings['mailerlite_update_trigger_rule_id'] = array(
-			'std'		=> false,
-			'type'		=> 'hidden',
-			'section'	=> 'main'
-			);
+			$settings['access_key']['type'] = 'hidden';
 
-		$new_settings['mailerlite_add_tag'] = array(
-			'title' 	=> __( 'Import Group', 'wp-fusion' ),
-			'desc'		=> __( 'When a contact is added to this group in MailerLite, they will be imported as a new WordPres user.', 'wp-fusion' ),
-			'type'		=> 'assign_tags',
-			'section'	=> 'main',
-			'placeholder' => 'Select a group',
-			'limit'		=> 1
-			);
+			$new_settings['mailerlite_update_trigger'] = array(
+				'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
+				'desc'		=> __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion' ),
+				'std'		=> 0,
+				'type'		=> 'checkbox',
+				'section'	=> 'main'
+				);
 
-		$new_settings['mailerlite_add_tag_rule_id'] = array(
-			'std'		=> false,
-			'type'		=> 'hidden',
-			'section'	=> 'main'
-			);
+			$new_settings['mailerlite_update_trigger_rule_id'] = array(
+				'std'		=> false,
+				'type'		=> 'hidden',
+				'section'	=> 'main'
+				);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
+			$new_settings['mailerlite_add_tag'] = array(
+				'title' 	=> __( 'Import Group', 'wp-fusion' ),
+				'desc'		=> __( 'When a contact is added to this group in MailerLite, they will be imported as a new WordPres user.', 'wp-fusion' ),
+				'type'		=> 'assign_tags',
+				'section'	=> 'main',
+				'placeholder' => 'Select a group',
+				'limit'		=> 1
+				);
+
+			$new_settings['mailerlite_add_tag_rule_id'] = array(
+				'std'		=> false,
+				'type'		=> 'hidden',
+				'section'	=> 'main'
+				);
+
+			$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
+
+		}
 
 		return $settings;
 

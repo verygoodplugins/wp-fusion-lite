@@ -133,7 +133,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		if( empty( $log['user'] ) || $log['user'] < 1 ) {
 			return 'system';
-		} elseif( $log['user'] >= 10000000 ) {
+		} elseif( $log['user'] >= 100000000 ) {
 			return 'auto-login-link';
 		}
 
@@ -141,7 +141,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		// If user deleted
 		if( $userdata == false ) {
-			return '(deleted user)';
+			return '(deleted user ' . $log['user'] . ')';
 		}
 
 		return '<a href="' . get_edit_user_link( $log['user'] ) . '" target="_blank">' . $userdata->data->user_login . '</a>';
@@ -171,7 +171,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 				foreach($context['meta_array'] as $key => $value) {
 					$output .= '<li><strong>' . $key . '</strong>: ';
 
-					if( is_array( $value ) ) {
+					if( is_array( $value ) || is_object( $value ) ) {
 						$output .= '<pre>' . print_r( $value, true ) . '</pre>';
 					} else {
 						$output .= $value;

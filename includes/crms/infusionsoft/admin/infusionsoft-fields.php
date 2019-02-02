@@ -229,5 +229,8 @@ $infusionsoft_fields[] = array(
 	'crm_field' => 'Anniversary'
 );
 
-
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Contact Type',
+	'crm_field' => 'ContactType'
+);
 

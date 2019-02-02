@@ -16,6 +16,14 @@ class WPF_MailerLite {
 	public $supports;
 
 	/**
+	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
+	 *
+	 * @var tag_type
+	 */
+
+	public $tag_type = 'Group';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -196,7 +204,6 @@ class WPF_MailerLite {
 	 */
 
 	public function connect( $api_key = null, $test = false ) {
-
 
 		if ( $test == false ) {
 			return true;
@@ -665,11 +672,15 @@ class WPF_MailerLite {
 
 		$access_key = wp_fusion()->settings->get('access_key');
 
+		$data = array(
+			'url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
+			'event' => 'subscriber.'. $event_type
+		);
+
 		$request      		= 'http://api.mailerlite.com/api/v2/webhooks';
 		$params           	= $this->params;
 		$params['method'] 	= 'POST';
-		$params['body']  	= json_encode(array('url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
-												'event' => 'subscriber.'. $event_type));
+		$params['body']  	= json_encode( $data );
 
 		$response = wp_remote_post( $request, $params );
 

@@ -25,7 +25,7 @@ class WPF_ConvertFox {
 
 
 		$this->slug     = 'convertfox';
-		$this->name     = 'ConvertFox';
+		$this->name     = 'Gist';
 		$this->supports = array( 'add_fields', 'add_tags' );
 
 		// Set up admin options
@@ -45,7 +45,31 @@ class WPF_ConvertFox {
 
 	public function init() {
 
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+	}
+
+	/**
+	 * Formats POST data received from HTTP Posts into standard format
+	 *
+	 * @access public
+	 * @return array
+	 */
+
+	public function format_post_data( $post_data ) {
+
+		if( isset( $post_data['contact_id'] ) ) {
+			return $post_data;
+		}
+
+		$payload = json_decode( file_get_contents( 'php://input' ) );
+
+		if( ! empty( $payload ) ) {
+			$post_data['contact_id'] = $payload->contact->id;
+		}
+
+		return $post_data;
 
 	}
 
@@ -416,10 +440,36 @@ class WPF_ConvertFox {
 		}
 
 		// ConvertFox needs a user ID to create a contact
-		$user_id = $data['user_id'];
+
+		if( isset( $data['user_id'] ) ) {
+
+			$user_id = $data['user_id'];
+
+		} else {
+
+			$user = get_user_by( 'email', $data['user_email'] );
+
+			if( $user == false ) {
+				$user_id = rand(0, 10000);
+			} else {
+				$user_id = $user->ID;
+			}
+
+		}
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
+		}
+
+		// Fix names
+
+		if( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
+
+			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
+
+			unset( $data['first_name'] );
+			unset( $data['last_name'] );
+
 		}
 
 		$update_data = (object) array(
@@ -479,6 +529,12 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
+		if( isset( $data['user_id'] ) ) {
+			$user_id = $data['user_id'];
+		} else {
+			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+		}
+
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
@@ -487,17 +543,26 @@ class WPF_ConvertFox {
 			return false;
 		}
 
-		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+		// Fix names
+
+		if( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
+
+			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
+
+			unset( $data['first_name'] );
+			unset( $data['last_name'] );
+
+		}
+
 
 		$update_data = (object) array(
-				// 'user_id' => $user_id,
-			'user_id' => '3423423',
-				'custom_properties' => array()
+			'user_id' => $user_id,
+			'id'	  => $contact_id,
+			'custom_properties' => array()
 		);
 
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
-
 
 		foreach( $data as $crm_field => $value ) {
 
@@ -555,9 +620,20 @@ class WPF_ConvertFox {
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
+		// Explode name into first name and last name
+
+		$exploded_name = explode(' ', $body_json['user']['name']);
+		$body_json['user']['first_name'] = $exploded_name[0];
+		unset( $exploded_name[0] );
+		$body_json['user']['last_name'] = implode(' ', $exploded_name);
+
 		$user_meta = array();
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
+
+			if( ! isset( $field_data['crm_field'] ) ) {
+				continue;
+			}
 
 			if( isset( $body_json['user'][ $field_data['crm_field'] ] ) && $field_data['active'] == true ) {
 

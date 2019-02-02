@@ -93,6 +93,10 @@ class WPF_Zoho {
 
 			return $date;
 
+		} elseif( $field_type == 'checkboxes' && ! empty( $value ) ) {
+
+			return explode(',', $value);
+
 		} else {
 
 			return $value;
@@ -119,6 +123,7 @@ class WPF_Zoho {
 
 		$this->params = array(
 			'timeout'     => 120,
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'httpversion' => '1.1',
 			'headers'     => array(
 				'Authorization' => 'Zoho-oauthtoken ' . $access_token
@@ -176,7 +181,7 @@ class WPF_Zoho {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'zoho') !== false ) {
+		if( strpos($url, 'zoho') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -187,7 +192,7 @@ class WPF_Zoho {
 
 				$response = wp_remote_request( $url, $args );
 
-			} elseif( isset( $body_json->code ) && $body_json->code == 'INVALID_DATA' ) {
+			} elseif( isset( $body_json->code ) && ( $body_json->code == 'INVALID_DATA' || $body_json->code == 'MANDATORY_NOT_FOUND' ) ) {
 
 				$response = new WP_Error( 'error', '<strong>Invalid Data</strong> error: <strong>' . $body_json->message . '</strong>.' );
 
@@ -617,6 +622,12 @@ class WPF_Zoho {
 
 			if ( $field_data['active'] == true && isset( $body_json->data[0]->{$field_data['crm_field']} ) ) {
 				$user_meta[ $field_id ] = $body_json->data[0]->{$field_data['crm_field']};
+
+				// Fix objects / lookups
+				if( is_object( $user_meta[ $field_id ] ) && isset( $user_meta[ $field_id ]->name ) ) {
+					$user_meta[ $field_id ] = $user_meta[ $field_id ]->name;
+				}
+
 			}
 
 		}

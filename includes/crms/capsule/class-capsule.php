@@ -29,7 +29,6 @@ class WPF_Capsule {
 
 	public function __construct() {
 
-
 		$this->slug     = 'capsule';
 		$this->name     = 'Capsule';
 		$this->supports = array();
@@ -95,7 +94,17 @@ class WPF_Capsule {
 
 			if( isset( $body_json->message ) ) {
 
-				$response = new WP_Error( 'error', $body_json->message );
+				$error_string = $body_json->message;
+
+				if( isset( $body_json->errors ) ) {
+
+					foreach( $body_json->errors as $error ) {
+						$error_string .= ': ' . $error->message;
+					}
+
+				}
+
+				$response = new WP_Error( 'error', $error_string );
 
 			}
 
@@ -803,6 +812,9 @@ class WPF_Capsule {
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
+		$email_misc = array();
+		$phone_misc = array();
+
 		$loaded_meta = array();
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -828,8 +840,18 @@ class WPF_Capsule {
 					// Email fields
 					foreach( $body_json['party']['emailAddresses'] as $email_address ) {
 
-						if( $email_address['type'] == $exploded_field[1] || $email_address['type'] == null ) {
-							$loaded_meta[ $field_id ] = $email_address['address'];
+						if( $email_address['type'] == $exploded_field[1] ) {
+
+							// Handle misc field
+							if( ! isset( $loaded_meta[ $field_id ] ) ) {
+
+								$loaded_meta[ $field_id ] = $email_address['address'];
+
+							} else {
+
+								$email_misc[] = $email_address['address'];
+
+							}
 						}
 
 					}
@@ -839,10 +861,8 @@ class WPF_Capsule {
 					// Address fields
 					foreach( $body_json['party']['addresses'] as $address ) {
 
-						if( $address['type'] == $exploded_field[1] && !empty( $address[ $exploded_field[2] ] ) ) {
-
+						if( $address['type'] == $exploded_field[1] ) {
 							$loaded_meta[ $field_id ] = $address[ $exploded_field[2] ];
-
 						}
 
 					}
@@ -853,8 +873,20 @@ class WPF_Capsule {
 					// Phone Numbers
 					foreach( $body_json['party']['phoneNumbers'] as $phone_number ) {
 
-						if( $phone_number['type'] == $exploded_field[1] || $phone_number['type'] == null ) {
-							$loaded_meta[ $field_id ] = $phone_number['number'];
+						if( $phone_number['type'] == $exploded_field[1] ) {
+
+							// Handle misc field
+							if( ! isset( $loaded_meta[ $field_id ] ) ) {
+
+								$loaded_meta[ $field_id ] = $phone_number['number'];
+
+							} else {
+
+								$phone_misc[] = $phone_number['number'];
+
+							}
+
+							
 						}
 
 					}
@@ -872,6 +904,37 @@ class WPF_Capsule {
 					if( $field['definition']['id'] == $field_data['crm_field'] ) {
 						$loaded_meta[ $field_id ] = $field['value'];
 					}
+
+				}
+
+			}
+
+		}
+
+		// Merge in misc fields
+
+		if( ! empty( $phone_misc ) ) {
+
+			foreach ( $contact_fields as $field_id => $field_data ) {
+
+				if( isset( $field_data['crm_field'] ) && $field_data['crm_field'] == 'phone+Misc' ) {
+					
+					$loaded_meta[ $field_id ] = implode(', ', $phone_misc);
+
+				}
+
+			}
+
+		}
+
+		// Merge in misc fields
+		if( ! empty( $email_misc ) ) {
+
+			foreach ( $contact_fields as $field_id => $field_data ) {
+
+				if( isset( $field_data['crm_field'] ) && $field_data['crm_field'] == 'email+Misc' ) {
+					
+					$loaded_meta[ $field_id ] = implode(', ', $email_misc);
 
 				}
 
@@ -911,12 +974,12 @@ class WPF_Capsule {
 		);
 
 		$contact_ids = array();
-		$offset = 0;
+		$page = 1;
 		$proceed = true;
 
 		while($proceed == true) {
 
-			$urlp              = "https://api.capsulecrm.com/api/v2/parties/filters/results";
+			$urlp              = "https://api.capsulecrm.com/api/v2/parties/filters/results?perPage=100&page=" . $page;
 			$nparams           = $this->params;
 			$nparams['method'] = 'POST';
 			$nparams['body']   = json_encode( $query_data );
@@ -933,9 +996,9 @@ class WPF_Capsule {
 				$contact_ids[] = $contact['id'];
 			}
 
-			$offset = $offset + 50;
+			$page++;
 
-			if(count($body_json['data']) < 50) {
+			if(count($body_json['parties']) < 100) {
 				$proceed = false;
 			}
 

@@ -477,6 +477,24 @@ jQuery(document).ready(function($){
 	}
 
 	//
+	// Advanced Ads functions
+	//
+
+	if($('body').hasClass('post-type-advanced_ads')) {
+
+		// Update select4's when a new condition is added
+
+		$(document).on('DOMNodeInserted', function(e) {
+
+			if( $(e.target).find( 'input.wp-fusion' ).length ) {
+				initializeTagsSelect('#wpbody .advads-conditions-table');
+			}
+
+		});
+
+	}
+
+	//
 	// User profile page
 	//
 
@@ -619,6 +637,71 @@ jQuery(document).ready(function($){
 		}
 	}
 
+	// WPForms
+
+	if( $('body').hasClass('wpforms_page_wpforms-builder') ) {
+
+		$( document ).ajaxComplete(function( event, xhr, settings ) {
+
+			var data = settings.data.split('&');
+
+			if( data[3] == 'provider=wp-fusion' && data[4] == 'task=new_connection' ) {
+				initializeTagsSelect( '.wpforms-provider-connections' );
+				initializeCRMFieldSelect();
+			}
+
+		});
+
+	}
+
+	// Formidable Forms
+
+	if( $('body').hasClass('toplevel_page_formidable') ) {
+
+		$( document ).ajaxComplete(function( event, xhr, settings ) {
+
+			initializeTagsSelect( 'div.frm_single_wpfusion_settings' );
+			initializeCRMFieldSelect();
+
+		});
+
+	}
+
+	// Popup Maker
+
+	if( $('body').hasClass('post-type-popup') ) {
+
+		if( $( 'div.select4-wpf-tags-wrapper' ).length ) {
+
+			$.each( $( 'div.select4-wpf-tags-wrapper' ), function(index, val) {
+
+				$( this ).find( 'select' ).addClass( 'select4-wpf-tags' );
+				$( this ).find( '.pumselect2-container' ).remove();
+
+			});
+
+			initializeTagsSelect( 'div.select4-wpf-tags-wrapper' );
+
+		}
+
+		$(document).on('pum_init', function () {
+
+			$.each( $( 'div.select4-wpf-tags-wrapper' ), function(index, val) {
+
+				if( ! $( this ).find( 'select' ).hasClass('select4-wpf-tags') ) {
+
+					$( this ).find( 'select' ).addClass('select4-wpf-tags');
+					$( this ).find( '.pumselect2-container' ).remove();
+					initializeTagsSelect( 'div.select4-wpf-tags-wrapper' );
+
+				}
+
+			});
+
+		});
+
+	}
+
 });
 
 // Tribe Tickets
@@ -627,7 +710,7 @@ function initializeTicketTable( ticketID ) {
 
 	initializeTagsSelect( '#ticket_form_table' );
 
-	jQuery('#ticket_form_table select#apply_tags').change(function(event) {
+	jQuery('#ticket_form_table #ticket_wpf_settings-apply_tags').change(function(event) {
 		
 		var items = [];
 		jQuery(this).find('option:selected').each(function(){ items.push(jQuery(this).val()); });

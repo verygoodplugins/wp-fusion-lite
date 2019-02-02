@@ -585,39 +585,43 @@ class WPF_ActiveCampaign {
 
 		}
 
-		// Custom fields
-		foreach ( $result->fields as $field_object ) {
+		if( ! empty( $result->fields ) ) {
 
-			foreach ( $contact_fields as $meta_key => $field_data ) {
+			// Custom fields
+			foreach ( $result->fields as $field_object ) {
 
-				if ( $field_data['active'] == true ) {
+				foreach ( $contact_fields as $meta_key => $field_data ) {
 
-					// Get field ID from stored CRM field value
-					$field_array = explode( ',', str_replace( 'field[', '', str_replace( ']', '', $field_data['crm_field'] ) ) );
+					if ( $field_data['active'] == true ) {
 
-					if ( $field_object->id == $field_array[0] ) {
+						// Get field ID from stored CRM field value
+						$field_array = explode( ',', str_replace( 'field[', '', str_replace( ']', '', $field_data['crm_field'] ) ) );
 
-						$value = $field_object->val;
+						if ( $field_object->id == $field_array[0] ) {
 
-						// Clean up the pipes from array type fields
-						if( strpos( $value, '||' ) !== false ) {
+							$value = $field_object->val;
 
-							// Remove pipes from beginning
-							if( substr( $value, 0, 2 ) == '||' ) {
-								$value = substr( $value, 2 );
+							// Clean up the pipes from array type fields
+							if( strpos( $value, '||' ) !== false ) {
+
+								// Remove pipes from beginning
+								if( substr( $value, 0, 2 ) == '||' ) {
+									$value = substr( $value, 2 );
+								}
+
+								if( substr( $value, -2 ) == '||' ) {
+									$value = substr( $value, 0, strlen( $value ) - 2 );
+								}
+
+								$value = str_replace('||', ',', $value);
+
 							}
 
-							if( substr( $value, -2 ) == '||' ) {
-								$value = substr( $value, 0, strlen( $value ) - 2 );
-							}
-
-							$value = str_replace('||', ',', $value);
+							$user_meta[ $meta_key ] = $value;
 
 						}
-
-						$user_meta[ $meta_key ] = $value;
-
 					}
+
 				}
 
 			}

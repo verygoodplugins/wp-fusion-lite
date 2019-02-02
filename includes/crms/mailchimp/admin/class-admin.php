@@ -44,6 +44,24 @@ class WPF_MailChimp_Admin {
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
+		// Add CID back as a field so it can be synced and used with auto login links
+		add_filter( 'wpf_meta_fields', array( $this, 'prepare_meta_fields' ), 70 );
+
+	}
+
+	/**
+	 * Add CID field for syncing
+	 *
+	 * @access  public
+	 * @return  array Meta fields
+	 */
+
+	public function prepare_meta_fields( $meta_fields ) {
+
+		$meta_fields['mailchimp_contact_id'] = array( 'label' => 'Contact ID', 'type' => 'text', 'group' => 'wordpress' );
+
+		return $meta_fields;
+
 	}
 
 

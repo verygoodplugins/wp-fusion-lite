@@ -27,6 +27,14 @@ class WPF_Salesforce {
 	public $object_type;
 
 	/**
+	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
+	 *
+	 * @var tag_type
+	 */
+
+	public $tag_type = 'Topic';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -40,6 +48,10 @@ class WPF_Salesforce {
 		$this->supports = array();
 
 		$this->object_type = 'Contact';
+
+		if( wp_fusion()->settings->get('sf_tag_type', 'Topics') != 'Topics' ) {
+			$this->tag_type = 'Tag';
+		}
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -208,6 +220,7 @@ class WPF_Salesforce {
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
 
 		return $this->params;
+		
 	}
 
 
@@ -329,7 +342,6 @@ class WPF_Salesforce {
 			}
 
 		} else {
-
 
 			$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20TagDefinition' );
 
@@ -806,22 +818,49 @@ class WPF_Salesforce {
 
 		$contact_ids = array();
 
-		$query_args = array( 'q' => "SELECT ItemId, TagDefinitionId from ContactTag where TagDefinitionId = '" . $tag . "'" );
+		$tag_type = wp_fusion()->settings->get('sf_tag_type', 'Topics');
 
-		$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
+		if( $tag_type == 'Topics' ) {
 
-		$response = wp_remote_get( $request, $this->params );
+			$query_args = array( 'q' => "SELECT EntityId from TopicAssignment WHERE TopicId = '" . $tag . "'" );
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
 
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
+			$response = wp_remote_get( $request, $this->params );
 
-		$response = json_decode(wp_remote_retrieve_body( $response ));
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		if( ! empty($response->records)) {
+			$response = json_decode(wp_remote_retrieve_body( $response ));
 
-			foreach($response->records as $contact) {
-				$contact_ids[] = $contact->ItemId;
+			if( ! empty( $response->records ) ) {
+
+				foreach($response->records as $contact) {
+					$contact_ids[] = $contact->EntityId;
+				}
+
+			}
+
+		} else {
+
+			$query_args = array( 'q' => "SELECT ItemId, TagDefinitionId from ContactTag where TagDefinitionId = '" . $tag . "'" );
+
+			$request  = add_query_arg($query_args, $this->instance_url . '/services/data/v42.0/query');
+
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode(wp_remote_retrieve_body( $response ));
+
+			if( ! empty($response->records)) {
+
+				foreach($response->records as $contact) {
+					$contact_ids[] = $contact->ItemId;
+				}
+
 			}
 
 		}

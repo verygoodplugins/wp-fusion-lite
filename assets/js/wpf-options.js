@@ -404,6 +404,39 @@ jQuery(document).ready(function($){
 
 		});
 
+		function paramReplace(name, string, value) {
+			// Find the param with regex
+			// Grab the first character in the returned string (should be ? or &)
+			// Replace our href string with our new value, passing on the name and delimeter
+			var re = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+			delimeter = re.exec(string)[0].charAt(0),
+			newString = string.replace(re, delimeter + name + "=" + value);
+
+			return newString;
+		}
+
+		//
+		// Fill slug into auth link (for oauth apps with slug)
+		//
+
+		$('#nationbuilder_slug').on('input', function(event) {
+			
+			if( $(this).val().length ) {
+
+				var newUrl = paramReplace( 'slug', $("a#nationbuilder-auth-btn").attr('href'), $(this).val() );
+
+				$("a#nationbuilder-auth-btn").attr('href', newUrl);
+
+				$("a#nationbuilder-auth-btn").removeClass('button-disabled').addClass('button-primary');
+
+			} else {
+
+				$("a#nationbuilder-auth-btn").removeClass('button-primary').addClass('button-disabled');
+
+			}
+
+		});
+
 		//
 		// Activate / deactivate license
 		//

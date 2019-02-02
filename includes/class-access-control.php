@@ -57,12 +57,20 @@ class WPF_Access_Control {
 			$user_id = get_current_user_id();
 		}
 
-		// See if taxonomy restrictions are in effect
-		if($this->user_can_access_term( $post_id, $user_id ) == false) {
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
+		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
+
+		if( empty( $post_restrictions ) ) {
+			$post_restrictions = array();
 		}
 
-		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
+		if( ! isset( $post_restrictions['allow_tags'] ) ) {
+			$post_restrictions['allow_tags'] = array();
+		}
+
+		// See if taxonomy restrictions are in effect
+		if($this->user_can_access_term( $post_id, $user_id ) == false) {
+			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_restrictions['allow_tags'] );
+		}
 
 		// If content isn't locked
 		if ( empty( $post_restrictions ) || ! isset( $post_restrictions['lock_content'] ) || $post_restrictions['lock_content'] != true ) {
@@ -71,19 +79,19 @@ class WPF_Access_Control {
 
 		// If not logged in
 		if ( ! is_user_logged_in() ) {
-			return apply_filters( 'wpf_user_can_access', false, false, $post_id );
+			return apply_filters( 'wpf_user_can_access', false, false, $post_restrictions['allow_tags'] );
 		}
 
 		// If no tags specified for restriction, but user is logged in, allow access
 		if ( empty( $post_restrictions['allow_tags'] ) ) {
-			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
+			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_restrictions['allow_tags'] );
 		}
 
 		$user_tags = wp_fusion()->user->get_tags( $user_id );
 
 		// If user has no valid tags
 		if ( empty( $user_tags ) ) {
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
+			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_restrictions['allow_tags'] );
 		}
 
 		// Check if user has required tags for content
@@ -97,7 +105,7 @@ class WPF_Access_Control {
 
 
 		// If no tags matched
-		return apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id );
+		return apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_restrictions['allow_tags'] );
 
 	}
 
@@ -195,8 +203,9 @@ class WPF_Access_Control {
 
 		foreach( $terms as $term_id ) {
 
-			if(!isset($taxonomy_rules[$term_id]) || !isset($taxonomy_rules[$term_id]['lock_content']) || !isset($taxonomy_rules[$term_id]['lock_posts']))
+			if(!isset($taxonomy_rules[$term_id]) || !isset($taxonomy_rules[$term_id]['lock_content']) || !isset($taxonomy_rules[$term_id]['lock_posts']) || ! isset( $taxonomy_rules[$term_id]['allow_tags'] ) ) {
 				continue;
+			}
 
 			$result = array_intersect( $taxonomy_rules[$term_id]['allow_tags'], $user_tags );
 
@@ -333,8 +342,9 @@ class WPF_Access_Control {
 
 		foreach( $terms as $term_id ) {
 
-			if(!isset($taxonomy_rules[$term_id]) || !isset($taxonomy_rules[$term_id]['lock_content']) || !isset($taxonomy_rules[$term_id]['lock_posts']))
+			if(!isset($taxonomy_rules[$term_id]) || !isset($taxonomy_rules[$term_id]['lock_content']) || !isset($taxonomy_rules[$term_id]['lock_posts']) || ! isset( $taxonomy_rules[$term_id]['allow_tags'] ) ) {
 				continue;
+			}
 
 			// If user doesn't have the tags to access that term, return the redirect for that term
 			$result = array_intersect( $taxonomy_rules[$term_id]['allow_tags'], $user_tags );
@@ -368,7 +378,7 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		if( is_admin() || is_home() ) {
+		if( is_admin() || is_home() || is_search() ) {
 
 			return true;
 
@@ -478,7 +488,28 @@ class WPF_Access_Control {
 
 	public function restricted_content_filter( $content ) {
 
-		return do_shortcode( stripslashes( wp_fusion()->settings->get( 'restricted_message' ) ) );
+		$message = false;
+
+		if( wp_fusion()->settings->get( 'per_post_messages', false ) == true ) {
+
+			global $post;
+			$settings = get_post_meta( $post->ID, 'wpf-settings', true );
+
+			if( ! empty( $settings['message'] ) ) {
+
+				$message = wp_specialchars_decode( $settings['message'], ENT_QUOTES );
+
+			}
+
+		}
+
+		if( $message == false ) {
+
+			$message = wp_fusion()->settings->get( 'restricted_message' );
+
+		}
+
+		return do_shortcode( stripslashes( $message ) );
 
 	}
 
@@ -646,7 +677,6 @@ class WPF_Access_Control {
 	 */
 
 	public function hide_restricted_widgets( $instance, $widget, $args ) {
-
 
 		if( ! isset( $instance['wpf_conditional'] ) )
 			return $instance;

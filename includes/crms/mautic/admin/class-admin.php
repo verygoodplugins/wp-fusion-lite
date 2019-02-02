@@ -156,11 +156,6 @@ class WPF_Mautic_Admin {
 		echo '</table><div id="connection-output"></div>';
 		echo '</div>'; // close #mautic div
 
-		// Hide Import tab (for now)
-		if( wp_fusion()->crm->slug == 'mautic' ) {
-			echo '<style type="text/css">#tab-import { display: none; }</style>';
-		}
-
 		echo '<table class="form-table">';
 
 	}

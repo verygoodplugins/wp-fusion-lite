@@ -17,8 +17,12 @@ class WPF_User {
 		add_action( 'profile_update', array( $this, 'profile_update'), 10, 2);
 		add_action( 'delete_user', array( $this, 'user_delete') );
 		add_action( 'password_reset', array( $this, 'password_reset' ), 10, 2 );
-		add_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3);
 		add_action( 'wp_login', array( $this, 'login' ), 10, 2 );
+
+		// Roles
+		add_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3);
+		add_action( 'add_user_role', array( $this, 'add_remove_user_role' ), 10, 2);
+		add_action( 'remove_user_role', array( $this, 'add_remove_user_role' ), 10, 2);
 
 		add_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		add_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
@@ -177,9 +181,10 @@ class WPF_User {
 		}
 
 		// Fill in some blanks from the DB if possible
-		$userdata               = get_userdata( $user_id );
-		$post_data['user_id']	= $user_id;
-		$post_data['role']  	= $userdata->roles[0];
+		$userdata               		= get_userdata( $user_id );
+		$post_data['user_id']			= $user_id;
+		$post_data['role']  			= $userdata->roles[0];
+		$post_data['user_registered']	= $userdata->user_registered;
 
 		foreach( array( 'first_name', 'last_name', 'user_email', 'user_url', 'user_login', 'user_nicename' ) as $meta_key ) {
 
@@ -257,7 +262,6 @@ class WPF_User {
 			$this->apply_tags( $assign_tags, $user_id );
 		}
 
-
 		do_action( 'wpf_user_created', $user_id, $contact_id, $post_data );
 
 		return $contact_id;
@@ -322,6 +326,13 @@ class WPF_User {
 		}
 
 		$user = get_user_by( 'id', $user_id );
+
+		if( empty( $user ) && defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
+
+			$user = new stdClass;
+			$user->user_email = get_user_meta( $user_id, 'user_email', true );
+
+		}
 
 		// If no user email set, don't bother with an API call
 		if ( empty( $user->user_email ) ) {
@@ -407,50 +418,94 @@ class WPF_User {
 		// Don't send updates back
 		remove_action( 'profile_update', array( $this, 'profile_update'), 10, 2);
 
-		$user = get_userdata( $user_id );
+		// Save all of it to usermeta table if doing auto login
+		if( defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
 
-		foreach ( $user_meta as $key => $value ) {
-
-			// Don't reset passwords for admins
-			if ( $key == 'user_pass' && ! empty( $value ) && ! user_can( $user_id, 'manage_options' ) ) {
-
-				// Only update pass if it's changed
-				if ( wp_check_password( $value, $user->data->user_pass, $user_id ) == false ) {
-
-					wp_fusion()->logger->handle( 'notice', $user_id, 'User password set to <strong>' . $value . '</strong>' );
-
-					// Don't send it back again
-					remove_action( 'password_reset', array( $this, 'password_reset' ), 10, 2 );
-					wp_set_password( $value, $user_id );
-
-				}
-
-
-			} elseif ( $key == 'display_name' ) {
-
-				wp_update_user( array( 'ID' => $user_id, 'display_name' => $value ) );
-
-			} elseif ( $key == 'user_email' && $value != $user->user_email ) {
-
-				wp_update_user( array( 'ID' => $user_id, 'user_email' => $value ) );
-
-			} elseif ( $key == 'user_url' ) {
-
-				wp_update_user( array( 'ID' => $user_id, 'user_url' => $value ) );
-
-			} elseif ( $key == 'role' && ! user_can( $user_id, 'manage_options' ) && wp_roles()->is_role( $value ) ) {
-
-				// Don't send it back again
-				remove_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3);
-				wp_update_user( array( 'ID' => $user_id, 'role' => $value ) );
-
-			} else {
+			foreach ( $user_meta as $key => $value ) {
 
 				update_user_meta( $user_id, $key, $value );
 
 			}
 
-			do_action( 'wpf_user_meta_updated', $user_id, $key, $value );
+		} else {
+
+			$user = get_userdata( $user_id );
+
+			foreach ( $user_meta as $key => $value ) {
+
+				if( empty( $value ) ) {
+					continue;
+				}
+
+				// Don't reset passwords for admins
+				if ( $key == 'user_pass' && ! empty( $value ) && ! user_can( $user_id, 'manage_options' ) ) {
+
+					// Only update pass if it's changed
+					if ( wp_check_password( $value, $user->data->user_pass, $user_id ) == false ) {
+
+						wp_fusion()->logger->handle( 'notice', $user_id, 'User password set to <strong>' . $value . '</strong>' );
+
+						// Don't send it back again
+						remove_action( 'password_reset', array( $this, 'password_reset' ), 10, 2 );
+						wp_set_password( $value, $user_id );
+
+					}
+
+
+				} elseif ( $key == 'display_name' ) {
+
+					wp_update_user( array( 'ID' => $user_id, 'display_name' => $value ) );
+
+				} elseif ( $key == 'user_email' && $value != $user->user_email ) {
+
+					wp_update_user( array( 'ID' => $user_id, 'user_email' => $value ) );
+
+				} elseif ( $key == 'user_registered' ) {
+
+					// Don't override the registered date
+					continue;
+
+				} elseif ( $key == 'user_url' ) {
+
+					wp_update_user( array( 'ID' => $user_id, 'user_url' => $value ) );
+
+				} elseif ( $key == 'role' && ! user_can( $user_id, 'manage_options' ) && wp_roles()->is_role( $value ) ) {
+
+					// Don't send it back again
+					remove_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3);
+					wp_update_user( array( 'ID' => $user_id, 'role' => $value ) );
+
+				} elseif ( $key == 'wp_capabilities' && ! user_can( $user_id, 'manage_options' ) ) {
+
+					if( ! is_array( $value ) ) {
+						$value = explode(',', $value);
+					}
+
+					if( is_array( $value ) ) {
+
+						foreach( $value as $i => $role ) {
+
+							if( ! wp_roles()->is_role( $role ) ) {
+								unset( $value[$i] );
+							}
+
+						}
+
+						if( ! empty( $value ) ) {
+							update_user_meta( $user_id, $key, $value );
+						}
+
+					}
+
+				} else {
+
+					update_user_meta( $user_id, $key, $value );
+
+				}
+
+				do_action( 'wpf_user_meta_updated', $user_id, $key, $value );
+
+			}
 
 		}
 
@@ -463,7 +518,7 @@ class WPF_User {
 	 * @return array Tags applied to the user
 	 */
 
-	public function get_tags( $user_id = false, $force_update = false ) {
+	public function get_tags( $user_id = false, $force_update = false, $lookup_cid = true ) {
 
 		if ( $user_id == false ) {
 			$user_id = get_current_user_id();
@@ -480,6 +535,11 @@ class WPF_User {
 		// If no tags
 		if ( empty( $user_tags ) && $force_update == false ) {
 			return array();
+		}
+
+		// Don't get the CID again if the request came from a webhook
+		if( $lookup_cid == false ) {
+			$force_update = false;
 		}
 
 		$contact_id = $this->get_contact_id( $user_id, $force_update );
@@ -536,7 +596,7 @@ class WPF_User {
 	}
 
 	/**
-	 * Applies an array of tags to a given contact ID
+	 * Applies an array of tags to a given user ID
 	 *
 	 * @access public
 	 * @return bool
@@ -591,7 +651,7 @@ class WPF_User {
 	}
 
 	/**
-	 * Removes an array of tags from a given contact ID
+	 * Removes an array of tags from a given user ID
 	 *
 	 * @access public
 	 * @return bool
@@ -680,11 +740,11 @@ class WPF_User {
 
 			wp_fusion()->logger->handle( 'info', $user_id, 'Returning generated password <strong>' . $user_meta['user_pass'] . '</strong> to ' . wp_fusion()->crm->name );
 
-			$this->push_user_meta( $user_id, array( 'user_login' => $user_meta['user_email'] ) );
+			$this->push_user_meta( $user_id, array( 'user_login' => $user_meta['user_login'] ) );
 
 		} else {
 
-			$this->push_user_meta( $user_id, array('user_pass' => $user_meta['user_pass'], 'user_login' => $user_meta['user_email'] ) );
+			$this->push_user_meta( $user_id, array('user_pass' => $user_meta['user_pass'], 'user_login' => $user_meta['user_login'] ) );
 
 		}
 
@@ -701,6 +761,27 @@ class WPF_User {
 	public function update_user_role( $user_id, $role, $old_roles ) {
 
 		$this->push_user_meta( $user_id, array('role' => $role ));
+
+	}
+
+	/**
+	 * Triggered when user role added or removed
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function add_remove_user_role( $user_id, $role ) {
+
+		$user = get_userdata( $user_id );
+
+		if( ! empty( $user->caps ) && is_array( $user->caps ) ) {
+
+			$roles = implode(', ', array_keys( $user->caps ) );
+
+			$this->push_user_meta( $user_id, array( 'wp_capabilities' => $roles ));
+
+		}
 
 	}
 
@@ -807,7 +888,14 @@ class WPF_User {
 
 		$tag_name = trim( $tag_name );
 
-		foreach ( wp_fusion()->settings->get( 'available_tags' ) as $id => $data ) {
+		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+
+		// If it's already an ID
+		if( isset( $available_tags[ $tag_name ] ) ) {
+			return $tag_name;
+		}
+
+		foreach ( $available_tags as $id => $data ) {
 
 			if ( isset( $data['label'] ) && $data['label'] == $tag_name ) {
 
@@ -816,6 +904,10 @@ class WPF_User {
 			} elseif ( $data == $tag_name ) {
 
 				return $id;
+
+			} elseif ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+
+				return $tag_name;
 
 			}
 
@@ -826,7 +918,7 @@ class WPF_User {
 	}
 
 	/**
-	 * Gets the display label for a given user's tag
+	 * Gets the display label for a given tag ID
 	 *
 	 * @access public
 	 * @return string Label for given tag
@@ -836,7 +928,11 @@ class WPF_User {
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags' );
 
-		if ( ! isset( $available_tags[ $tag_id ] ) ) {
+		if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+
+			return $tag_id;
+
+		} elseif ( ! isset( $available_tags[ $tag_id ] ) ) {
 
 			return '(Unknown Tag: ' . $tag_id . ')';
 
@@ -862,13 +958,15 @@ class WPF_User {
 	public function push_user_meta_single( $meta_id, $object_id, $meta_key, $_meta_value ) {
 
 		// Allow itegrations to register fields that should always sync when modified
+
 		$watched_fields = apply_filters( 'wpf_watched_meta_fields', array() );
+
+		// Don't even try if the field isn't enabled for sync
 
 		if ( wp_fusion()->settings->get( 'push_all_meta' ) != true && ! in_array( $meta_key, $watched_fields ) ) {
 			return;
 		}
 
-		// Don't even try if the field isn't enabled for sync
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
 		if( empty( $contact_fields[ $meta_key ] ) || $contact_fields[ $meta_key ]['active'] != true && ! in_array( $meta_key, $watched_fields ) ) {
@@ -907,12 +1005,13 @@ class WPF_User {
 		} elseif ( empty( $user_meta ) ) {
 
 			// If nothing's been supplied, get the latest from the DB
-			$user_meta         			= array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
-			$userdata          			= get_userdata( $user_id );
-			$user_meta['role'] 			= $userdata->roles[0];
-			$user_meta['user_login'] 	= $userdata->user_login;
-			$user_meta['user_email'] 	= $userdata->user_email;
-			$user_meta['user_id'] 		= $user_id;
+			$user_meta         				= array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
+			$userdata          				= get_userdata( $user_id );
+			$user_meta['role'] 				= $userdata->roles[0];
+			$user_meta['user_login'] 		= $userdata->user_login;
+			$user_meta['user_email'] 		= $userdata->user_email;
+			$user_meta['user_id'] 			= $user_id;
+			$user_meta['user_registered'] 	= $userdata->user_registered;
 
 		}
 
@@ -940,7 +1039,7 @@ class WPF_User {
 
 		}
 
-		do_action( 'wpf_pushed_user_meta', $user_id, $contact_id );
+		do_action( 'wpf_pushed_user_meta', $user_id, $contact_id, $user_meta );
 
 		return true;
 

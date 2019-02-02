@@ -2,11 +2,11 @@
 
 /*
 Plugin Name: WP Fusion Lite
-Description: WP Fusion connects your website to your CRM or marketing automation system
+Description: WP Fusion connects your website to your CRM or marketing automation system.
 Plugin URI: https://wpfusion.com/
-Version: 3.18
+Version: 3.22
 Author: Very Good Plugins
-Author URI: http://verygoodplugins.com/
+Author URI: https://verygoodplugins.com/
 Text Domain: wp-fusion
 */
 
@@ -30,7 +30,7 @@ Text Domain: wp-fusion
  *
  */
 
-define( 'WP_FUSION_VERSION', '3.18' );
+define( 'WP_FUSION_VERSION', '3.22' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -168,6 +168,12 @@ final class WP_Fusion {
 
 			self::$instance = new WP_Fusion;
 			self::$instance->setup_constants();
+
+			// If PHP version not met
+			if( ! self::$instance->check_install() ) {
+				add_action( 'admin_notices', array( self::$instance, 'php_version_notice' ) );
+			}
+
 			self::$instance->init_includes();
 
 			// Create settings
@@ -190,8 +196,14 @@ final class WP_Fusion {
 				self::$instance->ajax   	= new WPF_AJAX;
 				self::$instance->batch  	= new WPF_Batch;
 
+				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
+				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
+
 				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
-				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes' ) );
+
+				if( self::$instance->is_full_version() ) {
+					add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
+				}
 				
 			}
 
@@ -241,6 +253,10 @@ final class WP_Fusion {
 			define( 'WPF_MIN_WP_VERSION', '4.0' );
 		}
 
+		if ( ! defined( 'WPF_MIN_PHP_VERSION' ) ) {
+			define( 'WPF_MIN_PHP_VERSION', '5.6' );
+		}
+
 		if ( ! defined( 'WPF_DIR_PATH' ) ) {
 			define( 'WPF_DIR_PATH', plugin_dir_path( __FILE__ ) );
 		}
@@ -258,6 +274,24 @@ final class WP_Fusion {
 		}
 
 	}
+
+	/**
+	 * Check min PHP version
+	 *
+	 * @access private
+	 * @return bool
+	 */
+
+	private function check_install() {
+
+		if( version_compare( phpversion(), WPF_MIN_PHP_VERSION, '>=' ) ) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
 
 	/**
 	 * Setup CRM related constants
@@ -285,6 +319,19 @@ final class WP_Fusion {
 	public function get_integrations() {
 
 		return apply_filters( 'wpf_integrations', array() );
+
+	}
+
+	/**
+	 * Defines default supported theme integrations
+	 *
+	 * @access public
+	 * @return array Integrations
+	 */
+
+	public function get_integrations_theme() {
+
+		return apply_filters( 'wpf_integrations_theme', array() );
 
 	}
 
@@ -322,10 +369,15 @@ final class WP_Fusion {
 			'maropost'			=> 'WPF_Maropost',
 			'mailchimp'			=> 'WPF_MailChimp',
 			'sendinblue'		=> 'WPF_SendinBlue',
-			'maropost'			=> 'WPF_Maropost',
 			'hubspot'			=> 'WPF_HubSpot',
 			'platformly'		=> 'WPF_Platformly',
+			'drift'				=> 'WPF_Drift',
 			'staging'			=> 'WPF_Staging',
+			'autopilot'			=> 'WPF_Autopilot',
+			'customerly'		=> 'WPF_Customerly',
+			'copper'			=> 'WPF_Copper',
+			'nationbuilder'		=> 'WPF_NationBuilder',
+			'groundhogg'		=> 'WPF_Groundhogg'
 		) );
 
 	}
@@ -372,15 +424,22 @@ final class WP_Fusion {
 		require_once WPF_DIR_PATH . 'includes/class-access-control.php';
 		require_once WPF_DIR_PATH . 'includes/class-auto-login.php';
 		require_once WPF_DIR_PATH . 'includes/admin/class-batch.php';
+		require_once WPF_DIR_PATH . 'includes/admin/gutenberg/class-gutenberg.php';
 
-		if ( is_admin() ) {
+		if ( is_admin() && $this->is_full_version() ) {
 
-			// require_once WPF_DIR_PATH . 'includes/admin/class-updater.php';
+			require_once WPF_DIR_PATH . 'includes/admin/class-updater.php';
 
 		} else {
 
 			require_once WPF_DIR_PATH . 'includes/admin/class-admin-bar.php';
 			require_once WPF_DIR_PATH . 'includes/class-shortcodes.php';
+
+		}
+
+		if( $this->is_full_version() ) {
+
+			require_once WPF_DIR_PATH . 'includes/class-api.php';
 
 		}
 
@@ -411,6 +470,34 @@ final class WP_Fusion {
 				}
 
 			}
+
+		}
+
+	}
+
+	/**
+	 * Includes theme integrations after all theme has loaded
+	 *
+	 * @access private
+	 * @return void
+	 */
+
+	public function integrations_includes_theme() {
+
+		// Integrations base
+		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
+
+		// Integrations autoloader
+		foreach ( wp_fusion()->get_integrations_theme() as $filename => $dependency_class ) {
+
+			if( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
+
+				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
+					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';
+				}
+
+			}
+
 		}
 
 	}
@@ -427,6 +514,40 @@ final class WP_Fusion {
 		load_plugin_textdomain( 'wp-fusion', false, 'wp-fusion/languages' );
 
 	}
+
+
+	/**
+	 * Check to see if this is WPF Lite or regular
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function is_full_version() {
+
+		if( ! empty( $this->get_integrations() ) ) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
+	* Returns error message and deactivates plugin when error returned.
+	*
+	* @access public
+	* @return mixed error message.	
+	*/
+
+	public function php_version_notice() {
+
+		echo '<div class="notice notice-error">';
+		echo '<p><strong>Warning:</strong> WP Fusion requires at least PHP version ' . WPF_MIN_PHP_VERSION . ' in order to function properly. You are currently using PHP version ' . phpversion() . '. Please update your version of PHP, or contact your web host for assistance.</p>';
+		echo '</div>';
+
+	}
+
 
 
 }
@@ -452,5 +573,5 @@ if( ! function_exists( 'wp_fusion' ) ) {
 
 	// Get WP Fusion Running
 	wp_fusion();
-
+	
 }

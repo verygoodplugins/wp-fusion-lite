@@ -389,6 +389,10 @@ class WPF_Options {
 				$this->multi_selects[] = $id;
 			}
 
+			if($setting['type'] == 'checkboxes') {
+				$this->multi_selects[] = $id;
+			}
+
 			if($setting['type'] == 'assign_tags') {
 				$this->multi_selects[] = $id;
 			}
@@ -763,9 +767,19 @@ class WPF_Options {
 
 						<?php else : ?>
 
-							<li id="tab-<?php echo $section_slug ?>"> 
-								<a href="<?php menu_page_url( $section['slug'] ); ?>"><?php echo $section['title'] ?></a>
-							</li>
+							<?php if( isset( $section['url'] ) ) : ?>
+
+								<li id="tab-<?php echo $section_slug ?>"> 
+									<a href="<?php echo $section['url']; ?>"><?php echo $section['title'] ?></a>
+								</li>
+
+							<?php elseif( isset( $section['slug'] ) ) : ?>
+
+								<li id="tab-<?php echo $section_slug ?>"> 
+									<a href="<?php menu_page_url( $section['slug'] ); ?>"><?php echo $section['title'] ?></a>
+								</li>
+
+							<?php endif; ?>
 
 						<?php endif; ?>
 
@@ -1034,11 +1048,13 @@ class WPF_Options {
 	 */
 	private function show_field_heading($id, $field) {
 
-		echo '<h4>'.$field['title'].'</h4>';
+		if(!empty($field['title'])) {
+			echo '<h4>'.$field['title'].'</h4>';
+		}
 
 		if(!empty($field['desc'])) {
 
-			echo '<p>'.$field['desc'].'</p>';
+			echo $field['desc'];
 		}
 	}
 
@@ -1132,7 +1148,7 @@ class WPF_Options {
 		if(!isset($field['disabled']))
 			$field['disabled'] = false;
 
-		if($field['format'] == 'phone') {
+		if(isset($field['format']) && $field['format'] == 'phone') {
 
 			echo '<input id="'.($subfield_id ? $subfield_id : $id).'" class="form-control bfh-phone '.$field['class'].'" data-format="(ddd) ddd-dddd" type="text" id="'.$id.'" name="'.$this->option_group.'['.$id.']'.($subfield_id ? '['.$subfield_id.']' : '').'" placeholder="'.$field['std'].'" value="'.esc_attr($subfield_id ? $this->options[$id][$subfield_id] : $this->options[$id]).'" '.($field['disabled'] ? 'disabled="true"' : '').'>';
 		} else {
@@ -1284,6 +1300,40 @@ class WPF_Options {
 
 		echo '</td>';
 		echo '</tr>';
+	}
+
+	/**
+	 *
+	 * Checkboxes field
+	 *
+	 */
+
+	/**
+	 * Show Checkboxes field.
+	 *
+	 * @param string $id
+	 * @param array  $field
+	 *
+	 */
+	private function show_field_checkboxes($id, $field) {
+
+		if(!isset($field['class']))
+			$field['class'] = '';
+
+		foreach( $field['options'] as $value => $label ) {
+
+			if( ! isset( $this->options[$id][$value] ) ) {
+				$this->options[$id][$value] = false;
+			}
+
+			echo '<input class="checkbox ' . $field['class'] . '" type="checkbox" id="' . $id . '-' . $value . '" name="'.$this->option_group.'['.$id.'][' . $value . ']" value="1" '.checked($this->options[$id][$value], 1, false).' '.(isset($field['disabled']) && $field['disabled'] == true ? 'disabled="true"' : ''). ' />';
+
+			echo '<label for="'. $id .'-' . $value . '">'.$label.'</label><br />';
+
+		}
+
+		echo '<br />';
+
 	}
 
 	/**

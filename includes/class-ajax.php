@@ -46,7 +46,13 @@ class WPF_AJAX {
 
 		$tags = array_map('sanitize_text_field', $tags);
 
-		wp_fusion()->user->apply_tags( $tags, $user_id );
+		$tags_to_apply = array();
+
+		foreach ( $tags as $tag ) {
+			$tags_to_apply[] = wp_fusion()->user->get_tag_id( $tag );
+		}
+
+		wp_fusion()->user->apply_tags( $tags_to_apply, $user_id );
 
 		die();
 
@@ -206,17 +212,21 @@ class WPF_AJAX {
 
 	public function process_async() {
 
-		$callback = $_POST['data'];
 		$index = $_POST['index'];
 
-		// Add "doing async" override
-		$callback['args'][] = true;
+		$wpf_async = get_option( 'wpf_async' );
 
-		$class = new $callback['class'];
-		call_user_func_array( array( $class, $callback['function'] ), $callback['args'] );
+		if( ! isset( $wpf_async[ $index ] ) ) {
+			die();
+		}
+
+		// Add "doing async" override
+		$wpf_async[ $index ]['args'][] = true;
+
+		$class = new $wpf_async[ $index ][ 'class' ];
+		call_user_func_array( array( $class, $wpf_async[ $index ][ 'function' ] ), $wpf_async[ $index ][ 'args' ] );
 
 		// Clean up task if it's been processed
-		$wpf_async = get_option( 'wpf_async' );
 		unset( $wpf_async[$index] );
 
 		if( empty( $wpf_async ) ) {

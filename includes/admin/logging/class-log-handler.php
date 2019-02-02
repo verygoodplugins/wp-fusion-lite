@@ -459,6 +459,10 @@ class WPF_Log_Handler {
 
 				foreach( $slugs as $slug ) {
 
+					if( empty( $slug ) ) {
+						continue;
+					}
+
 					if (strpos($trace['file'], $slug ) !== false) {
 						$found_integrations[] = $slug;
 					}

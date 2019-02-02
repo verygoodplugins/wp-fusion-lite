@@ -438,6 +438,8 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				$return = true;
 			}
 
+			// Identifier is wpf_batch
+
 			return apply_filters( $this->identifier . '_time_exceeded', $return );
 		}
 

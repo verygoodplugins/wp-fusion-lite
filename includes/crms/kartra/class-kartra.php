@@ -377,6 +377,32 @@ class WPF_Kartra {
 			$crm_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
+		$params = $this->params;
+
+		// Try and get any custom fields by querying the first lead
+
+		$params['body']['get_lead']['id'] = '1';
+		
+		$response = wp_remote_post( $this->api_url, $params );
+
+		if( ! is_wp_error( $response ) ) {
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( ! empty( $response ) ) {
+
+				foreach( $response->lead_details as $field => $value ) {
+
+					if( strpos($field, ' ') !== false || strtolower( $field ) != $field ) {
+						$crm_fields[ $field ] = $field;
+					}
+
+				}
+
+			}
+
+		}
+
 		asort( $crm_fields );
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
@@ -634,6 +660,11 @@ class WPF_Kartra {
 
 		$data['cmd'] = 'edit_lead';
 		$data['id'] = $contact_id;
+
+		if( isset( $data['email'] ) ) {
+			$data['new_email'] = $data['email'];
+			unset( $data['email'] );
+		}
 
 		$params = $this->params;
 		$params['body']['lead'] = $data;

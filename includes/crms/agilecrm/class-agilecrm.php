@@ -263,7 +263,7 @@ class WPF_AgileCRM {
 
 			if( $response_code > 204 && ! empty( $response_message ) ) {
 
-				$response = new WP_Error( 'error', $response_message );
+				$response = new WP_Error( 'error', $response_message . '. ' . wp_remote_retrieve_body( $response ) );
 				
 			}
 

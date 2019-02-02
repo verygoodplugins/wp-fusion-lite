@@ -16,6 +16,14 @@ class WPF_SendinBlue {
 	public $supports;
 
 	/**
+	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
+	 *
+	 * @var tag_type
+	 */
+
+	public $tag_type = 'List';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -105,7 +113,7 @@ class WPF_SendinBlue {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'sendinblue') !== false ) {
+		if( strpos($url, 'sendinblue') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -137,6 +145,7 @@ class WPF_SendinBlue {
 
 		$this->params = array(
 			'timeout'     => 30,
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'headers'     => array(
 				'Content-Type'  	  => 'application/json',
 				'api-key' 			  => $api_key,
@@ -144,29 +153,6 @@ class WPF_SendinBlue {
 		);
 
 		return $this->params;
-	}
-
-
-	/**
-	 * SendinBlue sometimes requires an email to be submitted when contacts are modified
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users( array( 'meta_key'   => 'sendinblue_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
-
-		if ( ! empty( $users ) ) {
-			return $users[0]->user_email;
-		} else {
-			return false;
-		}
-
 	}
 
 
@@ -234,17 +220,31 @@ class WPF_SendinBlue {
 
 		$available_tags = array();
 
-		$request  = 'https://api.sendinblue.com/v3/contacts/lists';
-		$response = wp_remote_get( $request, $this->params );
+		$offset = 0;
+		$limit = 50;
+		$proceed = true;
 
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
+		while( $proceed == true ) {
 
-		$body_json = json_decode( $response['body'], true );
+			$request  = 'https://api.sendinblue.com/v3/contacts/lists?limit=' . $limit . '&offset=' . $offset;
+			$response = wp_remote_get( $request, $this->params );
 
-		foreach ( $body_json['lists'] as $row ) {
-			$available_tags[ $row['id'] ] = $row['name'];
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body_json = json_decode( $response['body'], true );
+
+			foreach ( $body_json['lists'] as $row ) {
+				$available_tags[ $row['id'] ] = $row['name'];
+			}
+
+			if( count( $body_json['lists'] ) < $limit ) {
+				$proceed = false;
+			} else {
+				$offset = $offset + $limit;
+			}
+
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -325,9 +325,6 @@ class WPF_SendinBlue {
 
 	public function get_tags( $contact_id ) {
 
-		// Get email for API request
-		// $email_address = $this->get_email_from_cid( $contact_id );
-
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
@@ -363,9 +360,6 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
-		// Get email for API request
-		// $email = $this->get_email_from_cid( $contact_id );
-
 		foreach ($tags as $tag) {
 
 			$request      		= 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
@@ -398,9 +392,6 @@ class WPF_SendinBlue {
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
-
-		// Get email for API request
-		// $email = $this->get_email_from_cid( $contact_id );
 
 		foreach ($tags as $tag) {
 
@@ -453,7 +444,9 @@ class WPF_SendinBlue {
 		$post_data['email'] = $data['email'];
 		unset( $data['email'] );
 
-		$post_data['attributes'] = $data;
+		if( ! empty( $data ) ) {
+			$post_data['attributes'] = $data;
+		}
 
 		$url              = 'https://api.sendinblue.com/v3/contacts';
 		$params           = $this->params;
@@ -523,9 +516,6 @@ class WPF_SendinBlue {
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
-
-		// Get email for API request
-		// $email 	= $this->get_email_from_cid( $contact_id );
 
 		$url      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
 		$response = wp_remote_get( $url, $this->params );

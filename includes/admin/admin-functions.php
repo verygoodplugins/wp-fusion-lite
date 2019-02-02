@@ -19,7 +19,7 @@ function wpf_render_tag_multiselect( $args ) {
 		'field_id'		=> null,
 		'field_sub_id' 	=> null,
 		'disabled'		=> false,
-		'placeholder'	=> 'Select tags',
+		'placeholder'	=> __( 'Select tags', 'wp-fusion' ),
 		'limit'			=> null,
 		'no_dupes'		=> array(),
 		'prepend'		=> array(),

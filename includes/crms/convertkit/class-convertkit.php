@@ -418,7 +418,20 @@ class WPF_ConvertKit {
 		$result = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( empty($result) || empty( $result->subscribers ) || ! is_array( $result->subscribers ) ) {
-			return false;
+			
+			// Try one more time for cancelled subscribers
+			$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) . '&sort_field=cancelled_at' );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$result = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( empty($result) || empty( $result->subscribers ) || ! is_array( $result->subscribers ) ) {
+				return false;
+			}
+
 		}
 
 		return $result->subscribers[0]->id;

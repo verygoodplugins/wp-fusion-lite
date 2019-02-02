@@ -69,6 +69,18 @@ class WPF_CRM_Queue {
 		// Queue sending data
 		if ( ( $method == 'apply_tags' || $method == 'remove_tags' || $method == 'update_contact' ) ) {
 
+			if( $method == 'update_contact' && ! isset( $args[2] ) ) {
+
+				// Possbily quit early if none of the data is mapped to CRM fields
+
+				$mapped_fields = wp_fusion()->crm_base->map_meta_fields( $args[1] );
+
+				if( empty( $mapped_fields ) ) {
+					return false;
+				}
+
+			}
+
 			$this->add_to_buffer( $method, $args );
 
 			return true;

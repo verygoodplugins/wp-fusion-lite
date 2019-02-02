@@ -37,11 +37,16 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * AWeber
 * ActiveCampaign
 * AgileCRM
+* Autopilot
 * Capsule
-* ConvertFox
 * ConvertKit
+* Copper
+* Customerly
+* Drift
 * Drip
 * Flexie
+* Gist (ConvertFox)
+* Groundhogg
 * HubSpot
 * Infusionsoft
 * Intercom
@@ -50,6 +55,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * MailerLite
 * Maropost
 * Mautic
+* NationBuilder
 * Ontraport
 * Platform.ly
 * Salesflare

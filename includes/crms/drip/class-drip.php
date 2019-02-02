@@ -56,6 +56,9 @@ class WPF_Drip {
 		// Add tracking code to footer
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
+		// HTTP response filter for API calls outside the SDK
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
 	}
 	
 
@@ -80,6 +83,31 @@ class WPF_Drip {
 			return stripslashes($value);
 
 		}
+
+	}
+
+	/**
+	 * Check HTTP Response for errors and return WP_Error if found
+	 *
+	 * @access public
+	 * @return HTTP Response
+	 */
+
+	public function handle_http_response( $response, $args, $url ) {
+
+		if( strpos($url, 'api.getdrip.com') !== false ) {
+
+			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( isset( $body_json->errors ) ) {
+
+				$response = new WP_Error( 'error', $body_json->errors[0]->message );
+
+			}
+
+		}
+	
+		return $response;
 
 	}
 
@@ -355,8 +383,16 @@ class WPF_Drip {
 
 		if( is_wp_error( $result ) ) {
 
-			// If no contact with that email
-			return false;
+			if( $result->get_error_message() == 'The resource you requested was not found' ) {
+
+				// If no contact with that email
+				return false;
+
+			} else {
+
+				return $result;
+
+			}
 
 		}
 

@@ -2,8 +2,9 @@
 Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, crm, marketing automation, user meta, sync, woocommerce
 Requires at least: 4.0
-Tested up to: 4.9.8
-Stable tag: 3.18
+Requires PHP: 5.6
+Tested up to: 5.0.3
+Stable tag: 3.22
 
 WP Fusion connects your website to your CRM or marketing automation system.
 
@@ -31,11 +32,16 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 * AWeber
 * ActiveCampaign
 * AgileCRM
+* Autopilot
 * Capsule
-* ConvertFox
 * ConvertKit
+* Copper
+* Customerly
+* Drift
 * Drip
 * Flexie
+* Gist (ConvertFox)
+* Groundhogg
 * HubSpot
 * Infusionsoft
 * Intercom
@@ -44,6 +50,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 * MailerLite
 * Maropost
 * Mautic
+* NationBuilder
 * Ontraport
 * Platform.ly
 * Salesflare
@@ -58,6 +65,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 1. Sync any WordPress user fields with contact records in your CRM
 2. View and manage contact tags within WordPress
 3. Restrict access to content based on a contact's tags
+4. Use the Gutenberg block to show and hide content within a page based on a contact's tags
 
 == Installation ==
 
@@ -68,6 +76,48 @@ Upload and activate the plugin, then go to Settings >> WP Fusion. Select your de
 See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.22 - 2/2/2019 =
+
+##### New CRMs
+
+* Drift
+* Autopilot
+* Customerly
+* Copper
+* Groundhogg
+* NationBuilder
+
+##### New Features
+
+* Added Gutenberg block for content restriction
+* Added support for Salesforce Topics
+* Added import tool for Mautic
+* Added support for updating email addresses in Kartra
+* Added handling for changed contact IDs in Infusionsoft
+* Added user_registered field for syncing
+* Added option for per-post restricted content messages
+* Added Pull User Meta batch operation
+* Added support for picklist / multiselect fields in Zoho
+* Added import by Topic for Salesforce
+* Added support for using tag labels in link click tracking
+* Added Gist (ConvertFox) webhooks support
+* Added custom fields support for Kartra
+* Added webhooks support for Platform.ly
+
+##### Bug Fixes
+
+* Capsule bugfixes
+* UserEngage bugfixes
+* Gist (ConvertFox) bugfixes
+* Drift tagging bugfixes
+* Fixed bug where bulk-editing pages would remove WPF access rules
+* Fix for syncing with unsubscribed subscribers in ConvertKit
+* Fix for incomplete address error with MailChimp
+* Fix for error creating contacts in Intercom without any custom fields
+* Fix for wpf_update_tags shortcode in auto-login sessions
+* Fix for imports larger than 50 with Capsule
+* Fix for Sendinblue not creating contacts if custom attributes weren't present
 
 = 3.18 - 11/5/2018 =
 * Added Platform.ly CRM support

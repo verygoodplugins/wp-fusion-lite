@@ -113,7 +113,7 @@ class WPF_Zoho_Admin {
 			'section' => 'setup',
 		);
 
-		if( empty( $options['zoho_token'] ) && ! isset( $_GET['code'] ) ) {
+		if( empty( $options['zoho_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['zoho_header']['desc'] = '<table class="form-table"><tr>';
 			$new_settings['zoho_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
@@ -155,6 +155,10 @@ class WPF_Zoho_Admin {
 	public function register_settings( $settings, $options ) {
 
 		$new_settings = array();
+
+		if( ! isset( $options['zoho_layouts'] ) ) {
+			$options['zoho_layouts'] = array();
+		}
 
 		$new_settings['zoho_layout'] = array(
 			'title'       => __( 'Contact Layout', 'wp-fusion' ),

@@ -42,9 +42,19 @@ $wp_fields['role'] = array(
 	'label' => 'User Role',
 );
 
+$wp_fields['wp_capabilities'] = array(
+	'type'  => 'multiselect',
+	'label' => 'User Capabilities',
+);
+
 $wp_fields['user_pass'] = array(
 	'type'  => 'text',
 	'label' => 'Password',
+);
+
+$wp_fields['user_registered'] = array(
+	'type'  => 'date',
+	'label' => 'User Registered',
 );
 
 $wp_fields['country'] = array(

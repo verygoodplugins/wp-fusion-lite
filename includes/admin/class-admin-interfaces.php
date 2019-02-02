@@ -229,12 +229,25 @@ class WPF_Admin_Interfaces {
 		$t_id = $term->term_id;
 
 		// retrieve the existing value(s) for this meta field. This returns an array
-		$taxonomy_rules = get_option( "wpf_taxonomy_rules", array() ); 
+		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() ); 
+
 		if(isset($taxonomy_rules[$t_id])) {
+
 			$settings = $taxonomy_rules[$t_id];
+
 		} else {
 			$settings = array();
 		}
+
+		$defaults = array(
+			'lock_content'	=> false,
+			'lock_posts'	=> false,
+			'allow_tags'	=> array(),
+			'redirect'		=> false,
+			'redirect_url'	=> false
+		);
+
+		$settings = array_merge( $defaults, $settings );
 
 		?>
 
@@ -302,6 +315,7 @@ class WPF_Admin_Interfaces {
                     </td>
                 </tr>
 
+
         <?php
 	}
 
@@ -325,7 +339,6 @@ class WPF_Admin_Interfaces {
 			update_option( "wpf_taxonomy_rules", $taxonomy_rules );
 
 		}
-
 
 	}
 
@@ -436,6 +449,10 @@ class WPF_Admin_Interfaces {
 
 				$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf_settings'] );
 
+				if( $settings['lock_content'] == false && empty( $settings['allow_tags'] ) && empty( $settings['redirect'] ) ) {
+					return;
+				}
+
 				// update for each post ID
 				foreach ( $post_ids as $post_id ) {
 					update_post_meta( $post_id, 'wpf-settings', $settings );
@@ -463,8 +480,16 @@ class WPF_Admin_Interfaces {
 
 		$post_types = apply_filters( 'wpf_meta_box_post_types', $post_types );
 
+		$per_post_messages = wp_fusion()->settings->get( 'per_post_messages', false );
+
 		foreach ( $post_types as $post_type ) {
+
 			add_meta_box( 'wpf-meta', 'WP Fusion', array( $this, 'meta_box_callback' ), $post_type, 'side', 'core' );
+
+			if( $per_post_messages ) {
+				add_meta_box( 'wpf-restricted-content-message', 'WP Fusion - Restricted Content Message', array( $this, 'restricted_content_message_callback' ), $post_type );
+			}
+
 		}
 
 	}
@@ -704,8 +729,37 @@ class WPF_Admin_Interfaces {
 		// Outputs the different input fields for the WPF meta box
 		do_action( 'wpf_meta_box_content', $post, $settings );
 
+	}
+
+	/**
+	 * Renders WPF meta box
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function restricted_content_message_callback( $post ) {
+
+		$settings = array(
+			'message' => false
+		);
+
+		if ( get_post_meta( $post->ID, 'wpf-settings', true ) ) {
+			$settings = array_merge( $settings, (array) get_post_meta( $post->ID, 'wpf-settings', true ) );
+		}
+
+		echo '<textarea name="wpf-settings[message]" id="wpf-settings-message" rows="6">' . $settings['message'] . '</textarea>';
+
+		echo '<span class="description">You can enter a message here that will be displayed in place of the post content if the post is restricted and no redirect is specified. Leave blank to use the <a href="' . get_admin_url() . '/options-general.php?page=wpf-settings">site default</a>.</span>';
 
 	}
+
+	/**
+	 * Saves WPF meta boxes
+	 *
+	 * @access public
+	 * @return void
+	 */
 
 	function save_meta_box_data( $post_id ) {
 
@@ -890,6 +944,10 @@ class WPF_Admin_Interfaces {
 
 		if ( isset( $settings['apply_delay'] ) ) {
 			$settings['apply_delay'] = intval( $settings['apply_delay'] );
+		}
+
+		if ( isset( $settings['message'] ) ) {
+			$settings['message'] = esc_textarea( $settings['message'] );
 		}
 
 		return $settings;

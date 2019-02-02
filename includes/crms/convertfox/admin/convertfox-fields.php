@@ -2,9 +2,19 @@
 
 $convertfox_fields = array();
 
+$convertfox_fields[] = array(
+	'crm_label' => 'Full Name',
+	'crm_field' => 'name'
+);
+
 $convertfox_fields['first_name'] = array(
 	'crm_label' => 'First Name',
-	'crm_field' => 'name'
+	'crm_field' => 'first_name'
+);
+
+$convertfox_fields['last_name'] = array(
+	'crm_label' => 'Last Name',
+	'crm_field' => 'last_name'
 );
 
 $convertfox_fields['user_email'] = array(

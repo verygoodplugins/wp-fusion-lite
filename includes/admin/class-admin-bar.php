@@ -34,6 +34,7 @@ class WPF_Admin_Bar {
 
 		add_filter( 'wpf_user_can_access', array( $this, 'admin_bar_overrides' ), 10, 3 );
 		add_filter( 'wpf_user_can_access_widget', array( $this, 'admin_bar_overrides_widget' ), 10, 3 );
+		add_filter( 'wpf_user_can_access_block', array( $this, 'admin_bar_overrides_block' ), 10, 3 );
 
 	}
 
@@ -58,7 +59,11 @@ class WPF_Admin_Bar {
 	 * @return bool
 	 */
 
-	public function admin_bar_overrides( $can_access, $user_id, $post_id ) {
+	public function admin_bar_overrides( $can_access, $user_id, $required_tags ) {
+
+		if( empty( get_query_var( 'wpf_tag' ) ) ) {
+			return $can_access;
+		}
 
 		if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
 			return true;
@@ -68,19 +73,18 @@ class WPF_Admin_Bar {
 			return false;
 		}
 
-		$user_tags = wp_fusion()->user->get_tags( $user_id );
-		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
-
-		if ( empty( $post_restrictions ) || ! isset( $post_restrictions['allow_tags'] ) || empty( $post_restrictions['allow_tags'] ) ) {
+		if ( empty( $required_tags ) ) {
 			return true;
 		}
+
+		$user_tags = wp_fusion()->user->get_tags( $user_id );
 
 		if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
 			$user_tags[] = $current_filter;
 		}
 
 		// If user has the required tag
-		$result = array_intersect( $post_restrictions['allow_tags'], $user_tags );
+		$result = array_intersect( $required_tags, $user_tags );
 
 		if( ! empty( $result ) ) {
 			return true;
@@ -156,6 +160,43 @@ class WPF_Admin_Bar {
 		} else {
 			return false;
 		}
+
+	}
+
+	/**
+	 * Allows for overriding content restriction via the admin bar
+	 *
+	 * @access public
+	 * @return mixed Instance / False
+	 */
+
+	public function admin_bar_overrides_block( $can_access, $instance, $block_tags ) {
+
+		if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
+			return true;
+		}
+
+		if ( get_query_var( 'wpf_tag' ) == 'lock-all' ) {
+			return false;
+		}
+
+		$user_tags = wp_fusion()->user->get_tags( $user_id );
+
+		$query_var = get_query_var( 'wpf_tag' );
+
+		if( ! empty( $query_var ) ) {
+			$user_tags[] = get_query_var( 'wpf_tag' );
+		}
+
+		// If user has the required tag
+		$result = array_intersect( $block_tags, $user_tags );
+
+		if( ! empty( $result ) ) {
+			return true;
+		}
+
+		return $can_access;
+
 
 	}
 

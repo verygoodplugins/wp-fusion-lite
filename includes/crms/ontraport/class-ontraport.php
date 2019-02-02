@@ -276,7 +276,7 @@ class WPF_Ontraport {
 
 		while( $continue == true ) {
 
-			$request  = "https://api.ontraport.com/1/objects?objectID=14&start=" . $offset;
+			$request  = 'https://api.ontraport.com/1/objects?objectID=' . $this->object_type . '&start=' . $offset;
 			$response = wp_remote_get( $request, $this->params );
 
 			if( is_wp_error( $response ) ) {

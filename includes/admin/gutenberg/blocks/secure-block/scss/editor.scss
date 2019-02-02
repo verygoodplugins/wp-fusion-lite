@@ -1,0 +1,67 @@
+@charset "UTF-8";
+
+/**
+ * Variables
+ **/
+$wp_fusion_color_primary: #6c2a22;
+$wp_fusion_color_gutenberg_grey: #f3f3f4;
+$wp_fusion_color_gutenberg_black: #32373c;
+
+/**
+ * Default Styles
+ *
+ * The default styles for the block in the editor.
+ */
+.wp-block-wp-fusion-secure-block {
+
+	&__handle {
+		position: relative;
+		background-color: $wp_fusion_color_gutenberg_grey;
+		color: $wp_fusion_color_gutenberg_black;
+		padding: 5px 30px 5px 10px;
+		font-size: 12px;
+	}
+
+	&__tags {
+
+		.tag:after {
+			content: ", ";
+		}
+		.tag:last-of-type:after {
+			content: "";
+		}
+		.tag__name {
+			font-family: monospace;
+			background: white;
+			padding: 2px 4px 2px 4px;
+			opacity: .8;
+		}
+	}
+
+	&__icon {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		opacity: 0.8;
+	}
+
+	&__description {
+		display: block;
+		strong {
+			font-family: monospace;
+			background: white;
+			padding: 2px 4px 2px 4px;
+			opacity: .8;
+			font-weight: normal;
+		}
+	}
+
+	&__footer {
+		background-color: $wp_fusion_color_gutenberg_grey;
+		color: $wp_fusion_color_gutenberg_black;
+		padding: 5px 10px 5px 10px;
+		font-size: 12px;
+		text-align: right;
+		font-style: italic;
+	}
+}

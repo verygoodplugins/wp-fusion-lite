@@ -28,6 +28,15 @@ class WPF_CRM_Base {
 	public $crm_no_queue;
 
 
+	/**
+	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
+	 *
+	 * @var tag_type
+	 */
+
+	public $tag_type = 'Tag';
+
+
 	public function __construct() {
 
 		$this->includes();
@@ -44,6 +53,11 @@ class WPF_CRM_Base {
 				if ( wp_fusion()->settings->get( 'crm' ) == $slug ) {
 					$this->crm_no_queue = $crm;
 					$this->crm_no_queue->init();
+
+					if( isset( $crm->tag_type ) ) {
+						$this->tag_type = $crm->tag_type;
+					}
+
 				}
 
 				$this->available_crms[ $slug ] = array( 'name' => $crm->name );
@@ -223,6 +237,8 @@ class WPF_CRM_Base {
 
 			}
 		}
+
+		$update_data = apply_filters( 'wpf_map_meta_fields', $update_data );
 
 		return $update_data;
 

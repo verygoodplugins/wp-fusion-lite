@@ -150,7 +150,7 @@ class WPF_Mautic {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'mautic') !== false ) {
+		if( strpos( $url, $this->url ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -288,7 +288,7 @@ class WPF_Mautic {
 
 		$available_tags = array();
 
-		$request  = $this->url . 'api/contacts';
+		$request  = $this->url . 'api/tags';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -297,11 +297,14 @@ class WPF_Mautic {
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach( $body_json['contacts'] as $contact ) {	
+		if( ! empty( $body_json['tags'] ) ) {
 
-			foreach ($contact['tags'] as $tag) {
-				$available_tags[$tag['tag']] = $tag['tag'];
+			foreach( $body_json['tags'] as $tag ) {
+
+				$available_tags[ $tag['tag'] ] = $tag['tag'];
+
 			}
+
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -324,7 +327,7 @@ class WPF_Mautic {
 		}
 
 		$crm_fields = array();
-		$request  = $this->url . 'api/contacts';
+		$request  = $this->url . 'api/fields/contact';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -333,18 +336,9 @@ class WPF_Mautic {
 
 		$body_json = json_decode( $response['body'], true );
 
+		foreach( $body_json['fields'] as $field ) {
 
-		$contact = array_shift($body_json['contacts']);
-
-		foreach ($contact['fields'] as $field_group) {
-
-			foreach ($field_group as $field) {
-
-				if(isset($field['alias'])) {
-					$crm_fields[$field['alias']] = $field['label'];
-				}
-
-			}
+			$crm_fields[ $field['alias'] ] = $field['label'];
 
 		}
 
@@ -369,7 +363,7 @@ class WPF_Mautic {
 		}
 
 		$contact_info = array();
-		$request      = $this->url . 'api/contacts/?search=' . urlencode($email_address) . '&minimal=true';
+		$request      = $this->url . 'api/contacts/?search=' . urlencode( 'email:"+' . $email_address . '"' ) . '&minimal=true';
 		$response     = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -491,10 +485,7 @@ class WPF_Mautic {
 		$params['method'] 	= 'PATCH';
 		$params['body']  	= array('tags' => $tags);
 
-
-		$response          = wp_remote_post( $request, $params );
-
-		$body_json = json_decode( $response['body'], true );
+		$response = wp_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -634,29 +625,23 @@ class WPF_Mautic {
 			$this->get_params();
 		}
 
+		$url      = $this->url . 'api/contacts?search=' . urlencode( 'tag:"+' . $tag . '"' );
+		$response = wp_remote_get( $url, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
 		$contact_ids = array();
-		$offset = 0;
-		$proceed = true;
 
-		while($proceed == true) {
+		if( ! empty( $response->contacts ) ) {
 
-			$url     = "https://api.ontraport.com/1/objects?objectID=138&range=50&start=" . $offset . "&condition=tag_id%3D" . $tag . "&listFields=object_id";
-			$results = wp_remote_get( $url, $this->params );
+			foreach( $response->contacts as $contact ) {
 
-			if( is_wp_error( $results ) ) {
-				return $results;
-			}
+				$contact_ids[] = $contact->id;
 
-			$body_json = json_decode( $results['body'], true );
-
-			foreach ( $body_json['data'] as $row => $contact ) {
-				$contact_ids[] = $contact['object_id'];
-			}
-
-			$offset = $offset + 50;
-
-			if(count($body_json['data']) < 50) {
-				$proceed = false;
 			}
 
 		}

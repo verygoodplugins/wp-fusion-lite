@@ -28,6 +28,12 @@ class WPF_Batch_Process extends WPF_Background_Process {
 
 		do_action_ref_array( $item['action'], $item['args'] );
 
+		$sleep = apply_filters( 'wpf_batch_sleep_time', 0 );
+
+		if( $sleep > 0 ) {
+			sleep( $sleep );
+		}
+
 		return false;
 
 	}

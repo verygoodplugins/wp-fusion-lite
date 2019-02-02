@@ -26,7 +26,7 @@ class WPF_Auto_Login {
 		add_filter( 'wpf_end_auto_login', array( $this, 'maybe_end' ) );
 		add_action( 'wp_logout', array( $this, 'end_auto_login' ) );
 		add_action( 'wp_login', array( $this, 'end_auto_login' ) );
-		add_filter( 'get_user_metadata', array( $this, 'get_user_meta' ), 10, 4 );
+		add_action( 'set_logged_in_cookie', array( $this, 'end_auto_login' ) );
 
 		// Session cleanup cron
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
@@ -81,6 +81,8 @@ class WPF_Auto_Login {
 		// Do first time autologin
 		if ( empty( $contact_data ) && isset( $contact_id ) ) {
 
+			define('DOING_WPF_AUTO_LOGIN', true);
+
 			$user_id = $this->create_temp_user( $contact_id );
 
 			 if( is_wp_error( $user_id ) ) {
@@ -95,8 +97,6 @@ class WPF_Auto_Login {
 			global $current_user;
 			$current_user->ID = $user_id;
 
-			define('DOING_WPF_AUTO_LOGIN', true);
-
 			// Hide admin bar
 			add_filter( 'show_admin_bar', '__return_false' );
 
@@ -106,6 +106,8 @@ class WPF_Auto_Login {
 
 		// Returning autologin
 		if ( is_array( $contact_data ) ) {
+
+			define('DOING_WPF_AUTO_LOGIN', true);
 
 			// See if temp user still exists
 			$contact_id = get_user_meta( $contact_data['user_id'], wp_fusion()->crm->slug . '_contact_id', true );
@@ -124,8 +126,6 @@ class WPF_Auto_Login {
 
 			global $current_user;
 			$current_user->ID = $contact_data['user_id'];
-
-			define('DOING_WPF_AUTO_LOGIN', true);
 
 			// Hide admin bar
 			add_filter( 'show_admin_bar', '__return_false' );
@@ -175,20 +175,14 @@ class WPF_Auto_Login {
 
 	public function create_temp_user( $contact_id ) {
 
-		$user_id = wp_fusion()->user->get_user_id( $contact_id );
-
-		if ( $user_id != false ) {
-			$user_tags = wp_fusion()->user->get_tags( $user_id );
-		} else {
-			$user_tags = wp_fusion()->crm->get_tags( $contact_id );
-		}
+		$user_tags = wp_fusion()->crm->get_tags( $contact_id );
 
 		if( is_wp_error( $user_tags ) ) {
 			return $user_tags;
 		}
 
 		// Set the random number based on the CID
-		$user_id = rand( 10000000, 100000000 );
+		$user_id = rand( 100000000, 1000000000 );
 
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
@@ -199,6 +193,9 @@ class WPF_Auto_Login {
 		);
 
 		setcookie( 'wpf_contact', json_encode( $contact_data ), time() + DAY_IN_SECONDS * 180, COOKIEPATH, COOKIE_DOMAIN );
+
+		// Load meta data
+		wp_fusion()->user->pull_user_meta( $user_id );
 
 		// Schedule cleanup after one day
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
@@ -244,75 +241,6 @@ class WPF_Auto_Login {
 		foreach ( $meta as $mid ) {
 			delete_metadata_by_mid( 'user', $mid );
 		}
-
-	}
-
-	/**
-	 * Filters calls to get_user_meta for WPF related fields accessed by auto log in visitors
-	 *
-	 * @access public
-	 * @return mixed Meta field value
-	 */
-
-	public function get_user_meta( $return_value, $object_id, $meta_key, $single ) {
-
-		if ( ! empty( $this->auto_login_user ) ) {
-
-			// Nothing fancy if it's for contact ID or tags
-			if( $meta_key == wp_fusion()->crm->slug . '_contact_id' || $meta_key == wp_fusion()->crm->slug . '_tags' ) {
-				return $return_value;
-			}
-
-			// Load the data from the CRM if it's enabled
-			if( is_array( $this->auto_login_user ) && $this->auto_login_user['user_id'] == $object_id && empty( $return_value ) ) {
-
-				$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-
-				if( isset( $contact_fields[$meta_key] ) && $contact_fields[$meta_key]['active'] == true ) {
-
-					// Prevent looping
-					remove_filter( 'get_user_metadata', array( $this, 'get_user_meta' ), 10, 4 );
-
-					// Check the cache
-					$cached_meta = get_user_meta( $object_id, 'wpf_cached_meta', true );
-
-					if( ! empty( $cached_meta ) ) {
-
-						if( isset( $cached_meta[ $meta_key ] ) ) {
-
-							// Put filter back
-							add_filter( 'get_user_metadata', array( $this, 'get_user_meta' ), 10, 4 );
-
-							return $cached_meta[ $meta_key ];
-							
-						} else {
-							return false;
-						}
-
-					}
-
-					$user_meta = wp_fusion()->crm->load_contact( $this->auto_login_user['contact_id'] );
-
-					$user_meta = apply_filters( 'wpf_auto_login_loaded_contact', $user_meta, $this->auto_login_user['contact_id'] );
-
-					update_user_meta( $object_id, 'wpf_cached_meta', $user_meta );
-
-					// Put filter back
-					add_filter( 'get_user_metadata', array( $this, 'get_user_meta' ), 10, 4 );
-
-					if( isset( $user_meta[ $meta_key ] ) ) {
-						return $user_meta[ $meta_key ];
-					} else {
-						return false;
-					}
-
-				}
-
-			}
-
-		}
-
-		return $return_value;
 
 	}
 

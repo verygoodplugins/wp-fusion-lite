@@ -129,7 +129,20 @@ class WPF_MailChimp {
 
 				$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-				$response = new WP_Error( 'error', '<strong>' . $body->title . ':</strong> ' . $body->detail );
+				$message = '<strong>' . $body->title . ':</strong> ' . $body->detail;
+
+				if( isset( $body->errors ) ) {
+
+					$message .= '<ul>';
+
+					foreach( $body->errors as $error ) {
+						$message .= '<li><strong>' . $error->field . ':</strong> ' . $error->message . '</li>';
+					}
+
+					$message .= '</ul>';
+				}
+
+				$response = new WP_Error( 'error', $message );
 
 			}
 
@@ -589,6 +602,10 @@ class WPF_MailChimp {
 
 		unset( $payload['merge_fields']['email_address'] );
 
+		if( empty( $payload['merge_fields'] ) ) {
+			unset( $payload['merge_fields'] );
+		}
+
 		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/';
 		$params           = $this->params;
 		$params['body']   = json_encode( $payload );
@@ -643,6 +660,23 @@ class WPF_MailChimp {
 				unset( $data[$key] );
 
 			}
+
+		}
+
+		// Address can't be sent unless it's complete
+
+		if( isset( $data['ADDRESS'] ) ) {
+
+			$defaults = array(
+				'addr1'		=> 'unknown',
+				'addr2'		=> 'unknown',
+				'city'		=> 'unknown',
+				'zip'		=> 'unknown',
+				'country'	=> 'unknown',
+				'state'		=> 'unknown'
+			);
+
+			$data['ADDRESS'] = array_merge( $defaults, $data['ADDRESS'] );
 
 		}
 

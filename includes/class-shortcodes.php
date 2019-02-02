@@ -156,7 +156,15 @@ class WPF_Shortcodes {
 			$content = preg_replace('/\[else\].*\[\/else]/s', '', $content );
 		}
 
-		if ( $proceed_tag == true && $proceed_not == true ) {
+		if( $proceed_tag == true && $proceed_not == true ) {
+			$can_access = true;
+		} else {
+			$can_access = false;
+		}
+
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $tags_split );
+
+		if ( $can_access == true ) {
 
 			return do_shortcode( shortcode_unautop( $content ) );
 

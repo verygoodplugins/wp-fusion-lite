@@ -25,8 +25,8 @@ class WPF_UserEngage {
 	public function __construct() {
 
 		$this->slug     = 'userengage';
-		$this->name     = 'UserEngage';
-		$this->supports = array('add_tags');
+		$this->name     = 'User.com';
+		$this->supports = array( 'add_tags', 'add_fields' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -122,10 +122,6 @@ class WPF_UserEngage {
 
 				$response = new WP_Error( 'error', 'Invalid API key' );
 
-			} else {
-
-				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-
 			}
 
 		}
@@ -157,29 +153,6 @@ class WPF_UserEngage {
 		);
 
 		return $this->params;
-	}
-
-
-	/**
-	 * AgileCRM sometimes requires an email to be submitted when contacts are modified
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users( array( 'meta_key'   => 'userengage_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
-
-		if ( ! empty( $users ) ) {
-			return $users[0]->user_email;
-		} else {
-			return false;
-		}
-
 	}
 
 
@@ -303,11 +276,13 @@ class WPF_UserEngage {
 
 			foreach ( $body_results as $field_data ) {
 
-				$custom_fields[ $field_data['name_std'] ] = $field_data['name'];
+				$custom_fields[ $field_data['name'] ] = $field_data['name'];
 
 			}
 
 		}
+
+		$custom_fields['user_id'] = 'User ID';
 
 		asort( $custom_fields );
 
@@ -335,18 +310,18 @@ class WPF_UserEngage {
 		$request      = 'https://app.userengage.com/api/public/users/search/?email=' . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
 
-
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json ) ) {
 			return false;
 		}
 
 		return $body_json['id'];
+
 	}
 
 	/**
@@ -395,8 +370,6 @@ class WPF_UserEngage {
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
-
-		$email = $this->get_email_from_cid( $contact_id );
 
 		foreach ($tags as $tag) {
 
@@ -466,7 +439,6 @@ class WPF_UserEngage {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-
 		$url              = 'https://app.userengage.com/api/public/users/';
 		$params           = $this->params;
 		$params['body']   = json_encode( $data );
@@ -481,11 +453,9 @@ class WPF_UserEngage {
 
 		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
 
-
 		if( empty($crm_fields['Custom Fields']) ){
 			return $body->id;
 		}
-
 
 		$attributes = array();
 
@@ -508,13 +478,9 @@ class WPF_UserEngage {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-
 		return $body->id;
 
 	}
-
-		
-
 
 
 	/**
@@ -525,8 +491,7 @@ class WPF_UserEngage {
 	 */
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-		//post update an existing one
-		// could update only custom att 00 check and see if main update api call needs to be sent or just custom attributes.
+
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
@@ -549,7 +514,7 @@ class WPF_UserEngage {
 			}	
 		}
 
-		if($send == true) {
+		if( $send ) {
 
 			$url              = 'https://app.userengage.com/api/public/users/' . $contact_id;
 			$params           = $this->params;
@@ -575,11 +540,14 @@ class WPF_UserEngage {
 			}
 		}
 
-		if( ! empty($attributes) ) {
+		if( ! empty( $attributes ) ) {
+
 			$url = 'https://app.userengage.com/api/public/users/'. $contact_id . '/set_multiple_attributes/';
 			$params           = $this->params;
 			$params['body']   = json_encode( $attributes );
 			$response = wp_remote_post( $url, $params );
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if( is_wp_error( $response ) ) {
 				return $response;

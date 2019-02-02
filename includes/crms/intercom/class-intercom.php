@@ -446,8 +446,12 @@ class WPF_Intercom {
 			unset( $data['name'] );
 		}
 
-		// All other custom fields
-		$body['custom_attributes'] = $data;
+		if( ! empty( $data ) ) {
+
+			// All other custom fields
+			$body['custom_attributes'] = $data;
+
+		}
 
 		$url 				= 'https://api.intercom.io/users';
 		$params 			= $this->params;
@@ -503,19 +507,19 @@ class WPF_Intercom {
 			$body['name'] = $data['name'];
 			unset( $data['name'] );
 		}
+		
+		if( ! empty( $data ) ) {
 
-		error_log(print_r($data, true));
+			// All other custom fields
+			$body['custom_attributes'] = $data;
 
-		// All other custom fields
-		$body['custom_attributes'] = $data;
+		}
 
 		$url 				= 'https://api.intercom.io/users';
 		$params 			= $this->params;
 		$params['body'] 	= json_encode( $body );
 
 		$response = wp_remote_post( $url, $params );
-
-		error_log(print_r($response, true));
 
 		if( is_wp_error( $response ) ) {
 			return $response;

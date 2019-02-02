@@ -35,6 +35,10 @@ class WPF_Batch {
 		add_filter( 'wpf_batch_users_meta_init', array( $this, 'users_meta_init' ) );
 		add_action( 'wpf_batch_users_meta', array( $this, 'users_meta_step' ) );
 
+		// Pull user meta
+		add_filter( 'wpf_batch_pull_users_meta_init', array( $this, 'pull_users_meta_init' ) );
+		add_action( 'wpf_batch_pull_users_meta', array( $this, 'pull_users_meta_step' ) );
+
 		// Sync users
 		add_filter( 'wpf_batch_users_sync_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_sync', array( $this, 'users_sync_step' ) );
@@ -213,6 +217,18 @@ class WPF_Batch {
 			return false;
 
 		}
+
+		// Remove existing users
+
+		// foreach( $contact_ids as $i => $contact_id ) {
+
+		// 	if( wp_fusion()->user->get_user_id( $contact_id ) != false ) {
+
+		// 		unset( $contact_ids[$i] );
+
+		// 	}
+
+		// }
 
 		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Import Contacts</strong> batch operation on ' . count($contact_ids) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>', array( 'source' => 'batch-process' ) );
 
@@ -404,9 +420,15 @@ class WPF_Batch {
 		$args = array(
 			'fields'     => 'ID',
 			'meta_query' => array(
+				'relation'   => 'AND',
 				array(
 					'key'     => wp_fusion()->crm->slug . '_contact_id',
 					'compare' => 'EXISTS'
+				),
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'value'   => false,
+					'compare' => '!='
 				)
 			)
 		);
@@ -429,6 +451,52 @@ class WPF_Batch {
 	public function users_meta_step( $user_id ) {
 
 		wp_fusion()->user->push_user_meta( $user_id );
+
+	}
+
+	/**
+	 * Users meta batch process init
+	 *
+	 * @since 3.0
+	 * @return array Users
+	 */
+
+	public function pull_users_meta_init() {
+
+		$args = array(
+			'fields'     => 'ID',
+			'meta_query' => array(
+				'relation'   => 'AND',
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'compare' => 'EXISTS'
+				),
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'value'   => false,
+					'compare' => '!='
+				)
+			)
+		);
+
+		$users = get_users( $args );
+
+		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Pull User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+
+		return $users;
+
+	}
+
+	/**
+	 * Users meta batch process - single step
+	 *
+	 * @since 3.0
+	 * @return void
+	 */
+
+	public function pull_users_meta_step( $user_id ) {
+
+		wp_fusion()->user->pull_user_meta( $user_id );
 
 	}
 
