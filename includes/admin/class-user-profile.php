@@ -51,16 +51,16 @@ class WPF_User_Profile {
 			// Prevent it from running more than once on a profile update
 			unset( $_POST[ 'wpf_tags_field_edited'] );
 
-            if(isset( $_POST[ wp_fusion()->crm->slug . '_tags' ] )) {
-	            $posted_tags = $_POST[ wp_fusion()->crm->slug . '_tags' ];
-	            unset( $_POST[ wp_fusion()->crm->slug . '_tags' ] );
-            } else {
-                $posted_tags = array();
-            }
+			if(isset( $_POST[ wp_fusion()->crm->slug . '_tags' ] )) {
+				$posted_tags = $_POST[ wp_fusion()->crm->slug . '_tags' ];
+				unset( $_POST[ wp_fusion()->crm->slug . '_tags' ] );
+			} else {
+				$posted_tags = array();
+			}
 
-            $posted_tags = stripslashes_deep( $posted_tags );
+			$posted_tags = stripslashes_deep( $posted_tags );
 
-            $posted_tags = array_map( 'sanitize_text_field', $posted_tags );
+			$posted_tags = array_map( 'sanitize_text_field', $posted_tags );
 
 			$user_tags = wp_fusion()->user->get_tags( $user_id );
 
@@ -192,17 +192,22 @@ class WPF_User_Profile {
 			return;
 		}
 
+		// For debugging purposes
+
 		if( isset( $_GET['wpf_register'] ) ) {
-			wp_fusion()->user->user_register( $user->ID );
+			wp_fusion()->user->user_register( $user->ID, null, true );
 		}
 
 		?>
-        <h3>WP Fusion</h3>
+		<h3>WP Fusion</h3>
 
-        <table class="form-table">
-            <tr>
-                <th><label for="contact_id"><?php echo wp_fusion()->crm->name ?> Contact ID</label></th>
-                <td id="contact-id">
+		<table class="form-table">
+
+			<?php do_action( 'wpf_user_profile_before_table_rows', $user ); ?>
+
+			<tr>
+				<th><label for="contact_id"><?php echo wp_fusion()->crm->name ?> Contact ID</label></th>
+				<td id="contact-id">
 					<?php if ( $contact_id = wp_fusion()->user->get_contact_id( $user->ID ) ) : ?>
 
 						<?php if( is_wp_error( $contact_id ) ) : ?>
@@ -217,17 +222,17 @@ class WPF_User_Profile {
 
 					<?php else : ?>
 
-                        No <?php echo wp_fusion()->crm->name ?> contact record found.
+						No <?php echo wp_fusion()->crm->name ?> contact record found.
 
 					<?php endif; ?>
-                </td>
-            </tr>
+				</td>
+			</tr>
 			<?php if ( wp_fusion()->user->get_contact_id( $user->ID ) ) : ?>
 				
-                <tr id="wpf-tags-row">
-                    <th><label for="wpf_tags"><?php echo sprintf( __('%s Tags', 'wp-fusion'), wp_fusion()->crm->name ); ?></label></th>
-                    <td id="wpf-tags-td">
-                    
+				<tr id="wpf-tags-row">
+					<th><label for="wpf_tags"><?php echo sprintf( __('%s Tags', 'wp-fusion'), wp_fusion()->crm->name ); ?></label></th>
+					<td id="wpf-tags-td">
+					
 						<?php 
 
 						$args = array(
@@ -240,22 +245,25 @@ class WPF_User_Profile {
 
 						?>
 
-                        <input type="hidden" id="wpf-tags-field-edited" name="wpf_tags_field_edited" value="false" />
-                        <p class="description"><?php _e( 'These tags are currently applied to the user in', 'wp-fusion' ) ?> <?php echo wp_fusion()->crm->name ?> <a id="wpf-profile-edit-tags" href="#"><?php _e('Edit Tags', 'wp-fusion'); ?></a></p>
+						<input type="hidden" id="wpf-tags-field-edited" name="wpf_tags_field_edited" value="false" />
+						<p class="description"><?php _e( 'These tags are currently applied to the user in', 'wp-fusion' ) ?> <?php echo wp_fusion()->crm->name ?> <a id="wpf-profile-edit-tags" href="#"><?php _e('Edit Tags', 'wp-fusion'); ?></a></p>
 
-                    </td>
-                </tr>
+					</td>
+				</tr>
 			<?php endif; ?>
-            <tr>
-                <th><label for="resync_contact"><?php _e( 'Resync Tags', 'wp-fusion' ) ?></label></th>
-                <td>
+			<tr>
+				<th><label for="resync_contact"><?php _e( 'Resync Tags', 'wp-fusion' ) ?></label></th>
+				<td>
 
-                    <a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID ?>">Resync Tags</a>
-                    <p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and load from the %s contact record.', 'wp-fusion' ), wp_fusion()->crm->name ); ?></p>
+					<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID ?>">Resync Tags</a>
+					<p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and load from the %s contact record.', 'wp-fusion' ), wp_fusion()->crm->name ); ?></p>
 
-                </td>
-            </tr>
-        </table>
+				</td>
+			</tr>
+
+			<?php do_action( 'wpf_user_profile_after_table_rows', $user ); ?>
+
+		</table>
 		<?php
 	}
 }

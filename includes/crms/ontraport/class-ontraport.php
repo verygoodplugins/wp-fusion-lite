@@ -64,6 +64,7 @@ class WPF_Ontraport {
 		// add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
 
 		// Add tracking code to footer
+		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
 	}
@@ -129,6 +130,33 @@ class WPF_Ontraport {
 
 
 	/**
+	 * Set tracking cookie if enabled
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function set_tracking_cookie() {
+
+		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+			return;
+		}
+
+		if( is_user_logged_in() && ! isset( $_COOKIE['contact_id'] ) ) {
+
+			$contact_id = wp_fusion()->user->get_contact_id();
+
+			if( ! empty( $contact_id ) ) {
+
+				setcookie( 'contact_id', $contact_id, time() + DAY_IN_SECONDS * 180, COOKIEPATH, COOKIE_DOMAIN );
+
+			}
+
+		}
+
+	}
+
+	/**
 	 * Output tracking code
 	 *
 	 * @access public
@@ -137,8 +165,9 @@ class WPF_Ontraport {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false )
+		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
 			return;
+		}
 
 		$account_id = wp_fusion()->settings->get('account_id');
 
@@ -192,7 +221,7 @@ class WPF_Ontraport {
 		}
 
 		$this->params = array(
-			'timeout'     => 30,
+			'timeout'     => 15,
 			'httpversion' => '1.1',
 			'headers'     => array(
 				"Api-Appid" => $api_url,
@@ -276,7 +305,7 @@ class WPF_Ontraport {
 
 		while( $continue == true ) {
 
-			$request  = 'https://api.ontraport.com/1/objects?objectID=' . $this->object_type . '&start=' . $offset;
+			$request  = 'https://api.ontraport.com/1/objects?objectID=14&start=' . $offset;
 			$response = wp_remote_get( $request, $this->params );
 
 			if( is_wp_error( $response ) ) {
@@ -286,7 +315,11 @@ class WPF_Ontraport {
 			$body_json = json_decode( $response['body'], true );
 
 			foreach ( $body_json['data'] as $row ) {
-				$available_tags[ $row['tag_id'] ] = $row['tag_name'];
+
+				if( $row['object_type_id'] == $this->object_type ) {
+					$available_tags[ $row['tag_id'] ] = $row['tag_name'];
+				}
+				
 			}
 
 			if ( count( $body_json['data'] ) < 50 ) {
@@ -325,7 +358,7 @@ class WPF_Ontraport {
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach ( $body_json['data'][0]['fields'] as $key => $field_data ) {
+		foreach ( $body_json['data'][ $this->object_type ]['fields'] as $key => $field_data ) {
 			$crm_fields[ $key ] = $field_data['alias'];
 		}
 
@@ -489,13 +522,17 @@ class WPF_Ontraport {
 			$data['lreferrer'] = $_COOKIE['aff_'];
 		}
 
-		$urlp              = "https://api.ontraport.com/1/objects";
-		$data['objectID']  = $this->object_type;
-		$nparams           = $this->params;
-		$nparams['method'] = 'POST';
-		$nparams['body']   = json_encode( $data );
+		if( $this->object_type == 0 ) {
+			$url = 'https://api.ontraport.com/1/Contacts/saveorupdate';
+		} else {
+			$url = 'https://api.ontraport.com/1/objects';
+			$data['objectID'] = $this->object_type;
+		}
 
-		$response = wp_remote_post( $urlp, $nparams );
+		$params           = $this->params;
+		$params['body']   = json_encode( $data );
+
+		$response = wp_remote_post( $url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

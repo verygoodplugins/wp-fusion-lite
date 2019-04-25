@@ -100,7 +100,7 @@ class WPF_Autopilot {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'autopilothq') !== false ) {
+		if( strpos($url, 'autopilothq') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url()  ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 

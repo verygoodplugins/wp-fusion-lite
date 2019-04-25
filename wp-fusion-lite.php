@@ -2,9 +2,9 @@
 
 /*
 Plugin Name: WP Fusion Lite
-Description: WP Fusion connects your website to your CRM or marketing automation system.
+Description: WP Fusion connects your website to your CRM or marketing automation system
 Plugin URI: https://wpfusion.com/
-Version: 3.22
+Version: 3.24
 Author: Very Good Plugins
 Author URI: https://verygoodplugins.com/
 Text Domain: wp-fusion
@@ -30,7 +30,7 @@ Text Domain: wp-fusion
  *
  */
 
-define( 'WP_FUSION_VERSION', '3.22' );
+define( 'WP_FUSION_VERSION', '3.24' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -40,7 +40,7 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 
-final class WP_Fusion {
+final class WP_Fusion_Lite {
 
 	/** Singleton *************************************************************/
 
@@ -54,7 +54,6 @@ final class WP_Fusion {
 	/**
 	 * Contains all active integrations classes
 	 *
-	 * @var WPF_Integrations_Base
 	 * @since 3.0
 	 */
 	public $integrations;
@@ -164,9 +163,9 @@ final class WP_Fusion {
 
 	public static function instance() {
 
-		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion ) ) {
+		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion_Lite ) ) {
 
-			self::$instance = new WP_Fusion;
+			self::$instance = new WP_Fusion_Lite;
 			self::$instance->setup_constants();
 
 			// If PHP version not met
@@ -197,7 +196,6 @@ final class WP_Fusion {
 				self::$instance->batch  	= new WPF_Batch;
 
 				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
-				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
 
 				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 
@@ -323,19 +321,6 @@ final class WP_Fusion {
 	}
 
 	/**
-	 * Defines default supported theme integrations
-	 *
-	 * @access public
-	 * @return array Integrations
-	 */
-
-	public function get_integrations_theme() {
-
-		return apply_filters( 'wpf_integrations_theme', array() );
-
-	}
-
-	/**
 	 * Defines supported CRMs
 	 *
 	 * @access private
@@ -377,7 +362,9 @@ final class WP_Fusion {
 			'customerly'		=> 'WPF_Customerly',
 			'copper'			=> 'WPF_Copper',
 			'nationbuilder'		=> 'WPF_NationBuilder',
-			'groundhogg'		=> 'WPF_Groundhogg'
+			'groundhogg'		=> 'WPF_Groundhogg',
+			'mailjet'			=> 'WPF_Mailjet',
+			'sendlane'			=> 'WPF_Sendlane'
 		) );
 
 	}
@@ -476,33 +463,6 @@ final class WP_Fusion {
 	}
 
 	/**
-	 * Includes theme integrations after all theme has loaded
-	 *
-	 * @access private
-	 * @return void
-	 */
-
-	public function integrations_includes_theme() {
-
-		// Integrations base
-		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
-
-		// Integrations autoloader
-		foreach ( wp_fusion()->get_integrations_theme() as $filename => $dependency_class ) {
-
-			if( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
-
-				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
-					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';
-				}
-
-			}
-
-		}
-
-	}
-
-	/**
 	 * Load internationalization files
 	 *
 	 * @access public
@@ -525,7 +485,9 @@ final class WP_Fusion {
 
 	public function is_full_version() {
 
-		if( ! empty( $this->get_integrations() ) ) {
+		$integrations = $this->get_integrations();
+
+		if( ! empty( $integrations ) ) {
 			return true;
 		} else {
 			return false;
@@ -568,7 +530,7 @@ final class WP_Fusion {
 if( ! function_exists( 'wp_fusion' ) ) {
 
 	function wp_fusion() {
-		return WP_Fusion::instance();
+		return WP_Fusion_Lite::instance();
 	}
 
 	// Get WP Fusion Running

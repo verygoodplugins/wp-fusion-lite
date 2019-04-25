@@ -216,6 +216,8 @@ class WPF_CRM_Queue {
 							$user_id = 0;
 						}
 
+						$args[1] = wp_fusion()->crm_base->map_meta_fields( $args[1] );
+
 						wp_fusion()->logger->handle( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
 
 					}

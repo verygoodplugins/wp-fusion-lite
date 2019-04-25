@@ -59,6 +59,22 @@ class WPF_Drip {
 		// HTTP response filter for API calls outside the SDK
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		// Slow down the batch processses to get around the 3600 requests per hour limit
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+	}
+
+	/**
+	 * Slow down batch processses to get around the 3600 requests per hour limit
+	 *
+	 * @access public
+	 * @return int Sleep time
+	 */
+
+	public function set_sleep_time( $seconds ) {
+
+		return 1;
+		
 	}
 	
 
@@ -567,13 +583,13 @@ class WPF_Drip {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		if( empty( $data ) ) {
+			return false;
+		}
+
 		if( isset( $data['email'] ) ) {
 			$provided_email = $data['email'];
 			unset($data['email']);
-		}
-
-		if( empty( $data ) ) {
-			return false;
 		}
 
 		$params = array(
@@ -589,7 +605,7 @@ class WPF_Drip {
 		}
 
 		// Check if we need to change the email address
-		if( isset($provided_email) && $result['email'] != $provided_email ) {
+		if( isset($provided_email) && strtolower( $result['email'] ) != strtolower( $provided_email ) ) {
 
 			$params['new_email'] = $provided_email;
 

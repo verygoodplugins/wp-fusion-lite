@@ -68,8 +68,9 @@ class WPF_Log_Handler {
 
 	public function init() {
 
-		if(wp_fusion()->settings->get('enable_logging') != true)
+		if( wp_fusion()->settings->get('enable_logging') != true ) {
 			return;
+		}
 
 		add_filter( 'wpf_configure_sections', array( $this, 'configure_sections' ), 10, 2 );
 
@@ -201,7 +202,9 @@ class WPF_Log_Handler {
 		<div class="wrap">
 	        <h1><?php _e( 'WP Fusion Activity Log', 'wp-fusion' ); ?></h1>
 
-			<form method="post" id="mainform" action="">
+			<form method="get" id="mainform">
+
+				<input type="hidden" name="page" value="wpf-settings-logs">
 
 				<?php $log_table_list->display(); ?>
 
@@ -210,15 +213,6 @@ class WPF_Log_Handler {
 
 			</form>
 		</div>
-
-		<script type=\"text/javascript\">
-			jQuery( '#flush-logs' ).click( function() {
-				if ( window.confirm('Are you sure you want to clear all logs from the database?' ) ) {
-					return true;
-				}
-				return false;
-			});
-		</script>
 
 		<?php
 
@@ -360,7 +354,20 @@ class WPF_Log_Handler {
 			$insert['context'] = serialize( $context );
 		}
 
-		return false !== $wpdb->insert( "{$wpdb->prefix}wpf_logging", $insert, $format );
+		$result = $wpdb->insert( "{$wpdb->prefix}wpf_logging", $insert, $format );
+
+		if( $result === false ) {
+			return false;
+		}
+
+		$rowcount = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}wpf_logging");
+
+		if( $rowcount > 10000 ) {
+			$wpdb->query( "DELETE FROM {$wpdb->prefix}wpf_logging ORDER BY log_id ASC LIMIT 1" );
+		}
+
+		return $result;
+		
 	}
 
 	/**
@@ -445,10 +452,10 @@ class WPF_Log_Handler {
 		$full_trace = debug_backtrace( $debug_backtrace_arg );
 		$enabled_integrations = wp_fusion()->integrations;
 
-		$slugs = array('user-profile', 'api', 'access-control', 'batch-process');
+		$slugs = array('user-profile', 'class-api', 'access-control', 'batch-process');
 
-		foreach( wp_fusion()->integrations as $integration ) {
-			$slugs[] = $integration->slug;
+		foreach( wp_fusion()->get_integrations() as $slug => $integration ) {
+			$slugs[] = $slug;
 		}
 
 		$found_integrations = array();
@@ -464,6 +471,7 @@ class WPF_Log_Handler {
 					}
 
 					if (strpos($trace['file'], $slug ) !== false) {
+
 						$found_integrations[] = $slug;
 					}
 				}

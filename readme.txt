@@ -1,10 +1,10 @@
 === WP Fusion Lite ===
 Contributors: verygoodplugins
-Tags: infusionsoft, activecampaign, ontraport, crm, marketing automation, user meta, sync, woocommerce
+Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, user meta, sync
 Requires at least: 4.0
 Requires PHP: 5.6
-Tested up to: 5.0.3
-Stable tag: 3.22
+Tested up to: 5.1.1
+Stable tag: 3.24
 
 WP Fusion connects your website to your CRM or marketing automation system.
 
@@ -14,18 +14,18 @@ WP Fusion Lite connects to leading CRMs and marketing automation systems to add 
 
 = Features =
 
-* Automaticaly create new contacts in your CRM when new users are added in WordPress
-	* Can limit user creation to specified user roles
-	* Assign tags to newly-created users
-* Configurable synchronization of user meta fields with contact fields
-	* Update a contact record in your CRM when a user's profile is updated
+* Automaticaly create new contacts in your CRM when users register in WordPress
+* Apply tags when users register
+* Synchronize any WordPress user data with custom fields in your CRM
+* Restrict access to site content using tags in your CRM
 * Import contacts from your CRM as new WordPress users
+* Export site users to your CRM as contacts
 
 = Lite Version =
 
 This is a free version of [WP Fusion](https://wpfusion.com/?utm_campaign=free-plugin&utm_source=wp-org). It includes support for WordPress core and synchronizing users with contact records, but does not have plugin-specific integrations or advanced tagging features.
 
-For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other popular WordPress plugins, check out [one of our paid licenses](https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=wp-org).
+For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 60 other popular WordPress plugins, check out [one of our paid licenses](https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=wp-org).
 
 = Supported CRMs =
 
@@ -40,7 +40,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 * Drift
 * Drip
 * Flexie
-* Gist (ConvertFox)
+* Gist
 * Groundhogg
 * HubSpot
 * Infusionsoft
@@ -48,6 +48,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 * Kartra
 * MailChimp
 * MailerLite
+* Mailjet
 * Maropost
 * Mautic
 * NationBuilder
@@ -56,6 +57,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, and over 40 other po
 * Salesflare
 * Salesforce
 * SendinBlue
+* Sendlane
 * Tubular
 * UserEngage
 * Zoho
@@ -76,6 +78,47 @@ Upload and activate the plugin, then go to Settings >> WP Fusion. Select your de
 See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.24 - 4/25/2019 =
+
+##### New CRMs
+
+* Sendlane
+* Mailjet
+
+##### New Features
+
+* Added option to return people to originally requested content after login
+* Added admin users column showing user tags
+* Added AgileCRM site tracking scripts
+* Added Organization Name field for ActiveCampaign
+* Added merge settings option to bulk edit
+* Added setting to remove "Additional Fields" section from settings
+* Added date-format parameter to user_meta shortcode
+* Added "Required tags (all)" option to post restriction meta box
+* Added option for login meta sync
+* Added additional status triggers for Mailerlite webhooks
+* Added option to embed Mautic site tracking scripts
+* Added Mautic mtc_id cookie tracking for known contacts
+* Improved Ontraport site tracking script integration
+* Improved HubSpot error logging
+
+##### Bug Fixes
+
+* Platform.ly bugfixes
+* Mailerlite bugfixes
+* ConvertKit fixes for unconfirmed subscribers
+* Fix for email addresses with + sign in MailChimp
+* Fix for contact ID lookup with HubSpot
+* Updated AWeber subscriber ID lookup to only use selected list
+* Better AWeber exception handling
+* Fix for changing email addresses with Drip
+* Limit logging table to 10,000 rows
+* Fixes for wpf_user_can_access filter
+* Fix for background worker when PHP's memory_limit is set to -1
+* Comments are now properly hidden when a post is restricted and no redirects are specified
+* Set 1 second sleep time for Drip batch processes to avoid API timeouts
+* Fixes for custom objects with Ontraport
 
 = 3.22 - 2/2/2019 =
 

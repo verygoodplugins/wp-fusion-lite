@@ -1,6 +1,6 @@
 <?php
 
-class WPF_Kartra_Admin {
+class WPF_Sendlane_Admin {
 
 	private $slug;
 	private $name;
@@ -19,10 +19,9 @@ class WPF_Kartra_Admin {
 		$this->name = $name;
 		$this->crm  = $crm;
 
-		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_kartra_header_begin', array( $this, 'show_field_kartra_header_begin' ), 10, 2 );
-		add_action( 'show_field_kartra_api_password_end', array( $this, 'show_field_kartra_api_password_end' ), 10, 2 );
+		add_action( 'show_field_sendlane_header_begin', array( $this, 'show_field_sendlane_header_begin' ), 10, 2 );
+		add_action( 'show_field_sendlane_domain_end', array( $this, 'show_field_sendlane_domain_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -49,7 +48,7 @@ class WPF_Kartra_Admin {
 
 
 	/**
-	 * Loads Kartra connection information on settings page
+	 * Loads sendlane connection information on settings page
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -59,28 +58,33 @@ class WPF_Kartra_Admin {
 
 		$new_settings = array();
 
-		$new_settings['kartra_header'] = array(
-			'title'   => __( 'Kartra Configuration', 'wp-fusion' ),
+		$new_settings['sendlane_header'] = array(
+			'title'   => __( 'Sendlane Configuration', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
-		$new_settings['kartra_api_key'] = array(
-			'title'   => __( 'API Key', 'wp-fusion' ),
-			'desc'    => __( 'Enter the API Key for your Kartra account. You can find your key under <a href="https://app.kartra.com/integrations/api/key" target="_blank">the My Integrations menu</a>.', 'wp-fusion' ),
-			'std'     => '',
-			'type'    => 'text',
-			'section' => 'setup'
+		$new_settings['sendlane_key'] = array(
+			'title'       => __( 'API Key', 'wp-fusion' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.sendlane.com/developer" target="_blank">developer settings</a> of your Sendlane account.', 'wp-fusion' ),
+			'type'        => 'text',
+			'section'     => 'setup',
 		);
 
-		$new_settings['kartra_api_password'] = array(
-			'title'       => __( 'API Password', 'wp-fusion' ),
-			'desc'        => __( 'The API password will be displayed next to your API Key.', 'wp-fusion' ),
+		$new_settings['sendlane_hash'] = array(
+			'title'       => __( 'API Hash Key', 'wp-fusion' ),
+			'type'        => 'text',
+			'section'     => 'setup',
+		);
+
+		$new_settings['sendlane_domain'] = array(
+			'title'       => __( 'Subdomain', 'wp-fusion' ),
 			'type'        => 'api_validate',
+			'desc'        => __( 'For example domain.sendlane.com', 'wp-fusion' ),
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'kartra_api_key', 'kartra_api_password' )
+			'post_fields' => array( 'sendlane_key', 'sendlane_hash', 'sendlane_domain' )
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -89,8 +93,9 @@ class WPF_Kartra_Admin {
 
 	}
 
+
 	/**
-	 * Adds Kartra list fields option
+	 * Loads ActiveCampaign specific settings fields
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -102,30 +107,25 @@ class WPF_Kartra_Admin {
 			$options['available_lists'] = array();
 		}
 
-		$new_settings['kartra_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion' ),
-			'desc'        => __( 'New users will be automatically added to the selected lists.', 'wp-fusion' ),
-			'type'        => 'multi_select',
-			'placeholder' => 'Select lists',
+		$new_settings['default_list'] = array(
+			'title'       => __( 'Sendlane List', 'wp-fusion' ),
+			'desc'        => __( 'Select a default list to use for WP Fusion.', 'wp-fusion' ),
+			'type'        => 'select',
+			'placeholder' => 'Select list',
 			'section'     => 'main',
 			'choices'     => $options['available_lists']
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
-		if ( ! isset( $settings['create_users']['unlock']['kartra_lists'] ) ) {
-			$settings['create_users']['unlock'][] = 'kartra_lists';
-		}
-
-		$settings['kartra_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
-
 		return $settings;
 
 	}
 
 
+
 	/**
-	 * Loads standard Kartra field names and attempts to match them up with standard local ones
+	 * Loads standard Sendlane field names and attempts to match them up with standard local ones
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -135,12 +135,12 @@ class WPF_Kartra_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/kartra-fields.php';
+			require_once dirname( __FILE__ ) . '/sendlane-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
-				if ( isset( $kartra_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
-					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $kartra_fields[ $field ] );
+				if ( isset( $sendlane_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
+					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $sendlane_fields[ $field ] );
 				}
 
 			}
@@ -151,15 +151,14 @@ class WPF_Kartra_Admin {
 
 	}
 
-
 	/**
-	 * Puts a div around the Kartra configuration section so it can be toggled
+	 * Puts a div around the sendlane configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
-	public function show_field_kartra_header_begin( $id, $field ) {
+	public function show_field_sendlane_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
@@ -167,15 +166,15 @@ class WPF_Kartra_Admin {
 
 	}
 
-
 	/**
-	 * Close out Kartra section
+	 * Close out mailerlight section
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
-	public function show_field_kartra_api_password_end( $id, $field ) {
+
+	public function show_field_sendlane_domain_end( $id, $field ) {
 
 		if ( $field['desc'] != '' ) {
 			echo '<span class="description">' . $field['desc'] . '</span>';
@@ -184,13 +183,13 @@ class WPF_Kartra_Admin {
 		echo '</tr>';
 
 		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #kartra div
-		echo '<table class="form-table">';
 
-		// Hide Import tab (for now)
-		if( wp_fusion()->crm->slug == 'kartra' ) {
+		if( wp_fusion()->crm->slug == 'sendlane' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
+
+		echo '</div>'; // close #sendlane div
+		echo '<table class="form-table">';
 
 	}
 
@@ -203,10 +202,11 @@ class WPF_Kartra_Admin {
 
 	public function test_connection() {
 
-		$api_key 		= sanitize_text_field( $_POST['kartra_api_key'] );
-		$api_password 	= sanitize_text_field( $_POST['kartra_api_password'] );
+		$api_key = sanitize_text_field( $_POST['sendlane_key'] );
+		$api_hash = sanitize_text_field( $_POST['sendlane_hash'] );
+		$api_domain = sanitize_text_field( $_POST['sendlane_domain'] );
 
-		$connection = $this->crm->connect( $api_key, $api_password, true );
+		$connection = $this->crm->connect( $api_key, $api_hash, $api_domain, true );
 
 		if ( is_wp_error( $connection ) ) {
 
@@ -215,11 +215,11 @@ class WPF_Kartra_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			$options['kartra_api_key']        = $api_key;
-			$options['kartra_api_password']   = $api_password;
+			$options['sendlane_key']          = $api_key;
+			$options['sendlane_hash']         = $api_hash;
+			$options['sendlane_domain']       = $api_domain;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-
 			wp_fusion()->settings->set_all( $options );
 
 			wp_send_json_success();
@@ -229,6 +229,5 @@ class WPF_Kartra_Admin {
 		die();
 
 	}
-
 
 }

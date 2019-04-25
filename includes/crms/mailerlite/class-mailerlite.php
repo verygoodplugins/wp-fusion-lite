@@ -57,6 +57,23 @@ class WPF_MailerLite {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		// Slow down the batch processses to get around API limits
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+	}
+
+
+	/**
+	 * Slow down batch processses to get around the 3600 requests per hour limit
+	 *
+	 * @access public
+	 * @return int Sleep time
+	 */
+
+	public function set_sleep_time( $seconds ) {
+
+		return 2;
+		
 	}
 
 
@@ -139,6 +156,10 @@ class WPF_MailerLite {
 
 				$response = new WP_Error( 'error', $body_json->error->message );
 
+			} elseif( wp_remote_retrieve_response_code( $response ) == 429 ) {
+
+				$response = new WP_Error( 'error', 'API limits exceeded.' );
+
 			}
 
 		}
@@ -188,10 +209,27 @@ class WPF_MailerLite {
 		) );
 
 		if ( ! empty( $users ) ) {
+
 			return $users[0]->user_email;
+			
 		} else {
-			return false;
+			
+			// Try an API lookup
+
+			$data = $this->load_contact( $contact_id );
+
+			if( ! is_wp_error( $data ) && ! empty( $data['user_email'] ) ) {
+
+				return $data['user_email'];
+
+			} else {
+
+				return false;
+
+			}
+
 		}
+
 
 	}
 
@@ -260,18 +298,33 @@ class WPF_MailerLite {
 
 		$available_tags = array();
 
-		$request  = 'https://api.mailerlite.com/api/v2/groups';
-		$response = wp_remote_get( $request, $this->params );
+		$offset = 0;
+		$continue = true;
 
-		if( is_wp_error( $response ) ) {
-			return $response;
+		while ( $continue == true ) {
+
+			$request  = 'https://api.mailerlite.com/api/v2/groups?offset=' . $offset;
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body_json = json_decode( $response['body'], true );
+
+			foreach ( $body_json as $row ) {
+				$available_tags[ $row['id'] ] = $row['name'];
+			}
+
+			if( count( $body_json ) < 2 ) {
+				$continue = false;
+			}
+
+			$offset = $offset + 100;
+
 		}
 
-		$body_json = json_decode( $response['body'], true );
 
-		foreach ( $body_json as $row ) {
-			$available_tags[ $row['id'] ] = $row['name'];
-		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
@@ -328,8 +381,14 @@ class WPF_MailerLite {
 		$request      = 'https://api.mailerlite.com/api/v2/subscribers/' . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if( is_wp_error( $response ) && $response->get_error_message() == 'Subscriber not found' ) {
+
+			return false;
+
+		} elseif( is_wp_error( $response ) ) {
+
 			return $response;
+			
 		}
 
 		$body_json    = json_decode( $response['body'], true );
@@ -655,46 +714,66 @@ class WPF_MailerLite {
 	 * Sets up hooks specific to this CRM
 	 *
 	 * @access public
-	 * @return int Rule ID
+	 * @return array Rule IDs
 	 */
 
-	public function register_webhook( $type ) {
+	public function register_webhooks( $type ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
+		$event_types = array();
+
 		if( $type == 'add' ) {
-			$event_type = 'add_to_group';
-		}	elseif( $type == 'update' ) {
-			$event_type = 'update';
+
+			$event_types[] = 'add_to_group';
+
+		} elseif( $type == 'update' ) {
+
+			$event_types[] = 'update';
+			$event_types[] = 'add_to_group';
+			$event_types[] = 'remove_from_group';
+
 		}
 
 		$access_key = wp_fusion()->settings->get('access_key');
 
-		$data = array(
-			'url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
-			'event' => 'subscriber.'. $event_type
-		);
+		$ids = array();
 
-		$request      		= 'http://api.mailerlite.com/api/v2/webhooks';
-		$params           	= $this->params;
-		$params['method'] 	= 'POST';
-		$params['body']  	= json_encode( $data );
+		foreach( $event_types as $event_type ) {
 
-		$response = wp_remote_post( $request, $params );
+			if( $event_type == 'update' ) {
+				$type = 'update';
+			} else {
+				$type = 'update_tags';
+			}
 
-		if( is_wp_error( $response ) ) {
-			return $response;
+			$data = array(
+				'url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
+				'event' => 'subscriber.' . $event_type
+			);
+
+			$request      		= 'http://api.mailerlite.com/api/v2/webhooks';
+			$params           	= $this->params;
+			$params['method'] 	= 'POST';
+			$params['body']  	= json_encode( $data );
+
+			$response = wp_remote_post( $request, $params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$result = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if(is_object($result)) {
+				$ids[] = $result->id;
+			}
+
 		}
 
-		$result = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if(is_object($result)) {
-			return $result->id;
-		} else {
-			return false;
-		}
+		return $ids;
 
 	}
 

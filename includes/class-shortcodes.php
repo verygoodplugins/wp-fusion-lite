@@ -9,7 +9,6 @@ class WPF_Shortcodes {
 	public function __construct() {
 
 		add_shortcode( 'wpf', array( $this, 'shortcodes' ) );
-		add_shortcode( 'else', array( $this, 'else_shortcode' ) );
 		add_shortcode( 'wpf_update_tags', array( $this, 'shortcode_update_tags' ) );
 		add_shortcode( 'wpf_update_meta', array( $this, 'shortcode_update_meta' ) );
 
@@ -162,7 +161,9 @@ class WPF_Shortcodes {
 			$can_access = false;
 		}
 
-		$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $tags_split );
+		global $post;
+
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $post->ID, $tags_split );
 
 		if ( $can_access == true ) {
 
@@ -216,13 +217,14 @@ class WPF_Shortcodes {
 
 	public function shortcode_user_meta( $atts, $content = null ) {
 
-		$atts = shortcode_atts( array('field' => ''), $atts );
+		$atts = shortcode_atts( array('field' => '', 'date-format' => ''), $atts );
 
-		if(empty($atts['field']))
+		if( empty( $atts['field'] ) ) {
 			return;
+		}
 
-		if(!is_user_logged_in()) {
-			return do_shortcode($content);
+		if( ! is_user_logged_in() ) {
+			return do_shortcode( $content );
 		}
 
 		$user_data = get_userdata( get_current_user_id() );
@@ -237,7 +239,21 @@ class WPF_Shortcodes {
 
 		}
 
-		if(empty($value)) {
+		if( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {
+
+			if( is_numeric( $value ) ) {
+
+				$value = date( $atts['date-format'], $value );
+
+			} else {
+
+				$value = date( $atts['date-format'], strtotime( $value ) );
+
+			}
+
+		}
+
+		if( empty( $value ) ) {
 			return do_shortcode($content);
 		} else {
 			return $value;

@@ -32,7 +32,7 @@ class WPF_Admin_Bar {
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'pre_get_posts', array( $this, 'unset_query_arg' ) );
 
-		add_filter( 'wpf_user_can_access', array( $this, 'admin_bar_overrides' ), 10, 3 );
+		add_filter( 'wpf_user_can_access', array( $this, 'admin_bar_overrides' ), 10, 4 );
 		add_filter( 'wpf_user_can_access_widget', array( $this, 'admin_bar_overrides_widget' ), 10, 3 );
 		add_filter( 'wpf_user_can_access_block', array( $this, 'admin_bar_overrides_block' ), 10, 3 );
 
@@ -59,7 +59,7 @@ class WPF_Admin_Bar {
 	 * @return bool
 	 */
 
-	public function admin_bar_overrides( $can_access, $user_id, $required_tags ) {
+	public function admin_bar_overrides( $can_access, $user_id, $post_id, $required_tags = array() ) {
 
 		if( empty( get_query_var( 'wpf_tag' ) ) ) {
 			return $can_access;

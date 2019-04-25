@@ -97,6 +97,12 @@ class WPF_MailChimp {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
+		// Fix for country
+		
+		if( $value == 'United States' ) {
+			$value == 'United States of America';
+		}
+
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
@@ -448,11 +454,20 @@ class WPF_MailChimp {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( empty( $body->exact_matches ) || empty( $body->exact_matches->members ) ) {
-			return false;
-		}
+		// Exact matches
+		if ( isset( $body->exact_matches ) && ! empty( $body->exact_matches->members ) ) {
 
-		return $body->exact_matches->members[0]->id;
+			return $body->exact_matches->members[0]->id;
+
+		} elseif( isset( $body->full_search ) && ! empty( $body->full_search->members ) ) {
+
+			return $body->full_search->members[0]->id;
+
+		} else {
+
+			return false;
+
+		}
 	}
 
 

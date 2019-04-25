@@ -37,6 +37,10 @@ class WPF_Admin_Interfaces {
 		add_action( 'bulk_edit_custom_box', array( $this, 'bulk_edit_box' ), 10, 2 );
 		add_action( 'wp_ajax_wpf_bulk_edit_save', array( $this, 'bulk_edit_save' ) );
 
+		// User columns
+		add_filter( 'manage_users_columns', array( $this, 'manage_users_columns' ) );
+		add_filter( 'manage_users_custom_column', array( $this, 'manage_users_custom_column' ), 10, 3 );
+
 		// Meta box content
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ), 20 );
 		add_action( 'wpf_meta_box_content', array( $this, 'restrict_content_checkbox' ), 10, 2 );
@@ -211,8 +215,8 @@ class WPF_Admin_Interfaces {
         $registered_taxonomies = get_taxonomies();
 
         foreach($registered_taxonomies as $slug => $taxonomy) {
-            add_action( $slug . '_edit_form_fields', array( $this, 'taxonomy_form_fields' ), 10, 2 );
-	        add_action( 'edited_' . $slug , array( $this, 'save_taxonomy_form_fields' ), 10, 2 );
+            add_action( $slug . '_edit_form_fields', array( $this, 'taxonomy_form_fields' ), 15, 2 );
+	        add_action( 'edited_' . $slug , array( $this, 'save_taxonomy_form_fields' ), 15, 2 );
         }
 
 	}
@@ -240,11 +244,12 @@ class WPF_Admin_Interfaces {
 		}
 
 		$defaults = array(
-			'lock_content'	=> false,
-			'lock_posts'	=> false,
-			'allow_tags'	=> array(),
-			'redirect'		=> false,
-			'redirect_url'	=> false
+			'lock_content'		=> false,
+			'lock_posts'		=> false,
+			'allow_tags'		=> array(),
+			'allow_tags_all'	=> array(),
+			'redirect'			=> false,
+			'redirect_url'		=> false
 		);
 
 		$settings = array_merge( $defaults, $settings );
@@ -264,7 +269,7 @@ class WPF_Admin_Interfaces {
                 <tr class="form-field">
                     <th scope="row" valign="top"><label for="lock_content"><?php _e( 'Restrict access to archives', 'wp-fusion' ); ?></label></th>
                     <td>
-                        <input class="checkbox" type="checkbox" data-unlock="lock_posts wpf-settings-allow_tags wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
+                        <input class="checkbox" type="checkbox" data-unlock="lock_posts wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
                     </td>
                 </tr>
 
@@ -298,6 +303,7 @@ class WPF_Admin_Interfaces {
 
                     </td>
                 </tr>
+
 
                 <tr class="form-field">
                     <th scope="row" valign="top"><label for="wpf_redirect"><?php _e( 'Redirect if access is denied', 'wp-fusion' ); ?></label></th>
@@ -378,6 +384,53 @@ class WPF_Admin_Interfaces {
 	}
 
 	/**
+	 * Bulk edit columns config
+	 *
+	 * @access public
+	 * @return array Columns
+	 */
+
+	public function manage_users_columns( $columns ) {
+
+		$columns['wpf_tags'] =  wp_fusion()->crm->name . ' ' . __('Tags', 'wp-fusion');
+
+		return $columns;
+
+	}
+
+	/**
+	 * Bulk edit columns config
+	 *
+	 * @access public
+	 * @return array Columns
+	 */
+
+	public function manage_users_custom_column( $val, $column_name, $user_id ) {
+
+		if ( $column_name == 'wpf_tags' ) {
+
+			$tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
+
+			if( empty( $tags ) ) {
+				return '-';
+			} else {
+
+				$tag_labels = array();
+
+				foreach($tags as $tag) {
+					$tag_labels[] = wp_fusion()->user->get_tag_label( $tag );
+				}
+
+				return implode(', ', $tag_labels);
+			}
+
+		}
+
+		return $val;
+
+	}
+
+	/**
 	 * Bulk edit / inline editing boxes
 	 *
 	 * @access public
@@ -408,6 +461,7 @@ class WPF_Admin_Interfaces {
 		$settings = array(
 			'lock_content' => 0,
 			'allow_tags'   => array(),
+			'allow_tags_all' => array(),
 			'apply_tags'   => array(),
 			'apply_delay'  => 0,
 			'redirect'     => '',
@@ -418,10 +472,17 @@ class WPF_Admin_Interfaces {
 
         <div id="wpf-meta" class="inline-edit-col-wpf">
             <div class="inline-edit-col">
-				<?php $this->restrict_content_checkbox( $post, $settings ); ?>
+            	<div style="margin: 10px">
+					<?php $this->restrict_content_checkbox( $post, $settings ); ?>
+				</div>
 				<?php $this->required_tags_select( $post, $settings ); ?>
 				<?php $this->page_redirect_select( $post, $settings ); ?>
 				<?php $this->external_redirect_input( $post, $settings ); ?>
+
+				<div style="margin: 20px 10px 10px;">
+					<input type="checkbox" name="wpf-settings[bulk_edit_merge]" value="1"> Merge Changes <br />
+				</div>
+
             </div>
         </div>
         </div>
@@ -453,9 +514,57 @@ class WPF_Admin_Interfaces {
 					return;
 				}
 
-				// update for each post ID
-				foreach ( $post_ids as $post_id ) {
-					update_post_meta( $post_id, 'wpf-settings', $settings );
+				// Update for each post ID
+
+				if( isset( $settings['bulk_edit_merge'] ) && $settings['bulk_edit_merge'] == true ) {
+
+					unset( $settings['bulk_edit_merge'] );
+
+					foreach ( $post_ids as $post_id ) {
+						
+						$current_settings = get_post_meta( $post_id, 'wpf-settings', true );
+
+						if( empty( $current_settings['allow_tags'] ) ) {
+							$current_settings['allow_tags'] = array();
+						}
+
+						if( empty( $current_settings['allow_tags_all'] ) ) {
+							$current_settings['allow_tags_all'] = array();
+						}
+
+						if( empty( $settings['allow_tags'] ) ) {
+							$settings['allow_tags'] = array();
+						}
+
+						if( empty( $settings['allow_tags_all'] ) ) {
+							$settings['allow_tags_all'] = array();
+						}
+
+						$new_allow_tags = array_merge( $current_settings['allow_tags'], $settings['allow_tags'] );
+						$new_allow_tags_all = array_merge( $current_settings['allow_tags_all'], $settings['allow_tags_all'] );
+
+						if( empty( $settings['redirect'] ) ) {
+							unset( $settings['redirect'] );
+						}
+
+						if( empty( $settings['redirect_url'] ) ) {
+							unset( $settings['redirect_url'] );
+						}
+
+						$new_settings = array_merge( $current_settings, $settings );
+
+						$new_settings['allow_tags'] = $new_allow_tags;
+						$new_settings['allow_tags_all'] = $new_allow_tags_all;
+
+						update_post_meta( $post_id, 'wpf-settings', $new_settings );
+					}
+
+				} else {
+
+					foreach ( $post_ids as $post_id ) {
+						update_post_meta( $post_id, 'wpf-settings', $settings );
+					}
+
 				}
 
 			}
@@ -506,7 +615,7 @@ class WPF_Admin_Interfaces {
 
 		$post_type_object = get_post_type_object( $post->post_type );
 
-		echo '<input class="checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-redirect wpf-redirect-url" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <strong>Restrict access to this ' . strtolower( $post_type_object->labels->singular_name ) . '</strong></p>';
+		echo '<input class="checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf-redirect-url" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <strong>Restrict access to this ' . strtolower( $post_type_object->labels->singular_name ) . '</strong></p>';
 
 	}
 
@@ -519,7 +628,7 @@ class WPF_Admin_Interfaces {
 
 	public function required_tags_select( $post, $settings ) {
 
-		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>Required tags (any):</small></label>';
+		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>' . __('Required tags (any):', 'wp-fusion' ) . '</small></label>';
 
 		if ( $settings['lock_content'] != true ) {
 			$disabled = true;
@@ -531,6 +640,25 @@ class WPF_Admin_Interfaces {
 			'setting' 		=> $settings['allow_tags'],
 			'meta_name' 	=> 'wpf-settings',
 			'field_id'		=> 'allow_tags',
+			'disabled'		=> $disabled
+		);
+
+        wpf_render_tag_multiselect( $args );
+
+		echo '</p>';
+
+		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags-all"><small>' . __('Required tags (all):', 'wp-fusion' ) . '</small></label>';
+
+		if ( $settings['lock_content'] != true ) {
+			$disabled = true;
+		} else {
+			$disabled = false;
+		}
+
+		$args = array(
+			'setting' 		=> $settings['allow_tags_all'],
+			'meta_name' 	=> 'wpf-settings',
+			'field_id'		=> 'allow_tags_all',
 			'disabled'		=> $disabled
 		);
 
@@ -714,12 +842,13 @@ class WPF_Admin_Interfaces {
 		wp_nonce_field( 'wpf_meta_box', 'wpf_meta_box_nonce' );
 
 		$settings = array(
-			'lock_content' => 0,
-			'allow_tags'   => array(),
-			'apply_tags'   => array(),
-			'apply_delay'  => 0,
-			'redirect'     => '',
-			'redirect_url' => ''
+			'lock_content' 		=> 0,
+			'allow_tags'   		=> array(),
+			'allow_tags_all' 	=> array(),
+			'apply_tags'   		=> array(),
+			'apply_delay' 		=> 0,
+			'redirect'     		=> '',
+			'redirect_url' 		=> ''
 		);
 
 		if ( get_post_meta( $post->ID, 'wpf-settings', true ) ) {

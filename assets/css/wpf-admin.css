@@ -1,3 +1,8 @@
+
+body > .select4-container--open {
+	z-index: 999999; 
+}
+
 /* Widget Tags Filter Classes */
 
 .wpf-widget-controls {
@@ -94,8 +99,13 @@ body.term-php .wpf-page-redirect-select label {
 
 /* WPF center column meta boxes */
 
-#post-body #postbox-container-2 .select4-container, #wpf-coursewre-levels-table .select4-container, #wpf-learndash-meta .select4-container {
+#post-body #postbox-container-2 .select4-container, #wpf-learndash-meta .select4-container, .cp-box-content .select4-container {
 	min-width: 400px;
+}
+
+#wpf-coursewre-levels-table .select4-container {
+	min-width: 100%;
+	max-width: 100%;
 }
 
 /* WPF side meta box */
@@ -165,6 +175,15 @@ body .select4-drop.select4-drop-active {
 
 /* Lifter */
 
+#llms-quiz-settings-fields .select4-container {
+	width: 100% !important;
+	margin-top: 5px;
+}
+
+#llms-quiz-settings-fields .settings-group--wp_fusion .select2-container {
+	display: none;
+}
+
 .llms-mb-container .tab-content span.select4 {
 	margin-top: 10px;
 	min-width: 500px;
@@ -172,6 +191,14 @@ body .select4-drop.select4-drop-active {
 
 .llms-mb-container .tab-content span.select4 ul li.select4-search {
 	padding: 0px !important;
+}
+
+.llms-metabox-section span.select4 {
+	min-width: 400px;
+}
+
+#post-body #postbox-container-2 .llms-access-plans .select4-container {
+	min-width: 100%;
 }
 
 /* select4 */
@@ -184,7 +211,7 @@ body .select4-drop.select4-drop-active {
 	display: none;
 }
 
-#wpf-meta .select4-container {
+#wpf-meta .select4-container, body.term-php .select4-container {
 	width: 100% !important;
 	margin-top: 5px;
 	display: block;
@@ -425,6 +452,30 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	min-width: 0;
 	width: auto !important;
 	grid-column: 10/13;
+}
+
+/* Elementor */
+
+#elementor-popup__timing-controls-group--wp_fusion .elementor-control-wp_fusion_popup_tags .elementor-control-input-wrapper {
+	width: 200px;
+}
+
+#elementor-popup__timing-controls-group--wp_fusion .elementor-popup__display-settings_controls_group__icon img {
+	display: none;
+}
+
+#elementor-popup__timing-controls-group--wp_fusion .elementor-popup__display-settings_controls_group__icon {
+	background-image: url(../img/logo.png);
+    background-position: center center;
+    background-size: 70% 70%;
+    background-repeat: no-repeat;
+    opacity: 0.35;
+    -webkit-transition: 200ms opacity ease-in-out;
+    transition: 200ms opacity ease-in-out;
+}
+
+#elementor-popup__timing-controls-group--wp_fusion.elementor-active .elementor-popup__display-settings_controls_group__icon {
+	opacity: 0.9;
 }
 
 /* Fix for X theme messing up woo descriptions */

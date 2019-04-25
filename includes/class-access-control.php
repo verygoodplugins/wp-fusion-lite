@@ -29,6 +29,9 @@ class WPF_Access_Control {
 		add_action( 'template_redirect', array( $this, 'template_redirect' ), 15 );
 		add_filter( 'widget_display_callback', array( $this, 'hide_restricted_widgets'), 10, 3 );
 
+		// Return after login
+		add_action( 'wp_login', array( $this, 'return_after_login' ), 10, 2 );
+
 		// Apply tags on view scripts
 		add_action( 'wp_enqueue_scripts', array( $this, 'apply_tags_on_view' ) );
 
@@ -53,13 +56,13 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		if($user_id == false) {
+		if( $user_id == false ) {
 			$user_id = get_current_user_id();
 		}
 
 		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
 
-		if( empty( $post_restrictions ) ) {
+		if( empty( $post_restrictions ) || ! is_array( $post_restrictions ) ) {
 			$post_restrictions = array();
 		}
 
@@ -67,9 +70,13 @@ class WPF_Access_Control {
 			$post_restrictions['allow_tags'] = array();
 		}
 
+		if( ! isset( $post_restrictions['allow_tags_all'] ) ) {
+			$post_restrictions['allow_tags_all'] = array();
+		}
+
 		// See if taxonomy restrictions are in effect
 		if($this->user_can_access_term( $post_id, $user_id ) == false) {
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_restrictions['allow_tags'] );
+			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id, $post_restrictions['allow_tags'] );
 		}
 
 		// If content isn't locked
@@ -78,34 +85,54 @@ class WPF_Access_Control {
 		}
 
 		// If not logged in
-		if ( ! is_user_logged_in() ) {
-			return apply_filters( 'wpf_user_can_access', false, false, $post_restrictions['allow_tags'] );
+		if ( ! is_user_logged_in() && empty( $user_id ) ) {
+			return apply_filters( 'wpf_user_can_access', false, false, $post_id );
 		}
 
 		// If no tags specified for restriction, but user is logged in, allow access
-		if ( empty( $post_restrictions['allow_tags'] ) ) {
-			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_restrictions['allow_tags'] );
+		if ( empty( $post_restrictions['allow_tags'] ) && empty( $post_restrictions['allow_tags_all'] ) ) {
+			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id, $post_restrictions['allow_tags'] );
 		}
 
 		$user_tags = wp_fusion()->user->get_tags( $user_id );
 
 		// If user has no valid tags
 		if ( empty( $user_tags ) ) {
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_restrictions['allow_tags'] );
+			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id, $post_restrictions['allow_tags'] );
 		}
 
-		// Check if user has required tags for content
-		$result = array_intersect( (array) $post_restrictions['allow_tags'], $user_tags );
+		if( ! empty( $post_restrictions['allow_tags'] ) ) {
 
-		if( ! empty( $result ) ) {
-			$can_access = true;
+			// Check if user has required tags for content
+			$result = array_intersect( (array) $post_restrictions['allow_tags'], $user_tags );
+
+			if( ! empty( $result ) ) {
+				$can_access = true;
+			} else {
+				$can_access = false;
+			}
+
 		} else {
-			$can_access = false;
+
+			$can_access = true;
+
+		}
+
+		if( ! empty( $post_restrictions['allow_tags_all'] ) ) {
+
+			$result = array_intersect( (array) $post_restrictions['allow_tags_all'], $user_tags );
+
+			if( count( $result ) == count( $post_restrictions['allow_tags_all'] ) && $can_access == true ) {
+				$can_access = true;
+			} else {
+				$can_access = false;
+			}
+
 		}
 
 
 		// If no tags matched
-		return apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_restrictions['allow_tags'] );
+		return apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id, $post_restrictions['allow_tags'] );
 
 	}
 
@@ -436,12 +463,16 @@ class WPF_Access_Control {
 
 			global $post;
 
-			if ( empty( $post ) || $post->ID == 0 ) {
+			if ( empty( $post ) ) {
 				return true;
 			}
 
 			// For inheriting restrictions from another post
 			$post_id = apply_filters( 'wpf_redirect_post_id', $post->ID );
+
+			if ( $post_id == 0 ) {
+				return true;
+			}
 
 			// If user can access, return without doing anything
 			if ( $this->user_can_access( $post_id ) == true ) {
@@ -463,12 +494,23 @@ class WPF_Access_Control {
 
 			if ( ! empty( $redirect ) ) {
 
+				if( wp_fusion()->settings->get( 'return_after_login' ) == true && ! empty( $post_id ) ) {
+					setcookie( 'wpf_return_to', $post_id, time() + 5 * MINUTE_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
+				}
+
 				wp_redirect( $redirect );
 				exit();
 
 			} else {
 
 				add_filter( 'the_content', array( $this, 'restricted_content_filter' ) );
+
+				add_filter( 'comments_open', array( $this, 'turn_off_comments' ), 10, 2 );
+
+				add_filter( 'post_password_required', array( $this, 'hide_comments' ), 10, 2 );
+
+				do_action( 'wpf_filtering_page_content', $post_id );
+
 				return true;
 
 			}
@@ -510,6 +552,38 @@ class WPF_Access_Control {
 		}
 
 		return do_shortcode( stripslashes( $message ) );
+
+	}
+
+
+	/**
+	 * Turn off comments if post is restricted and no redirect is specified
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function turn_off_comments( $open, $post_id ) {
+
+		return false;
+
+	}
+
+
+	/**
+	 * Sets the post to be password required so existing comments are hidden
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function hide_comments( $hide, $post ) {
+
+		if( ! empty( get_comments_number( $post->ID ) ) ) {
+			return true;
+		}
+
+		return $hide;
 
 	}
 
@@ -634,7 +708,14 @@ class WPF_Access_Control {
 	public function pre_get_posts( $query ) {
 
 		if ( ( ! is_admin() || defined( 'DOING_AJAX' )  ) && ! $query->is_main_query() && wp_fusion()->settings->get( 'hide_archives' ) == true ) {
+
 			$query->set('suppress_filters', false);
+
+		} elseif ( ( ! is_admin() || defined( 'DOING_AJAX' )  ) && $query->is_search() && wp_fusion()->settings->get( 'hide_archives' ) == true ) {
+
+			// Search queries
+			$query->set('suppress_filters', false);
+
 		}
 
 	}
@@ -648,7 +729,7 @@ class WPF_Access_Control {
 
 	public function exclude_restricted_posts( $posts, $query ) {
 
-		if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ( $query->is_main_query() && ! $query->is_archive() ) || wp_fusion()->settings->get( 'hide_archives' ) != true ) {
+		if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ( $query->is_main_query() && ! $query->is_archive() && ! $query->is_search() ) || wp_fusion()->settings->get( 'hide_archives' ) != true ) {
 			return $posts;
 		}
 
@@ -666,6 +747,35 @@ class WPF_Access_Control {
 		}
 
 		return array_values( $posts );
+
+	}
+
+	/**
+	 * Redirect back to restricted content after login
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function return_after_login( $user_login, $user ) {
+
+		if( isset( $_COOKIE['wpf_return_to'] ) ) {
+
+			$post_id = intval( $_COOKIE['wpf_return_to'] );
+
+			$url = get_permalink( $post_id );
+
+			setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
+
+			if( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
+
+				wp_redirect( $url );
+				exit();
+
+			}
+
+
+		}
 
 	}
 

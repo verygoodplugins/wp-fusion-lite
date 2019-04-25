@@ -107,7 +107,7 @@ class WPF_MailChimp_Admin {
 
 
 	/**
-	 * Loads ActiveCampaign specific settings fields
+	 * Loads MailChimp specific settings fields
 	 *
 	 * @access  public
 	 * @since   1.0

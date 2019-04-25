@@ -53,6 +53,7 @@ class WPF_Settings {
 		add_action( 'show_field_import_users_end', array( $this, 'show_field_import_users_end' ), 10, 2 );
 		add_action( 'show_field_import_groups', array( $this, 'show_field_import_groups' ), 10, 2 );
 		add_action( 'show_field_export_options', array( $this, 'show_field_export_options' ), 10, 2 );
+		add_action( 'show_field_test_webhooks', array( $this, 'show_field_test_webhooks' ), 10, 2 );
 
 		add_action( 'show_field_crm_field', array( $this, 'show_field_crm_field' ), 10, 2 );
 
@@ -122,7 +123,7 @@ class WPF_Settings {
 				<p>You're running the <strong>Lite</strong> version of WP Fusion. A paid license includes:</p>
 
 				<ul>
-					<li>50+ plugin integrations</li>
+					<li>60+ plugin integrations</li>
 					<li>Hundreds of tag triggers</li>
 					<li>Sync data back to WordPress via webhooks</li>
 					<li>Premium support</li>
@@ -177,7 +178,7 @@ class WPF_Settings {
 	public function set( $key, $value ) {
 
 		$this->options[ $key ] = $value;
-		update_option( 'wpf_options', $this->options );
+		update_option( 'wpf_options', $this->options, false );
 
 	}
 
@@ -199,7 +200,7 @@ class WPF_Settings {
 	 */
 	public function set_all( $options ) {
 		$this->options = $options;
-		update_option( 'wpf_options', $options );
+		update_option( 'wpf_options', $options, false );
 	}
 
 	/**
@@ -321,7 +322,7 @@ class WPF_Settings {
 
 		if( $domain == 'wp-fusion' ) {
 
-			if( $this->options['connection_configured'] == true && isset( $this->options['crm_tag_type'] ) ) {
+			if( isset( $this->options['connection_configured'] ) && $this->options['connection_configured'] == true && isset( $this->options['crm_tag_type'] ) ) {
 
 				if( strpos($translation, ' Tag') !== false ) {
 
@@ -528,7 +529,7 @@ class WPF_Settings {
 		}
 
 		unset( $import_groups[ $import_group ] );
-		update_option( 'wpf_import_groups', $import_groups );
+		update_option( 'wpf_import_groups', $import_groups, false );
 		wp_send_json_success();
 
 		die();
@@ -843,6 +844,11 @@ class WPF_Settings {
 			}
 		}
 
+		// Staging CRM
+		if( isset( $options['crm'] ) && $options['crm'] == 'staging' ) {
+			$options['connection_configured'] = true;
+		}
+
 		return $options;
 
 	}
@@ -915,19 +921,29 @@ class WPF_Settings {
 
 		$settings['push_all_meta'] = array(
 			'title'   => __( 'Push All', 'wp-fusion' ),
-			'desc'    => __( 'Push meta data whenever a single "user_meta" entry is added or modified.<br /><small>(Useful if using non-supported plugins or manual user_meta updates, but may result in duplicate API calls and slower performance)</small>', 'wp-fusion' ),
+			'desc'    => __( 'Push meta data whenever a single "user_meta" entry is added or modified.', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
+			'tooltip' => 'This is useful if using non-supported plugins or manual user_meta updates, but may result in duplicate API calls and slower performance.'
 		);
 
 		$settings['login_sync'] = array(
-			'title'   => __( 'Login Sync', 'wp-fusion' ),
+			'title'   => __( 'Login Tags Sync', 'wp-fusion' ),
 			'desc'    => __( 'Load the user\'s latest tags from your CRM on login.', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main',
 			'tooltip' => __( 'Note: this is only necessary if you are applying tags via automations in your CRM and haven\'t set up webhooks to send the data back. Any tags applied via WP Fusion are available in WordPress immediately.' )
+		);
+
+		$settings['login__meta_sync'] = array(
+			'title'   => __( 'Login Meta Sync', 'wp-fusion' ),
+			'desc'    => __( 'Load the user\'s latest meta data from your CRM on login.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'tooltip' => __( 'Note: this is only necessary if you are manually updating contact data in your CRM and haven\'t set up webhooks to send the data back.' )
 		);
 
 		$settings['profile_update_tags'] = array(
@@ -978,6 +994,14 @@ class WPF_Settings {
 			'desc'    => __( 'Default redirect URL for when access is denied. This can be overridden on a per-page basis. Leave blank to display error message below.', 'wp-fusion' ),
 			'std'     => '',
 			'type'    => 'text',
+			'section' => 'main'
+		);
+
+		$settings['return_after_login'] = array(
+			'title'   => __( 'Return After Login', 'wp-fusion' ),
+			'desc'    => __( 'If a user has been redirected away from a restricted page, take them back to that page after logging in.', 'wp-fusion' ),
+			'std'     => 1,
+			'type'    => 'checkbox',
 			'section' => 'main'
 		);
 
@@ -1048,6 +1072,13 @@ class WPF_Settings {
 			$settings['access_key'] = array(
 				'title'   => __( 'Access Key', 'wp-fusion' ),
 				'desc'    => __( 'You must use this key when sending data back to WP Fusion.', 'wp-fusion' ),
+				'type'    => 'text',
+				'section' => 'main'
+			);
+
+			$settings['test_webhooks'] = array(
+				'title'   => __( 'Test Webhooks', 'wp-fusion' ),
+				'desc'    => __( 'Click this button to test your site\'s ability to receive incoming webhooks.', 'wp-fusion' ),
 				'type'    => 'text',
 				'section' => 'main'
 			);
@@ -1183,6 +1214,20 @@ class WPF_Settings {
 			'section' => 'advanced'
 		);
 
+		if( isset( $this->options['auto_login'] ) && $this->options['auto_login'] == true ) {
+			$std = 1;
+		} else {
+			$std = 0;
+		}
+
+		$settings['auto_login_forms'] = array(
+			'title'   => __( 'Form Auto Login', 'wp-fusion' ),
+			'desc'    => __( 'Start an auto-login session whenever a visitor submits a form configured with WP Fusion.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'std'     => $std,
+			'section' => 'advanced'
+		);
+
 		$settings['link_click_tracking'] = array(
 			'title'   => __( 'Link Tracking', 'wp-fusion' ),
 			'desc'    => __( 'Enqueue the scripts to handle link click tracking. See <a href="https://wpfusion.com/documentation/tutorials/link-click-tracking/" target="_blank">this tutorial</a> for more info.', 'wp-fusion' ),
@@ -1229,6 +1274,15 @@ class WPF_Settings {
 			'type'    => 'checkbox',
 			'std'     => 0,
 			'section' => 'advanced'
+		);
+
+		$settings['hide_additional'] = array(
+			'title'   => __( 'Hide Additional Fields', 'wp-fusion' ),
+			'desc'    => __( 'Hide the Additional Fields section from the Contact Fields tab.', 'wp-fusion' ),
+			'tooltip' => __( 'If you\'re not using any of the fields this can speed up performance and make the settings page load faster.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'std'     => 0,
+			'section' => 'advanced',
 		);
 
 		$settings['enable_queue'] = array(
@@ -1352,7 +1406,7 @@ class WPF_Settings {
 
 		if ( $this->options['connection_configured'] == true ) {
 
-			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-success" data-toggle="tooltip" data-placement="right" title="' . __( 'Reload all custom fields and available tags from your CRM', 'wp-fusion') . '">Resynchronize</a>';
+			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-success" data-toggle="tooltip" data-placement="right" title="' . __( 'Reload all custom fields and available tags from your CRM', 'wp-fusion') . '">Resynchronize Tags &amp; Fields</a>';
 
 		} else {
 
@@ -1559,6 +1613,12 @@ class WPF_Settings {
 
 		}
 
+		if( $this->options['hide_additional'] == true ) {
+
+			unset( $field_groups['extra'] );
+
+		}
+
 		// Display contact fields table
 
 		echo '<table id="contact-fields" class="table table-hover">';
@@ -1603,8 +1663,9 @@ class WPF_Settings {
 					continue;
 				}
 
-				if(empty($this->options[ $id ][ $user_meta ]) || !isset($this->options[ $id ][ $user_meta ]['crm_field']))
+				if( empty($this->options[ $id ][ $user_meta ] ) || ! isset( $this->options[ $id ][ $user_meta ]['crm_field'] ) || ! isset( $this->options[ $id ][ $user_meta ]['active'] ) ) {
 					$this->options[ $id ][ $user_meta ] = array('active' => false, 'crm_field' => false);
+				}
 
 				echo '<tr' . ( $this->options[ $id ][ $user_meta ]['active'] == true ? ' class="success" ' : '' ) . '>';
 				echo '<td><input class="checkbox contact-fields-checkbox"' . ( empty( $this->options[ $id ][ $user_meta ]['crm_field'] ) ? ' disabled' : '' ) . ' type="checkbox" id="wpf_cb_' . $user_meta . '" name="wpf_options[' . $id . '][' . $user_meta . '][active]" value="1" ' . checked( $this->options[ $id ][ $user_meta ]['active'], 1, false ) . '/></td>';
@@ -1753,6 +1814,19 @@ class WPF_Settings {
 
 	}
 
+
+	/**
+	 * Displays webhooks test button
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function show_field_test_webhooks( $id, $field ) {
+
+		echo '<a class="button" data-url="' . home_url() . '" id="test-webhooks-btn" href="#">Test Webhooks</a>';
+
+	}
 
 	/**
 	 * Validation for contact field data

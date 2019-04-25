@@ -75,7 +75,12 @@ class WPF_CRM_Base {
 		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
 
 		// Default field value formatting
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 5, 3 );
+
+		if( ! isset( $this->crm_no_queue->override_filters ) ) {
+
+			add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 5, 3 );
+
+		}
 
 		// AJAX CRM connection and sync
 		add_action( 'wp_ajax_wpf_sync', array( $this, 'sync' ) );
@@ -214,6 +219,10 @@ class WPF_CRM_Base {
 	 */
 
 	public function map_meta_fields( $user_data ) {
+
+		if( ! is_array( $user_data ) ) {
+			return false;
+		}
 
 		$update_data = array();
 

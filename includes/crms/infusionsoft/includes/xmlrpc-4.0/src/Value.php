@@ -307,7 +307,10 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 		//if (is_object($o) && (get_class($o) == 'xmlrpcval' || is_subclass_of($o, 'xmlrpcval')))
 		//{
 		reset( $this->me );
-		list( $typ, $val ) = each( $this->me );
+		$typ = key( $this->me );
+		$val = current( $this->me );
+		
+		//list( $typ, $val ) = each( $this->me ); // Deprecated in PHP 7.2
 
 		return '<value>' . $this->serializedata( $typ, $val, $charsetEncoding ) . "</value>\n";
 		//}

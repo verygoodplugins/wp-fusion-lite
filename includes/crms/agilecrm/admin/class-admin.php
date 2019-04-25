@@ -42,6 +42,7 @@ class WPF_AgileCRM_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -90,6 +91,49 @@ class WPF_AgileCRM_Admin {
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
+
+		return $settings;
+
+	}
+
+
+	/**
+	 * Loads AgileCRM specific settings fields
+	 *
+	 * @access  public
+	 * @since   1.0
+	 */
+
+	public function register_settings( $settings, $options ) {
+
+		// Add site tracking option
+		$site_tracking = array();
+
+		$site_tracking['site_tracking_header'] = array(
+			'title'   => __( 'AgileCRM Site Tracking', 'wp-fusion' ),
+			'desc'    => '',
+			'std'     => '',
+			'type'    => 'heading',
+			'section' => 'main'
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://www.agilecrm.com/marketing-automation/web-rules">AgileCRM analytics and web rules</a> scripts.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$site_tracking['site_tracking_acct'] = array(
+			'title'   => __( 'Account ID', 'wp-fusion' ),
+			'desc'    => __( 'Your account ID can be found in the Tracking Code in your AgileCRM account, under Admin Settings &raquo; Analytics. For example: <code>8g8fejferfqbi4g4mradq09373</code>', 'wp-fusion' ),
+			'std'     => '',
+			'type'    => 'text',
+			'section' => 'main'
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
 
 		return $settings;
 

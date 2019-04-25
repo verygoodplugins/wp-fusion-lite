@@ -33,6 +33,12 @@ class WPF_Zoho {
 	public $object_type;
 
 	/**
+	 * Bypass the field filtering in WPF_CRM_Base so multiselects get sent as arrays
+	 */
+
+	public $override_filters;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -51,6 +57,8 @@ class WPF_Zoho {
 		$this->client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
 
 		$this->object_type = 'Contacts';
+
+		$this->override_filters = true;
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -88,14 +96,31 @@ class WPF_Zoho {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
-			// Adjust formatting for date fields
+			if( ! is_numeric( $value ) ) {
+				$value = strtotime( $value );
+			}
+
+			// Adjust formatting for date fields (doesn't work with Date/time fields)
 			$date = date( 'Y-m-d', $value );
 
 			return $date;
 
-		} elseif( $field_type == 'checkboxes' && ! empty( $value ) ) {
+		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
-			return explode(',', $value);
+			if ( empty( $value ) ) {
+				//If checkbox is unselected
+				return null;
+			} else {
+				// If checkbox is selected
+				return 1;
+			}
+		
+		} elseif ( $field == 'user_pass' ) {
+
+			// Don't update password if it's empty
+			if ( ! empty( $value ) ) {
+				return $value;
+			}
 
 		} else {
 
@@ -196,9 +221,19 @@ class WPF_Zoho {
 
 				$response = new WP_Error( 'error', '<strong>Invalid Data</strong> error: <strong>' . $body_json->message . '</strong>.' );
 
-			} elseif( !empty( $body_json->data ) && isset( $body_json->data[0]->code ) && $body_json->data[0]->code == 'INVALID_DATA' ) {
+			} elseif( !empty( $body_json->data ) && isset( $body_json->data[0]->code ) && ( $body_json->data[0]->code == 'INVALID_DATA' || $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) ) {
 
-				$response = new WP_Error( 'error', 'Invalid data passed for field <strong>' . $body_json->data[0]->details->api_name . '</strong>, expected data type: <strong>' . $body_json->data[0]->details->expected_data_type . '</strong>' );
+				if( $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) {
+
+					$message = 'Mandatory field not found: <strong>' . $body_json->data[0]->details->api_name . '</strong>';
+
+				} elseif( $body_json->data[0]->code == 'INVALID_DATA' ) {
+
+					$message = 'Invalid data passed for field <strong>' . $body_json->data[0]->details->api_name . '</strong>, expected data type: <strong>' . $body_json->data[0]->details->expected_data_type . '</strong>';
+
+				}
+
+				$response = new WP_Error( 'error', $message );
 
 			} elseif( wp_remote_retrieve_response_code( $response ) == 429 ) {
 

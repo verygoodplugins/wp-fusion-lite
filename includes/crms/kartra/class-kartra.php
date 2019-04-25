@@ -37,7 +37,7 @@ class WPF_Kartra {
 
 		$this->slug     = 'kartra';
 		$this->name     = 'Kartra';
-		$this->supports = array();
+		$this->supports = array( 'add_fields' );
 
 		// WP Fusion app ID
 		$this->app_id 	= 'EoPIrcjdRhQl';

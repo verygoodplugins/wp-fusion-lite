@@ -42,6 +42,7 @@ class WPF_Mautic_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -119,6 +120,40 @@ class WPF_Mautic_Admin {
 		}
 
 		return $options;
+
+	}
+
+	/**
+	 * Loads Mautic specific settings fields
+	 *
+	 * @access  public
+	 * @since   1.0
+	 */
+
+	public function register_settings( $settings, $options ) {
+
+		// Add site tracking option
+		$site_tracking = array();
+
+		$site_tracking['site_tracking_header'] = array(
+			'title'   => __( 'Mautic Site Tracking', 'wp-fusion' ),
+			'desc'    => '',
+			'std'     => '',
+			'type'    => 'heading',
+			'section' => 'main'
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://www.mautic.org/docs/en/contacts/contact_monitoring.html">Mautic site tracking</a>.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+
+		return $settings;
 
 	}
 

@@ -21,3 +21,8 @@ $activecampaign_fields['phone_number'] = array(
 	'crm_label' => 'Phone',
 	'crm_field' => 'phone'
 );
+
+$activecampaign_fields[] = array(
+	'crm_label' => 'Organization Name',
+	'crm_field' => 'orgname'
+);

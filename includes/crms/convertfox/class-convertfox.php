@@ -297,7 +297,6 @@ class WPF_ConvertFox {
 
 		$body_json    = json_decode( $response['body'], true );
 
-
 		if ( empty( $body_json['user'] ) ) {
 			return false;
 		}

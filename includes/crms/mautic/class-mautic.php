@@ -54,6 +54,62 @@ class WPF_Mautic {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		// Add tracking code to footer
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+
+		// Set tracking cookie
+		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
+
+	}
+
+
+	/**
+	 * Output tracking code
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function tracking_code_output() {
+
+		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+			return;
+		}
+
+		echo '<script>';
+		echo '(function(w,d,t,u,n,a,m){w["MauticTrackingObject"]=n;';
+		echo 'w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)},a=d.createElement(t),';
+		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
+		echo '})(window,document,"script","' . wp_fusion()->settings->get( 'mautic_url' ) . '","mt");';
+
+		    echo 'mt("send", "pageview");';
+
+		echo '</script>';
+
+	}
+
+	/**
+	 * Set tracking cookie
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function set_tracking_cookie() {
+
+		if( is_admin() || ! is_user_logged_in() ) {
+			return;
+		}
+
+		$contact_id = wp_fusion()->user->get_contact_id();
+
+		if( ! empty( $contact_id ) && ! isset( $_COOKIE['mtc_id'] ) ) {
+
+			setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
+
+		}
+
+
 	}
 
 	/**
@@ -528,6 +584,9 @@ class WPF_Mautic {
 		if( isset( $body->errors ) ) {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
+
+		// Set cookie
+		setcookie( 'mtc_id', $body->contact->id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
 
 		return $body->contact->id;
 

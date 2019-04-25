@@ -544,11 +544,11 @@ tr.disabled {
     }
 }
 
-.tab-content>.tab-pane {
+.settings_page_wpf-settings-tab-content > .tab-pane {
     display: none;
 }
 
-.tab-content>.active {
+.settings_page_wpf-settings-tab-content > .active {
     display: block;
 }
 

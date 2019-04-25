@@ -168,6 +168,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * the process is not already running.
 		 */
 		public function maybe_handle() {
+
 			// Don't lock up other requests while processing
 			session_write_close();
 
@@ -414,7 +415,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				$memory_limit = '128M';
 			}
 
-			if ( ! $memory_limit || - 1 === $memory_limit ) {
+			if ( ! $memory_limit || -1 === intval( $memory_limit ) ) {
 				// Unlimited, set to 32GB.
 				$memory_limit = '32000M';
 			}

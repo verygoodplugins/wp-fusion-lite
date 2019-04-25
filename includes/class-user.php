@@ -181,12 +181,15 @@ class WPF_User {
 		}
 
 		// Fill in some blanks from the DB if possible
+
 		$userdata               		= get_userdata( $user_id );
 		$post_data['user_id']			= $user_id;
-		$post_data['role']  			= $userdata->roles[0];
-		$post_data['user_registered']	= $userdata->user_registered;
 
-		foreach( array( 'first_name', 'last_name', 'user_email', 'user_url', 'user_login', 'user_nicename' ) as $meta_key ) {
+		if( is_array( $userdata->roles ) ) {
+			$post_data['role'] = $userdata->roles[0];
+		}
+
+		foreach( array( 'first_name', 'last_name', 'user_email', 'user_url', 'user_login', 'user_nicename', 'user_registered' ) as $meta_key ) {
 
 			if( empty( $post_data[ $meta_key ] ) ) {
 				$post_data[ $meta_key ] = $userdata->{$meta_key};
@@ -200,7 +203,11 @@ class WPF_User {
 		$valid_roles = apply_filters( 'wpf_register_valid_roles', $valid_roles, $user_id, $post_data );
 
 		if ( is_array( $valid_roles ) && ! empty( $valid_roles[0] ) && ! in_array( $post_data['role'], $valid_roles ) && $force == false ) {
+
+			wp_fusion()->logger->handle( 'notice', $user_id, 'User not added to ' . wp_fusion()->crm->name . ' because role <strong>' . $post_data['role'] . '</strong> isn\'t enabled for contact creation.' );
+
 			return false;
+
 		}
 
 		// Get password from Admin >> Add New user screen
@@ -304,6 +311,26 @@ class WPF_User {
 
 
 	/**
+	 * Determine if a user has a contact record
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function has_contact_id( $user_id ) {
+
+		$contact_id = get_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', true );
+
+		if( ! empty( $contact_id ) ) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+
+	/**
 	 * Gets contact ID from user ID
 	 *
 	 * @access public
@@ -377,6 +404,7 @@ class WPF_User {
 		$user_meta = wp_fusion()->crm->load_contact( $contact_id );
 
 		// Error logging
+
 		if ( is_wp_error( $user_meta ) ) {
 
 			wp_fusion()->logger->handle( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() );
@@ -433,7 +461,7 @@ class WPF_User {
 
 			foreach ( $user_meta as $key => $value ) {
 
-				if( empty( $value ) ) {
+				if( empty( $value ) && $value != '0' ) {
 					continue;
 				}
 
@@ -559,9 +587,15 @@ class WPF_User {
 			wp_fusion()->logger->handle( $tags->get_error_code(), $user_id, 'Failed loading tags: ' . $tags->get_error_message() );
 			return $user_tags;
 
+		} elseif( $tags == $user_tags ) { 
+
+			// If nothing changed
+			return $user_tags;
+
 		} else {
 			$user_tags = (array) $tags;
 		}
+
 
 		if( ! empty( $user_tags ) ) {
 			wp_fusion()->logger->handle( 'info', $user_id, 'Loaded tag(s): ', array( 'tag_array' => $user_tags) );
@@ -792,7 +826,11 @@ class WPF_User {
 	 * @return void
 	 */
 
-	public function login( $user_login, $user ) {
+	public function login( $user_login, $user = false ) {
+
+		if( $user == false ) {
+			$user = get_user_by( 'login', $user_login );
+		}
 
 		if( wp_fusion()->settings->get( 'login_sync' ) == true ) {
 
@@ -800,6 +838,16 @@ class WPF_User {
 
 			if( ! empty( $cid ) ) {
 				$this->get_tags( $user->ID, true );
+			}
+
+		}
+
+		if( wp_fusion()->settings->get( 'login_meta_sync' ) == true ) {
+
+			$cid = $this->get_contact_id( $user->ID );
+
+			if( ! empty( $cid ) ) {
+				$this->pull_user_meta( $user->ID );
 			}
 
 		}
@@ -998,20 +1046,26 @@ class WPF_User {
 
 			$user_meta = $_POST;
 			$userdata          			= get_userdata( $user_id );
-			$user_meta['role'] 			= $userdata->roles[0];
 			$user_meta['user_login'] 	= $userdata->user_login;
 			$user_meta['user_id'] 		= $user_id;
+
+			if( is_array( $userdata->roles ) ) {
+				$user_meta['role'] = $userdata->roles[0];
+			}
 
 		} elseif ( empty( $user_meta ) ) {
 
 			// If nothing's been supplied, get the latest from the DB
 			$user_meta         				= array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
 			$userdata          				= get_userdata( $user_id );
-			$user_meta['role'] 				= $userdata->roles[0];
 			$user_meta['user_login'] 		= $userdata->user_login;
 			$user_meta['user_email'] 		= $userdata->user_email;
 			$user_meta['user_id'] 			= $user_id;
 			$user_meta['user_registered'] 	= $userdata->user_registered;
+
+			if( is_array( $userdata->roles ) ) {
+				$user_meta['role'] = $userdata->roles[0];
+			}
 
 		}
 
@@ -1143,6 +1197,7 @@ class WPF_User {
 
 			// Generate a password if one hasn't been supplied
 			$user_meta['user_pass'] = wp_generate_password( $length = 12, $include_standard_special_chars = false );
+			$user_meta['generated_user_pass'] = 'true';
 
 		} else {
 
@@ -1203,6 +1258,9 @@ class WPF_User {
 
 		// Logger
 		wp_fusion()->logger->handle( 'info', $user_id, 'Imported contact ID <strong>' . $contact_id . '</strong>, with meta data: ', array( 'meta_array' => $user_meta ) );
+
+		// Remove log data for generated pass
+		unset( $user_meta['generated_user_pass'] );
 
 		// Save any custom fields (wp insert user ignores them)
 		$this->set_user_meta( $user_id, $user_meta );

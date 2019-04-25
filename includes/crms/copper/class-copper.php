@@ -138,13 +138,13 @@ class WPF_Copper {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'copperhq') !== false ) {
+		if( strpos($url, 'prosperworks') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if( isset( $body_json->success ) && $body_json->success == false ) {
 
-				$response = new WP_Error( 'error', $body_json->error );
+				$response = new WP_Error( 'error', $body_json->message );
 
 			}
 
@@ -342,7 +342,7 @@ class WPF_Copper {
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
-		return $fields;
+		return $crm_fields;
 
 	}
 
@@ -534,29 +534,39 @@ class WPF_Copper {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		require dirname( __FILE__ ) . '/admin/copper-fields.php';
-
 		$update_data = array();
 
 		foreach( $data as $field => $value ) {
 
-			foreach( $copper_fields as $meta_key => $field_data ) {
+			if( $field == 'email' ) {
 
-				if( $field == $field_data['crm_field'] ) {
+				$update_data['emails'] = array( array( 'email' => $value, 'category' => 'work' ) );
 
-				$update_data['name'] = $data['first_name'] . ' ' . $data['last_name'];
-				$update_data['emails'] = array (array('email' => $data['email'], 'category' => 'work'));
-				$updata_data['phone_numbers'] = array (array('number' => $data['phone_number'], 'category' => 'work'));
-				$update_data['address'] = array('street' => $data['street'], 'city' => $data['city'], 'state' => $data['state'], 'postal_code' => $data['postal_code'], 'country' => $data['country']);
-				$update_data[$field] = $value;
+			} elseif( $field == 'number' ) {
 
+				$updata_data['phone_numbers'] = array( array( 'number' => $value, 'category' => 'work' ) );
+
+			} elseif( $field == 'street' || $field == 'city' || $field == 'state' || $field == 'postal_code' || $field == 'country' ) {
+
+				if( ! isset( $update_data['address'] ) ) {
+					$update_data['address'] = array();
 				}
 
-			}
+				$update_data['address'][$field] = $value;
 
-			if (is_int($field)) { 
+			} elseif( is_int( $field ) ) {
 
-				$update_data['custom_fields'] = array(array('custom_field_definition_id' => $field, 'value' => $value));
+				// Custom fields
+				if( ! isset( $update_data['custom_fields'] ) ) {
+					$update_data['custom_fields'] = array();
+				}
+
+				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
+
+
+			} else {
+
+				$update_data[ $field ] = $value;
 
 			}
 
@@ -595,29 +605,39 @@ class WPF_Copper {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		require dirname( __FILE__ ) . '/admin/copper-fields.php';
-
 		$update_data = array();
 
 		foreach( $data as $field => $value ) {
 
-			foreach( $copper_fields as $meta_key => $field_data ) {
+			if( $field == 'email' ) {
 
-				if( $field == $field_data['crm_field'] ) {
+				$update_data['emails'] = array( array( 'email' => $value, 'category' => 'work' ) );
 
-				$update_data['name'] = $data['first_name'] . ' ' . $data['last_name'];
-				$update_data['emails'] = array (array('email' => $data['email'], 'category' => 'work'));
-				$update_data['phone_numbers'] = array (array('number' => $data['phone_number'], 'category' => 'work'));
-				$update_data['address'] = array('street' => $data['street'], 'city' => $data['city'], 'state' => $data['state'], 'postal_code' => $data['postal_code'], 'country' => $data['country']);
-				$update_data[$field] = $value;
+			} elseif( $field == 'number' ) {
 
+				$updata_data['phone_numbers'] = array( array( 'number' => $value, 'category' => 'work' ) );
+
+			} elseif( $field == 'street' || $field == 'city' || $field == 'state' || $field == 'postal_code' || $field == 'country' ) {
+
+				if( ! isset( $update_data['address'] ) ) {
+					$update_data['address'] = array();
 				}
 
-			}
+				$update_data['address'][$field] = $value;
 
-			if (is_int($field)) { 
+			} elseif( is_int( $field ) ) {
 
-				$update_data['custom_fields'] = array(array('custom_field_definition_id' => $field, 'value' => $value));
+				// Custom fields
+				if( ! isset( $update_data['custom_fields'] ) ) {
+					$update_data['custom_fields'] = array();
+				}
+
+				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
+
+
+			} else {
+
+				$update_data[ $field ] = $value;
 
 			}
 
@@ -627,7 +647,7 @@ class WPF_Copper {
 		$params['method'] 	= 'PUT';
 		$params['body'] = json_encode( $update_data );
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/'. $contact_id;
+		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
@@ -636,7 +656,7 @@ class WPF_Copper {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $response->id;
+		return true;
 
 	}
 

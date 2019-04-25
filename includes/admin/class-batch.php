@@ -110,7 +110,7 @@ class WPF_Batch {
 
 			$remaining = $this->process->get_queue_remaining();
 
-			if( !empty( $remaining ) ) {
+			if( ! empty( $remaining ) ) {
 
 				$this->process->dispatch();
 				$active = true;
@@ -197,6 +197,25 @@ class WPF_Batch {
 	}
 
 	/**
+	 * Quick add a single item to the queue
+	 *
+	 * @since 3.24.2
+	 * @return void
+	 */
+
+	public function quick_add( $action, $args ) {
+
+		if( empty( $this->process ) ) {
+			$this->includes();
+			$this->init();
+		}
+
+		$this->process->push_to_queue( array( 'action' => $action, 'args' => $args ) );
+		$this->process->save()->dispatch();
+
+	}
+
+	/**
 	 * Import users batch init
 	 *
 	 * @since 3.0
@@ -220,15 +239,15 @@ class WPF_Batch {
 
 		// Remove existing users
 
-		// foreach( $contact_ids as $i => $contact_id ) {
+		foreach( $contact_ids as $i => $contact_id ) {
 
-		// 	if( wp_fusion()->user->get_user_id( $contact_id ) != false ) {
+			if( wp_fusion()->user->get_user_id( $contact_id ) != false ) {
 
-		// 		unset( $contact_ids[$i] );
+				unset( $contact_ids[$i] );
 
-		// 	}
+			}
 
-		// }
+		}
 
 		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Import Contacts</strong> batch operation on ' . count($contact_ids) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>', array( 'source' => 'batch-process' ) );
 

@@ -80,7 +80,7 @@ button.btn-verifying {
 	padding-left: 30px;
 }
 
-form#wpf-settings .tab-content {
+form#wpf-settings .settings_page_wpf-settings-tab-content {
 	padding: 0 10px;
 }
 
@@ -172,11 +172,11 @@ a#test-connection span, a#export-btn span, a#import-users-btn span {
 	display: none;
 }
 
-#wpf-settings.setup ul.nav-tabs, #wpf-settings.setup .tab-content .tab-pane {
+#wpf-settings.setup ul.nav-tabs, #wpf-settings.setup .settings_page_wpf-settings-tab-content .tab-pane {
 	display: none;
 }
 
-#wpf-settings.setup ul.nav-tabs li#tab-setup, #wpf-settings.setup .tab-content .tab-pane#setup {
+#wpf-settings.setup ul.nav-tabs li#tab-setup, #wpf-settings.setup .settings_page_wpf-settings-tab-content .tab-pane#setup {
 	display: block;
 }
 
@@ -284,6 +284,7 @@ th.sync {
 
 #contact-fields td.wp_field_type input[type="text"] {
 	width: auto;
+	max-width: 80px;
 }
 
 #contact-fields td .checkbox {

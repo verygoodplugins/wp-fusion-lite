@@ -59,7 +59,12 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		if ( is_user_logged_in() || wp_fusion()->settings->get( 'auto_login' ) == false || apply_filters( 'wpf_skip_auto_login', false ) ) {
+		if ( is_user_logged_in() || apply_filters( 'wpf_skip_auto_login', false ) ) {
+			return;
+		}
+
+		// If regular auto login is disabled and a contact ID is present in the URL, then quit
+		if( isset( $_GET['cid'] ) && wp_fusion()->settings->get( 'auto_login' ) == false ) {
 			return;
 		}
 
@@ -100,6 +105,8 @@ class WPF_Auto_Login {
 			// Hide admin bar
 			add_filter( 'show_admin_bar', '__return_false' );
 
+			do_action( 'wpf_started_auto_login', $user_id, $contact_id );
+
 			return;
 
 		}
@@ -130,6 +137,8 @@ class WPF_Auto_Login {
 			// Hide admin bar
 			add_filter( 'show_admin_bar', '__return_false' );
 
+			do_action( 'wpf_started_auto_login', $contact_data['user_id'], $contact_id );
+
 		}
 
 	}
@@ -148,11 +157,12 @@ class WPF_Auto_Login {
 		}
 
 		$request_uris = array(
-			'checkout',
-			'cart',
 			'login',
-			'register'
+			'register',
+			'checkout'
 		);
+
+		$request_uris = apply_filters( 'wpf_end_auto_login_request_uris', $request_uris );
 
 		foreach(  $request_uris as $uri ) {
 

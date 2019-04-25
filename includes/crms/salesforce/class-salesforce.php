@@ -800,6 +800,7 @@ class WPF_Salesforce {
 		}
 
 		return $user_meta;
+
 	}
 
 

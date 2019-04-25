@@ -37,8 +37,7 @@ class WPF_Staging {
 	 */
 
 	public function init() {
-
-		add_action( 'init', array( $this, 'set_connection_configured' ), 5 );
+		
 
 	}
 

@@ -8,7 +8,6 @@ class WPF_AJAX {
 
 	public function __construct() {
 
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_async_script' ), 1 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_link_click_script' ) );
 
 		// AJAX handlers
@@ -17,9 +16,6 @@ class WPF_AJAX {
 
 		add_action( 'wp_ajax_update_user', array( $this, 'update_user' ) );
 		add_action( 'wp_ajax_nopriv_update_user', array( $this, 'update_user' ) );
-
-		add_action( 'wp_ajax_wpf_async', array( $this, 'process_async' ) );
-		add_action( 'wp_ajax_nopriv_wpf_async', array( $this, 'process_async' ) );
 
 	}
 
@@ -157,85 +153,6 @@ class WPF_AJAX {
 			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', array( 'ajaxurl' => admin_url( 'admin-ajax.php' ) ) );
 
 		}
-
-	}
-
-	/**
-	 * Adds an asynchronous callback to the async queue
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function async_add( $id, $args ) {
-
-		$wpf_async = get_option( 'wpf_async', array() );
-
-		$wpf_async[ $id ] = $args;
-
-		update_option( 'wpf_async', $wpf_async );
-
-	}
-
-	/**
-	 * Enqueues async scripts if async actions detected
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function enqueue_async_script() {
-
-		if ( ! get_option( 'wpf_async' ) ) {
-			return;
-		}
-
-		$wpf_async = get_option( 'wpf_async' );
-
-		wp_register_script( 'wpf-async', WPF_DIR_URL . '/assets/js/wpf-async.js', array( 'jquery' ), WP_FUSION_VERSION, false );
-
-		wp_localize_script( 'wpf-async', 'wpf_async', array(
-			'ajaxurl' => admin_url( 'admin-ajax.php' ),
-			'hooks'   => $wpf_async
-		) );
-
-		wp_enqueue_script( 'wpf-async' );
-
-	}
-
-	/**
-	 * Processes async actions
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function process_async() {
-
-		$index = $_POST['index'];
-
-		$wpf_async = get_option( 'wpf_async' );
-
-		if( ! isset( $wpf_async[ $index ] ) ) {
-			die();
-		}
-
-		// Add "doing async" override
-		$wpf_async[ $index ]['args'][] = true;
-
-		$class = new $wpf_async[ $index ][ 'class' ];
-		call_user_func_array( array( $class, $wpf_async[ $index ][ 'function' ] ), $wpf_async[ $index ][ 'args' ] );
-
-		// Clean up task if it's been processed
-		unset( $wpf_async[$index] );
-
-		if( empty( $wpf_async ) ) {
-			delete_option( 'wpf_async' );
-		} else {
-			update_option( 'wpf_async', $wpf_async );
-		}
-
-		die();
 
 	}
 

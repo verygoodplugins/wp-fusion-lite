@@ -9,7 +9,6 @@ class WPF_MailerLite_Admin {
 	/**
 	 * Get things started
 	 *
-	 * @access  public
 	 * @since   1.0
 	 */
 
@@ -103,7 +102,7 @@ class WPF_MailerLite_Admin {
 			'section' => 'advanced',
 			'std'	  => 'ignore',
 			'choices' => array(
-				'ignore'	=> 'Ingore',
+				'ignore'	=> 'Ignore',
 				'duplicate' => 'Duplicate and Delete'
 			),
 			'desc'    => __( 'MailerLite doesn\'t allow for changing the email address of an existing subscriber. Choose <strong>Ignore</strong> and WP Fusion will continue updating a single subscriber, ignoring email address changes. Choose <strong>Duplicate and Delete</strong> and WP Fusion will attempt to create a new subscriber with the same details when an email address has been changed, and remove the original subscriber.', 'wp-fusion' ),
@@ -131,6 +130,18 @@ class WPF_MailerLite_Admin {
 				);
 
 			$new_settings['mailerlite_update_trigger_rule_id'] = array(
+				'std'		=> false,
+				'type'		=> 'hidden',
+				'section'	=> 'main'
+				);
+
+			$new_settings['mailerlite_update_trigger_group_add_rule_id'] = array(
+				'std'		=> false,
+				'type'		=> 'hidden',
+				'section'	=> 'main'
+				);
+
+			$new_settings['mailerlite_update_trigger_group_remove_rule_id'] = array(
 				'std'		=> false,
 				'type'		=> 'hidden',
 				'section'	=> 'main'
@@ -189,14 +200,14 @@ class WPF_MailerLite_Admin {
 		}
 
 		// Add new rule and save
-		$rule_id = wp_fusion()->crm->register_webhook( 'add' );
+		$rule_ids = wp_fusion()->crm->register_webhooks( 'add' );
 
 		// If there was an error, make the user select the tag again
-		if($rule_id == false) {
+		if( is_wp_error( $rule_ids ) || empty( $rule_ids ) ) {
 			return false;
 		}
 
-		add_filter( 'validate_field_mailerlite_add_tag_rule_id', function() use (&$rule_id) { return $rule_id; } );
+		add_filter( 'validate_field_mailerlite_add_tag_rule_id', function() use (&$rule_ids) { return $rule_ids[0]; } );
 
 		return $input;
 
@@ -219,11 +230,36 @@ class WPF_MailerLite_Admin {
 		}
 
 		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wp_fusion()->settings->get('mailerlite_update_trigger_rule_id');
+		$rule_ids = array();
 
-		if( ! empty( $rule_id ) ) {
-			wp_fusion()->crm->destroy_webhook($rule_id);
+		$update_rule = wp_fusion()->settings->get('mailerlite_update_trigger_rule_id');
+
+		if( ! empty( $update_rule ) ) {
+			$rule_ids[] = $update_rule;
+		}
+
+		$group_add_rule = wp_fusion()->settings->get('mailerlite_update_trigger_group_add_rule_id');
+
+		if( ! empty( $group_add_rule ) ) {
+			$rule_ids[] = $group_add_rule;
+		}
+
+		$group_remove_rule = wp_fusion()->settings->get('mailerlite_update_trigger_group_remove_rule_id');
+
+		if( ! empty( $group_remove_rule ) ) {
+			$rule_ids[] = $group_remove_rule;
+		}
+
+		if( ! empty( $rule_ids ) ) {
+
+			foreach( $rule_ids as $rule_id ) {
+				wp_fusion()->crm->destroy_webhook($rule_id);
+			}
+
 			add_filter( 'validate_field_mailerlite_update_trigger_rule_id', function() { return false; } );
+			add_filter( 'validate_field_mailerlite_update_trigger_group_add_rule_id', function() { return false; } );
+			add_filter( 'validate_field_mailerlite_update_trigger_group_remove_rule_id', function() { return false; } );
+
 		}
 
 		// Abort if tag has been removed and no new one provided
@@ -232,14 +268,20 @@ class WPF_MailerLite_Admin {
 		}
 
 		// Add new rule and save
-		$rule_id = wp_fusion()->crm->register_webhook( 'update' );
+		$rule_ids = wp_fusion()->crm->register_webhooks( 'update' );
 
 		// If there was an error, make the user select the tag again
-		if( $rule_id == false ) {
+		if( is_wp_error( $rule_ids ) || empty( $rule_ids ) ) {
 			return false;
 		}
+
+		$update_rule = $rule_ids[0];
+		$group_add_rule = $rule_ids[1];
+		$group_remove_rule = $rule_ids[2];
 	
-		add_filter( 'validate_field_mailerlite_update_trigger_rule_id', function() use (&$rule_id) { return $rule_id; } );
+		add_filter( 'validate_field_mailerlite_update_trigger_rule_id', function() use (&$update_rule) { return $update_rule; } );
+		add_filter( 'validate_field_mailerlite_update_trigger_group_add_rule_id', function() use (&$group_add_rule) { return $group_add_rule; } );
+		add_filter( 'validate_field_mailerlite_update_trigger_group_remove_rule_id', function() use (&$group_remove_rule) { return $group_remove_rule; } );
 
 		return $input;
 

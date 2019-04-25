@@ -59,6 +59,11 @@ $infusionsoft_fields['owner_id'] = array(
 	'crm_field' => 'OwnerID'
 );
 
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Person Type',
+	'crm_field' => 'ContactType'
+);
+
 
 /* Woocommerce Fields */
 

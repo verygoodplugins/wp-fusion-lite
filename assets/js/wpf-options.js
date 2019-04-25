@@ -229,6 +229,12 @@ jQuery(document).ready(function($){
 				return;
 			}
 
+			var r = confirm( 'Heads Up: These background operations can potentially alter a lot of data and are irreversible. If you\'re not sure you need to run one, please contact our support.\n\nIf you want to resynchronize the dropdowns of available tags and fields, click "Resynchronize Tags & Fields" from the setup tab.\n\nPress OK to proceed or Cancel to cancel.' );
+
+			if( r == false ) {
+				return;
+			}
+
 	        var button = $(this);
 	        var action = { 'action' : $('input[name=export_options]:checked').val(), 'title' : $('input[name=export_options]:checked').attr('data-title') }
 
@@ -256,6 +262,60 @@ jQuery(document).ready(function($){
 		if( GetURLParameter('orderby') ) {
 			$('ul.nav a[href="#logs"]').tab("show")
 		}
+
+		//
+		// Webhooks test
+		//
+
+		$( "#test-webhooks-btn" ).on( "click", function( event ) {
+
+			event.preventDefault();
+
+			var data = {
+				'url' : $(this).attr('data-url'),
+				'key' : $('input#access_key').val()
+			};
+
+			$(this).parent().find('span.label').remove();
+
+			$(this).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-success">Testing...</span>');
+
+			$.post('https://wpfusion.com/?action=test-wpf-webhooks', data, function(response) {
+
+				$( "#test-webhooks-btn" ).parent().find('span.label').remove();
+
+				try {
+
+					var result = $.parseJSON(response);
+
+				} catch (e) {
+
+					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Unexpected error. Try again or contact support.</span>');
+					return;
+
+				}
+
+				if( result.status == 'success' ) {
+
+					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-success">Success! Your site is able to receive incoming webhooks.</span>');
+
+				} else if( result.status == 'unauthorized' ) {
+
+					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Unauthorized. Your site is currently blocking incoming webhooks. Try changing your security settings, or contact our support.</span>');
+
+				} else if( result.status == 'error' ) {
+
+					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Error: ' + result.message + '</span>');
+
+				} else {
+
+					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Unexpected error. Try again or contact support.</span>');
+
+				}
+
+			});
+
+		});
 
 
 		//

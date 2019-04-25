@@ -45,7 +45,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Drift
 * Drip
 * Flexie
-* Gist (ConvertFox)
+* Gist
 * Groundhogg
 * HubSpot
 * Infusionsoft
@@ -53,6 +53,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Kartra
 * MailChimp
 * MailerLite
+* Mailjet
 * Maropost
 * Mautic
 * NationBuilder
@@ -61,6 +62,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Salesflare
 * Salesforce
 * SendinBlue
+* Sendlane
 * Tubular
 * UserEngage
 * Zoho

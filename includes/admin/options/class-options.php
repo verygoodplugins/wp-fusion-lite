@@ -285,7 +285,7 @@ class WPF_Options {
 			$this->options = apply_filters( $this->setup['project_slug'] . '_initialize_options', $this->options);
 
 			// Update the option in the database
-			update_option($this->option_group, $this->options);
+			update_option($this->option_group, $this->options, false);
 
 			// Update the options within the class
 			wp_fusion()->settings->options = $this->options;
@@ -442,7 +442,7 @@ class WPF_Options {
 
 		// If new options have been added, set their default values
 		if($needs_update) {
-			update_option($this->option_group, $options);
+			update_option($this->option_group, $options, false);
 			$this->options = $options;
 			wp_fusion()->settings->options = $options;
 		}
@@ -789,10 +789,23 @@ class WPF_Options {
 				</ul>
 
 			<?php } ?>
-			<div class="tab-content">
+			<div class="<?php echo $page['id'] ?>-tab-content">
 				<?php $isfirst = true; ?>
 
-				<?php foreach($page['sections'] as $section_slug => $section) { ?>
+				<?php
+
+				// Move pane to end to fix max_input_vars issues
+
+				if( isset( $page['sections']['contact-fields'] ) ) {
+
+					$tab = $page['sections']['contact-fields'];
+					unset( $page['sections']['contact-fields'] );
+
+					$page['sections']['contact-fields'] = $tab;
+
+				}
+
+				foreach($page['sections'] as $section_slug => $section) { ?>
 
 					<?php if( is_array( $section ) ) continue; ?>
 
@@ -1368,6 +1381,14 @@ class WPF_Options {
 
 		$i = 0;
 
+		if( ! isset( $field['class'] ) ) {
+			$field['class'] = false;
+		}
+
+		if( ! isset( $field['disabled'] ) ) {
+			$field['disabled'] = false;
+		}
+
 		foreach($field['choices'] as $value => $label) {
 
 			echo '<input class="radio '.$field['class'].'" type="radio" name="'.$this->option_group.'['.$id.']" id="'.$id.$i.'" value="'.esc_attr($value).'" '.checked($this->options[$id], $value, false).' '.($field['disabled'] ? 'disabled=true' : '').'><label for="'.$id.$i.'">'.$label.'</label>';
@@ -1651,6 +1672,7 @@ class WPF_Options {
 	private function show_field_hidden($id, $field) {
 
 		echo '<input id="' . $id . '" type="hidden" name="'.$this->option_group.'['.$id.']" value="'.$this->options[$id].'">';
+		
 	}
 
 	/**
@@ -2106,7 +2128,7 @@ class WPF_Options {
 
 		if(is_array($import_code)) {
 
-			update_option($this->option_group, $import_code);
+			update_option($this->option_group, $import_code, false);
 			$this->options = $import_code;
 			$this->settings_imported = true;
 

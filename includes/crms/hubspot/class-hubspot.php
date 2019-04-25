@@ -217,7 +217,23 @@ class WPF_HubSpot {
 
 			} elseif( isset( $body_json->status ) && $body_json->status == 'error' ) {
 
-				$response = new WP_Error( 'error', $body_json->message );
+				$message = $body_json->message;
+
+				if( isset( $body_json->validationResults ) ) {
+
+					$message .= '<ul>';
+
+					foreach( $body_json->validationResults as $result ) {
+
+						$message .= '<li>' . $result->message . '</li>';
+
+					}
+
+					$message .= '</ul>';
+
+				}
+
+				$response = new WP_Error( 'error', $message );
 
 			}
 
@@ -366,6 +382,7 @@ class WPF_HubSpot {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
+		
 	}
 
 
@@ -385,8 +402,14 @@ class WPF_HubSpot {
 		$request      = 'https://api.hubapi.com/contacts/v1/contact/email/' . urlencode($email_address) . '/profile';
 		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if( is_wp_error( $response ) && $response->get_error_message() == 'contact does not exist' ) {
+
+			return false;
+
+		} elseif( is_wp_error( $response ) ) {
+
 			return $response;
+			
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );

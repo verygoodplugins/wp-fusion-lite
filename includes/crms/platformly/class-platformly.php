@@ -533,7 +533,25 @@ class WPF_Platformly {
 		$response = $this->request( 'update_contact', $data );
 
 		if( is_wp_error( $response ) ) {
-			return $response;
+			
+			if( $response->get_error_message() == 'The action was not processed.' ) {
+
+				// Email address changes
+				$email = $this->get_email_from_cid( $contact_id );
+
+				if( $email == false ) {
+
+					$this->add_contact( $data, false );
+
+				} else {
+
+					$data['email'] = $email;
+					$this->update_contact( $contact_id, $data, false );
+
+				}
+
+			}
+
 		}
 
 		return true;

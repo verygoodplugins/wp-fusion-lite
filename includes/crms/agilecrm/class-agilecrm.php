@@ -63,6 +63,55 @@ class WPF_AgileCRM {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 
+		// Add tracking code to header
+		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+
+	}
+
+
+	/**
+	 * Output tracking code
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function tracking_code_output() {
+
+		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+			return;
+		}
+
+		$tracking_id = wp_fusion()->settings->get( 'site_tracking_acct' );
+
+		if( empty( $tracking_id ) ) {
+			return;
+		}
+
+		$domain = wp_fusion()->settings->get( 'agile_domain' );
+
+		if( is_user_logged_in() ) {
+			$user = get_userdata( get_current_user_id() );
+			$email = $user->user_email;
+		}
+
+		echo '<script id="_agile_min_js" async type="text/javascript" src="https://' . $domain . '.agilecrm.com/stats/min/agile-min.js"> </script>';
+		echo '<script type="text/javascript" >';
+		echo 'var Agile_API = Agile_API || {}; Agile_API.on_after_load = function(){';
+		echo '_agile.set_account("' . $tracking_id . '", "' . $domain . '", false);';
+		echo '_agile.track_page_view();';
+		echo '_agile_execute_web_rules();';
+
+		if( isset( $email ) ) {
+
+			echo '_agile.set_email("' . $email . '");';
+
+		}
+
+		echo '};';
+
+		echo '</script>';
+
 	}
 
 
@@ -256,7 +305,7 @@ class WPF_AgileCRM {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'agilecrm') !== false ) {
+		if( strpos($url, 'agilecrm') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$response_code = wp_remote_retrieve_response_code( $response );
 			$response_message = wp_remote_retrieve_response_message( $response );
@@ -296,6 +345,7 @@ class WPF_AgileCRM {
 
 		$this->params = array(
 			'timeout'     => 30,
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'headers' => array(
 				'Authorization' => 'Basic ' . base64_encode( $user_email . ':' . $api_key ),
 				'Content-type'  => 'application/json',

@@ -71,6 +71,22 @@ class WPF_AWeber {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
+		// Slow down the batch processses to get around the 120 requests per minute limit
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+	}
+
+	/**
+	 * Slow down batch processses to get around the 3600 requests per hour limit
+	 *
+	 * @access public
+	 * @return int Sleep time
+	 */
+
+	public function set_sleep_time( $seconds ) {
+
+		return 1;
+		
 	}
 
 	/**
@@ -307,7 +323,15 @@ class WPF_AWeber {
 
 		$this->connect();
 
-		$subscriber = $this->account->findSubscribers( array( 'email' => $email_address ) );
+		try {
+
+			$subscriber =  $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/?ws.op=find&email=' . $email_address);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
 		if ( ! empty( $subscriber->data['entries'] ) ) {
 			return $subscriber->data['entries'][0]['id'];
@@ -328,7 +352,16 @@ class WPF_AWeber {
 	public function get_tags( $contact_id ) {
 
 		$this->connect();
-		$subscriber =  $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+
+		try {
+
+			$subscriber =  $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
 		if( empty( $subscriber->data ) || empty( $subscriber->data['tags'] ) ) {
 			return false;
@@ -362,7 +395,15 @@ class WPF_AWeber {
 
 		$this->connect();
 
-		$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+		try {
+
+			$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
 		$subscriber->tags = array(
 			'add' => $tags
@@ -401,7 +442,15 @@ class WPF_AWeber {
 
 		$this->connect();
 
-		$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+		try {
+
+			$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
 		$subscriber->tags = array(
 			'remove' => $tags
@@ -446,7 +495,15 @@ class WPF_AWeber {
 			unset( $params['custom_fields'] );
 		}
 
-		$list = $this->account->loadFromUrl('/accounts/' . $this->account->id . '/lists/' . $this->list);
+		try {
+
+			$list = $this->account->loadFromUrl('/accounts/' . $this->account->id . '/lists/' . $this->list);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
 		try {
 
@@ -479,7 +536,14 @@ class WPF_AWeber {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+		try {
+
+			$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+		}
 
 		$builtin_fields = array( 'name', 'email', 'postal_code', 'city', 'country' );
 
@@ -517,7 +581,15 @@ class WPF_AWeber {
 
 		$this->connect();
 
-		$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+		try {
+
+			$subscriber = $this->app->loadFromUrl('https://api.aweber.com/1.0/accounts/' . $this->account->id . '/lists/' . $this->list . '/subscribers/' . $contact_id);
+
+		} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
 		if( empty( $subscriber->data ) ) {
 			return new WP_Error( 'error', 'No subscriber found with contact ID ' . $contact_id );
@@ -570,7 +642,16 @@ class WPF_AWeber {
 		$this->connect();
 
 		$contact_ids = array();
-    	$subscribers = $this->account->findSubscribers( array( 'tags' => array( $tag ) ) );
+
+		try {
+
+    		$subscribers = $this->account->findSubscribers( array( 'tags' => array( $tag ) ) );
+
+    	} catch (Exception $e) {
+
+			return new WP_Error( 'error', $e->getMessage() );
+			
+		}
 
     	if( ! empty( $subscribers->data['entries'] ) ) {
 

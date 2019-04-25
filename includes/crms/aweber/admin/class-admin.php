@@ -165,22 +165,26 @@ class WPF_AWeber_Admin {
 
 	public function register_settings( $settings, $options ) {
 
-		$new_settings['aweber_list'] = array(
-			'title'       => __( 'List', 'wp-fusion' ),
-			'desc'        => __( 'Select an AWeber list to use with WP Fusion.', 'wp-fusion' ),
-			'type'        => 'select',
-			'placeholder' => 'Select list',
-			'section'     => 'main',
-			'choices'     => $options['available_lists']
-		);
+		if( ! empty( $options['available_lists'] ) ) {
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+			$new_settings['aweber_list'] = array(
+				'title'       => __( 'List', 'wp-fusion' ),
+				'desc'        => __( 'Select an AWeber list to use with WP Fusion.', 'wp-fusion' ),
+				'type'        => 'select',
+				'placeholder' => 'Select list',
+				'section'     => 'main',
+				'choices'     => $options['available_lists']
+			);
 
-		if ( ! isset( $settings['create_users']['unlock']['aweber_lists'] ) ) {
-			$settings['create_users']['unlock'][] = 'aweber_lists';
+			$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+
+			if ( ! isset( $settings['create_users']['unlock']['aweber_lists'] ) ) {
+				$settings['create_users']['unlock'][] = 'aweber_lists';
+			}
+
+			$settings['aweber_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
+
 		}
-
-		$settings['aweber_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
 
 		return $settings;
 

@@ -34,7 +34,8 @@ function initializeTagsSelect(target) {
 					jQuery.each(noDupes, function(index, targetId) {
 
 						for (var i = 0; i < selectedValues.length; i++) {
-							jQuery('#' + targetId).find("option[value='" + selectedValues[i] + "']").attr('disabled', true);
+							var text = selectedValues[i].replace("\'", "\\\'");
+							jQuery('#' + targetId).find("option[value='" + text + "']").attr('disabled', true);
 						}
 
 					});
@@ -183,7 +184,7 @@ jQuery(document).ready(function($){
 
 	function initializeCRMFieldSelect() {
 
-		if( $("select.select4-crm-field").length ) {
+		if( $("select.select4-crm-field").length && $("select.select4-crm-field").length <= 300 ) {
 
 			function matcher (params, data) {
 				// Always return the object if there is nothing to compare
@@ -637,6 +638,46 @@ jQuery(document).ready(function($){
 		}
 	}
 
+	// LifterLMS
+
+	if( $('body').hasClass('admin_page_llms-course-builder') ) {
+
+		$( document ).ajaxComplete(function( event, xhr, settings ) {
+
+			if( typeof(xhr.responseJSON) !== 'undefined' && typeof(xhr.responseJSON.type) !== 'undefined' && xhr.responseJSON.type == 'llms_quiz' ) {
+
+				$( '#llms-quiz-settings-fields .settings-group--wp_fusion' ).find('select').each(function(index, el) {
+					$(this).addClass('select4-wpf-tags');
+				});
+
+				initializeTagsSelect( '#llms-quiz-settings-fields' );
+
+			}
+
+		});
+
+	}
+
+	// LifterLMS
+
+	if( $('body').hasClass('post-type-course') || $('body').hasClass('post-type-llms_membership') ) {
+
+		$( document ).ajaxComplete(function( event, xhr, settings ) {
+
+			if( typeof(xhr.responseText) !== 'undefined' && xhr.responseText.indexOf('llms-product-options-access-plans') >= 0 ) {
+
+				initializeTagsSelect( '#llms-product-options-access-plans' );
+
+				$("#llms-product-options-access-plans select.select4-search").select4({
+					allowClear: true
+				});
+
+			}
+
+		});
+
+	}
+
 	// WPForms
 
 	if( $('body').hasClass('wpforms_page_wpforms-builder') ) {
@@ -662,6 +703,29 @@ jQuery(document).ready(function($){
 
 			initializeTagsSelect( 'div.frm_single_wpfusion_settings' );
 			initializeCRMFieldSelect();
+
+		});
+
+	}
+
+	// Coursepress
+
+	if( $('body').hasClass('post-type-course') ) {
+
+		$('a#wpf-coursepress-update').click(function(event) {
+			
+			event.preventDefault();
+
+			var meta_items = $( '#wpf-coursepress-meta [name^="wpf_settings_coursepress"]' ).serializeArray();
+
+			var data = {
+				'action'	: 'wpf_coursepress_save',
+				'data'		: meta_items,
+				'id'		: $('#wpf-coursepress-postid').val()
+			}
+
+			jQuery.post(ajaxurl, data);
+
 
 		});
 
