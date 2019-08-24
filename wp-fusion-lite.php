@@ -2,9 +2,9 @@
 
 /*
 Plugin Name: WP Fusion Lite
-Description: WP Fusion connects your website to your CRM or marketing automation system
+Description: WP Fusion connects your website to your CRM or marketing automation system.
 Plugin URI: https://wpfusion.com/
-Version: 3.24
+Version: 3.25
 Author: Very Good Plugins
 Author URI: https://verygoodplugins.com/
 Text Domain: wp-fusion
@@ -27,10 +27,9 @@ Text Domain: wp-fusion
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  * **********************************************************************
- *
  */
 
-define( 'WP_FUSION_VERSION', '3.24' );
+define( 'WP_FUSION_VERSION', '3.25' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -45,7 +44,7 @@ final class WP_Fusion_Lite {
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion The one true WP_Fusion
+	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -150,36 +149,36 @@ final class WP_Fusion_Lite {
 
 
 	/**
-	 * Main WP_Fusion Instance
+	 * Main WP_Fusion_Lite Instance
 	 *
-	 * Insures that only one instance of WP_Fusion exists in memory at any one
+	 * Insures that only one instance of WP_Fusion_Lite exists in memory at any one
 	 * time. Also prevents needing to define globals all over the place.
 	 *
 	 * @since 1.0
 	 * @static
 	 * @static var array $instance
-	 * @return WP_Fusion The one true WP_Fusion
+	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
 	 */
 
 	public static function instance() {
 
 		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion_Lite ) ) {
 
-			self::$instance = new WP_Fusion_Lite;
+			self::$instance = new WP_Fusion_Lite();
 			self::$instance->setup_constants();
 
 			// If PHP version not met
-			if( ! self::$instance->check_install() ) {
+			if ( ! self::$instance->check_install() ) {
 				add_action( 'admin_notices', array( self::$instance, 'php_version_notice' ) );
 			}
 
 			self::$instance->init_includes();
 
 			// Create settings
-			self::$instance->settings = new WPF_Settings;
+			self::$instance->settings = new WPF_Settings();
 
 			// Load active CRM
-			self::$instance->crm_base = new WPF_CRM_Base;
+			self::$instance->crm_base = new WPF_CRM_Base();
 			self::$instance->crm      = self::$instance->crm_base->crm;
 
 			// Only useful if a CRM is selected and valid
@@ -188,23 +187,22 @@ final class WP_Fusion_Lite {
 				self::$instance->setup_crm_constants();
 				self::$instance->includes();
 
-				self::$instance->logger 	= new WPF_Log_Handler;
-				self::$instance->user   	= new WPF_User;
-				self::$instance->access 	= new WPF_Access_Control;
-				self::$instance->auto_login = new WPF_Auto_Login;
-				self::$instance->ajax   	= new WPF_AJAX;
-				self::$instance->batch  	= new WPF_Batch;
+				self::$instance->logger     = new WPF_Log_Handler();
+				self::$instance->user       = new WPF_User();
+				self::$instance->access     = new WPF_Access_Control();
+				self::$instance->auto_login = new WPF_Auto_Login();
+				self::$instance->ajax       = new WPF_AJAX();
+				self::$instance->batch      = new WPF_Batch();
 
 				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
+				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
 
 				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 
-				if( self::$instance->is_full_version() ) {
+				if ( self::$instance->is_full_version() ) {
 					add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
 				}
-				
 			}
-
 		}
 
 		return self::$instance;
@@ -282,7 +280,7 @@ final class WP_Fusion_Lite {
 
 	private function check_install() {
 
-		if( version_compare( phpversion(), WPF_MIN_PHP_VERSION, '>=' ) ) {
+		if ( version_compare( phpversion(), WPF_MIN_PHP_VERSION, '>=' ) ) {
 			return true;
 		} else {
 			return false;
@@ -321,6 +319,19 @@ final class WP_Fusion_Lite {
 	}
 
 	/**
+	 * Defines default supported theme integrations
+	 *
+	 * @access public
+	 * @return array Integrations
+	 */
+
+	public function get_integrations_theme() {
+
+		return apply_filters( 'wpf_integrations_theme', array() );
+
+	}
+
+	/**
 	 * Defines supported CRMs
 	 *
 	 * @access private
@@ -329,43 +340,46 @@ final class WP_Fusion_Lite {
 
 	public function get_crms() {
 
-		return apply_filters( 'wpf_crms', array(
-			'infusionsoft'   	=> 'WPF_Infusionsoft_iSDK',
-			'activecampaign' 	=> 'WPF_ActiveCampaign',
-			'ontraport'      	=> 'WPF_Ontraport',
-			'drip'           	=> 'WPF_Drip',
-			'convertkit'    	=> 'WPF_ConvertKit',
-			'agilecrm'      	=> 'WPF_AgileCRM',
-			'salesforce'		=> 'WPF_Salesforce',
-			'mautic'			=> 'WPF_Mautic',
-			'intercom'			=> 'WPF_Intercom',
-			'aweber'			=> 'WPF_AWeber',
-			//'nimble'		 	=> 'WPF_Nimble'
-			'mailerlite'		=> 'WPF_MailerLite',
-			'capsule'			=> 'WPF_Capsule',
-			'zoho'				=> 'WPF_Zoho',
-			'kartra'			=> 'WPF_Kartra',
-			'userengage'		=> 'WPF_UserEngage',
-			'convertfox'		=> 'WPF_ConvertFox',
-			'salesflare'		=> 'WPF_Salesflare',
-			'vtiger'			=> 'WPF_Vtiger',
-			'flexie'			=> 'WPF_Flexie',
-			'tubular'			=> 'WPF_Tubular',
-			'maropost'			=> 'WPF_Maropost',
-			'mailchimp'			=> 'WPF_MailChimp',
-			'sendinblue'		=> 'WPF_SendinBlue',
-			'hubspot'			=> 'WPF_HubSpot',
-			'platformly'		=> 'WPF_Platformly',
-			'drift'				=> 'WPF_Drift',
-			'staging'			=> 'WPF_Staging',
-			'autopilot'			=> 'WPF_Autopilot',
-			'customerly'		=> 'WPF_Customerly',
-			'copper'			=> 'WPF_Copper',
-			'nationbuilder'		=> 'WPF_NationBuilder',
-			'groundhogg'		=> 'WPF_Groundhogg',
-			'mailjet'			=> 'WPF_Mailjet',
-			'sendlane'			=> 'WPF_Sendlane'
-		) );
+		return apply_filters(
+			'wpf_crms', array(
+				'infusionsoft'   => 'WPF_Infusionsoft_iSDK',
+				'activecampaign' => 'WPF_ActiveCampaign',
+				'ontraport'      => 'WPF_Ontraport',
+				'drip'           => 'WPF_Drip',
+				'convertkit'     => 'WPF_ConvertKit',
+				'agilecrm'       => 'WPF_AgileCRM',
+				'salesforce'     => 'WPF_Salesforce',
+				'mautic'         => 'WPF_Mautic',
+				'intercom'       => 'WPF_Intercom',
+				'aweber'         => 'WPF_AWeber',
+				'mailerlite'     => 'WPF_MailerLite',
+				'capsule'        => 'WPF_Capsule',
+				'zoho'           => 'WPF_Zoho',
+				'kartra'         => 'WPF_Kartra',
+				'userengage'     => 'WPF_UserEngage',
+				'convertfox'     => 'WPF_ConvertFox',
+				'salesflare'     => 'WPF_Salesflare',
+				'vtiger'         => 'WPF_Vtiger',
+				'flexie'         => 'WPF_Flexie',
+				'tubular'        => 'WPF_Tubular',
+				'maropost'       => 'WPF_Maropost',
+				'mailchimp'      => 'WPF_MailChimp',
+				'sendinblue'     => 'WPF_SendinBlue',
+				'hubspot'        => 'WPF_HubSpot',
+				'platformly'     => 'WPF_Platformly',
+				'drift'          => 'WPF_Drift',
+				'staging'        => 'WPF_Staging',
+				'autopilot'      => 'WPF_Autopilot',
+				'customerly'     => 'WPF_Customerly',
+				'copper'         => 'WPF_Copper',
+				'nationbuilder'  => 'WPF_NationBuilder',
+				'groundhogg'     => 'WPF_Groundhogg',
+				'mailjet'        => 'WPF_Mailjet',
+				'sendlane'       => 'WPF_Sendlane',
+				'getresponse'    => 'WPF_GetResponse',
+				'mailpoet'       => 'WPF_MailPoet',
+			)
+		);
 
 	}
 
@@ -390,7 +404,7 @@ final class WP_Fusion_Lite {
 			require_once WPF_DIR_PATH . 'includes/admin/admin-functions.php';
 			require_once WPF_DIR_PATH . 'includes/admin/class-admin-interfaces.php';
 
-			self::$instance->admin_interfaces = new WPF_Admin_Interfaces;
+			self::$instance->admin_interfaces = new WPF_Admin_Interfaces();
 
 		}
 
@@ -419,12 +433,16 @@ final class WP_Fusion_Lite {
 
 		} else {
 
-			require_once WPF_DIR_PATH . 'includes/admin/class-admin-bar.php';
 			require_once WPF_DIR_PATH . 'includes/class-shortcodes.php';
 
 		}
 
-		if( $this->is_full_version() ) {
+		// Admin bar tools
+		if ( ! is_admin() && self::$instance->settings->get( 'enable_admin_bar', true ) == true ) {
+			require_once WPF_DIR_PATH . 'includes/admin/class-admin-bar.php';
+		}
+
+		if ( $this->is_full_version() ) {
 
 			require_once WPF_DIR_PATH . 'includes/class-api.php';
 
@@ -450,14 +468,37 @@ final class WP_Fusion_Lite {
 		// Integrations autoloader
 		foreach ( wp_fusion()->get_integrations() as $filename => $dependency_class ) {
 
-			if( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
+			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
 					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';
 				}
-
 			}
+		}
 
+	}
+
+	/**
+	 * Includes theme integrations after all theme has loaded
+	 *
+	 * @access private
+	 * @return void
+	 */
+
+	public function integrations_includes_theme() {
+
+		// Integrations base
+		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
+
+		// Integrations autoloader
+		foreach ( wp_fusion()->get_integrations_theme() as $filename => $dependency_class ) {
+
+			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
+
+				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
+					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';
+				}
+			}
 		}
 
 	}
@@ -487,7 +528,7 @@ final class WP_Fusion_Lite {
 
 		$integrations = $this->get_integrations();
 
-		if( ! empty( $integrations ) ) {
+		if ( ! empty( $integrations ) ) {
 			return true;
 		} else {
 			return false;
@@ -496,11 +537,11 @@ final class WP_Fusion_Lite {
 	}
 
 	/**
-	* Returns error message and deactivates plugin when error returned.
-	*
-	* @access public
-	* @return mixed error message.	
-	*/
+	 * Returns error message and deactivates plugin when error returned.
+	 *
+	 * @access public
+	 * @return mixed error message.
+	 */
 
 	public function php_version_notice() {
 
@@ -527,7 +568,7 @@ final class WP_Fusion_Lite {
  * @return object The one true WP Fusion Instance
  */
 
-if( ! function_exists( 'wp_fusion' ) ) {
+if ( ! function_exists( 'wp_fusion' ) ) {
 
 	function wp_fusion() {
 		return WP_Fusion_Lite::instance();
@@ -535,5 +576,5 @@ if( ! function_exists( 'wp_fusion' ) ) {
 
 	// Get WP Fusion Running
 	wp_fusion();
-	
+
 }

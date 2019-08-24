@@ -45,6 +45,7 @@ class WPF_ConvertKit_Admin {
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_filter( 'validate_field_ck_update_tag', array( $this, 'validate_webhooks' ), 10, 2 );
 		add_filter( 'validate_field_ck_add_tag', array( $this, 'validate_webhooks' ), 10, 2 );
+		add_filter( 'validate_field_ck_notify_unsubscribe', array( $this, 'validate_unsubscribe_webhook' ), 10, 2 );
 
 	}
 
@@ -99,11 +100,11 @@ class WPF_ConvertKit_Admin {
 			'desc'    => __( 'Configuring the fields below allows ConvertKit to add new users to your site and update existing users when specific tags are applied from within ConvertKit. Read our <a href="https://wpfusion.com/documentation/webhooks/convertkit-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
 		);
 
-		$settings['access_key']['type'] = 'hidden';
+		$new_settings = array();
 
 		$new_settings['ck_update_tag'] = array(
 			'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
-			'desc'		=> __( 'When this tag is applied to a contact in Convertkit, their tags and meta data will be updated in WordPress.', 'wp-fusion' ),
+			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion' ),
 			'type'		=> 'assign_tags',
 			'section'	=> 'main',
 			'placeholder' => 'Select a tag',
@@ -119,7 +120,7 @@ class WPF_ConvertKit_Admin {
 
 		$new_settings['ck_add_tag'] = array(
 			'title' 	=> __( 'Import Trigger', 'wp-fusion' ),
-			'desc'		=> __( 'When this tag is applied to a contact in Convertkit, they will be imported as a new WordPres user.', 'wp-fusion' ),
+			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, they will be imported as a new WordPres user.', 'wp-fusion' ),
 			'type'		=> 'assign_tags',
 			'section'	=> 'main',
 			'placeholder' => 'Select a tag',
@@ -134,6 +135,41 @@ class WPF_ConvertKit_Admin {
 			);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
+
+		$new_settings = array();
+
+		$new_settings['ck_header'] = array(
+			'title'   => __( 'ConvertKit Settings', 'wp-fusion' ),
+			'type'    => 'heading',
+			'section' => 'advanced'
+		);
+
+		$new_settings['ck_notify_unsubscribe'] = array(
+			'title' 	=> __( 'Notify on Unsubscribe', 'wp-fusion' ),
+			'desc'		=> __( 'Send a notification email when a subscriber with a WordPress user account unsubscribes. See <a href="https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/">the documentation</a> for more info.', 'wp-fusion' ),
+			'type'		=> 'checkbox',
+			'section'	=> 'advanced',
+			'std'		=> 0,
+			'unlock'	=> array( 'ck_notify_email' ),
+			'action'    => 'unsubscribe',
+		);
+
+		$new_settings['ck_unsubscribe_rule_id'] = array(
+			'std'		=> false,
+			'type'		=> 'hidden',
+			'section'	=> 'advanced'
+			);
+
+		$new_settings['ck_notify_email'] = array(
+			'title' 	=> __( 'Notification Email', 'wp-fusion' ),
+			'desc'		=> __( 'The notification will be sent to this email.', 'wp-fusion' ),
+			'type'		=> 'text',
+			'section'	=> 'advanced',
+			'std'		=> get_option( 'admin_email' ),
+			'disabled'  => ( isset( $options['ck_notify_unsubscribe'] ) && $options['ck_notify_unsubscribe'] == true ? false : true ),
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
 
 		return $settings;
 
@@ -189,6 +225,56 @@ class WPF_ConvertKit_Admin {
 			return false;
 
 		add_filter( 'validate_field_ck_' . $type . '_tag_rule_id', function() use (&$rule_id) { return $rule_id; } );
+
+		return $input;
+
+	}
+
+	/**
+	 * Creates / destroys / updates webhooks on field changes
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function validate_unsubscribe_webhook( $input, $setting ) {
+
+		$prev_value = wp_fusion()->settings->get( 'ck_notify_unsubscribe' );
+
+		// If no changes have been made, quit early
+		if ( $input == $prev_value ) {
+			return $input;
+		}
+
+		// See if we need to destroy an existing webhook before creating a new one
+		$rule_id = wp_fusion()->settings->get( 'ck_unsubscribe_rule_id' );
+
+		if ( ! empty( $rule_id ) ) {
+
+			wp_fusion()->crm->destroy_webhook( $rule_id );
+
+			add_filter( 'validate_field_ck_unsubscribe_rule_id', function() {
+				return false;
+			} );
+
+		}
+
+		// Abort if setting is switched off
+		if ( empty( $input ) ) {
+			return $input;
+		}
+
+		// Add new rule and save
+		$rule_id = wp_fusion()->crm->register_webhook( 'unsubscribe', false );
+
+		// If there was an error, make the user select the option again
+		if ( false == $rule_id ) {
+			return false;
+		}
+
+		add_filter( 'validate_field_ck_unsubscribe_rule_id', function() use ( &$rule_id ) {
+			return $rule_id;
+		} );
 
 		return $input;
 

@@ -14,11 +14,13 @@
 	margin-left: -30px;
 	margin-right: -30px;
 	padding: 25px 30px;
-    background-color: #20242a;;
+    background-color: #E55B10;
 }
 
 #wpf-pro img {
-	width: 100%;
+	margin: 0 auto;
+    width: 211px;
+    display: block;
 }
 
 #wpf-pro ul {
@@ -59,7 +61,7 @@ input.api_key, input#license_key, input#ac_url {
 	width: 300px;
 }
 
-input.wpf_type {
+select.wpf_type {
 	background-color: transparent !important;
 	border: none;
 	box-shadow: none;
@@ -136,24 +138,6 @@ tr.import-group-row {
 	position: relative;
 }
 
-tr.import-group-row .progress-bar {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 0;
-	-webkit-animation: progress-bar-stripes 2s linear infinite;
-	-o-animation: progress-bar-stripes 2s linear infinite;
-	animation: progress-bar-stripes 2s linear infinite;
-	background-image: -webkit-linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
-	background-image: -o-linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
-	background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
-	-webkit-background-size: 40px 40px;
-	background-size: 40px 40px;
-	-webkit-transition: width 3s ease;
-	transition: width 3s ease;
-	z-index: 99;
-}
-
 a#test-connection i.fa, a#edd-license i.fa, a#import-users-btn i.fa, a#export-btn i.fa {
 	left: 0px;
 	top: 7px;
@@ -205,6 +189,12 @@ a#test-connection span, a#export-btn span, a#import-users-btn span {
 	float: right;
 		position: relative;
 		top: -2px;
+}
+
+#wpf-settings input[type="radio"]+label {
+	line-height: 2;
+	position: relative;
+    top: -2px;
 }
 
 /* Select 2 */

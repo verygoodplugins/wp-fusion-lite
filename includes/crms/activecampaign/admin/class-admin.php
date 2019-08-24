@@ -47,7 +47,7 @@ class WPF_ActiveCampaign_Admin {
 		add_action( 'wpf_resync_contact', array( $this, 'resync_lists' ) );
 
 		add_filter( 'validate_field_site_tracking', array( $this, 'validate_site_tracking' ), 10, 2 );
-		add_filter( 'wpf_initialize_options', array( $this, 'get_tracking_id' ), 10 );
+		add_filter( 'wpf_initialize_options', array( $this, 'maybe_get_tracking_id' ), 10 );
 
 	}
 
@@ -102,9 +102,13 @@ class WPF_ActiveCampaign_Admin {
 
 	public function register_settings( $settings, $options ) {
 
+		if( ! isset( $options['available_lists'] ) ) {
+			$options['available_lists'] = array();
+		}
+
 		$new_settings['ac_lists'] = array(
 			'title'       => __( 'Lists', 'wp-fusion' ),
-			'desc'        => __( 'New users will be automatically added to the selected lists.', 'wp-fusion' ),
+			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion' ),
 			'type'        => 'multi_select',
 			'placeholder' => 'Select lists',
 			'section'     => 'main',
@@ -211,16 +215,19 @@ class WPF_ActiveCampaign_Admin {
 	 * @since   1.0
 	 */
 
-	public function get_tracking_id( $options ) {
+	public function maybe_get_tracking_id( $options ) {
 
-		if( isset($options['site_tracking']) && $options['site_tracking'] == true && empty( $options['site_tracking_id'] ) ) {
+		if ( isset( $options['site_tracking'] ) && $options['site_tracking'] == true && empty( $options['site_tracking_id'] ) ) {
 
-			// Get site tracking ID
-			wp_fusion()->crm->connect();
-			$me = wp_fusion()->crm->app->api( 'user/me' );
+			$this->crm->connect();
+			$trackid = $this->crm->get_tracking_id();
 
-			$options['site_tracking_id'] = $me->trackid;
-			wp_fusion()->settings->set( 'site_tracking_id', $me->trackid );
+			if ( empty( $trackid ) ) {
+				return $options;
+			}
+
+			$options['site_tracking_id'] = $trackid;
+			wp_fusion()->settings->set( 'site_tracking_id', $trackid );
 
 		}
 

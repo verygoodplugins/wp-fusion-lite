@@ -37,7 +37,6 @@ abstract class WPF_Integrations_Base {
 			if ( ! empty( $meta_fields[ $key ] ) ) {
 				$meta_fields[ $field ] = $meta_fields[ $key ];
 			}
-
 		}
 
 		return $meta_fields;

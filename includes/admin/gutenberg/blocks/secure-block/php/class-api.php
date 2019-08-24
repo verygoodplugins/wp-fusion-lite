@@ -58,10 +58,11 @@ class API {
 	}
 
 	/**
-	 * Get the user roles
+	 * Get the available tags
 	 *
-	 * @return $roles JSON feed of returned objects
+	 * @return $available_tags JSON feed of returned objects
 	 */
+	
 	public function get_available_tags() {
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
@@ -87,5 +88,6 @@ class API {
 		}
 
 		return $tags_for_select;
+
 	}
 }

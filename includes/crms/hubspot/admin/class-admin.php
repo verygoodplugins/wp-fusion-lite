@@ -46,6 +46,7 @@ class WPF_HubSpot_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -74,7 +75,7 @@ class WPF_HubSpot_Admin {
 
 			$response = wp_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return false;
 			}
 
@@ -83,7 +84,7 @@ class WPF_HubSpot_Admin {
 			if( isset( $body->error ) ) {
 				return false;
 			}
-			
+
 			wp_fusion()->settings->set( 'hubspot_token', $body->access_token );
 			wp_fusion()->settings->set( 'hubspot_refresh_token', $body->refresh_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
@@ -143,6 +144,46 @@ class WPF_HubSpot_Admin {
 		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
+
+		return $settings;
+
+	}
+
+	/**
+	 * Loads HubSpot specific settings fields
+	 *
+	 * @access  public
+	 * @return  array Settings
+	 */
+
+	public function register_settings( $settings, $options ) {
+
+		// Add site tracking option
+		$site_tracking = array();
+
+		$site_tracking['site_tracking_header'] = array(
+			'title'   => __( 'HubSpot Site Tracking', 'wp-fusion' ),
+			'desc'    => '',
+			'std'     => '',
+			'type'    => 'heading',
+			'section' => 'main'
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://knowledge.hubspot.com/articles/kcs_article/account/how-does-hubspot-track-visitors">HubSpot site tracking</a>.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$site_tracking['site_tracking_id'] = array(
+			'std'     => '',
+			'type'    => 'hidden',
+			'section' => 'main'
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
 
 		return $settings;
 

@@ -90,7 +90,7 @@ export default registerBlockType(
 	'wp-fusion/secure-block',
 	{
 		title:       __( 'WP Fusion', 'secure-blocks-for-gutenberg' ),
-		description: __( 'By default the secure content is only shown if a user is logged in. You can also restrict the block to be visible to users within certain tags.', 'secure-blocks-for-gutenberg' ),
+		description: __( 'By default the secure content is only shown if a user is logged in. You can also restrict the block to be visible to users with certain tags.', 'wp-fusion' ),
 		category:   'layout',
 		icon:       'lock',
 		keywords:   [
@@ -121,7 +121,7 @@ export default registerBlockType(
 				return (
 					<p className={className} >
 						<Spinner />
-						{ __( 'Loading Data', 'secure-blocks-for-gutenberg' ) }
+						{ __( 'Loading Data', 'wp-fusion' ) }
 					</p>
 				);
 			}
@@ -194,7 +194,7 @@ export default registerBlockType(
 						] }
 						/>
 					<footer className={ classnames( props.className ) + '__footer' }>
-						{ __( 'End: WP Fusion', 'secure-blocks-for-gutenberg' ) }
+						{ __( 'End: WP Fusion', 'wp-fusion' ) }
 					</footer>
 				</div>
 			];

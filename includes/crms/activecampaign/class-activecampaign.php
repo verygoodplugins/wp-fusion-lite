@@ -62,7 +62,7 @@ class WPF_ActiveCampaign {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id'])) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
@@ -82,18 +82,18 @@ class WPF_ActiveCampaign {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields
 			$date = date( 'm/d/Y', $value );
 
 			return $date;
 
-		} elseif( $field_type == 'checkboxes' && ! empty( $value ) ) {
+		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! empty( $value ) ) {
 
-			return str_replace(',', '||', $value);
+			return str_replace( ',', '||', $value );
 
-		} elseif( $field_type == 'checkboxes' && empty( $value ) ) {
+		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && empty( $value ) ) {
 
 			$value = null;
 
@@ -114,19 +114,24 @@ class WPF_ActiveCampaign {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false )
+		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
 			return;
+		}
 
 		$cid = get_user_meta( get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
 
-		if( ! empty( $cid ) ) {
-			$user = get_userdata( get_current_user_id() );
+		if ( ! empty( $cid ) ) {
+			$user  = get_userdata( get_current_user_id() );
 			$email = $user->user_email;
 		} else {
 			$email = '';
 		}
 
 		$trackid = wp_fusion()->settings->get( 'site_tracking_id' );
+
+		if ( empty( $trackid ) ) {
+			$trackid = $this->get_tracking_id();
+		}
 
 		echo '<script type="text/javascript">';
 		echo 'var trackcmp_email = "' . $email . '";';
@@ -145,6 +150,27 @@ class WPF_ActiveCampaign {
 
 	}
 
+	/**
+	 * Get site tracking ID
+	 *
+	 * @access  public
+	 * @return  int Tracking ID
+	 */
+
+	public function get_tracking_id() {
+
+		// Get site tracking ID
+		$this->connect();
+
+		$me = wp_fusion()->crm->app->api( 'user/me' );
+
+		if ( is_wp_error( $me ) || ! isset( $me->trackid ) ) {
+			return false;
+		}
+
+		return $me->trackid;
+
+	}
 
 	/**
 	 * Initialize connection
@@ -165,7 +191,7 @@ class WPF_ActiveCampaign {
 			$api_key = wp_fusion()->settings->get( 'ac_key' );
 		}
 
-		if( ! class_exists( 'WPF_ActiveCampaign_API' ) ) {
+		if ( ! class_exists( 'WPF_ActiveCampaign_API' ) ) {
 			require dirname( __FILE__ ) . '/includes/ActiveCampaign.class.php';
 		}
 
@@ -176,7 +202,6 @@ class WPF_ActiveCampaign {
 			if ( ! (int) $app->credentials_test() ) {
 				return new WP_Error( 'error', __( 'Access denied: Invalid credentials (URL and/or API key).', 'wp-fusion' ) );
 			}
-
 		}
 
 		// Connection was a success
@@ -232,7 +257,7 @@ class WPF_ActiveCampaign {
 
 		$available_tags = array();
 
-		if(empty($result->tags)) {
+		if ( empty( $result->tags ) ) {
 			wp_fusion()->settings->set( 'available_tags', $available_tags );
 			return $available_tags;
 		}
@@ -242,10 +267,10 @@ class WPF_ActiveCampaign {
 		}
 
 		// If more than 100 tags, loop until we get them all
-		if($result->meta->total > 100) {
+		if ( $result->meta->total > 100 ) {
 
-			for ($i = 100; $i < $result->meta->total; $i = $i + 100) {
-				
+			for ( $i = 100; $i < $result->meta->total; $i = $i + 100 ) {
+
 				$api = wp_fusion()->settings->get( 'ac_url' ) . '/api/3/tags&api_key=' . wp_fusion()->settings->get( 'ac_key' ) . '&limit=100&offset=' . $i;
 
 				$request = curl_init( $api );
@@ -261,10 +286,10 @@ class WPF_ActiveCampaign {
 				foreach ( $result->tags as $tag ) {
 					$available_tags[ $tag->tag ] = $tag->tag;
 				}
-
 			}
-
 		}
+
+		asort( $available_tags );
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
@@ -327,7 +352,6 @@ class WPF_ActiveCampaign {
 		asort( $built_in_fields );
 
 		// Get custom fields
-
 		$custom_fields = array();
 		$result        = $this->app->api( 'list/field_view?ids=all' );
 
@@ -345,7 +369,10 @@ class WPF_ActiveCampaign {
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
@@ -370,7 +397,7 @@ class WPF_ActiveCampaign {
 			return $result;
 		}
 
-		if ( is_object($result) && $result->success == 1 ) {
+		if ( is_object( $result ) && $result->success == 1 ) {
 			return $result->id;
 		} else {
 			return false;
@@ -394,6 +421,10 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		}
+
+		if ( empty( $result->tags ) ) {
+			return array();
 		}
 
 		// Merge tags with available ones
@@ -424,7 +455,12 @@ class WPF_ActiveCampaign {
 
 		$this->connect();
 
-		$result = $this->app->api( 'contact/tag_add', array( 'id' => $contact_id, 'tags' => $tags ) );
+		$result = $this->app->api(
+			'contact/tag_add', array(
+				'id'   => $contact_id,
+				'tags' => $tags,
+			)
+		);
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -460,7 +496,12 @@ class WPF_ActiveCampaign {
 
 		$this->connect();
 
-		$result = $this->app->api( 'contact/tag_remove', array( 'id' => $contact_id, 'tags' => $tags ) );
+		$result = $this->app->api(
+			'contact/tag_remove', array(
+				'id'   => $contact_id,
+				'tags' => $tags,
+			)
+		);
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -490,7 +531,7 @@ class WPF_ActiveCampaign {
 		$lists = wp_fusion()->settings->get( 'ac_lists' );
 
 		// Allow filtering
-		$lists = apply_filters( 'wpf_ac_add_contact_lists', $lists );
+		$lists = apply_filters( 'wpf_add_contact_lists', $lists );
 
 		if ( ! empty( $lists ) ) {
 			foreach ( $lists as $list_id ) {
@@ -529,7 +570,7 @@ class WPF_ActiveCampaign {
 		}
 
 		// Allow filtering
-		$lists = apply_filters( 'wpf_ac_update_contact_lists', array() );
+		$lists = apply_filters( 'wpf_update_contact_lists', array() );
 
 		if ( ! empty( $lists ) ) {
 			foreach ( $lists as $list_id ) {
@@ -537,7 +578,7 @@ class WPF_ActiveCampaign {
 			}
 		}
 
-		$data['id'] = $contact_id;
+		$data['id']        = $contact_id;
 		$data['overwrite'] = 0;
 
 		$result = $this->app->api( 'contact/edit', $data );
@@ -577,15 +618,13 @@ class WPF_ActiveCampaign {
 
 			foreach ( $contact_fields as $meta_key => $field_data ) {
 
-				if ( isset($field_data['crm_field']) && $field_data['crm_field'] == $field_name && $field_data['active'] == true ) {
+				if ( isset( $field_data['crm_field'] ) && $field_data['crm_field'] == $field_name && $field_data['active'] == true ) {
 					$user_meta[ $meta_key ] = $value;
 				}
-
 			}
-
 		}
 
-		if( ! empty( $result->fields ) ) {
+		if ( ! empty( $result->fields ) ) {
 
 			// Custom fields
 			foreach ( $result->fields as $field_object ) {
@@ -602,18 +641,18 @@ class WPF_ActiveCampaign {
 							$value = $field_object->val;
 
 							// Clean up the pipes from array type fields
-							if( strpos( $value, '||' ) !== false ) {
+							if ( strpos( $value, '||' ) !== false ) {
 
 								// Remove pipes from beginning
-								if( substr( $value, 0, 2 ) == '||' ) {
+								if ( substr( $value, 0, 2 ) == '||' ) {
 									$value = substr( $value, 2 );
 								}
 
-								if( substr( $value, -2 ) == '||' ) {
+								if ( substr( $value, -2 ) == '||' ) {
 									$value = substr( $value, 0, strlen( $value ) - 2 );
 								}
 
-								$value = str_replace('||', ',', $value);
+								$value = str_replace( '||', ',', $value );
 
 							}
 
@@ -621,11 +660,8 @@ class WPF_ActiveCampaign {
 
 						}
 					}
-
 				}
-
 			}
-
 		}
 
 		return $user_meta;
@@ -644,10 +680,10 @@ class WPF_ActiveCampaign {
 		$this->connect();
 
 		$contact_ids = array();
-		$page = 1;
-		$proceed = true;
+		$page        = 1;
+		$proceed     = true;
 
-		while( $proceed == true ) {
+		while ( $proceed == true ) {
 
 			$result = $this->app->api( 'contact/list?full=0&page=' . $page . '&filters[tagname]=' . urlencode( $tag ) );
 
@@ -659,8 +695,9 @@ class WPF_ActiveCampaign {
 
 				foreach ( $result as $record ) {
 
-					if(!is_object($record))
+					if ( ! is_object( $record ) ) {
 						continue;
+					}
 
 					$contact_ids[] = $record->id;
 
@@ -673,14 +710,215 @@ class WPF_ActiveCampaign {
 				$proceed = false;
 
 			}
-
 		}
 
 		return $contact_ids;
 
 	}
 
+	//
+	// Deep data stuff
+	//
+	/**
+	 * Gets or creates an ActiveCampaign deep data connection
+	 *
+	 * @since 3.24.11
+	 * @return int
+	 */
+
+	public function get_connection_id() {
+
+		$connection_id = get_option( 'wpf_ac_connection_id' );
+
+		if ( ! empty( $connection_id ) ) {
+			return $connection_id;
+		}
+
+		$api_url = wp_fusion()->settings->get( 'ac_url' );
+		$api_key = wp_fusion()->settings->get( 'ac_key' );
+
+		$body = array(
+			'connection' => array(
+				'service'    => 'WP Fusion',
+				'externalid' => $_SERVER['SERVER_NAME'],
+				'name'       => get_bloginfo(),
+				'logoUrl'    => 'https://wpfusionplugin.com/wp-content/uploads/2017/03/fb-profile.png',
+				'linkUrl'    => admin_url( 'options-general.php?page=wpf-settings' ),
+			),
+		);
+
+		$args = array(
+			'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
+			'body'    => json_encode( $body ),
+		);
+
+		wp_fusion()->logger->handle( 'info', 0, 'Opening ActiveCampaign Deep Data connection', array( 'source' => 'wpf-ecommerce' ) );
+
+		$response = wp_remote_post( $api_url . '/api/3/connections?api_key=' . $api_key, $args );
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! is_object( $body ) ) {
+
+			return false;
+
+		} elseif ( isset( $body->message ) ) {
+
+			// If Deep Data not enabled
+			wp_fusion()->logger->handle( 'info', 0, 'Unable to open Deep Data Connection: ' . $body->message, array( 'source' => 'wpf-ecommerce' ) );
+			update_option( 'wpf_ac_connection_id', false );
+
+			return false;
+
+		} elseif ( isset( $body->errors ) ) {
+
+			if ( $body->errors[0]->title == 'The integration already exists in the system.' ) {
+
+				// Try to look up an existing connection
+				unset( $args['body'] );
+				$response = wp_remote_get( $api_url . '/api/3/connections?api_key=' . $api_key, $args );
+
+				$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+				foreach ( $response->connections as $connection ) {
+
+					if ( $connection->service == 'WP Fusion' && $connection->externalid == $_SERVER['SERVER_NAME'] ) {
+
+						update_option( 'wpf_ac_connection_id', $connection->id );
+
+						return $connection->id;
+
+					}
+				}
+			}
+
+			wp_fusion()->logger->handle( 'info', 0, 'Unable to open Deep Data Connection: ' . $body->errors[0]->title, array( 'source' => 'wpf-ecommerce' ) );
+			update_option( 'wpf_ac_connection_id', false );
+
+			return false;
+
+		}
+
+		update_option( 'wpf_ac_connection_id', $body->connection->id );
+
+		return $body->connection->id;
+
+	}
+
+	/**
+	 * Deletes a registered connection
+	 *
+	 * @since 3.24.11
+	 * @return void
+	 */
+
+	public function delete_connection( $connection_id ) {
+
+		$api_url = wp_fusion()->settings->get( 'ac_url' );
+		$api_key = wp_fusion()->settings->get( 'ac_key' );
+
+		$args = array(
+			'method' => 'DELETE',
+		);
+
+		wp_fusion()->logger->handle( 'notice', 0, 'Closing ActiveCampaign Deep Data connection ID <strong>' . $connection_id . '</strong>', array( 'source' => 'wpf-ecommerce' ) );
+
+		wp_remote_request( $api_url . '/api/3/connections/' . $connection_id . '?api_key=' . $api_key, $args );
+
+		delete_option( 'wpf_ac_connection_id' );
+
+	}
+
+	/**
+	 * Gets or creates an ActiveCampaign deep data customer
+	 *
+	 * @since 3.24.11
+	 * @return int
+	 */
+
+	public function get_customer_id( $contact_id, $connection_id, $order_id = false ) {
+
+		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+		if ( false !== $user_id ) {
+
+			$customer_id = get_user_meta( $user_id, 'wpf_ac_customer_id', true );
+
+			if ( ! empty( $customer_id ) ) {
+				return $customer_id;
+			}
+		}
+
+		if ( false !== $order_id ) {
+
+			$customer_id = get_post_meta( $order_id, 'wpf_ac_customer_id', true );
+
+			if ( ! empty( $customer_id ) ) {
+				return $customer_id;
+			}
+		}
+
+		if ( $user_id == false ) {
+			$external_id  = 'guest';
+			$contact_data = $this->load_contact( $contact_id );
+			$user_email   = $contact_data['user_email'];
+		} else {
+			$external_id = $user_id;
+			$user        = get_userdata( $user_id );
+			$user_email  = $user->user_email;
+		}
+
+		$api_url = wp_fusion()->settings->get( 'ac_url' );
+		$api_key = wp_fusion()->settings->get( 'ac_key' );
+
+		$body = array(
+			'ecomCustomer' => array(
+				'connectionid' => $connection_id,
+				'externalid'   => $external_id,
+				'email'        => $user_email,
+			),
+		);
+
+		$args = array(
+			'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
+			'body'    => json_encode( $body ),
+		);
+
+		$response = wp_remote_post( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key, $args );
+		$body     = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( isset( $body->errors ) && $body->errors[0]->title == 'The ecomCustomer already exists in the system.' ) {
+
+			// Look up an existing customer (AC could have made this way more elegantly)
+			$response = wp_remote_get( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key, $args );
+
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $body->ecomCustomers as $customer ) {
+
+				if ( $customer->email == $user_email ) {
+
+					$customer_id = $customer->id;
+
+				}
+			}
+		} else {
+
+			$customer_id = $body->ecomCustomer->id;
+
+		}
+
+		if ( false !== $user_id ) {
+			update_user_meta( $user_id, 'wpf_ac_customer_id', $customer_id );
+		}
+
+		if ( false !== $order_id ) {
+			update_post_meta( $order_id, 'wpf_ac_customer_id', $customer_id );
+		}
+
+		return $customer_id;
+
+	}
+
 
 }
-
-

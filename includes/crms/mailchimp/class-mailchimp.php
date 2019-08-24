@@ -63,6 +63,7 @@ class WPF_MailChimp {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
 
 	}
 
@@ -76,15 +77,32 @@ class WPF_MailChimp {
 
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
-		if( isset( $post_data['data'] ) && isset( $post_data['data']['email'] ) ) {
+		if ( isset( $post_data['data'] ) && isset( $post_data['data']['email'] ) ) {
 			$post_data['contact_id'] = md5( $post_data['data']['email'] );
 		}
 
 		return $post_data;
+
+	}
+
+	/**
+	 * Allows using an email address in the ?cid parameter
+	 *
+	 * @access public
+	 * @return string Contact ID
+	 */
+
+	public function auto_login_contact_id( $contact_id ) {
+
+		if ( is_email( $contact_id ) ) {
+			$contact_id = $this->get_contact_id( urldecode( $contact_id ) );
+		}
+
+		return $contact_id;
 
 	}
 
@@ -98,8 +116,7 @@ class WPF_MailChimp {
 	public function format_field_value( $value, $field_type, $field ) {
 
 		// Fix for country
-		
-		if( $value == 'United States' ) {
+		if ( $value == 'United States' ) {
 			$value == 'United States of America';
 		}
 
@@ -127,21 +144,21 @@ class WPF_MailChimp {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'mailchimp') !== false ) {
+		if ( strpos( $url, 'mailchimp' ) !== false ) {
 
 			$code = wp_remote_retrieve_response_code( $response );
 
-			if( $code != 200 && $code != 204 ) {
+			if ( $code != 200 && $code != 204 ) {
 
 				$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 				$message = '<strong>' . $body->title . ':</strong> ' . $body->detail;
 
-				if( isset( $body->errors ) ) {
+				if ( isset( $body->errors ) ) {
 
 					$message .= '<ul>';
 
-					foreach( $body->errors as $error ) {
+					foreach ( $body->errors as $error ) {
 						$message .= '<li><strong>' . $error->field . ':</strong> ' . $error->message . '</li>';
 					}
 
@@ -151,7 +168,6 @@ class WPF_MailChimp {
 				$response = new WP_Error( 'error', $message );
 
 			}
-
 		}
 
 		return $response;
@@ -168,10 +184,13 @@ class WPF_MailChimp {
 
 	private function get_email_from_cid( $contact_id ) {
 
-		$users = get_users( array( 'meta_key'   => 'mailchimp_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
+		$users = get_users(
+			array(
+				'meta_key'   => 'mailchimp_contact_id',
+				'meta_value' => $contact_id,
+				'fields'     => array( 'user_email' ),
+			)
+		);
 
 		if ( ! empty( $users ) ) {
 
@@ -180,7 +199,6 @@ class WPF_MailChimp {
 		} else {
 
 			// Try and get it via API call
-			
 			if ( ! $this->params ) {
 				$this->get_params();
 			}
@@ -188,7 +206,7 @@ class WPF_MailChimp {
 			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
 			$response = wp_remote_get( $url, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -201,7 +219,6 @@ class WPF_MailChimp {
 			return $result->email_address;
 
 		}
-
 
 	}
 
@@ -216,19 +233,25 @@ class WPF_MailChimp {
 
 		// Get saved data from DB
 		if ( empty( $dc ) || empty( $api_key ) ) {
-			$dc = wp_fusion()->settings->get( 'mailchimp_dc' );
+			$dc      = wp_fusion()->settings->get( 'mailchimp_dc' );
 			$api_key = wp_fusion()->settings->get( 'mailchimp_key' );
 		}
 
+		// Get data server from key
+		if ( empty( $dc ) ) {
+			$key_exploded = explode( '-', $api_key );
+			$dc           = $key_exploded[1];
+		}
+
 		$this->params = array(
-			'timeout'     => 30,
-			'headers'     => array(
-				'Authorization' =>  'Basic ' . base64_encode( 'user:' . $api_key ),
-				'Content-Type' 	=> 'application/json'
-			)
+			'timeout' => 30,
+			'headers' => array(
+				'Authorization' => 'Basic ' . base64_encode( 'user:' . $api_key ),
+				'Content-Type'  => 'application/json',
+			),
 		);
 
-		$this->dc = $dc;
+		$this->dc   = $dc;
 		$this->list = wp_fusion()->settings->get( 'mc_default_list', false );
 
 		return $this->params;
@@ -255,7 +278,7 @@ class WPF_MailChimp {
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -303,23 +326,22 @@ class WPF_MailChimp {
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $body->lists as $list ) {
+		foreach ( $body->lists as $list ) {
 			$available_lists[ $list->id ] = $list->name;
 		}
 
 		wp_fusion()->settings->set( 'mc_lists', $available_lists );
 
 		// Set default
-
 		$default_list = wp_fusion()->settings->get( 'mc_default_list', false );
 
-		if( empty( $default_list ) ) {
+		if ( empty( $default_list ) ) {
 
 			reset( $available_lists );
 			$default_list = key( $available_lists );
@@ -350,24 +372,22 @@ class WPF_MailChimp {
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=200';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( ! empty( $body->segments ) ) {
+		if ( ! empty( $body->segments ) ) {
 
-			foreach( $body->segments as $segment ) {
+			foreach ( $body->segments as $segment ) {
 
-				if( $segment->type == 'static' ) {
+				if ( $segment->type == 'static' ) {
 
 					$available_tags[ $segment->id ] = $segment->name;
 
 				}
-
 			}
-
 		}
 
 		asort( $available_tags );
@@ -402,26 +422,24 @@ class WPF_MailChimp {
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/merge-fields/?count=100';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( ! empty( $body->merge_fields ) ) {
+		if ( ! empty( $body->merge_fields ) ) {
 
-			foreach( $body->merge_fields as $field ) {
+			foreach ( $body->merge_fields as $field ) {
 
-				if( $field->type == 'address' ) {
+				if ( $field->type == 'address' ) {
 					continue;
 				}
 
 				$crm_fields[ $field->tag ] = $field->name;
 
 			}
-
 		}
-
 
 		asort( $crm_fields );
 
@@ -448,26 +466,35 @@ class WPF_MailChimp {
 		$request      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/search-members/?query=' . $email_address;
 		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
+		$contact_id = false;
+
 		// Exact matches
 		if ( isset( $body->exact_matches ) && ! empty( $body->exact_matches->members ) ) {
 
-			return $body->exact_matches->members[0]->id;
+			foreach ( $body->exact_matches->members as $member ) {
 
-		} elseif( isset( $body->full_search ) && ! empty( $body->full_search->members ) ) {
+				if ( $member->list_id == $this->list ) {
+					$contact_id = $member->id;
+				}
+			}
+		} elseif ( isset( $body->full_search ) && ! empty( $body->full_search->members ) ) {
 
-			return $body->full_search->members[0]->id;
+			foreach ( $body->full_search->members as $member ) {
 
-		} else {
-
-			return false;
-
+				if ( $member->list_id == $this->list ) {
+					$contact_id = $member->id;
+				}
+			}
 		}
+
+		return $contact_id;
+
 	}
 
 
@@ -484,17 +511,17 @@ class WPF_MailChimp {
 			$this->get_params();
 		}
 
-		$tags 		= array();
-		$request    = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
-		$response   = wp_remote_get( $request, $this->params );
+		$tags     = array();
+		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $body->tags ) ) {
+		if ( empty( $body->tags ) ) {
 			return $tags;
 		}
 
@@ -520,18 +547,17 @@ class WPF_MailChimp {
 
 		$email_address = $this->get_email_from_cid( $contact_id );
 
-		foreach ($tags as $tag) {
+		foreach ( $tags as $tag ) {
 
-			$request      		= 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/';
-			$params           	= $this->params;
-			$params['body']  	= json_encode( array( 'email_address' => $email_address ) );
+			$request        = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/';
+			$params         = $this->params;
+			$params['body'] = json_encode( array( 'email_address' => $email_address ) );
 
 			$response = wp_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -554,18 +580,17 @@ class WPF_MailChimp {
 
 		$email_address = $this->get_email_from_cid( $contact_id );
 
-		foreach ($tags as $tag) {
+		foreach ( $tags as $tag ) {
 
-			$request      		= 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/' . $contact_id;
-			$params           	= $this->params;
-			$params['method']  	= 'DELETE';
+			$request          = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/' . $contact_id;
+			$params           = $this->params;
+			$params['method'] = 'DELETE';
 
 			$response = wp_remote_request( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -591,43 +616,43 @@ class WPF_MailChimp {
 		}
 
 		// Put address fields in their places
-		foreach( $data as $key => $value ) {
+		foreach ( $data as $key => $value ) {
 
-			if( strpos($key, '+') !== false ) {
+			if ( strpos( $key, '+' ) !== false ) {
 
-				$keyparts = explode('+', $key);
+				$keyparts = explode( '+', $key );
 
-				if( ! isset( $data[ $keyparts[0] ] ) ) {
+				if ( ! isset( $data[ $keyparts[0] ] ) ) {
 					$data[ $keyparts[0] ] = array();
 				}
 
 				$data[ $keyparts[0] ][ $keyparts[1] ] = $value;
 
-				unset( $data[$key] );
+				unset( $data[ $key ] );
 
 			}
-
 		}
 
 		$payload = array(
-			'status'		=> 'subscribed',
-			'email_address'	=> $data['email_address'],
-			'merge_fields'	=> $data
+			'status'        => 'subscribed',
+			'email_address' => $data['email_address'],
+			'merge_fields'  => $data,
 		);
 
 		unset( $payload['merge_fields']['email_address'] );
 
-		if( empty( $payload['merge_fields'] ) ) {
+		if ( empty( $payload['merge_fields'] ) ) {
 			unset( $payload['merge_fields'] );
 		}
 
-		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/';
+		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . md5( strtolower( $data['email_address'] ) );
 		$params           = $this->params;
+		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $payload );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_remote_request( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -637,7 +662,7 @@ class WPF_MailChimp {
 
 	}
 
-		
+
 	/**
 	 * Update contact
 	 *
@@ -655,67 +680,70 @@ class WPF_MailChimp {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
 		// Put address fields in their places
-		foreach( $data as $key => $value ) {
+		foreach ( $data as $key => $value ) {
 
-			if( strpos($key, '+') !== false ) {
+			if ( strpos( $key, '+' ) !== false ) {
 
-				$keyparts = explode('+', $key);
+				$keyparts = explode( '+', $key );
 
-				if( ! isset( $data[ $keyparts[0] ] ) ) {
+				if ( ! isset( $data[ $keyparts[0] ] ) ) {
 					$data[ $keyparts[0] ] = array();
 				}
 
 				$data[ $keyparts[0] ][ $keyparts[1] ] = $value;
 
-				unset( $data[$key] );
+				unset( $data[ $key ] );
 
 			}
-
 		}
 
 		// Address can't be sent unless it's complete
-
-		if( isset( $data['ADDRESS'] ) ) {
+		if ( isset( $data['ADDRESS'] ) ) {
 
 			$defaults = array(
-				'addr1'		=> 'unknown',
-				'addr2'		=> 'unknown',
-				'city'		=> 'unknown',
-				'zip'		=> 'unknown',
-				'country'	=> 'unknown',
-				'state'		=> 'unknown'
+				'addr1'   => 'unknown',
+				'addr2'   => 'unknown',
+				'city'    => 'unknown',
+				'zip'     => 'unknown',
+				'country' => 'unknown',
+				'state'   => 'unknown',
 			);
 
 			$data['ADDRESS'] = array_merge( $defaults, $data['ADDRESS'] );
 
 		}
 
-		if( empty( $data['email_address'] ) ) {
+		if ( empty( $data['email_address'] ) ) {
 			$email_address = $this->get_email_from_cid( $contact_id );
 		} else {
 			$email_address = $data['email_address'];
 			unset( $data['email_address'] );
 		}
 
+		// Yes email address changes do work
+
 		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
 		$params           = $this->params;
 		$params['method'] = 'PATCH';
-		$params['body']   = json_encode( array( 'email_address' => $email_address, 'merge_fields' => $data ) );
+		$params['body']   = json_encode(
+			array(
+				'email_address' => $email_address,
+				'merge_fields'  => $data,
+			)
+		);
 
-		$response 		  = wp_remote_post( $url, $params );
+		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-
 		return true;
-
 
 	}
 
@@ -735,40 +763,37 @@ class WPF_MailChimp {
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
 		$response = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$user_meta      	= array();
-		$contact_fields 	= wp_fusion()->settings->get( 'contact_fields' );
-		$body      			= json_decode( wp_remote_retrieve_body( $response ) );
+		$user_meta      = array();
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$body           = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$loaded_meta = array();
+		$loaded_meta                  = array();
 		$loaded_meta['email_address'] = $body->email_address;
 
-		foreach( $body->merge_fields as $key => $value ) {
+		foreach ( $body->merge_fields as $key => $value ) {
 
-			if( ! is_object( $value ) ) {
+			if ( ! is_object( $value ) ) {
 
 				$loaded_meta[ $key ] = $value;
 
 			} else {
 
 				// Address fields
-				foreach( $value as $subkey => $subvalue ) {
+				foreach ( $value as $subkey => $subvalue ) {
 					$loaded_meta[ $key . '+' . $subkey ] = $subvalue;
 				}
-
 			}
-
 		}
-		
+
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
 			if ( $field_data['active'] == true && isset( $loaded_meta[ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $loaded_meta[ $field_data['crm_field'] ];
 			}
-
 		}
 
 		return $user_meta;
@@ -793,13 +818,13 @@ class WPF_MailChimp {
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/';
 		$response = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $body->members as $contact ) {
+		foreach ( $body->members as $contact ) {
 			$contact_ids[] = $contact->id;
 		}
 

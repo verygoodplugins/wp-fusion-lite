@@ -161,8 +161,9 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 			$context = maybe_unserialize( $log['context'] );
 
-			if( empty( $context['meta_array'] ) && ! empty( $context['meta_array_nofilter'] ) )
+			if( empty( $context['meta_array'] ) && ! empty( $context['meta_array_nofilter'] ) ) {
 				$context['meta_array'] = $context['meta_array_nofilter'];
+			}
 
 			if( ! empty( $context['meta_array'] ) ) {
 				
@@ -214,6 +215,13 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_source( $log ) {
+
+		$log['source'] = maybe_unserialize( $log['source'] );
+
+		if ( is_array( $log['source'] ) ) {
+			$log['source'] = implode( ' &raquo; ', $log['source'] );
+		}
+
 		return $log['source'];
 	}
 
@@ -266,14 +274,31 @@ class WPF_Log_Table_List extends WP_List_Table {
 	protected function source_dropdown() {
 		global $wpdb;
 
-		$sources = $wpdb->get_col( "
+		$sources_db = $wpdb->get_col( "
 			SELECT DISTINCT source
 			FROM {$wpdb->prefix}wpf_logging
 			WHERE source != ''
 			ORDER BY source ASC
 		" );
 
-		if ( ! empty( $sources ) ) {
+		if ( ! empty( $sources_db ) ) {
+
+			$sources = array();
+
+			foreach ( $sources_db as $source )  {
+
+				$source = maybe_unserialize( $source );
+
+				if ( is_array( $source ) ) {
+					$sources = array_merge( $sources, $source );
+				} else {
+					$sources[] = $source;
+				}
+
+			}
+
+			$sources = array_unique( $sources );
+
 			$selected_source = isset( $_REQUEST['source'] ) ? esc_attr( $_REQUEST['source'] ) : '';
 			?>
 				<label for="filter-by-source" class="screen-reader-text"><?php _e( 'Filter by source', 'wp-fusion' ); ?></label>
@@ -450,14 +475,12 @@ class WPF_Log_Table_List extends WP_List_Table {
 			$where_values[]     = wp_fusion()->logger->get_level_severity( $_REQUEST['level'] );
 		}
 		if ( ! empty( $_REQUEST['source'] ) ) {
-			$where_conditions[] = 'source = %s';
-			//$where_values[]     = wc_clean( $_REQUEST['source'] );
-			$where_values[]     = esc_attr( $_REQUEST['source'] );
+			$where_conditions[] = 'source LIKE %s';
+			$where_values[]     = '%' . $wpdb->esc_like( $_REQUEST['source'] ) . '%';
 		}
 
 		if ( ! empty( $_REQUEST['user'] ) ) {
 			$where_conditions[] = 'user = %s';
-			//$where_values[]     = wc_clean( $_REQUEST['user'] );
 			$where_values[]     = esc_attr( $_REQUEST['user'] );
 		}
 

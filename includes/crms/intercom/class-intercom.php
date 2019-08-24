@@ -308,11 +308,20 @@ class WPF_Intercom {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( !isset( $response->id ) ) {
-			return false;
-		}
+		if( isset( $response->id ) ) {
 
-		return $response->id;
+			return $response->id;
+
+		} elseif( isset( $response->users ) && ! empty( $response->users ) ) {
+
+			return $response->users[0]->id;
+
+		} else {
+
+			return false;
+
+		}
+		
 	}
 
 

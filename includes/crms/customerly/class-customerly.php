@@ -27,7 +27,6 @@ class WPF_Customerly {
 		$this->name     = 'Customerly';
 		$this->supports = array( 'add_tags', 'add_fields' );
 
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
@@ -66,7 +65,11 @@ class WPF_Customerly {
 			return $post_data;
 		}
 
-		// Webhooks take about 10 mins to come in
+		$payload = json_decode( file_get_contents( 'php://input' ) );
+
+		$post_data['contact_id'] = $payload->data->user->data->email;
+
+		return $post_data;
 
 	}
 

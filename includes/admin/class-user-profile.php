@@ -118,7 +118,7 @@ class WPF_User_Profile {
 		}
 
 		// Force reset tags and search for new tags
-		$user_tags = wp_fusion()->user->get_tags( $user_id, true );
+		$user_tags = wp_fusion()->user->get_tags( $user_id, true, false );
 
 		$response = array(
 			'contact_id' => $contact_id,
@@ -194,8 +194,26 @@ class WPF_User_Profile {
 
 		// For debugging purposes
 
-		if( isset( $_GET['wpf_register'] ) ) {
+		if ( isset( $_GET['wpf_register'] ) ) {
+
 			wp_fusion()->user->user_register( $user->ID, null, true );
+
+		} elseif ( isset( $_GET['wpf_pull'] ) ) {
+
+			wp_fusion()->user->pull_user_meta( $user->ID );
+
+		} elseif ( isset( $_GET['wpf_push'] ) ) {
+
+			wp_fusion()->user->push_user_meta( $user->ID );
+
+		} elseif ( isset( $_GET['wpf_show_meta'] ) ) {
+
+			$user_meta = get_user_meta( $user->ID );
+
+			echo '<pre>';
+			echo print_r( $user_meta, true );
+			echo '</pre>';
+
 		}
 
 		?>
@@ -217,7 +235,7 @@ class WPF_User_Profile {
 						<?php else : ?>
 
 							<?php echo $contact_id; ?>
-							
+
 						<?php endif; ?>
 
 					<?php else : ?>
@@ -255,7 +273,7 @@ class WPF_User_Profile {
 				<th><label for="resync_contact"><?php _e( 'Resync Tags', 'wp-fusion' ) ?></label></th>
 				<td>
 
-					<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID ?>">Resync Tags</a>
+					<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID ?>"><?php _e( 'Resync Tags', 'wp-fusion' ) ?></a>
 					<p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and load from the %s contact record.', 'wp-fusion' ), wp_fusion()->crm->name ); ?></p>
 
 				</td>

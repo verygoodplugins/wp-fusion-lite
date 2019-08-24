@@ -61,6 +61,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 
 			add_action( 'wp_ajax_' . $this->identifier, array( $this, 'maybe_handle' ) );
 			add_action( 'wp_ajax_nopriv_' . $this->identifier, array( $this, 'maybe_handle' ) );
+
 		}
 
 
@@ -83,10 +84,18 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * @return array|WP_Error
 		 */
 		public function dispatch() {
+
 			$url  = add_query_arg( $this->get_query_args(), $this->get_query_url() );
 			$args = $this->get_post_args();
 
-			return wp_remote_post( esc_url_raw( $url ), $args );
+			$result = wp_remote_post( esc_url_raw( $url ), $args );
+
+			if ( is_wp_error( $result ) ) {
+				wp_fusion()->logger->handle( 'error', 0, 'Error dispatching batch: ' . $result->get_error_message(), array( 'source' => 'batch-process' ) );
+			}
+
+			return $result;
+
 		}
 
 		/**
@@ -95,14 +104,16 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * @return array
 		 */
 		protected function get_query_args() {
+
 			if ( property_exists( $this, 'query_args' ) ) {
 				return $this->query_args;
 			}
 
 			return array(
 				'action' => $this->identifier,
-				'nonce'  => wp_create_nonce( $this->identifier ),
+				'nonce'  => wp_create_nonce( $this->identifier )
 			);
+
 		}
 
 		/**
@@ -111,11 +122,13 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * @return string
 		 */
 		protected function get_query_url() {
+
 			if ( property_exists( $this, 'query_url' ) ) {
 				return $this->query_url;
 			}
 
 			return admin_url( 'admin-ajax.php' );
+
 		}
 
 		/**
@@ -124,6 +137,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * @return array
 		 */
 		protected function get_post_args() {
+
 			if ( property_exists( $this, 'post_args' ) ) {
 				return $this->post_args;
 			}
@@ -135,6 +149,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 				'cookies'   => $_COOKIE,
 				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
 			);
+
 		}
 
 		/**
@@ -143,14 +158,21 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * Check for correct nonce and pass to handler.
 		 */
 		public function maybe_handle() {
+
 			// Don't lock up other requests while processing
 			session_write_close();
 
-			check_ajax_referer( $this->identifier, 'nonce' );
+			if( strpos( $_POST['hook'], 'wpf_' ) === false ) {
+				wp_die();
+			}
+
+			// Escape args
+			$_POST['args'] = array_map( 'intval', $_POST['args'] );
 
 			$this->handle();
 
 			wp_die();
+
 		}
 
 		/**

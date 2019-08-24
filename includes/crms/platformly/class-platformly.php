@@ -135,7 +135,6 @@ class WPF_Platformly {
 
 		}
 
-
 	}
 
 	/**

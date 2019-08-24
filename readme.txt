@@ -1,10 +1,10 @@
 === WP Fusion Lite ===
 Contributors: verygoodplugins
-Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, user meta, sync
+Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, user meta, sync, wpfusion, wp-fusion
 Requires at least: 4.0
 Requires PHP: 5.6
-Tested up to: 5.1.1
-Stable tag: 3.24
+Tested up to: 5.2.2
+Stable tag: 3.25
 
 WP Fusion connects your website to your CRM or marketing automation system.
 
@@ -40,6 +40,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 * Drift
 * Drip
 * Flexie
+* GetResponse
 * Gist
 * Groundhogg
 * HubSpot
@@ -49,6 +50,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 * MailChimp
 * MailerLite
 * Mailjet
+* MailPoet
 * Maropost
 * Mautic
 * NationBuilder
@@ -78,6 +80,75 @@ Upload and activate the plugin, then go to Settings >> WP Fusion. Select your de
 See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.25 - 8/24/2019 =
+
+##### New CRMs
+
+* GetResponse
+* MailPoet
+
+##### New Features
+
+* Added option to return people to originally requested content after login
+* Added ability to create new user meta fields from the Contact Fields list
+* Added dynamic tagging based on field values (for supported CRMs)
+* Added ability to modify field data formats via the Contact Fields list
+* Added option to remove tags when a page is viewed
+* Added option to completely hide a taxonomy term based on tags
+* Added option to enable HubSpot site tracking scripts
+* Added auto-login by email address for MailerLite
+* Added "Advanced" mode for Filter Queries setting
+* MailerLite will now re-subscribe subscribers when they submit a form
+* Added additional monitoring tools for background process worker
+* Groundhogg 2.0 compatibility
+* Added social media fields to Kartra
+* Added date_joined field for Kartra
+* Added new default profile fields for Drip
+* Added wpf_salesforce_auth_url filter for Salesforce
+* Added multiselect support for HubSpot
+* Added unsubscribe notifications for ConvertKit
+* Added "wpf_salesforce_auth_url" filter for overriding Salesforce authorization URL
+* Added details about configured tags to protected content in post list table
+* Added Email Changed event for Drip
+* Added Is X? fields for NationBuilder
+* Added option to disable "Preview With Tag" in admin bar
+* Added active lists to list dropdowns with HubSpot
+* Added IP address when adding new contacts with Mautic
+* Added Organisation field for syncing to Capsule
+* Auto login with Mailchimp now works with email address
+* Added Portuguese translation (thanks @João Alexandre)
+
+##### Improvements
+
+* Improved OAuth access token refresh process with Salesforce
+* Access control meta box now requires the manage_options capability
+* Drip site tracking will now auto-identify logged in users
+* Groundhogg will now load tags and meta immediately instead of requiring sync
+* Improved handling for State fields with Ontraport
+* Better handling for missing last names in Salesforce
+* Slowed down HubSpot batch operations to get around API limits
+* Mautic performance improvements
+* Preview With Tag now bypasses Exclude Admins setting
+* Compatibility updates for custom field formatting with Mailerlite
+
+##### Bug Fixes
+
+* Fixed typo in NationBuilder fields dropdown
+* Fixed email address changes with Infusionsoft causing opt-outs
+* Fixed notifications going out when using the built in import tool
+* Bugfixes for Preview with Tag feature
+* Fixed Infusionsoft API errors with addWithDupCheck method
+* Fixed ConvertKit contact ID lookup failing
+* Fixed creating a contact in Zoho without a last name
+* Fixed slashes getting added to tags with apostrophes in Mautic
+* Fixed redirect causing multiple API calls with contact ID lookup in Mautic
+* Fixed MailChimp looking up contacts from other lists
+* Fixed empty date type fields sending 1/1/1970 dates
+* Copper bugfixes
+* Capsule bugfixes
+* Platform.ly bugfixes
+
 
 = 3.24 - 4/25/2019 =
 

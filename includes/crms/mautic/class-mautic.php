@@ -31,7 +31,7 @@ class WPF_Mautic {
 
 		$this->slug     = 'mautic';
 		$this->name     = 'Mautic';
-		$this->supports = array('add_tags');
+		$this->supports = array( 'add_tags', 'combined_updates' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -109,7 +109,6 @@ class WPF_Mautic {
 
 		}
 
-
 	}
 
 	/**
@@ -121,16 +120,37 @@ class WPF_Mautic {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( isset( $payload->{'mautic.lead_post_save_update'} ) ) {
-			$post_data['contact_id'] = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
+		if ( isset( $payload->{'mautic.lead_post_save_update'} ) ) {
+
+			$contact_id = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
+
+			$post_data['contact_id'] = $contact_id;
+
+			// Deal with changing contact IDs
+
+			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+			if ( empty( $user_id ) ) {
+
+				$email = $payload->{'mautic.lead_post_save_update'}[0]->lead->fields->core->email->value;
+
+				$user = get_user_by( 'email', $email );
+
+				if ( ! empty( $user ) ) {
+
+					update_user_meta( $user->ID, 'mautic_contact_id', $contact_id );
+
+				}
+			}
 		}
 
-		return $post_data; 
+		return $post_data;
 
 	}
 
@@ -206,7 +226,7 @@ class WPF_Mautic {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos( $url, $this->url ) !== false ) {
+		if( strpos( (string) $url, $this->url ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -287,7 +307,7 @@ class WPF_Mautic {
 				if( $body->errors[0]->code == 404 ) {
 
 					return new WP_Error( $body->errors[0]->code, '404 error. This sometimes happens when you\'ve just enabled the API, and your cache needs to be rebuilt. See <a href="https://mautic.org/docs/en/tips/troubleshooting.html" target="_blank">here for more info</a>.' );
-				
+
 				} elseif( $body->errors[0]->code == 403 ) {
 
 					return new WP_Error( $body->errors[0]->code, '403 error. You need to enable the API from within Mautic\'s configuration settings for WP Fusion to connect.' );
@@ -297,6 +317,10 @@ class WPF_Mautic {
 					return new WP_Error( $body->errors[0]->code, $body->errors[0]->message );
 
 				}
+
+			} elseif ( empty( $body ) ) {
+
+				return new WP_Error( 'error', 'This is not a valid URL. Please enter the base URL to your Mautic install.' );
 
 			}
 
@@ -419,7 +443,7 @@ class WPF_Mautic {
 		}
 
 		$contact_info = array();
-		$request      = $this->url . 'api/contacts/?search=' . urlencode( 'email:"+' . $email_address . '"' ) . '&minimal=true';
+		$request      = $this->url . 'api/contacts?search=' . urlencode( 'email:"+' . $email_address . '"' ) . '&minimal=true';
 		$response     = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -464,7 +488,7 @@ class WPF_Mautic {
 		$contact_tags = array();
 
 		if ( empty( $body_json['contact']['tags'] ) ) {
-			return false;
+			return $contact_tags;
 		}
 
 
@@ -569,6 +593,8 @@ class WPF_Mautic {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		$data['ipAddress'] = $_SERVER['REMOTE_ADDR'];
+
 		$request 		= $this->url . 'api/contacts/new';
 		$params 		= $this->params;
 		$params['body'] = $data;
@@ -613,10 +639,10 @@ class WPF_Mautic {
 			return false;
 		}
 
-		$request      		= $this->url . 'api/contacts/' . $contact_id . '/edit';
-		$params           	= $this->params;
-		$params['method'] 	= 'PATCH';
-		$params['body']   	= $data;
+		$request          = $this->url . 'api/contacts/' . $contact_id . '/edit';
+		$params           = $this->params;
+		$params['method'] = 'PATCH';
+		$params['body']   = $data;
 
 		$response = wp_remote_post( $request, $params );
 
@@ -630,8 +656,46 @@ class WPF_Mautic {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
 
-
 		return true;
+	}
+
+	/**
+	 * Updates contact and applies / removes tags in a single API call
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function combined_update( $contact_id, $update_data ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		if ( isset( $update_data['update_contact'] ) ) {
+			$data = $update_data['update_contact'];
+		} else {
+			$data = array();
+		}
+
+		if ( isset( $update_data['apply_tags'] ) ) {
+			$data['tags'] = $update_data['apply_tags'];
+		}
+
+		// Append minus sign for tag removal
+
+		if ( isset( $update_data['remove_tags'] ) ) {
+
+			foreach ( $update_data['remove_tags'] as $tag ) {
+				$data['tags'][] = '-' . $tag;
+			}
+
+		}
+
+		$result = $this->update_contact( $contact_id, $data, false );
+
+		return $result;
+
 	}
 
 	/**

@@ -1,6 +1,6 @@
 <?php
 
-class WPF_Groundhogg_Admin {
+class WPF_MailPoet_Admin {
 
 	private $slug;
 	private $name;
@@ -20,8 +20,8 @@ class WPF_Groundhogg_Admin {
 		$this->crm  = $crm;
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_groundhogg_header_begin', array( $this, 'show_field_groundhogg_header_begin' ), 10, 2 );
-		add_action( 'show_field_groundhogg_connect_end', array( $this, 'show_field_groundhogg_connect_end' ), 10, 2 );
+		add_action( 'show_field_mailpoet_header_begin', array( $this, 'show_field_mailpoet_header_begin' ), 10, 2 );
+		add_action( 'show_field_mailpoet_connect_end', array( $this, 'show_field_mailpoet_connect_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -46,7 +46,7 @@ class WPF_Groundhogg_Admin {
 	}
 
 	/**
-	 * Loads groundhogg connection information on settings page
+	 * Loads mailpoet connection information on settings page
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -56,19 +56,19 @@ class WPF_Groundhogg_Admin {
 
 		$new_settings = array();
 
-		$new_settings['groundhogg_header'] = array(
-			'title'   => __( 'Groundhogg Configuration', 'wp-fusion' ),
+		$new_settings['mailpoet_header'] = array(
+			'title'   => __( 'MailPoet Configuration', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
-		$new_settings['groundhogg_connect'] = array(
+		$new_settings['mailpoet_connect'] = array(
 			'title'       => __( 'Connect', 'wp-fusion' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'groundhogg_connect' )
+			'post_fields' => array( 'mailpoet_connect' )
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -78,7 +78,7 @@ class WPF_Groundhogg_Admin {
 	}
 
 	/**
-	 * Loads standard Groundhogg field names and attempts to match them up with standard local ones
+	 * Loads standard MailPoet field names and attempts to match them up with standard local ones
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -88,12 +88,12 @@ class WPF_Groundhogg_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/groundhogg-fields.php';
+			require_once dirname( __FILE__ ) . '/mailpoet-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
-				if ( isset( $groundhogg_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
-					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $groundhogg_fields[ $field ] );
+				if ( isset( $mailpoet_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
+					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $mailpoet_fields[ $field ] );
 				}
 
 			}
@@ -105,35 +105,35 @@ class WPF_Groundhogg_Admin {
 	}
 
 	/**
-	 * Puts a div around the groundhogg configuration section so it can be toggled
+	 * Puts a div around the mailpoet configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
-	public function show_field_groundhogg_header_begin( $id, $field ) {
+	public function show_field_mailpoet_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
 		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
-		echo '<style>#groundhogg_connect {display: none;}</style>';
+		echo '<style>#mailpoet_connect {display: none;} #tab-import { display: none; }</style>';
 
 	}
 
 	/**
-	 * Close out Groundhogg section
+	 * Close out MailPoet section
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
-	public function show_field_groundhogg_connect_end( $id, $field ) {
+	public function show_field_mailpoet_connect_end( $id, $field ) {
 
 		echo '</td>';
 		echo '</tr>';
 
 		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #nationbuilder div
+		echo '</div>'; // close #mailpoet div
 		echo '<table class="form-table">';
 
 	}

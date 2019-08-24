@@ -86,7 +86,7 @@ class WPF_MailChimp_Admin {
 		$new_settings['mailchimp_dc'] = array(
 			'title'       => __( 'Data Server', 'wp-fusion' ),
 			'desc'        => __( 'Your data server is the first part of your MailChimp account URL (like "us1").', 'wp-fusion' ),
-			'type'        => 'text',
+			'type'        => 'hidden',
 			'section'     => 'setup',
 		);
 
@@ -114,6 +114,10 @@ class WPF_MailChimp_Admin {
 	 */
 
 	public function register_settings( $settings, $options ) {
+
+		if( ! isset( $options['mc_lists'] ) ) {
+			$options['mc_lists'] = array();
+		}
 
 		$new_settings['mc_default_list'] = array(
 			'title'       => __( 'MailChimp List', 'wp-fusion' ),
@@ -209,6 +213,13 @@ class WPF_MailChimp_Admin {
 
 		$data_server 	= sanitize_text_field( $_POST['mailchimp_dc'] );
 		$api_key 		= sanitize_text_field( $_POST['mailchimp_key'] );
+
+		if( empty( $data_server ) ) {
+
+			$key_exploded = explode( '-', $api_key );
+			$data_server = $key_exploded[1];
+
+		}
 
 		$connection = $this->crm->connect( $data_server, $api_key, true );
 

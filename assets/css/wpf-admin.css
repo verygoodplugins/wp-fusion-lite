@@ -99,7 +99,7 @@ body.term-php .wpf-page-redirect-select label {
 
 /* WPF center column meta boxes */
 
-#post-body #postbox-container-2 .select4-container, #wpf-learndash-meta .select4-container, .cp-box-content .select4-container {
+#post-body #postbox-container-2 .select4-container, #wpf-learndash-meta .select4-container, .cp-box-content .select4-container, #affwp_edit_affiliate .select4-container {
 	min-width: 400px;
 }
 
@@ -109,6 +109,21 @@ body.term-php .wpf-page-redirect-select label {
 }
 
 /* WPF side meta box */
+
+#wpf-meta input.wpf-restrict-access-checkbox {
+	display: inline-block;
+	width: 16px;
+	margin-top: 6px;
+}
+
+#wpf-meta label.wpf-restrict-access {
+	font-weight: bold;
+	display: inline-block;
+	width: 85%;
+ 	vertical-align: top;
+	margin-top: 2px;
+	margin-left: 2px;
+}
 
 #wpf-meta input[type=text] {
 	width: 100%;
@@ -159,6 +174,13 @@ body .select4-drop.select4-drop-active {
 
 .frm_form_settings #wp_fusion_settings table td .select4-container, .frm_single_wpfusion_settings table td .select4-container {
 	min-width: 300px !important;
+}
+
+.frm_actions_list .frm_wpfusion_action .frm-inner-circle, .frm_email_settings .frm_single_wpfusion_settings .frm_form_action_icon.frm-inverse {
+	background-image: url(../img/logo-sm-trans.png);
+    background-position: center center;
+    background-size: 100%;
+    background-repeat: no-repeat;
 }
 
 /* RCP */

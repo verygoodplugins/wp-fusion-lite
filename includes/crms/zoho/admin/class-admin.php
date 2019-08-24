@@ -59,7 +59,7 @@ class WPF_Zoho_Admin {
 
 	public function maybe_oauth_complete() {
 
-		if( isset( $_GET['code'] ) && isset( $_GET['location'] ) )  {
+		if( isset( $_GET['code'] ) && isset( $_GET['location'] ) ) {
 
 			if( $_GET['location'] == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
@@ -170,6 +170,16 @@ class WPF_Zoho_Admin {
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'create_users', $settings, $new_settings );
+
+		$new_settings = array(
+			'import_notice' => array(
+				'desc'        => __( '<strong>Note:</strong> Imports with Zoho use a loose word match on the contact record. That means if your import tag is "gmail", it will also import any contacts with an <em>@gmail.com</em> email address. Please use a unique tag name for imports.', 'wp-fusion' ),
+				'type'        => 'paragraph',
+				'section'     => 'import',
+			)
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'import_users', $settings, $new_settings );
 
 		return $settings;
 

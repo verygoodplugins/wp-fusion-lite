@@ -37,6 +37,11 @@ $capsule_fields[] = array(
 	'crm_field' => 'email+Misc'
 );
 
+$capsule_fields[] = array(
+	'crm_label' => 'Organisation',
+	'crm_field' => 'organisation'
+);
+
 
 $capsule_fields['phone_number'] = array(
 	'crm_label' => 'Phone',
@@ -202,3 +207,7 @@ $capsule_fields[] = array(
 	'crm_field' => 'address+Office+zip'
 );
 
+$capsule_fields[] = array(
+	'crm_label' => 'Zip (Office)',
+	'crm_field' => 'address+Office+zip'
+);

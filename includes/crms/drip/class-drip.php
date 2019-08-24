@@ -73,10 +73,10 @@ class WPF_Drip {
 
 	public function set_sleep_time( $seconds ) {
 
-		return 1;
-		
+		return 2;
+
 	}
-	
+
 
 	/**
 	 * Formats user entered data to match Drip field formats
@@ -87,17 +87,19 @@ class WPF_Drip {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields
 			$date = date( 'm/d/Y', $value );
 
 			return $date;
 
-		} else {
+		} elseif( ! empty( $value ) ) {
 
 			return stripslashes($value);
 
+		} else {
+			return $value;
 		}
 
 	}
@@ -111,18 +113,21 @@ class WPF_Drip {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'api.getdrip.com') !== false ) {
+		if ( strpos( $url, 'api.getdrip.com' ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->errors ) ) {
+			if ( isset( $body_json->errors ) ) {
 
 				$response = new WP_Error( 'error', $body_json->errors[0]->message );
 
-			}
+			} elseif ( isset( $body_json->error ) ) {
 
+				$response = new WP_Error( 'error', $body_json->error->message );
+
+			}
 		}
-	
+
 		return $response;
 
 	}
@@ -168,8 +173,9 @@ class WPF_Drip {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false )
+		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
 			return;
+		}
 
 		$account_id = wp_fusion()->settings->get('drip_account');
 
@@ -186,6 +192,30 @@ class WPF_Drip {
 		echo "var s = document.getElementsByTagName('script')[0];";
 		echo "s.parentNode.insertBefore(dc, s);";
 		echo "})();";
+
+		// Identify visitor
+
+		if ( is_user_logged_in() && ! empty( wp_fusion()->user->get_contact_id() ) ) {
+
+			$userdata = wp_get_current_user();
+
+			if( empty( $userdata ) && defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
+
+				$user_email = get_user_meta( get_current_user_id(), 'user_email', true );
+
+			} else {
+
+				$user_email = $userdata->user_email;
+
+			}
+
+			echo '_dcq.push(["identify", {';
+			echo 'email: "' . $user_email . '",';
+			echo 'success: function(response) {}';
+			echo '}]);';
+
+		}
+
 		echo "</script>";
 		echo "<!-- end Drip -->";
 
@@ -214,25 +244,47 @@ class WPF_Drip {
 
 			return $users[0]->user_email;
 
-		} else {
+		} elseif ( class_exists( 'WooCommerce' ) ) {
 
-			$this->connect();
-			
-			// Try and get CID from Drip
+			$args = array(
+				'numberposts' => 1,
+				'post_type'   => 'shop_order',
+				'post_status' => array( 'wc-processing', 'wc-completed' ),
+				'fields'      => 'ids',
+				'meta_key'    => 'drip_contact_id',
+				'meta_value'  => $contact_id
+			);
 
-			$result = $this->app->fetch_subscriber( array(
-				'account_id'    => $this->account_id,
-				'subscriber_id' => $contact_id
-			) );
+			$orders = get_posts( $args );
 
-			if(!empty($result) && !empty($result['email'])) {
-				return $result['email'];
-			} else {
-				return false;
+			if ( ! empty( $orders ) ) {
+
+				$order = wc_get_order( $orders[0] );
+
+				return $order->get_billing_email();
+
 			}
 
 		}
 
+		$this->connect();
+
+		// Try and get CID from Drip
+
+		$result = $this->app->fetch_subscriber( array(
+			'account_id'    => $this->account_id,
+			'subscriber_id' => $contact_id
+		) );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		if ( ! empty( $result ) && ! empty( $result['email'] ) ) {
+			return $result['email'];
+		} else {
+			return false;
+		}
 
 	}
 
@@ -477,8 +529,13 @@ class WPF_Drip {
 
 		$email = $this->get_email_from_cid( $contact_id );
 
-		if($email == false)
+		if ( is_wp_error( $email ) ) {
+			return $email;
+		}
+
+		if( $email == false ) {
 			return false;
+		}
 
 		$this->connect();
 
@@ -510,8 +567,13 @@ class WPF_Drip {
 
 		$email = $this->get_email_from_cid( $contact_id );
 
-		if($email == false)
+		if ( is_wp_error( $email ) ) {
+			return $email;
+		}
+
+		if ( $email == false ) {
 			return false;
+		}
 
 		$this->connect();
 
@@ -595,7 +657,7 @@ class WPF_Drip {
 		$params = array(
 			'account_id'    => $this->account_id,
 			'id'            => $contact_id,
-			'custom_fields' => $data
+			'custom_fields' => $data,
 		);
 
 		$result = $this->app->create_or_update_subscriber( $params );
@@ -605,14 +667,32 @@ class WPF_Drip {
 		}
 
 		// Check if we need to change the email address
-		if( isset($provided_email) && strtolower( $result['email'] ) != strtolower( $provided_email ) ) {
+		if ( isset( $provided_email ) && strtolower( $result['email'] ) != strtolower( $provided_email ) ) {
 
 			$params['new_email'] = $provided_email;
 
 			$result = $this->app->create_or_update_subscriber( $params );
 
-			if( is_wp_error( $result ) ) {
+			if ( is_wp_error( $result ) ) {
+
+				// This isn't a serious error so we'll ignore it
+				if ( strpos( $result->get_error_message(), 'New email is already subscribed' ) !== false ) {
+					return true;
+				}
+
 				return $result;
+			}
+
+			if ( wp_fusion()->settings->get( 'email_change_event' ) == true ) {
+
+				$params = array(
+					'account_id' => $this->account_id,
+					'id'         => $contact_id,
+					'action'     => 'Email Changed'
+				);
+
+				$this->app->record_event( $params );
+
 			}
 
 		}

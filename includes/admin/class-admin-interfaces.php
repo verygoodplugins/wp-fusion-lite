@@ -55,11 +55,11 @@ class WPF_Admin_Interfaces {
 		add_action( 'wpf_meta_box_save', array( $this, 'save_changes_to_children' ), 10, 2 );
 
 		// Widget interfaces
-        add_action( 'in_widget_form', array( $this, 'widget_form' ), 5, 3 );
-        add_filter( 'widget_update_callback', array( $this, 'widget_form_update' ), 5, 4 );
+		add_action( 'in_widget_form', array( $this, 'widget_form' ), 5, 3 );
+		add_filter( 'widget_update_callback', array( $this, 'widget_form_update' ), 5, 4 );
 
-        // Sanitize meta box inputs
-        add_filter( 'wpf_sanitize_meta_box', array( $this, 'sanitize_meta_box' ) );
+		// Sanitize meta box inputs
+		add_filter( 'wpf_sanitize_meta_box', array( $this, 'sanitize_meta_box' ) );
 
 	}
 
@@ -212,12 +212,12 @@ class WPF_Admin_Interfaces {
 
 	public function register_taxonomy_form_fields() {
 
-        $registered_taxonomies = get_taxonomies();
+		$registered_taxonomies = get_taxonomies();
 
-        foreach($registered_taxonomies as $slug => $taxonomy) {
-            add_action( $slug . '_edit_form_fields', array( $this, 'taxonomy_form_fields' ), 15, 2 );
-	        add_action( 'edited_' . $slug , array( $this, 'save_taxonomy_form_fields' ), 15, 2 );
-        }
+		foreach($registered_taxonomies as $slug => $taxonomy) {
+			add_action( $slug . '_edit_form_fields', array( $this, 'taxonomy_form_fields' ), 15, 2 );
+			add_action( 'edited_' . $slug , array( $this, 'save_taxonomy_form_fields' ), 15, 2 );
+		}
 
 	}
 
@@ -246,6 +246,7 @@ class WPF_Admin_Interfaces {
 		$defaults = array(
 			'lock_content'		=> false,
 			'lock_posts'		=> false,
+			'hide_term'			=> false,
 			'allow_tags'		=> array(),
 			'allow_tags_all'	=> array(),
 			'redirect'			=> false,
@@ -256,41 +257,49 @@ class WPF_Admin_Interfaces {
 
 		?>
 
-        </table>
+		</table>
 
-        <table id="wpf-meta" class="form-table" style="max-width: 800px;">
+		<table id="wpf-meta" class="form-table" style="max-width: 800px;">
 
-            <tbody>
+			<tbody>
 
-                <tr class="form-field">
-                    <th style="padding-bottom: 0px;" colspan="2"><h3 style="margin: 0px;">WP Fusion Settings</h3></th>
-                </tr>
+				<tr class="form-field">
+					<th style="padding-bottom: 0px;" colspan="2"><h3 style="margin: 0px;">WP Fusion Settings</h3></th>
+				</tr>
 
-                <tr class="form-field">
-                    <th scope="row" valign="top"><label for="lock_content"><?php _e( 'Restrict access to archives', 'wp-fusion' ); ?></label></th>
-                    <td>
-                        <input class="checkbox" type="checkbox" data-unlock="lock_posts wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
-                    </td>
-                </tr>
+				<tr class="form-field">
+					<th scope="row" valign="top"><label for="lock_content"><?php _e( 'Restrict access to archives', 'wp-fusion' ); ?></label></th>
+					<td>
+						<input class="checkbox" type="checkbox" data-unlock="lock_posts hide_term wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
+					</td>
+				</tr>
 
-                <tr class="form-field">
-                    <th scope="row" valign="top"><label for="lock_posts"><?php _e( 'Restrict access to all posts', 'wp-fusion' ); ?></label></th>
-                    <td>
-                        <input class="checkbox" type="checkbox" <?php if ( $settings['lock_content'] != true ) echo 'disabled="disabled"'; ?> id="lock_posts" name="wpf-settings[lock_posts]" value="1" <?php echo checked( $settings['lock_posts'], 1, false ); ?> />
-                        <?php $term = get_term($_GET['tag_ID']); ?>
-                        <span class="description">Apply these restrictions to all posts in the <?php echo $term->name . ' ' . $term->taxonomy; ?>.</p>
-                    </td>
-                </tr>
+				<tr class="form-field">
+					<th scope="row" valign="top"><label for="lock_posts"><?php _e( 'Restrict access to all posts', 'wp-fusion' ); ?></label></th>
+					<td>
+						<input class="checkbox" type="checkbox" <?php if ( $settings['lock_content'] != true ) echo 'disabled="disabled"'; ?> id="lock_posts" name="wpf-settings[lock_posts]" value="1" <?php echo checked( $settings['lock_posts'], 1, false ); ?> />
+						<?php $term = get_term($_GET['tag_ID']); ?>
+						<span class="description">Apply these restrictions to all posts in the <?php echo $term->name . ' ' . $term->taxonomy; ?>.</p>
+					</td>
+				</tr>
 
-                <tr class="form-field">
-                    <th scope="row" valign="top"><label for="wpf-lock-content"><?php _e( 'Required tags (any)', 'wp-fusion' ); ?></label></th>
-                    <td style="max-width: 400px;">
-                        <?php
-                        if ( $settings['lock_content'] != true ) {
-                        	$disabled = true;
-                        } else {
-                        	$disabled = false;
-                        }
+				<tr class="form-field">
+					<th scope="row" valign="top"><label for="lock_posts"><?php _e( 'Hide term', 'wp-fusion' ); ?></label></th>
+					<td>
+						<input class="checkbox" type="checkbox" <?php if ( $settings['lock_content'] != true ) echo 'disabled="disabled"'; ?> id="hide_term" name="wpf-settings[hide_term]" value="1" <?php echo checked( $settings['hide_term'], 1, false ); ?> />
+						<span class="description">The taxonomy term will be completely hidden from all term listings.</p>
+					</td>
+				</tr>
+
+				<tr class="form-field">
+					<th scope="row" valign="top"><label for="wpf-lock-content"><?php _e( 'Required tags (any)', 'wp-fusion' ); ?></label></th>
+					<td style="max-width: 400px;">
+						<?php
+						if ( $settings['lock_content'] != true ) {
+							$disabled = true;
+						} else {
+							$disabled = false;
+						}
 
 						$args = array(
 							'setting' 		=> $settings['allow_tags'],
@@ -299,30 +308,30 @@ class WPF_Admin_Interfaces {
 							'disabled'		=> $disabled
 						);
 
-                        wpf_render_tag_multiselect( $args ); ?>
+						wpf_render_tag_multiselect( $args ); ?>
 
-                    </td>
-                </tr>
-
-
-                <tr class="form-field">
-                    <th scope="row" valign="top"><label for="wpf_redirect"><?php _e( 'Redirect if access is denied', 'wp-fusion' ); ?></label></th>
-                    <td>
-                        <?php $post = new stdClass(); ?>
-                        <?php $post->ID = 0; ?>
-                        <?php $this->page_redirect_select($post, $settings); ?>
-                    </td>
-                </tr>
-
-                <tr class="form-field">
-                    <th scope="row" valign="top"><label for="lock_content"><?php _e( 'Or enter a URL', 'wp-fusion' ); ?></label></th>
-                    <td>
-                        <input <?php echo ( $settings['lock_content'] == 1 ? "" : ' disabled' ) ?> type="text" id="wpf_redirect_url" name="wpf-settings[redirect_url]" value="<?php echo esc_attr( $settings['redirect_url'] ) ?>" />
-                    </td>
-                </tr>
+					</td>
+				</tr>
 
 
-        <?php
+				<tr class="form-field">
+					<th scope="row" valign="top"><label for="wpf_redirect"><?php _e( 'Redirect if access is denied', 'wp-fusion' ); ?></label></th>
+					<td>
+						<?php $post = new stdClass(); ?>
+						<?php $post->ID = 0; ?>
+						<?php $this->page_redirect_select($post, $settings); ?>
+					</td>
+				</tr>
+
+				<tr class="form-field">
+					<th scope="row" valign="top"><label for="lock_content"><?php _e( 'Or enter a URL', 'wp-fusion' ); ?></label></th>
+					<td>
+						<input <?php echo ( $settings['lock_content'] == 1 ? "" : ' disabled' ) ?> type="text" id="wpf_redirect_url" name="wpf-settings[redirect_url]" value="<?php echo esc_attr( $settings['redirect_url'] ) ?>" />
+					</td>
+				</tr>
+
+
+		<?php
 	}
 
 	/**
@@ -376,7 +385,17 @@ class WPF_Admin_Interfaces {
 			$wpf_settings = get_post_meta( $post_id, 'wpf-settings', true );
 
 			if ( ! empty( $wpf_settings ) && isset( $wpf_settings['lock_content'] ) && $wpf_settings['lock_content'] == true ) {
+
 				echo '<span class="dashicons dashicons-lock"></span>';
+
+				if( ! empty( $wpf_settings['allow_tags'] ) ) {
+
+					$tags = array_map( array( wp_fusion()->user, 'get_tag_label' ), (array) $wpf_settings['allow_tags'] );
+
+					echo '<br /><small><em style="display:inline-block; line-height: 1.5">' . implode( ', ', $tags ) . '</em></small>';
+
+				}
+
 			}
 
 		}
@@ -407,23 +426,43 @@ class WPF_Admin_Interfaces {
 
 	public function manage_users_custom_column( $val, $column_name, $user_id ) {
 
-		if ( $column_name == 'wpf_tags' ) {
+		if ( 'wpf_tags' == $column_name ) {
 
 			$tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
 
-			if( empty( $tags ) ) {
+			if ( empty( $tags ) ) {
+
 				return '-';
+
 			} else {
+
+				$available_tags = wp_fusion()->settings->get( 'available_tags' );
 
 				$tag_labels = array();
 
-				foreach($tags as $tag) {
-					$tag_labels[] = wp_fusion()->user->get_tag_label( $tag );
+				foreach ( $tags as $tag_id ) {
+
+					if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+
+						$tag_labels[] = $tag_id;
+
+					} elseif ( ! isset( $available_tags[ $tag_id ] ) ) {
+
+						continue;
+
+					} elseif ( is_array( $available_tags[ $tag_id ] ) ) {
+
+						$tag_labels[] = $available_tags[ $tag_id ]['label'];
+
+					} else {
+
+						$tag_labels[] = $available_tags[ $tag_id ];
+
+					}
 				}
 
-				return implode(', ', $tag_labels);
+				return implode( ', ', $tag_labels );
 			}
-
 		}
 
 		return $val;
@@ -470,9 +509,9 @@ class WPF_Admin_Interfaces {
 
 		?>
 
-        <div id="wpf-meta" class="inline-edit-col-wpf">
-            <div class="inline-edit-col">
-            	<div style="margin: 10px">
+		<div id="wpf-meta" class="inline-edit-col-wpf">
+			<div class="inline-edit-col">
+				<div style="margin: 10px">
 					<?php $this->restrict_content_checkbox( $post, $settings ); ?>
 				</div>
 				<?php $this->required_tags_select( $post, $settings ); ?>
@@ -483,9 +522,9 @@ class WPF_Admin_Interfaces {
 					<input type="checkbox" name="wpf-settings[bulk_edit_merge]" value="1"> Merge Changes <br />
 				</div>
 
-            </div>
-        </div>
-        </div>
+			</div>
+		</div>
+		</div>
 
 		<?php
 
@@ -582,7 +621,11 @@ class WPF_Admin_Interfaces {
 
 	public function add_meta_box() {
 
-		$post_types = get_post_types();
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$post_types = get_post_types( array( 'public' => true ) );
 
 		unset( $post_types['attachment'] );
 		unset( $post_types['revision'] );
@@ -615,7 +658,7 @@ class WPF_Admin_Interfaces {
 
 		$post_type_object = get_post_type_object( $post->post_type );
 
-		echo '<input class="checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf-redirect-url" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <strong>Restrict access to this ' . strtolower( $post_type_object->labels->singular_name ) . '</strong></p>';
+		echo '<input class="checkbox wpf-restrict-access-checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf-redirect-url" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <label for="wpf-lock-content" class="wpf-restrict-access">Users must be logged in to view this ' . strtolower( $post_type_object->labels->singular_name ) . '</label></p>';
 
 	}
 
@@ -628,7 +671,7 @@ class WPF_Admin_Interfaces {
 
 	public function required_tags_select( $post, $settings ) {
 
-		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>' . __('Required tags (any):', 'wp-fusion' ) . '</small></label>';
+		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>' . __('Required tags (any)', 'wp-fusion' ) . ':</small></label>';
 
 		if ( $settings['lock_content'] != true ) {
 			$disabled = true;
@@ -643,11 +686,11 @@ class WPF_Admin_Interfaces {
 			'disabled'		=> $disabled
 		);
 
-        wpf_render_tag_multiselect( $args );
+		wpf_render_tag_multiselect( $args );
 
 		echo '</p>';
 
-		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags-all"><small>' . __('Required tags (all):', 'wp-fusion' ) . '</small></label>';
+		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? "" : ' class="disabled"' ) . ' for="wpf-allow-tags-all"><small>' . __('Required tags (all)', 'wp-fusion' ) . ':</small></label>';
 
 		if ( $settings['lock_content'] != true ) {
 			$disabled = true;
@@ -662,7 +705,7 @@ class WPF_Admin_Interfaces {
 			'disabled'		=> $disabled
 		);
 
-        wpf_render_tag_multiselect( $args );
+		wpf_render_tag_multiselect( $args );
 
 		echo '</p>';
 
@@ -755,7 +798,7 @@ class WPF_Admin_Interfaces {
 
 		$post_type_object = get_post_type_object( $post->post_type );
 
-		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>Apply tags when a user views this ' . strtolower( $post_type_object->labels->singular_name ) . ':</small></label>';
+		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>' . sprintf( __( 'Apply tags when a user views this %s', 'wp-fusion' ), strtolower( $post_type_object->labels->singular_name ) ) . ':</small></label>';
 		
 		$args = array(
 			'setting' 		=> $settings['apply_tags'],
@@ -763,7 +806,19 @@ class WPF_Admin_Interfaces {
 			'field_id'		=> 'apply_tags',
 		);
 
-        wpf_render_tag_multiselect( $args );
+		wpf_render_tag_multiselect( $args );
+
+		echo '</p>';
+
+		echo '<p class="wpf-apply-tags-select"><label for="wpf-remove-tags"><small>' . sprintf( __( 'Remove tags when a user views this %s', 'wp-fusion' ), strtolower( $post_type_object->labels->singular_name ) ) . ':</small></label>';
+		
+		$args = array(
+			'setting' 		=> $settings['remove_tags'],
+			'meta_name' 	=> 'wpf-settings',
+			'field_id'		=> 'remove_tags',
+		);
+
+		wpf_render_tag_multiselect( $args );
 
 		echo '</p>';
 
@@ -771,7 +826,7 @@ class WPF_Admin_Interfaces {
 		// Delay before applying tags
 		*/
 
-		echo '<p class="wpf-apply-tags-delay-input"><label for="wpf-apply-delay"><small>Delay (in ms) before applying tags:</small></label>';
+		echo '<p class="wpf-apply-tags-delay-input"><label for="wpf-apply-delay"><small>' . __( 'Delay (in ms) before applying / removing tags', 'wp-fusion' ) . ':</small></label>';
 		echo '<input type="text" id="wpf-apply-delay" name="wpf-settings[apply_delay]" value="' . esc_attr( $settings['apply_delay'] ) . '" size="15" />';
 		echo '</p>';
 
@@ -846,6 +901,7 @@ class WPF_Admin_Interfaces {
 			'allow_tags'   		=> array(),
 			'allow_tags_all' 	=> array(),
 			'apply_tags'   		=> array(),
+			'remove_tags'   	=> array(),
 			'apply_delay' 		=> 0,
 			'redirect'     		=> '',
 			'redirect_url' 		=> ''
@@ -950,63 +1006,63 @@ class WPF_Admin_Interfaces {
 			$instance['wpf_conditional'] = false;
 		}
 
-        ?>
-        <div class="wpf-widget-controls">
+		?>
+		<div class="wpf-widget-controls">
 
-	        <p class="widgets-tags-conditional">
-	            <input id="<?php echo $widget->get_field_id('wpf_conditional'); ?>" name="<?php echo $widget->get_field_name('wpf_conditional'); ?>" type="checkbox" class="widget-filter-by-tag" value="1" <?php  echo checked( $instance['wpf_conditional'], 1, false ); ?> class="widget-tags-checkbox" />
-	            <label for="<?php echo $widget->get_field_id('wpf_conditional'); ?>" class="widgets-tags-conditional-label"><?php _e('Conditionally Display This Widget','wp-fusion'); ?></label>
-	        </p>
-	        <span class="tags-container<?php echo ($instance['wpf_conditional'] == true ? '' : ' hide'); ?>">
+			<p class="widgets-tags-conditional">
+				<input id="<?php echo $widget->get_field_id('wpf_conditional'); ?>" name="<?php echo $widget->get_field_name('wpf_conditional'); ?>" type="checkbox" class="widget-filter-by-tag" value="1" <?php  echo checked( $instance['wpf_conditional'], 1, false ); ?> class="widget-tags-checkbox" />
+				<label for="<?php echo $widget->get_field_id('wpf_conditional'); ?>" class="widgets-tags-conditional-label"><?php _e('Users must be logged in to see this widget','wp-fusion'); ?></label>
+			</p>
+			<span class="tags-container<?php echo ($instance['wpf_conditional'] == true ? '' : ' hide'); ?>">
 
-	            <label class="screen-reader-text" for="wpf_filter_tag"><?php _e('Allowable Tags','wp-fusion'); ?></label>
+				<label class="screen-reader-text" for="wpf_filter_tag"><?php _e('Allowable Tags','wp-fusion'); ?></label>
 
-	            <?php
+				<?php
 
-	            if( empty( $instance[$widget->id_base . '_wpf_tags'] ) ) {
-	            	$instance[$widget->id_base . '_wpf_tags'] = array();
-	            }
+				if( empty( $instance[$widget->id_base . '_wpf_tags'] ) ) {
+					$instance[$widget->id_base . '_wpf_tags'] = array();
+				}
 
-	            $setting = array( $widget->id_base . '_wpf_tags' => $instance[$widget->id_base . '_wpf_tags'] );
+				$setting = array( $widget->id_base . '_wpf_tags' => $instance[$widget->id_base . '_wpf_tags'] );
 
-	            $args = array(
-	                'setting' 		=> $setting,
-	                'meta_name' 	=> 'widget-' . $widget->id_base,
-	                'field_id'		=> $widget->number,
-	                'field_sub_id'	=> $widget->id_base . '_wpf_tags',
-	            );
+				$args = array(
+					'setting' 		=> $setting,
+					'meta_name' 	=> 'widget-' . $widget->id_base,
+					'field_id'		=> $widget->number,
+					'field_sub_id'	=> $widget->id_base . '_wpf_tags',
+				);
 
-	            wpf_render_tag_multiselect( $args );
+				wpf_render_tag_multiselect( $args );
 
-	            ?>
-	            <span class="description">(This widget will be hidden for users without any of the specified tags)</span>
+				?>
+				<span class="description">(Users must have at least one of these tags to see the widget)</span>
 
-	            <label class="screen-reader-text" for="wpf_filter_tag"><?php _e('Allowable Tags','wp-fusion'); ?></label>
+				<label class="screen-reader-text" for="wpf_filter_tag"><?php _e('Allowable Tags','wp-fusion'); ?></label>
 
-	            <?php
+				<?php
 
-	            if( empty( $instance[$widget->id_base . '_wpf_tags_not'] ) ) {
-	            	$instance[$widget->id_base . '_wpf_tags_not'] = array();
-	            }
+				if( empty( $instance[$widget->id_base . '_wpf_tags_not'] ) ) {
+					$instance[$widget->id_base . '_wpf_tags_not'] = array();
+				}
 
-	            $setting = array( $widget->id_base . '_wpf_tags_not' => $instance[$widget->id_base . '_wpf_tags_not'] );
+				$setting = array( $widget->id_base . '_wpf_tags_not' => $instance[$widget->id_base . '_wpf_tags_not'] );
 
-	            $args = array(
-	                'setting' 		=> $setting,
-	                'meta_name' 	=> 'widget-' . $widget->id_base,
-	                'field_id'		=> $widget->number,
-	                'field_sub_id'	=> $widget->id_base . '_wpf_tags_not',
-	            );
+				$args = array(
+					'setting' 		=> $setting,
+					'meta_name' 	=> 'widget-' . $widget->id_base,
+					'field_id'		=> $widget->number,
+					'field_sub_id'	=> $widget->id_base . '_wpf_tags_not',
+				);
 
-	            wpf_render_tag_multiselect( $args );
+				wpf_render_tag_multiselect( $args );
 
-	            ?>
-	            <span class="description">(This widget will be hidden from users who <i>have</i> any of the specified tags)</span>
-	        </span>
+				?>
+				<span class="description">(If users <i>have</i> any of these tags, the widget will be hidden)</span>
+			</span>
 
-	    </div>
-        <?php 
-    }
+		</div>
+		<?php 
+	}
 
 	/**
 	 * Merge / remove additional fields into widget instance during form updates
@@ -1015,40 +1071,40 @@ class WPF_Admin_Interfaces {
 	 * @return array Instance
 	 */
 
-    public function widget_form_update($instance, $new_instance, $old_instance, $widget) {
+	public function widget_form_update($instance, $new_instance, $old_instance, $widget) {
 
-    	if( isset($new_instance['wpf_conditional']) ) {
+		if( isset($new_instance['wpf_conditional']) ) {
 
-    		$instance['wpf_conditional'] = $new_instance['wpf_conditional'];
+			$instance['wpf_conditional'] = $new_instance['wpf_conditional'];
 
-    	} elseif( isset( $instance['wpf_conditional'] ) ) {
+		} elseif( isset( $instance['wpf_conditional'] ) ) {
 
-    		unset( $instance['wpf_conditional'] );
+			unset( $instance['wpf_conditional'] );
 
-    	}
+		}
 
-    	if( isset($new_instance[$widget->id_base . '_wpf_tags']) ) {
+		if( isset($new_instance[$widget->id_base . '_wpf_tags']) ) {
 
-    		$instance[$widget->id_base . '_wpf_tags'] = $new_instance[$widget->id_base . '_wpf_tags'];
+			$instance[$widget->id_base . '_wpf_tags'] = $new_instance[$widget->id_base . '_wpf_tags'];
 
-    	} elseif( isset($instance[$widget->id_base . '_wpf_tags']) ) {
+		} elseif( isset($instance[$widget->id_base . '_wpf_tags']) ) {
 
-    		unset( $instance[$widget->id_base . '_wpf_tags'] );
+			unset( $instance[$widget->id_base . '_wpf_tags'] );
 
-    	}
+		}
 
-    	if( isset($new_instance[$widget->id_base . '_wpf_tags_not']) ) {
+		if( isset($new_instance[$widget->id_base . '_wpf_tags_not']) ) {
 
-    		$instance[$widget->id_base . '_wpf_tags_not'] = $new_instance[$widget->id_base . '_wpf_tags_not'];
+			$instance[$widget->id_base . '_wpf_tags_not'] = $new_instance[$widget->id_base . '_wpf_tags_not'];
 
-    	} elseif( isset($instance[$widget->id_base . '_wpf_tags_not']) ) {
+		} elseif( isset($instance[$widget->id_base . '_wpf_tags_not']) ) {
 
-    		unset( $instance[$widget->id_base . '_wpf_tags_not'] );
+			unset( $instance[$widget->id_base . '_wpf_tags_not'] );
 
-    	}
+		}
 
-        return $instance;
-    }
+		return $instance;
+	}
 
 	/**
 	 * Sanitizes user data input from WPF meta box
@@ -1057,7 +1113,7 @@ class WPF_Admin_Interfaces {
 	 * @return array Settings
 	 */
 
-    public function sanitize_meta_box( $settings ) {
+	public function sanitize_meta_box( $settings ) {
 
 		if( ! isset( $settings['lock_content'] ) ) {
 			$settings['lock_content'] = false;
@@ -1081,7 +1137,7 @@ class WPF_Admin_Interfaces {
 
 		return $settings;
 
-    }
+	}
 
 
 }

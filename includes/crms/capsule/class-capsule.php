@@ -67,9 +67,14 @@ class WPF_Capsule {
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			$date = date( 'Y-m-d', $value );
 
 			return $date;
+
+		} elseif ( $field_type == 'int' || is_int( $value ) ) {
+
+			// Capsule doesn't like integer values in text fields
+			return (string) $value;
 
 		} else {
 
@@ -462,11 +467,18 @@ class WPF_Capsule {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		if( ! isset( $data['type'] ) ) {
+			$data['type'] = 'person';
+		}
+
+		if( empty( $data['firstName'] ) && empty( $data['lastName'] ) ) {
+			$data['lastName'] = 'unknown';
+		}
+
 		$update_data = (object) array(
 			'party' => (object) array(
-				'type'	=> 'person'
+				'type'	=> $data['type']
 			)
-
 		);
 
 		// Load built in fields to get field types and subtypes
@@ -474,63 +486,82 @@ class WPF_Capsule {
 
 		foreach( $data as $crm_field => $value ) {
 
-			foreach( $capsule_fields as $meta_key => $field_data ) {
+			if( is_numeric( $crm_field ) ) {
 
-				if( $crm_field == $field_data['crm_field'] ) {
+				// Custom fields
 
-					// This means that we've found that field in capsule-fields.php and it needs to be treated specially
-					if( strpos($crm_field, '+') == false ) {
+				if( ! isset( $update_data->party->fields ) ) {
+					$update_data->party->fields = array();
+				}
 
-						// If there is NO "+" sign in the field
-						$update_data->party->{$crm_field} = $value;
+				$update_data->party->fields[] = array( 'value' => $value, 'definition' => array( 'id' => $crm_field ) );
 
-					} else {
+			} else {
 
-						$exploded_field = explode('+', $crm_field);
+				foreach( $capsule_fields as $meta_key => $field_data ) {
 
-						if( $exploded_field[0] == 'email' ) {
+					if( $crm_field == $field_data['crm_field'] ) {
 
-							if( ! isset( $update_data->party->emailAddresses ) ) {
-								$update_data->party->emailAddresses =  array();
-							}
+						// This means that we've found that field in capsule-fields.php and it needs to be treated specially
+						if( $crm_field == 'organisation' ) {
+							
+							// Organisation needs to be sent as an array
+							$update_data->party->{$crm_field} = array( 'name' => $value );
 
-							$update_data->party->emailAddresses[] = array('type' => $exploded_field[1], 'address' => $value);
+						} elseif( strpos($crm_field, '+') == false ) {
 
-						} elseif ( $exploded_field[0] == 'address' ) {
+							// If there is NO "+" sign in the field
+							$update_data->party->{$crm_field} = $value;
 
-							if( ! isset( $update_data->party->addresses ) ) {
+						} else {
 
-								$update_data->party->addresses =  array( array('type' => $exploded_field[1], $exploded_field[2] => $value) );
+							$exploded_field = explode('+', $crm_field);
 
-							} else {
+							if( $exploded_field[0] == 'email' ) {
 
-								$found_address = false;
-								foreach( $update_data->party->addresses as $i => $address ) {
+								if( ! isset( $update_data->party->emailAddresses ) ) {
+									$update_data->party->emailAddresses =  array();
+								}
 
-									if( $address['type'] == $exploded_field[1] ) {
+								$update_data->party->emailAddresses[] = array('type' => $exploded_field[1], 'address' => $value);
 
-										$found_address = true;
-										$update_data->party->addresses[$i][$exploded_field[2]] = $value;
+							} elseif ( $exploded_field[0] == 'address' ) {
 
+								if( ! isset( $update_data->party->addresses ) ) {
+
+									$update_data->party->addresses =  array( array('type' => $exploded_field[1], $exploded_field[2] => $value) );
+
+								} else {
+
+									$found_address = false;
+									foreach( $update_data->party->addresses as $i => $address ) {
+
+										if( $address['type'] == $exploded_field[1] ) {
+
+											$found_address = true;
+											$update_data->party->addresses[$i][$exploded_field[2]] = $value;
+
+										}
+
+									}
+
+									if( ! $found_address ) {
+										$update_data->party->addresses[] = array( 'type' => $exploded_field[1], $exploded_field[2] => $value );
 									}
 
 								}
 
-								if( ! $found_address ) {
-									$update_data->party->addresses[] = array( 'type' => $exploded_field[1], $exploded_field[2] => $value );
+							} elseif ( $exploded_field[0] == 'phone' ) {
+
+								if( ! isset( $update_data->party->phoneNumbers ) ) {
+									$update_data->party->phoneNumbers =  array();
 								}
 
-							}
+								$update_data->party->phoneNumbers[] = array('type' => $exploded_field[1], 'number' => $value);
 
-						} elseif ( $exploded_field[0] == 'phone' ) {
+							} 
 
-							if( ! isset( $update_data->party->phoneNumbers ) ) {
-								$update_data->party->phoneNumbers =  array();
-							}
-
-							$update_data->party->phoneNumbers[] = array('type' => $exploded_field[1], 'number' => $value);
-
-						} 
+						}
 
 					}
 
@@ -578,11 +609,14 @@ class WPF_Capsule {
 			return false;
 		}
 
+		if( ! isset( $data['type'] ) ) {
+			$data['type'] = 'person';
+		}
+
 		$update_data = (object) array(
 			'party' => (object) array(
-				'type'	=> 'person'
+				'type'	=> $data['type']
 			)
-
 		);
 
 		// Determine if we need to load the contact first to get the field IDs
@@ -658,7 +692,13 @@ class WPF_Capsule {
 					if( $crm_field == $field_data['crm_field'] ) {
 
 						// This means that we've found that field in capsule-fields.php and it needs to be treated specially
-						if( strpos($crm_field, '+') == false ) {
+
+						if( $crm_field == 'organisation' ) {
+							
+							// Organisation needs to be sent as an array
+							$update_data->party->{$crm_field} = array( 'name' => $value );
+
+						} elseif( strpos($crm_field, '+') == false ) {
 
 							// If there is NO "+" sign in the field
 							$update_data->party->{$crm_field} = $value;

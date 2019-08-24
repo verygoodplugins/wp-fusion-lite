@@ -98,8 +98,16 @@ class WPF_Drip_Admin {
 
 	public function add_default_fields( $options ) {
 
-		if ( $options['connection_configured'] == true && empty( $options['contact_fields']['user_email']['crm_field'] ) ) {
-			$options['contact_fields']['user_email']['crm_field'] = 'email';
+		if ( $options['connection_configured'] == true ) {
+
+			require_once dirname( __FILE__ ) . '/drip-fields.php';
+
+			foreach ( $options['contact_fields'] as $field => $data ) {
+
+				if ( isset( $drip_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
+					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $drip_fields[ $field ] );
+				}
+			}
 		}
 
 		return $options;
@@ -120,7 +128,7 @@ class WPF_Drip_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'Drip Site Tracking', 'wp-fusion' ),
+			'title'   => __( 'Drip Settings', 'wp-fusion' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -130,6 +138,14 @@ class WPF_Drip_Admin {
 		$site_tracking['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion' ),
 			'desc'    => __( 'Enable <a target="_blank" href="http://kb.getdrip.com/general/installing-your-javascript-snippet/">Drip site tracking</a>.', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main'
+		);
+
+		$site_tracking['email_change_event'] = array(
+			'title'   => __( 'Email Change Event', 'wp-fusion' ),
+			'desc'    => __( 'Send an <code>Email Changed</code> event when a user changes their email address.', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'

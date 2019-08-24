@@ -47,25 +47,6 @@ class WPF_Shortcodes {
 			return false;
 		}
 
-		// If admins are excluded from restrictions
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
-			return do_shortcode( shortcode_unautop( $content ) );
-		}
-
-		if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
-
-			if ( $current_filter == 'unlock-all' ) {
-
-				return do_shortcode( shortcode_unautop( $content ) );
-
-			} elseif ( $current_filter == 'lock-all' ) {
-
-				return false;
-
-			}
-
-		}
-
 		$user_tags = wp_fusion()->user->get_tags();
 
 		$proceed_tag = false;
@@ -139,7 +120,7 @@ class WPF_Shortcodes {
 			}
 
 			// If we're overriding
-			if ( $current_filter == get_query_var( 'wpf_tag' ) ) {
+			if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
 				if ( in_array( $current_filter, $tags ) ) {
 					return false;
 				}
@@ -162,6 +143,11 @@ class WPF_Shortcodes {
 		}
 
 		global $post;
+
+		// If admins are excluded from restrictions
+		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+			$can_access = true;
+		}
 
 		$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $post->ID, $tags_split );
 
@@ -219,12 +205,16 @@ class WPF_Shortcodes {
 
 		$atts = shortcode_atts( array('field' => '', 'date-format' => ''), $atts );
 
-		if( empty( $atts['field'] ) ) {
+		if ( empty( $atts['field'] ) ) {
 			return;
 		}
 
-		if( ! is_user_logged_in() ) {
+		if ( ! is_user_logged_in() ) {
 			return do_shortcode( $content );
+		}
+
+		if ( $atts['field'] == 'user_id' ) {
+			$atts['field'] = 'ID';
 		}
 
 		$user_data = get_userdata( get_current_user_id() );
@@ -238,6 +228,8 @@ class WPF_Shortcodes {
 			$value = get_user_meta( get_current_user_id(), $atts['field'], true );
 
 		}
+
+		$value = apply_filters( 'wpf_user_meta_shortcode_value', $value, $atts['field'] );
 
 		if( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {
 

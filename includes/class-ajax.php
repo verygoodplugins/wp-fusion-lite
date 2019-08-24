@@ -14,8 +14,11 @@ class WPF_AJAX {
 		add_action( 'wp_ajax_apply_tags', array( $this, 'apply_tags' ) );
 		add_action( 'wp_ajax_nopriv_apply_tags', array( $this, 'apply_tags' ) );
 
+		add_action( 'wp_ajax_remove_tags', array( $this, 'remove_tags' ) );
+		add_action( 'wp_ajax_nopriv_remove_tags', array( $this, 'remove_tags' ) );
+
 		add_action( 'wp_ajax_update_user', array( $this, 'update_user' ) );
-		add_action( 'wp_ajax_nopriv_update_user', array( $this, 'update_user' ) );
+		//add_action( 'wp_ajax_nopriv_update_user', array( $this, 'update_user' ) );
 
 	}
 
@@ -55,6 +58,41 @@ class WPF_AJAX {
 	}
 
 	/**
+	 * Applies tags to a given user via AJAX call
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function remove_tags() {
+
+		$tags = $_POST['tags'];
+
+		if( isset( $_POST['user_id'] ) ) {
+			$user_id = intval($_POST['user_id']);
+		} else {
+			$user_id = get_current_user_id();
+		}
+
+		if( ! is_array( $tags ) ) {
+			$tags = explode(',', $tags);
+		}
+
+		$tags = array_map('sanitize_text_field', $tags);
+
+		$tags_to_remove = array();
+
+		foreach ( $tags as $tag ) {
+			$tags_to_remove[] = wp_fusion()->user->get_tag_id( $tag );
+		}
+
+		wp_fusion()->user->remove_tags( $tags_to_remove, $user_id );
+
+		die();
+
+	}
+
+	/**
 	 * Updates contact via AJAX call
 	 *
 	 * @access public
@@ -71,7 +109,9 @@ class WPF_AJAX {
 			$user_id = get_current_user_id();
 		}
 
-		if( is_array( $update_data ) ) {
+		if ( is_array( $update_data ) ) {
+
+			$update_data = array_map( 'sanitize_text_field', $update_data );
 
 			// Figure out how we're doing the update
 

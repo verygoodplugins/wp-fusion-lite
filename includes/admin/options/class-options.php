@@ -163,8 +163,8 @@ class WPF_Options {
 			do_action( 'wpf_settings_page_init' );
 
 			// Set options based on configured settings
-			$this->options = apply_filters( $this->setup['project_slug'] . '_initialize_options', $this->options);
-			wp_fusion()->settings->options = $this->options;
+			// $this->options = apply_filters( $this->setup['project_slug'] . '_initialize_options', $this->options);
+			// wp_fusion()->settings->options = $this->options;
 
 			// Load in all pluggable settings
 			$settings = apply_filters( $this->setup['project_slug'] . '_configure_settings', $this->settings, $this->options);
@@ -853,6 +853,20 @@ class WPF_Options {
 
 					// For each part of the field (begin, content, and end) check to see if a user-specified override is available in the child class
 
+					$defaults = $this->default_setting;
+
+					if( has_filter( 'default_field_' . $setting['type'] ) ) {
+
+						$defaults = array_merge( $defaults, apply_filters( 'default_field_' . $setting['type'], $setting ) );
+
+					} elseif ( method_exists( $this, 'default_field_' . $setting['type'] ) ) {
+
+						$defaults = array_merge( $defaults, call_user_func( array( $this, 'default_field_' . $setting['type'] ) ) );
+
+					}
+
+					$setting = array_merge( $defaults, $setting );
+
 					/**
 					 * "field_begin" override
 					 */
@@ -1330,8 +1344,9 @@ class WPF_Options {
 	 */
 	private function show_field_checkboxes($id, $field) {
 
-		if(!isset($field['class']))
-			$field['class'] = '';
+		if( ! is_array( $this->options[$id] ) ) {
+			$this->options[$id] = array();
+		}
 
 		foreach( $field['options'] as $value => $label ) {
 
@@ -1381,14 +1396,6 @@ class WPF_Options {
 
 		$i = 0;
 
-		if( ! isset( $field['class'] ) ) {
-			$field['class'] = false;
-		}
-
-		if( ! isset( $field['disabled'] ) ) {
-			$field['disabled'] = false;
-		}
-
 		foreach($field['choices'] as $value => $label) {
 
 			echo '<input class="radio '.$field['class'].'" type="radio" name="'.$this->option_group.'['.$id.']" id="'.$id.$i.'" value="'.esc_attr($value).'" '.checked($this->options[$id], $value, false).' '.($field['disabled'] ? 'disabled=true' : '').'><label for="'.$id.$i.'">'.$label.'</label>';
@@ -1431,13 +1438,15 @@ class WPF_Options {
 	 */
 	private function show_field_multi_select($id, $field, $subfield_id = null) {
 
-		if(empty($this->options[$id]))
-			{$this->options[$id] = array();}
+		if(empty($this->options[$id])) {
+			$this->options[$id] = array();
+		}
 
 		echo '<select multiple="multiple" id="'.($subfield_id ? $subfield_id : $id).'" class="select4 '.$field['class'].'" name="'.$this->option_group.'['.$id.'][]'.($subfield_id ? '['.$subfield_id.']' : '').'" ' . ($field['disabled'] ? 'disabled="true" ' : '') . ($field['placeholder'] ? 'data-placeholder="' . $field['placeholder'] .'" ' : '') . '>';
 
-		if(isset($field['placeholder']))
-			{echo '<option></option>';}
+		if(isset($field['placeholder'])) {
+			echo '<option></option>';
+		}
 
 		foreach((array)$field['choices'] as $value => $label) {
 			echo '<option value="'.esc_attr($value).'"'.selected(true, in_array($value, $this->options[$id]), false).'>'.$label.'</option>';
@@ -1476,12 +1485,6 @@ class WPF_Options {
 	 * @param null   $subfield_id
 	 */
 	private function show_field_select($id, $field, $subfield_id = null) {
-
-		if(!isset($field['class']))
-			$field['class'] = '';
-
-		if(!isset($field['disabled']))
-			$field['disabled'] = false;
 
 		if(!isset($field['allow_null']))
 			$field['allow_null'] = false;
@@ -2153,7 +2156,8 @@ class WPF_Options {
 	 *
 	 */
 	private function show_field_reset($id, $field) {
-		echo '<input class="checkbox warning '.$field['class'].'" type="checkbox" id="'.$id.'" name="'.$this->option_group.'['.$id.']" value="1" '.checked($this->options[$id], 1, false).' />';
+
+		echo '<input class="checkbox warning" type="checkbox" id="'.$id.'" name="'.$this->option_group.'['.$id.']" value="1" '.checked($this->options[$id], 1, false).' />';
 
 		if($field['desc'] != '') {
 			echo '<label for="'.$id.'">'.$field['desc'].'</label>';

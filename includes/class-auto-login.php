@@ -55,6 +55,8 @@ class WPF_Auto_Login {
 
 		}
 
+		$contact_id = apply_filters( 'wpf_auto_login_contact_id', $contact_id );
+
 		if( empty( $contact_id ) && empty( $_COOKIE['wpf_contact'] ) ) {
 			return;
 		}

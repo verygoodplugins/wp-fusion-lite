@@ -574,6 +574,12 @@ class WPF_Zoho {
 			$data['Layout'] = $layout;
 		}
 
+		// Contact creation will fail if there isn't a last name
+
+		if( ! isset( $data['Last_Name'] ) ) {
+			$data['Last_Name'] = 'unknown';
+		}
+
 		$params 		= $this->params;
 		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
 

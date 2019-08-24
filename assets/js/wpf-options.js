@@ -65,11 +65,7 @@ jQuery(document).ready(function($){
 
 			button.attr('disabled', 'disabled');
 
-			button.closest('tr').children('.import-date').children('.progress-bar').width('100');
-
 			if(confirm("WARNING: All users from this import will be deleted, and any user content will be reassigned to your account.") == true) {
-
-				button.closest('tr').children('.import-date').children('.progress-bar').width($('#import-groups').width());
 
 		        var data = {
 					'action'	: 'delete_import_group',
@@ -80,14 +76,11 @@ jQuery(document).ready(function($){
 
 					if(response.success == true) {
 						button.closest('tr').remove();
-					} else {
-						button.closest('tr').children('.import-date').children('.progress-bar').width('0');
 					}
 
 				});
 
 			} else {
-				button.closest('tr').children('.import-date').children('.progress-bar').width('0');
 				button.removeAttr('disabled');
 			}
 
@@ -129,9 +122,15 @@ jQuery(document).ready(function($){
 				'action'	: 'wpf_batch_status',
 			};
 
-			$.post(ajaxurl, data, function(remaining) {
+			$.post(ajaxurl, data, function(response) {
 
-				remaining = parseInt(remaining);
+				response = $.parseJSON( response );
+
+				console.log( 'BATCH step:' );
+				console.dir( response );
+
+				var remaining = parseInt( response.remaining );
+				var total = parseInt( response.total );
 
 				if(remaining == 0 || isNaN(remaining)) {
 
@@ -159,7 +158,7 @@ jQuery(document).ready(function($){
 
 					getBatchStatus(total, title, callback);
 
-				}, 2000);
+				}, 5000);
 
 			});
 
@@ -212,10 +211,15 @@ jQuery(document).ready(function($){
 				'args'		: args
 			};
 
-			$.post(ajaxurl, data, function(total) {
+			$.post(ajaxurl, data, function( response ) {
+
+				var items = $.parseJSON( response.data );
+
+				console.log('START batch with items:');
+				console.dir( items );
 
 				button.html('Background Task Created');
-				getBatchStatus(total, action.title, callback);
+				getBatchStatus( items.length, action.title, callback);
 
 			});
 

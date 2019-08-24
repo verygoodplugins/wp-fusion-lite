@@ -45,6 +45,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Drift
 * Drip
 * Flexie
+* GetResponse
 * Gist
 * Groundhogg
 * HubSpot
@@ -54,6 +55,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * MailChimp
 * MailerLite
 * Mailjet
+* MailPoet
 * Maropost
 * Mautic
 * NationBuilder

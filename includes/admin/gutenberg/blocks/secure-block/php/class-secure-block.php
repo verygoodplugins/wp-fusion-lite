@@ -78,6 +78,8 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 	$can_access = false;
 
+	$restricted_tags = array();
+
 	if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
 
 		$can_access = true;
@@ -101,9 +103,6 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 				if( ! empty( $result ) ) {
 					$can_access = true;
 				}
-
-				$can_access = apply_filters( 'wpf_user_can_access_block', $can_access, get_current_user_id(), $restricted_tags );
-
 			}
 		}
 
@@ -130,6 +129,9 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 	$secure_content   = trim( $secure_content_dom->saveHTML() );
 	$unsecure_content = trim( $unsecure_content_dom->saveHTML() );
+
+	global $post;
+	$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $post->ID, $restricted_tags );
 
 	if ( is_user_logged_in() && $can_access ) {
 		return $secure_content;

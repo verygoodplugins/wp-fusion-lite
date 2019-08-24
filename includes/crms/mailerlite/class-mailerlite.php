@@ -60,6 +60,8 @@ class WPF_MailerLite {
 		// Slow down the batch processses to get around API limits
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
+		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
+
 	}
 
 
@@ -73,7 +75,7 @@ class WPF_MailerLite {
 	public function set_sleep_time( $seconds ) {
 
 		return 2;
-		
+
 	}
 
 
@@ -136,6 +138,23 @@ class WPF_MailerLite {
 			return $value;
 
 		}
+
+	}
+
+	/**
+	 * Allows using an email address in the ?cid parameter
+	 *
+	 * @access public
+	 * @return string Contact ID
+	 */
+
+	public function auto_login_contact_id( $contact_id ) {
+
+		if ( is_email( $contact_id ) ) {
+			$contact_id = $this->get_contact_id( urldecode( $contact_id ) );
+		}
+
+		return $contact_id;
 
 	}
 
@@ -388,7 +407,7 @@ class WPF_MailerLite {
 		} elseif( is_wp_error( $response ) ) {
 
 			return $response;
-			
+
 		}
 
 		$body_json    = json_decode( $response['body'], true );
@@ -404,7 +423,7 @@ class WPF_MailerLite {
 	 * Gets all tags currently applied to the user, also update the list of available tags
 	 *
 	 * @access public
-	 * @return void
+	 * @return array Tags
 	 */
 
 	public function get_tags( $contact_id ) {
@@ -424,7 +443,7 @@ class WPF_MailerLite {
 		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json ) ) {
-			return false;
+			return $tags;
 		}
 
 		foreach ( $body_json as $row ) {
@@ -530,10 +549,23 @@ class WPF_MailerLite {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		$send_data = array();
+
+		if( isset( $data['name'] ) ) {
+			$send_data['name'] = $data['name'];
+			unset( $data['name'] );
+		}
+
+		if( isset( $data['email'] ) ) {
+			$send_data['email'] = $data['email'];
+			unset( $data['email'] );
+		}
+
+		$send_data['fields'] = $data;
 
 		$url              = 'https://api.mailerlite.com/api/v2/subscribers';
 		$params           = $this->params;
-		$params['body']   = json_encode( $data );
+		$params['body']   = json_encode( $send_data );
 
 		$response = wp_remote_post( $url, $params );
 
@@ -568,14 +600,27 @@ class WPF_MailerLite {
 			return false;
 		}
 
+		$send_data = array();
+
+		if( isset( $data['name'] ) ) {
+			$send_data['name'] = $data['name'];
+			unset( $data['name'] );
+		}
+
+		if( isset( $data['email'] ) ) {
+			$send_data['email'] = $data['email'];
+			unset( $data['email'] );
+		}
+
+		$send_data['fields'] = $data;
+		$send_data['type']   = 'active';
+
 		$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
-		$data['objectID']  = 0;
-		$data['id']        = $contact_id;
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $data );
+		$params['body']   = json_encode( $send_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_remote_request( $url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -628,7 +673,6 @@ class WPF_MailerLite {
 				wp_remote_request( 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id, $params );
 
 				wp_fusion()->logger->handle( 'notice', $user_id, 'User email changed from <strong>' . $original_email . '</strong> to <strong>' . $data['email'] . '</strong>. Contact ID updated from <strong>' . $contact_id . '</strong> to <strong>' . $body->id . '</strong>.', array( 'source' => 'mailerlite' ) );
-
 
 			}
 

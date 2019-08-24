@@ -114,7 +114,7 @@ class WPF_ConvertFox {
 		}
 
 		$this->params = array(
-			'timeout'     => 30,
+			'timeout'     => 20,
 			'headers'     => array( 
 				'Authorization' => 'Bearer ' . $api_key,
 				'Content-Type'  => 'application/json'

@@ -188,7 +188,7 @@ class WPF_Salesforce_Admin {
 
 		$username 		= sanitize_text_field( $_POST['sf_username'] );
 		$token 			= sanitize_text_field( $_POST['sf_token'] );
-		$combined_token = sanitize_text_field( $_POST['sf_pass'] ) . $token;
+		$combined_token = $_POST['sf_pass'] . $token;
 
 		$connection = $this->crm->connect( $username, $combined_token, true );
 

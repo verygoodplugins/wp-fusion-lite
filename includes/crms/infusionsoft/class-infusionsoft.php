@@ -127,7 +127,7 @@ class WPF_Infusionsoft_iSDK {
 			$value = str_replace('&', '&amp;', $value);
 		}
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields
 			$date = date( "Ymd\T00:00:00", $value );
@@ -147,7 +147,6 @@ class WPF_Infusionsoft_iSDK {
 				return $value;
 
 			}
-
 
 		} else {
 
@@ -562,7 +561,8 @@ class WPF_Infusionsoft_iSDK {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$contact_id = $this->app->addWithDupCheck( $data, 'Email' );
+		// addCon instead of addWithDupCheck because addWithDupCheck has random errors with custom fields
+		$contact_id = $this->app->addCon( $data );
 
 		if ( is_wp_error( $contact_id ) ) {
 			return $contact_id;
@@ -626,6 +626,8 @@ class WPF_Infusionsoft_iSDK {
 
 		}
 
+		// Opt-in the email since email address changes cause opt-outs
+		$this->app->optIn( $data['Email'] );
 
 		do_action( 'wpf_contact_updated', $contact_id );
 
@@ -694,7 +696,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $user_meta;
-
 
 	}
 

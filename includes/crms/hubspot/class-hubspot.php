@@ -71,6 +71,26 @@ class WPF_HubSpot {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
+
+		// Add tracking code to header
+		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+
+		// Slow down the batch processses to get around the 100 requests per 10s limit
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+	}
+
+	/**
+	 * Slow down the batch processses to get around the 100 requests per 10s limit
+	 *
+	 * @access public
+	 * @return int Sleep time
+	 */
+
+	public function set_sleep_time( $seconds ) {
+
+		return 1;
 
 	}
 
@@ -86,10 +106,14 @@ class WPF_HubSpot {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'Y-m-d', $value );
+			// Dates are in milliseconds
+			$date = date( 'U', strtotime('today', $value) ) * 1000;
 
 			return $date;
+
+		} elseif ( $field_type == 'multiselect' && ! empty( $value ) ) {
+
+			return str_replace( ',', ';', $value );
 
 		} else {
 
@@ -119,6 +143,23 @@ class WPF_HubSpot {
 		}
 
 		return $post_data;
+
+	}
+
+	/**
+	 * Allows using an email address in the ?cid parameter
+	 *
+	 * @access public
+	 * @return string Contact ID
+	 */
+
+	public function auto_login_contact_id( $contact_id ) {
+
+		if ( is_email( $contact_id ) ) {
+			$contact_id = $this->get_contact_id( urldecode( $contact_id ) );
+		}
+
+		return $contact_id;
 
 	}
 
@@ -308,7 +349,7 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request = 'https://api.hubapi.com/contacts/v1/lists/static?count=250';
+		$request = 'https://api.hubapi.com/contacts/v1/lists/?count=250';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -323,7 +364,16 @@ class WPF_HubSpot {
 
 			foreach( $response->lists as $list ) {
 
-				$available_tags[ $list->listId ] = $list->name;
+				if( $list->listType == 'STATIC' ) {
+					$category = 'Static Lists';
+				} else {
+					$category = 'Active Lists';
+				}
+
+				$available_tags[ $list->listId ] = array(
+					'label'    => $list->name,
+					'category' => $category
+				);
 
 			}
 
@@ -409,12 +459,12 @@ class WPF_HubSpot {
 		} elseif( is_wp_error( $response ) ) {
 
 			return $response;
-			
+
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $body_json ) ) {
+		if ( empty( $body_json ) ) {
 			return false;
 		}
 
@@ -451,8 +501,12 @@ class WPF_HubSpot {
 			return $tags;
 		}
 
+		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+
 		foreach( $body_json->{'list-memberships'} as $list ) {
+
 			$tags[] = $list->{'static-list-id'};
+
 		}
 
 		return $tags;
@@ -627,7 +681,14 @@ class WPF_HubSpot {
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
 			if ( $field_data['active'] == true && isset( $body_json->properties->{$field_data['crm_field']} ) ) {
-				$user_meta[ $field_id ] = $body_json->properties->{$field_data['crm_field']}->value;
+
+				$value = $body_json->properties->{$field_data['crm_field']}->value;
+
+				if( $field_data['type'] == 'multiselect' && ! empty( $value ) ) {
+					$value = explode(';', $value);
+				}
+
+				$user_meta[ $field_id ] = $value;
 			}
 
 		}
@@ -681,6 +742,71 @@ class WPF_HubSpot {
 		}
 
 		return $contact_ids;
+
+	}
+
+
+	/**
+	 * Output tracking code
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function tracking_code_output() {
+
+		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+			return;
+		}
+
+		$trackid = wp_fusion()->settings->get( 'site_tracking_id' );
+
+		if ( empty( $trackid ) ) {
+			$trackid = $this->get_tracking_id();
+		}
+
+		echo '<!-- Start of HubSpot Embed Code -->';
+		echo '<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/' . $trackid . '.js"></script>';
+
+		if( is_user_logged_in() ) {
+
+			$user = wp_get_current_user();
+			echo '<script>';
+			echo 'var _hsq = window._hsq = window._hsq || [];';
+			echo '_hsq.push(["identify",{ email: "' . $user->user_email . '" }]);';
+			echo '</script>';
+
+		}
+
+		echo '<!-- End of HubSpot Embed Code -->';
+
+	}
+
+	/**
+	 * Gets tracking ID for site tracking script
+	 *
+	 * @access public
+	 * @return int tracking ID
+	 */
+
+	public function get_tracking_id() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request    = 'https://api.hubapi.com/integrations/v1/me';
+		$response 	= wp_remote_get( $request, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		wp_fusion()->settings->set( 'site_tracking_id', $body_json->portalId );
+
+		return $body_json->portalId;
 
 	}
 

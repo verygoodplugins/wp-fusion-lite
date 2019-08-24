@@ -54,7 +54,7 @@ class WPF_CRM_Queue {
 		$args = apply_filters( 'wpf_api_' . $method . '_args', $args );
 
 		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || defined( 'WPF_STAGING_MODE' ) ) {
-			
+
 			wp_fusion()->logger->handle( 'notice', 0, 'Staging mode enabled. Method ' . $method . ':', array( 'source' => $this->crm->slug, 'args' => $args ) );
 
 			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
@@ -68,18 +68,6 @@ class WPF_CRM_Queue {
 
 		// Queue sending data
 		if ( ( $method == 'apply_tags' || $method == 'remove_tags' || $method == 'update_contact' ) ) {
-
-			if( $method == 'update_contact' && ! isset( $args[2] ) ) {
-
-				// Possbily quit early if none of the data is mapped to CRM fields
-
-				$mapped_fields = wp_fusion()->crm_base->map_meta_fields( $args[1] );
-
-				if( empty( $mapped_fields ) ) {
-					return false;
-				}
-
-			}
 
 			$this->add_to_buffer( $method, $args );
 
@@ -107,74 +95,152 @@ class WPF_CRM_Queue {
 
 		if ( $method == 'apply_tags' || $method == 'remove_tags' ) {
 
-			$cid = $args[1];
+			$cid  = $args[1];
+			$data = $args[0];
 
-		} elseif( $method == 'update_contact' ) {
+		} elseif ( $method == 'update_contact' ) {
 
-			// If call sets $map_meta_fields to false, create separate buffer entry
-			if( isset( $args[2] ) && $args[2] == false ) {
-				$cid = $args[0] . '_nomap';
-			} else {
-				$cid = $args[0];
+			// Map meta fields here so calls can be combined
+
+			if ( ! isset( $args[2] ) || $args[2] == true ) {
+				$args[1] = wp_fusion()->crm_base->map_meta_fields( $args[1] );
+				$args[2] = false;
 			}
+
+			$cid  = $args[0];
+			$data = $args[1];
 
 		}
 
-		if ( ! isset( $this->buffer[ $method ] ) ) {
+		if ( in_array( 'combined_updates', $this->crm->supports ) ) {
 
-			$this->buffer[ $method ] = array( $cid => $args );
+			// CRMs that support tags and contact data in the same request
 
-		} elseif ( ! isset( $this->buffer[ $method ][ $cid ] ) ) {
+			$update_data = array( $method => $data );
 
-			$this->buffer[ $method ][ $cid ] = $args;
+			if ( ! isset( $this->buffer['combined_update'] ) ) {
+
+				$this->buffer['combined_update'] = array( $cid => $update_data );
+
+			} elseif ( ! isset( $this->buffer['combined_update'][ $cid ] ) ) {
+
+				$this->buffer['combined_update'][ $cid ] = $update_data;
+
+			} else {
+
+				if ( ! isset( $this->buffer['combined_update'][ $cid ][ $method ] ) ) {
+
+					$this->buffer['combined_update'][ $cid ][ $method ] = $data;
+
+				}
+
+				if ( $method == 'apply_tags' ) {
+
+					// Prevent tags getting added and removed in the same request
+
+					if ( isset( $this->buffer['combined_update'][ $cid ]['remove_tags'] ) ) {
+
+						foreach ( $data as $tag ) {
+
+							$match = array_search( $tag, $this->buffer['combined_update'][ $cid ]['remove_tags'] );
+
+							if ( $match !== false ) {
+								unset( $this->buffer['combined_update'][ $cid ]['remove_tags'][ $match ] );
+							}
+
+						}
+
+					}
+
+					$this->buffer['combined_update'][ $cid ]['apply_tags'] = array_unique( array_merge( $this->buffer['combined_update'][ $cid ]['apply_tags'], $data ) );
+
+				} elseif ( $method == 'remove_tags' ) {
+
+					// Prevent tags getting added and removed in the same request
+
+					if ( isset( $this->buffer['combined_update'][ $cid ]['apply_tags'] ) ) {
+
+						foreach ( $data as $tag ) {
+
+							$match = array_search( $tag, $this->buffer['combined_update'][ $cid ]['apply_tags'] );
+
+							if ( $match !== false ) {
+								unset( $this->buffer['combined_update'][ $cid ]['apply_tags'][ $match ] );
+							}
+
+						}
+
+					}
+
+					$this->buffer['combined_update'][ $cid ]['remove_tags'] = array_unique( array_merge( $this->buffer['combined_update'][ $cid ]['remove_tags'], $data ) );
+
+				} elseif ( $method == 'update_contact' ) {
+
+					$this->buffer['combined_update'][ $cid ]['update_contact'] = array_merge( $this->buffer['combined_update'][ $cid ]['update_contact'], $data );
+
+				}
+
+			}
 
 		} else {
 
-			if ( $method == 'apply_tags' ) {
+			// CRMs that require separate API calls for tags and contact data
 
-				// Prevent tags getting added and removed in the same request
+			if ( ! isset( $this->buffer[ $method ] ) ) {
 
-				if(isset($this->buffer[ 'remove_tags' ]) && isset($this->buffer[ 'remove_tags' ][ $cid ])) {
+				$this->buffer[ $method ] = array( $cid => $args );
 
-					foreach( $args[0] as $tag ) {
+			} elseif ( ! isset( $this->buffer[ $method ][ $cid ] ) ) {
 
-						$match = array_search($tag, $this->buffer[ 'remove_tags' ][ $cid ][0]);
+				$this->buffer[ $method ][ $cid ] = $args;
 
-						if($match !== false) {
-							unset($this->buffer[ 'remove_tags' ][ $cid ][0][$match]);
-							return;
+			} else {
+
+				if ( $method == 'apply_tags' ) {
+
+					// Prevent tags getting added and removed in the same request
+
+					if(isset($this->buffer[ 'remove_tags' ]) && isset($this->buffer['remove_tags'][ $cid ])) {
+
+						foreach( $args[0] as $tag ) {
+
+							$match = array_search($tag, $this->buffer[ 'remove_tags' ][ $cid ][0]);
+
+							if($match !== false) {
+								unset($this->buffer[ 'remove_tags' ][ $cid ][0][$match]);
+							}
+
 						}
 
 					}
 
-				}
+					$this->buffer[ 'apply_tags' ][ $cid ][0] = array_unique( array_merge( $this->buffer[ 'apply_tags' ][ $cid ][0], $args[0] ) );
 
-				$this->buffer[ 'apply_tags' ][ $cid ][0] = array_unique( array_merge( $this->buffer[ 'apply_tags' ][ $cid ][0], $args[0] ) );
+				} elseif( $method == 'remove_tags' ) {
 
-			} elseif( $method == 'remove_tags' ) {
+					// Prevent tags getting added and removed in the same request
 
-				// Prevent tags getting added and removed in the same request
+					if(isset($this->buffer[ 'apply_tags' ]) && isset($this->buffer[ 'apply_tags' ][ $cid ])) {
 
-				if(isset($this->buffer[ 'apply_tags' ]) && isset($this->buffer[ 'apply_tags' ][ $cid ])) {
+						foreach( $args[0] as $tag ) {
 
-					foreach( $args[0] as $tag ) {
+							$match = array_search($tag, $this->buffer[ 'apply_tags' ][ $cid ][0]);
 
-						$match = array_search($tag, $this->buffer[ 'apply_tags' ][ $cid ][0]);
+							if($match !== false) {
+								unset($this->buffer[ 'apply_tags' ][ $cid ][0][$match]);
+							}
 
-						if($match !== false) {
-							unset($this->buffer[ 'apply_tags' ][ $cid ][0][$match]);
-							return;
 						}
 
 					}
 
+					$this->buffer[ 'remove_tags' ][ $cid ][0] = array_unique( array_merge( $this->buffer[ 'remove_tags' ][ $cid ][0], $args[0] ) );
+
+				} elseif( $method == 'update_contact' ) {
+
+					$this->buffer[ $method ][ $cid ][1] = array_merge( $this->buffer[ $method ][ $cid ][1], $args[1] );
+
 				}
-
-				$this->buffer[ 'remove_tags' ][ $cid ][0] = array_unique( array_merge( $this->buffer[ 'remove_tags' ][ $cid ][0], $args[0] ) );
-
-			} elseif( $method == 'update_contact' ) {
-
-				$this->buffer[ $method ][ $cid ][1] = array_merge( $this->buffer[ $method ][ $cid ][1], $args[1] );
 
 			}
 
@@ -200,15 +266,18 @@ class WPF_CRM_Queue {
 			foreach ( $contacts as $cid => $args ) {
 
 				// Don't send empty data
-				if(!empty($args[0]) && !empty($args[1]) ) {
+				if ( ! empty( $args[0] ) && ! empty( $args[1] ) || $method == 'combined_update' ) {
+
+					if ( $method == 'combined_update' ) {
+
+						$args = array( $cid, $args );
+
+					}
 
 					$result = call_user_func_array( array( $this->crm, $method ), $args );
 
 					// Error handling
 					if( is_wp_error( $result ) ) {
-
-						// Handle no-map CIDs
-						$cid = str_replace('_nomap', '', $cid);
 
 						$user_id = wp_fusion()->user->get_user_id( $cid );
 
@@ -216,9 +285,11 @@ class WPF_CRM_Queue {
 							$user_id = 0;
 						}
 
-						$args[1] = wp_fusion()->crm_base->map_meta_fields( $args[1] );
-
 						wp_fusion()->logger->handle( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
+
+					} else {
+
+						do_action( 'wpf_api_did_' . $method, $args, $result );
 
 					}
 

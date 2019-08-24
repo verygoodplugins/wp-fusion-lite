@@ -39,11 +39,9 @@ class WPF_GetResponse_Admin {
 	 * @since   1.0
 	 */
 
-	public function init() {	
+	public function init() {
 
-		//add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
-		//add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
+		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 	}
 
 
@@ -58,38 +56,41 @@ class WPF_GetResponse_Admin {
 
 		$new_settings = array();
 
-		$new_settings['getresponse_lists'] = array(
-			'title'       => __( 'Campaigns', 'wp-fusion' ),
-			'desc'        => __( 'New users will be automatically added to the selected campaigns.', 'wp-fusion' ),
+		if( ! isset( $options['available_lists'] ) ) {
+			$options['available_lists'] = array();
+		}
+
+		$new_settings['getresponse_list'] = array(
+			'title'       => __( 'List', 'wp-fusion' ),
+			'desc'        => __( 'New users will be automatically added to the selected list.', 'wp-fusion' ),
 			'type'        => 'select',
-			'placeholder' => 'Select lists',
+			'placeholder' => 'Select list',
 			'section'     => 'main',
-			'choices'     => $options['available_lists']
+			'choices'     => $options['available_lists'],
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
-		if ( ! isset( $settings['create_users']['unlock']['getresponse_lists'] ) ) {
-			$settings['create_users']['unlock'][] = 'getresponse_lists';
+		if ( ! isset( $settings['create_users']['unlock']['getresponse_list'] ) ) {
+			$settings['create_users']['unlock'][] = 'getresponse_list';
 		}
 
-		$settings['getresponse_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
-
+		$settings['getresponse_list']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
 
 		$new_settings['getresponse_header'] = array(
 			'title'   => __( 'GetResponse Configuration', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['getresponse_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.GetResponse.com/integrations/api/" target="_blank">Developer API</a> settings of your GetResponse account.', 'wp-fusion' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.getresponse.com/api/" target="_blank">API settings</a> of your GetResponse account.', 'wp-fusion' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'getresponse_key' )
+			'post_fields' => array( 'getresponse_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -107,23 +108,27 @@ class WPF_GetResponse_Admin {
 
 	public function validate_import_trigger( $input, $setting ) {
 
-		$prev_value = wp_fusion()->settings->get('getresponse_add_tag');
+		$prev_value = wp_fusion()->settings->get( 'getresponse_add_tag' );
 
 		// If no changes have been made, quit early
-		if($input == $prev_value) {
+		if ( $input == $prev_value ) {
 			return $input;
 		}
 
 		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wp_fusion()->settings->get('getresponse_add_tag_rule_id');
+		$rule_id = wp_fusion()->settings->get( 'getresponse_add_tag_rule_id' );
 
-		if( ! empty( $rule_id ) ) {
+		if ( ! empty( $rule_id ) ) {
 			wp_fusion()->crm->destroy_webhook( $rule_id );
-			add_filter( 'validate_field_getresponse_add_tag_rule_id', function() { return false; } );
+			add_filter(
+				'validate_field_getresponse_add_tag_rule_id', function() {
+					return false;
+				}
+			);
 		}
 
 		// Abort if tag has been removed and no new one provided
-		if( empty( $input ) ) {
+		if ( empty( $input ) ) {
 			return $input;
 		}
 
@@ -131,11 +136,15 @@ class WPF_GetResponse_Admin {
 		$rule_id = wp_fusion()->crm->register_webhook( 'add' );
 
 		// If there was an error, make the user select the tag again
-		if($rule_id == false) {
+		if ( $rule_id == false ) {
 			return false;
 		}
 
-		add_filter( 'validate_field_getresponse_add_tag_rule_id', function() use (&$rule_id) { return $rule_id; } );
+		add_filter(
+			'validate_field_getresponse_add_tag_rule_id', function() use ( &$rule_id ) {
+				return $rule_id;
+			}
+		);
 
 		return $input;
 
@@ -150,23 +159,27 @@ class WPF_GetResponse_Admin {
 
 	public function validate_update_trigger( $input, $setting ) {
 
-		$prev_value = wp_fusion()->settings->get('getresponse_update_trigger');
+		$prev_value = wp_fusion()->settings->get( 'getresponse_update_trigger' );
 
 		// If no changes have been made, quit early
-		if( $input == $prev_value ) {
+		if ( $input == $prev_value ) {
 			return $input;
 		}
 
 		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wp_fusion()->settings->get('getresponse_update_trigger_rule_id');
+		$rule_id = wp_fusion()->settings->get( 'getresponse_update_trigger_rule_id' );
 
-		if( ! empty( $rule_id ) ) {
-			wp_fusion()->crm->destroy_webhook($rule_id);
-			add_filter( 'validate_field_getresponse_update_trigger_rule_id', function() { return false; } );
+		if ( ! empty( $rule_id ) ) {
+			wp_fusion()->crm->destroy_webhook( $rule_id );
+			add_filter(
+				'validate_field_getresponse_update_trigger_rule_id', function() {
+					return false;
+				}
+			);
 		}
 
 		// Abort if tag has been removed and no new one provided
-		if( $input == false ) {
+		if ( $input == false ) {
 			return $input;
 		}
 
@@ -174,11 +187,15 @@ class WPF_GetResponse_Admin {
 		$rule_id = wp_fusion()->crm->register_webhook( 'update' );
 
 		// If there was an error, make the user select the tag again
-		if( $rule_id == false ) {
+		if ( $rule_id == false ) {
 			return false;
 		}
-	
-		add_filter( 'validate_field_getresponse_update_trigger_rule_id', function() use (&$rule_id) { return $rule_id; } );
+
+		add_filter(
+			'validate_field_getresponse_update_trigger_rule_id', function() use ( &$rule_id ) {
+				return $rule_id;
+			}
+		);
 
 		return $input;
 
@@ -203,9 +220,7 @@ class WPF_GetResponse_Admin {
 				if ( isset( $getresponse_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $getresponse_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
@@ -245,13 +260,11 @@ class WPF_GetResponse_Admin {
 		echo '</tr>';
 
 		echo '</table><div id="connection-output"></div>';
-		if( wp_fusion()->crm->slug == 'getresponse' ) {
+		if ( wp_fusion()->crm->slug == 'getresponse' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 		echo '</div>'; // close #GetResponse div
 		echo '<table class="form-table">';
-
-
 
 	}
 

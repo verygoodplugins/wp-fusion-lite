@@ -51,6 +51,7 @@ class WPF_ConvertKit {
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_action( 'wpf_ck_unsubscribed', array( $this, 'process_unsubscribe' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
@@ -91,6 +92,40 @@ class WPF_ConvertKit {
 		}
 
 		return $post_data;
+
+	}
+
+	/**
+	 * Handles unsubscribe notifications and sends notification email
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function process_unsubscribe() {
+
+		$payload = json_decode( file_get_contents( 'php://input' ) );
+
+		if ( is_object( $payload ) ) {
+
+			$contact_id = $payload->subscriber->id;
+
+			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+			if ( ! empty( $user_id ) ) {
+
+				$email = wp_fusion()->settings->get( 'ck_notify_email' );
+
+				$user = get_user_by( 'id', $user_id );
+
+				wp_mail( $email, 'WP Fusion - Unsubscribe Notification', 'User with email ' . $user->user_email . ' has unsubscribed from marketing in ConvertKit.' );
+
+			}
+
+		}
+
+		wp_die( 'Success', 'Success', 200 );
+
 
 	}
 
@@ -159,11 +194,24 @@ class WPF_ConvertKit {
 
 		$access_key = wp_fusion()->settings->get('access_key');
 
-		$data = array(
-			'api_secret' 	=> $this->api_secret,
-			'target_url'    => get_home_url(null, '/?wpf_action=' . $type . '&access_key=' . $access_key . '&send_notification=false'),
-			'event'			=> array( 'name' => 'subscriber.tag_add', 'tag_id' => $tag )
-		);
+		if ( $type == 'unsubscribe' ) {
+
+			$data = array(
+				'api_secret' 	=> $this->api_secret,
+				'target_url'    => get_home_url(null, '/?wpf_action=ck_unsubscribed&access_key=' . $access_key ),
+				'event'			=> array( 'name' => 'subscriber.subscriber_unsubscribe' )
+			);
+
+
+		} else {
+
+			$data = array(
+				'api_secret' 	=> $this->api_secret,
+				'target_url'    => get_home_url(null, '/?wpf_action=' . $type . '&access_key=' . $access_key . '&send_notification=false'),
+				'event'			=> array( 'name' => 'subscriber.tag_add', 'tag_id' => $tag )
+			);
+
+		}
 
 		$response = wp_remote_post( 'https://api.convertkit.com/v3/automations/hooks', array(
 			'headers' => array( 'Content-Type' => 'application/json' ),
@@ -452,7 +500,7 @@ class WPF_ConvertKit {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if( empty( $body ) || empty( $body->tags ) ) {
-			return false;
+			return $contact_tags;
 		}
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
@@ -486,7 +534,7 @@ class WPF_ConvertKit {
 
 				unset( $contact_tags[$import_tag[0]] );
 				$this->remove_tags( array($import_tag[0]), $contact_id );
-				
+
 			}
 
 		}

@@ -57,11 +57,6 @@ $wp_fields['user_registered'] = array(
 	'label' => 'User Registered',
 );
 
-$wp_fields['country'] = array(
-	'type'  => 'select',
-	'label' => 'Country/Region',
-);
-
 $wp_fields['description'] = array(
 	'type'  => 'textarea',
 	'label' => 'Biography',

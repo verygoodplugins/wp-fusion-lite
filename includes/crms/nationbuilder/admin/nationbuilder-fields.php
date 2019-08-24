@@ -76,7 +76,7 @@ $nationbuilder_fields['billing_postcode'] = array(
 
 $nationbuilder_fields['billing_country'] = array(
 	'crm_field' => 'billing_address+country_code',
-	'crm_label'	=> 'City (Billing)'
+	'crm_label'	=> 'Country (Billing)'
 );
 
 // Primary Address
@@ -108,7 +108,7 @@ $nationbuilder_fields[] = array(
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'primary_address+country_code',
-	'crm_label'	=> 'City (Primary)'
+	'crm_label'	=> 'Country (Primary)'
 );
 
 // Home Address
@@ -140,7 +140,7 @@ $nationbuilder_fields['shipping_postcode'] = array(
 
 $nationbuilder_fields['shipping_country'] = array(
 	'crm_field' => 'home_address+country_code',
-	'crm_label'	=> 'City (Home)'
+	'crm_label'	=> 'Country (Home)'
 );
 
 // Other stuff
@@ -190,6 +190,103 @@ $nationbuilder_fields[] = array(
 	'crm_label'	=> 'Facebook Profile URL'
 );
 
+// Booleans
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_absentee_voter',
+	'crm_label' => 'Is Absentee Voter?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_active_voter',
+	'crm_label' => 'Is Active Voter?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_deceased',
+	'crm_label' => 'Is Deceased?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_donor',
+	'crm_label' => 'Is Donor?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_dropped_from_file',
+	'crm_label' => 'Is Dropped From File?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_early_voter',
+	'crm_label' => 'Is Early Voter?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_fundraiser',
+	'crm_label' => 'Is Fundraiser?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_ignore_donation_limits',
+	'crm_label' => 'Is Ignore Donation Limits?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_leaderboardable',
+	'crm_label' => 'Is Leaderboarable?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_mobile_bad',
+	'crm_label' => 'Is Mobile Bad?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_permanent_absentee_voter',
+	'crm_label' => 'Is Permanent Absentee Voter?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_possible_duplicate',
+	'crm_label' => 'Is Possible Duplicate?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_profile_private',
+	'crm_label' => 'Is Profile Private?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_profile_searchable',
+	'crm_label' => 'Is Profile Searchable?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_prospect',
+	'crm_label' => 'Is Prospect?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_supporter',
+	'crm_label' => 'Is Supporter?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_survey_question_private',
+	'crm_label' => 'Is Survey Question Private?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'is_volunteer',
+	'crm_label' => 'Is Volunteer?',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'party_member',
+	'crm_label' => 'Is Party Member?',
+);
+
 // Fields to ignore (for now)
 
 $nationbuilder_ignore_fields = array(
@@ -210,7 +307,6 @@ $nationbuilder_ignore_fields = array(
 	'has_facebook',
 	'id',
 	'is_twitter_follower',
-	'is_volunteer',
 	'judicial_district',
 	'labour_region',
 	'linkedin_id',
@@ -300,23 +396,6 @@ $nationbuilder_ignore_fields = array(
 	'invoice_payments_referred_amount_in_cents',
 	'invoices_amount_in_cents',
 	'invoices_count',
-	'is_absentee_voter',
-	'is_active_voter',
-	'is_deceased',
-	'is_donor',
-	'is_dropped_from_file',
-	'is_early_voter',
-	'is_fundraiser',
-	'is_ignore_donation_limits',
-	'is_leaderboardable',
-	'is_mobile_bad',
-	'is_permanent_absentee_voter',
-	'is_possible_duplicate',
-	'is_profile_private',
-	'is_profile_searchable',
-	'is_prospect',
-	'is_supporter',
-	'is_survey_question_private',
 	'last_call_id',
 	'last_contacted_at',
 	'last_contacted_by',
@@ -341,7 +420,6 @@ $nationbuilder_ignore_fields = array(
 	'page_slug',
 	'parent',
 	'parent_id',
-	'party_member',
 	'phone_normalized',
 	'phone_time',
 	'precinct_code',

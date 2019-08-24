@@ -6,9 +6,14 @@
 class WPF_Batch {
 
 	/**
-	 * @var WP_Example_Process
+	 * @var WPF_Background_Process
 	 */
 	public $process;
+
+	/**
+	 * @var WPF_Async_Process
+	 */
+	public $async;
 
 	/**
 	 * Get things started
@@ -89,6 +94,7 @@ class WPF_Batch {
 
 	}
 
+
 	/**
 	 * Show batch status bar at the top of settings page
 	 *
@@ -100,17 +106,22 @@ class WPF_Batch {
 
 		$active = false;
 
+		$status = array(
+			'total'     => 0,
+			'remaining' => 0,
+		);
+
 		// Get process status / try and restart stalled processes
 		if ( $this->process->is_process_running() == true ) {
 
 			$active = true;
-			$remaining = $this->process->get_queue_remaining();
+			$status = $this->process->get_status();
 
 		} elseif ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
 
-			$remaining = $this->process->get_queue_remaining();
+			$status = $this->process->get_status();
 
-			if( ! empty( $remaining ) ) {
+			if( ! empty( $status ) ) {
 
 				$this->process->dispatch();
 				$active = true;
@@ -119,11 +130,15 @@ class WPF_Batch {
 
 		}
 
+		$total     = intval( $status['total'] );
+		$remaining = intval( $status['remaining'] );
+		$done = $total - $remaining;
+
 		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . $remaining . '"' : '' ) . '>';
 		echo '<i class="fa fa-li fa-spin fa-spinner"></i><p><span class="title"><strong>Background operation running:</strong></span> <span class="status">';
 
 		if ( $active ) {
-			echo 'Processing ' . $remaining . ' records ';
+			echo 'Processing ' . $done . ' of ' . $total . ' records ';
 		}
 
 		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">Cancel</a></p>';
@@ -161,7 +176,7 @@ class WPF_Batch {
 
 		$this->process->save()->dispatch();
 
-		echo count( $objects );
+		wp_send_json_success( json_encode( $objects ) );
 
 		die();
 
@@ -176,7 +191,7 @@ class WPF_Batch {
 
 	public function batch_status() {
 
-		echo $this->process->get_queue_remaining();
+		echo json_encode( $this->process->get_status() );
 
 		die();
 
@@ -197,7 +212,7 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Quick add a single item to the queue
+	 * Quick add a single item for async request
 	 *
 	 * @since 3.24.2
 	 * @return void
@@ -205,7 +220,7 @@ class WPF_Batch {
 
 	public function quick_add( $action, $args ) {
 
-		if( empty( $this->process ) ) {
+		if ( empty( $this->process ) ) {
 			$this->includes();
 			$this->init();
 		}
@@ -228,11 +243,11 @@ class WPF_Batch {
 
 		if( is_wp_error( $contact_ids ) ) {
 
-			wp_fusion()->logger->handle( 'error', 0, 'Error performing batch operation: ' . $contact_ids->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
+			wp_fusion()->logger->handle( 'error', 0, 'Error performing batch operation: ' . $contact_ids->get_error_message(), array( 'source' => 'batch-process' ) );
 			return false;
 
 		} elseif ( empty( $contact_ids ) ) {
-			
+
 			return false;
 
 		}
@@ -277,6 +292,10 @@ class WPF_Batch {
 	 */
 
 	public function import_users_step( $contact_id, $args ) {
+
+		if( $args['notify'] == 'false' ) {
+			$args['notify'] = false;
+		}
 
 		add_action( 'wpf_user_imported', array( $this, 'count_imported_user' ), 10, 2 );
 		wp_fusion()->user->import_user( $contact_id, $args['notify'], $args['role'] );

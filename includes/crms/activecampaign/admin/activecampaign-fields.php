@@ -23,6 +23,6 @@ $activecampaign_fields['phone_number'] = array(
 );
 
 $activecampaign_fields[] = array(
-	'crm_label' => 'Organization Name',
+	'crm_label' => 'Account Name',
 	'crm_field' => 'orgname'
 );

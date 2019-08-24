@@ -197,7 +197,17 @@ class WPF_Log_Handler {
 		}
 
 		$log_table_list = new WPF_Log_Table_List();
-		$log_table_list->prepare_items(); ?>
+		$log_table_list->prepare_items(); 
+
+		// Stop _wp_http_referer getting appended to the logs URL, so it doesn't get too long
+		add_filter( 'removable_query_args', function( $query_args ) {
+
+			$query_args[] = '_wp_http_referer';
+			return $query_args;
+
+		} );
+
+		?>
 
 		<div class="wrap">
 	        <h1><?php _e( 'WP Fusion Activity Log', 'wp-fusion' ); ?></h1>
@@ -450,11 +460,10 @@ class WPF_Log_Handler {
 		}
 
 		$full_trace = debug_backtrace( $debug_backtrace_arg );
-		$enabled_integrations = wp_fusion()->integrations;
 
-		$slugs = array('user-profile', 'class-api', 'access-control', 'batch-process');
+		$slugs = array( 'user-profile', 'class-api', 'access-control', 'class-auto-login', 'class-ajax' );
 
-		foreach( wp_fusion()->get_integrations() as $slug => $integration ) {
+		foreach ( wp_fusion()->get_integrations() as $slug => $integration ) {
 			$slugs[] = $slug;
 		}
 
@@ -464,13 +473,13 @@ class WPF_Log_Handler {
 
 			if ( isset( $trace['file'] ) ) {
 
-				foreach( $slugs as $slug ) {
+				foreach ( $slugs as $slug ) {
 
-					if( empty( $slug ) ) {
+					if ( empty( $slug ) ) {
 						continue;
 					}
 
-					if (strpos($trace['file'], $slug ) !== false) {
+					if ( strpos( $trace['file'], $slug ) !== false) {
 
 						$found_integrations[] = $slug;
 					}
@@ -480,11 +489,10 @@ class WPF_Log_Handler {
 
 		// Figure out most likely integration
 
-		if( ! empty( $found_integrations ) ) {
-			$result = array_count_values($found_integrations);
-			asort($result);
-			end($result);
-			$source = key($result);
+		if ( ! empty( $found_integrations ) ) {
+
+			$source = serialize( array_reverse( array_unique( $found_integrations ) ) );
+
 		} else {
 			$source = 'unknown';
 		}

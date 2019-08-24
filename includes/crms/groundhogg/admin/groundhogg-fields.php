@@ -24,12 +24,12 @@ $groundhogg_fields['phone_number'] = array(
 
 $groundhogg_fields['billing_address_1'] = array(
 	'crm_label' => 'Address 1',
-	'crm_field' => 'address'
+	'crm_field' => 'street_address_1'
 );
 
 $groundhogg_fields['billing_address_2'] = array(
 	'crm_label' => 'Address 2',
-	'crm_field' => 'address2'
+	'crm_field' => 'street_address_2'
 );
 
 $groundhogg_fields['billing_city'] = array(
@@ -39,12 +39,12 @@ $groundhogg_fields['billing_city'] = array(
 
 $groundhogg_fields['billing_state'] = array(
 	'crm_label' => 'State',
-	'crm_field' => 'state'
+	'crm_field' => 'region'
 );
 
 $groundhogg_fields['billing_postcode'] = array(
 	'crm_label' => 'Zip',
-	'crm_field' => 'zip'
+	'crm_field' => 'postal_zip'
 );
 
 $groundhogg_fields['billing_country'] = array(

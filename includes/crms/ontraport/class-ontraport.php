@@ -61,6 +61,7 @@ class WPF_Ontraport {
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_states' ), 10, 2 );
 		// add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
 
 		// Add tracking code to footer
@@ -78,9 +79,48 @@ class WPF_Ontraport {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		// Ontraport is pretty easy with this stuff
-
 		return $value;
+
+	}
+
+	/**
+	 * Formats states back into codes
+	 *
+	 * @access public
+	 * @return array Customer Data
+	 */
+
+	public function format_states( $customer_data, $order ) {
+
+		if ( isset( $customer_data['billing_state'] ) ) {
+			$customer_data['billing_state'] = $order->get_billing_state();
+		}
+
+		if ( isset( $customer_data['shipping_state'] ) ) {
+			$customer_data['shipping_state'] = $order->get_shipping_state();
+		}
+
+		// Ontraport has non-standard Australian state abbreviations
+		if ( $customer_data['billing_country'] == 'AU' ) {
+
+			if ( $customer_data['billing_state'] == 'NT' ) {
+				$customer_data['billing_state'] = 'AU_NT';
+			}
+
+			if ( $customer_data['shipping_state'] == 'NT' ) {
+				$customer_data['shipping_state'] = 'AU_NT';
+			}
+
+			if ( $customer_data['billing_state'] == 'WA' ) {
+				$customer_data['billing_state'] = 'AU_WA';
+			}
+
+			if ( $customer_data['shipping_state'] == 'WA' ) {
+				$customer_data['shipping_state'] = 'AU_WA';
+			}
+		}
+
+		return $customer_data;
 
 	}
 
@@ -187,7 +227,7 @@ class WPF_Ontraport {
 	public function handle_http_response( $response, $args, $url ) {
 
 		// Ignore on find by email requests since they'll return a 400 error if no matching email is found
-		if( strpos($url, 'ontraport') !== false && strpos($url, 'getByEmail') === false ) {
+		if( strpos( $url, 'ontraport' ) !== false && strpos( $url, 'getByEmail' ) === false ) {
 
 			$body = wp_remote_retrieve_body( $response );
 			$response_code = wp_remote_retrieve_response_code( $response );
@@ -221,7 +261,7 @@ class WPF_Ontraport {
 		}
 
 		$this->params = array(
-			'timeout'     => 15,
+			'timeout'     => 20,
 			'httpversion' => '1.1',
 			'headers'     => array(
 				"Api-Appid" => $api_url,
@@ -424,7 +464,7 @@ class WPF_Ontraport {
 		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['data']['contact_cat'] ) ) {
-			return false;
+			return array();
 		}
 
 		$cat = array_filter( explode( '*/*', $body_json['data']['contact_cat'] ) );
@@ -579,7 +619,7 @@ class WPF_Ontraport {
 
 		$response = wp_remote_post( $urlp, $nparams );
 
-		if( is_wp_error( $response ) && $response->get_error_message() == 'Object not found' ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'Object not found' ) {
 
 			// If contact ID changed, try again
 			$user_id = wp_fusion()->user->get_user_id( $contact_id );
@@ -591,7 +631,7 @@ class WPF_Ontraport {
 
 			}
 
-		} elseif( is_wp_error( $response ) ) {
+		} elseif ( is_wp_error( $response ) ) {
 			return $response;
 		}
 

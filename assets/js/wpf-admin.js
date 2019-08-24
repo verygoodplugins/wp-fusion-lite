@@ -47,21 +47,21 @@ function initializeTagsSelect(target) {
 
 				// For CRMs that support adding new tags via API
 
-					var limit = jQuery(this).attr('data-limit');
+				var limit = jQuery(this).attr('data-limit');
 
-					if(!limit || limit.length == 0)
-						limit = -1;
+				if(!limit || limit.length == 0)
+					limit = -1;
 
-					jQuery(this).select4({
-						multiple : true,
-						minimumResultsForSearch: -1,
-						tags : true,
-						maximumSelectionLength: limit,
-						insertTag: function(data, tag){
-						    tag.text = tag.text + " (add new)"
-						    data.push(tag);
-						}
-					});
+				jQuery(this).select4({
+					multiple : true,
+					minimumResultsForSearch: -1,
+					tags : true,
+					maximumSelectionLength: limit,
+					insertTag: function(data, tag){
+					    tag.text = tag.text + " (add new)"
+					    data.push(tag);
+					}
+				});
 
 			} else {
 

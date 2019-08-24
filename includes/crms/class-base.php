@@ -93,7 +93,7 @@ class WPF_CRM_Base {
 		} else {
 
 			$this->queue();
-			
+
 		}
 
 	}
@@ -254,6 +254,25 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Get the CRM field for a single key
+	 *
+	 * @access public
+	 * @return string / false
+	 */
+
+	public function get_crm_field( $meta_key ) {
+
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+
+		if ( ! empty( $contact_fields[ $meta_key ] ) && ! empty( $contact_fields[ $meta_key ]['crm_field'] ) ) {
+			return $contact_fields[ $meta_key ]['crm_field'];
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
 	 * Formats user entered data to match CRM field formats
 	 *
 	 * @access public
@@ -264,10 +283,15 @@ class WPF_CRM_Base {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
-			if( ! is_numeric( $value ) ) {
+			if( ! is_numeric( $value ) && ! empty( $value ) ) {
 				$value = strtotime( $value );
 			}
 
+			return $value;
+
+		} elseif ( false !== strpos( $field, 'add_tag_' ) ) {
+
+			// Don't modify it if it's a dynamic tag field
 			return $value;
 
 		} elseif ( ($field_type == 'multiselect' && is_array($value)) || is_array($value) ) {
@@ -301,6 +325,5 @@ class WPF_CRM_Base {
 		}
 
 	}
-
 
 }

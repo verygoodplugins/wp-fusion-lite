@@ -29,12 +29,10 @@ class WPF_Admin_Bar {
 		add_action( 'wp_before_admin_bar_render', array( $this, 'render_admin_bar' ), 100 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'admin_bar_style' ) );
 
-		add_filter( 'query_vars', array( $this, 'query_vars' ) );
-		add_action( 'pre_get_posts', array( $this, 'unset_query_arg' ) );
+		add_filter( 'wpf_get_setting_exclude_admins', array( $this, 'bypass_exclude_admins' ) );
 
-		add_filter( 'wpf_user_can_access', array( $this, 'admin_bar_overrides' ), 10, 4 );
-		add_filter( 'wpf_user_can_access_widget', array( $this, 'admin_bar_overrides_widget' ), 10, 3 );
-		add_filter( 'wpf_user_can_access_block', array( $this, 'admin_bar_overrides_block' ), 10, 3 );
+		add_filter( 'wpf_user_tags', array( $this, 'user_tags' ), 10, 2 );
+		add_filter( 'wpf_user_can_access', array( $this, 'admin_bar_overrides' ), 10, 3 );
 
 	}
 
@@ -47,211 +45,69 @@ class WPF_Admin_Bar {
 
 	public function admin_bar_style() {
 
-		wp_enqueue_script( 'wpf-admin-bar', WPF_DIR_URL . '/assets/js/wpf-admin-bar.js', array( 'jquery' ) );
 		wp_enqueue_style( 'wpf-admin-bar', WPF_DIR_URL . '/assets/css/wpf-admin-bar.css', array(), WP_FUSION_VERSION );
 
 	}
 
+
+	/**
+	 * Merges admin bar tag selection into user's tags
+	 *
+	 * @access public
+	 * @return array Tags
+	 */
+
+	public function user_tags( $user_tags, $user_id ) {
+
+		if ( ! empty( $_GET['wpf_tag'] ) ) {
+			$user_tags[] = $_GET['wpf_tag'];
+		}
+
+		return $user_tags;
+
+	}
+
+
 	/**
 	 * Allows for overriding content restriction via the admin bar
 	 *
 	 * @access public
-	 * @return bool
+	 * @return bool Can Access
 	 */
 
-	public function admin_bar_overrides( $can_access, $user_id, $post_id, $required_tags = array() ) {
+	public function admin_bar_overrides( $can_access, $user_id, $post_id ) {
 
-		if( empty( get_query_var( 'wpf_tag' ) ) ) {
+		if( empty( $_GET['wpf_tag'] ) ) {
 			return $can_access;
 		}
 
-		if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
+		if ( $_GET['wpf_tag'] == 'unlock-all' ) {
 			return true;
 		}
 
-		if ( get_query_var( 'wpf_tag' ) == 'lock-all' ) {
+		if ( $_GET['wpf_tag'] == 'lock-all' ) {
 			return false;
-		}
-
-		if ( empty( $required_tags ) ) {
-			return true;
-		}
-
-		$user_tags = wp_fusion()->user->get_tags( $user_id );
-
-		if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
-			$user_tags[] = $current_filter;
-		}
-
-		// If user has the required tag
-		$result = array_intersect( $required_tags, $user_tags );
-
-		if( ! empty( $result ) ) {
-			return true;
 		}
 
 		return $can_access;
 
 	}
 
-	/**
-	 * Allows for overriding content restriction via the admin bar
-	 *
-	 * @access public
-	 * @return mixed Instance / False
-	 */
-
-	public function admin_bar_overrides_widget( $can_access, $instance, $widget ) {
-
-		if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
-			return $instance;
-		}
-
-		if ( get_query_var( 'wpf_tag' ) == 'lock-all' ) {
-			return false;
-		}
-
-		$user_tags = wp_fusion()->user->get_tags();
-
-		if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
-			$user_tags[] = $current_filter;
-		}
-
-        if( isset( $instance[$widget->id_base . '_wpf_tags'] ) ) {
-        	$widget_tags = $instance[$widget->id_base . '_wpf_tags'];
-        } 
-       
-        if ( isset( $instance[$widget->id_base . '_wpf_tags_not'] )) {
-   			$widget_tags_not = $instance[$widget->id_base . '_wpf_tags_not'];
-        }
-
-        if( ! isset( $widget_tags ) && ! isset( $widget_tags_not ) ) {
-
-         	if( $can_access ) {
-				return $instance;
-			} else {
-				return false;
-			}
-
-		}
-
-		if( isset( $widget_tags ) ) {
-
-        	$result = array_intersect( $widget_tags, $user_tags );
-
-        	if( empty( $result ) ) {
-        		$can_access = false;
-        	}
-
-        }
-
-        if( $can_access == true && isset( $widget_tags_not ) ) {
-
-        	$result = array_intersect( $widget_tags_not, $user_tags );
-
-        	if( ! empty( $result ) ) {
-        		$can_access = false;
-        	}
-
-        }
-
-		if( $can_access ) {
-			return $instance;
-		} else {
-			return false;
-		}
-
-	}
 
 	/**
-	 * Allows for overriding content restriction via the admin bar
+	 * Bypass the Exclude Admins option when an admin bar filter is selected
 	 *
 	 * @access public
-	 * @return mixed Instance / False
+	 * @return bool Value
 	 */
 
-	public function admin_bar_overrides_block( $can_access, $instance, $block_tags ) {
+	public function bypass_exclude_admins( $value ) {
 
-		if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
-			return true;
+		if ( ! empty( $_GET['wpf_tag'] ) ) {
+			$value = false;
 		}
 
-		if ( get_query_var( 'wpf_tag' ) == 'lock-all' ) {
-			return false;
-		}
-
-		$user_tags = wp_fusion()->user->get_tags( $user_id );
-
-		$query_var = get_query_var( 'wpf_tag' );
-
-		if( ! empty( $query_var ) ) {
-			$user_tags[] = get_query_var( 'wpf_tag' );
-		}
-
-		// If user has the required tag
-		$result = array_intersect( $block_tags, $user_tags );
-
-		if( ! empty( $result ) ) {
-			return true;
-		}
-
-		return $can_access;
-
-
-	}
-
-	/**
-	 * Unregister WPF query var
-	 *
-	 * @access public
-	 * @return array Vars
-	 */
-
-	public function unset_query_arg( $query ) {
-
-		if ( is_admin() || ! $query->is_main_query() ) {
-			return;
-		}
-
-		$filter = get_query_var( 'wpf_tag' );
-
-		if ( ! empty( $filter ) ) {
-
-			$query->set( 'wpf_tag', null );
-
-			global $wp;
-
-			// unset wpf_tag var from $wp
-			unset( $wp->query_vars['wpf_tag'] );
-
-			// if in home (because $wp->query_vars is empty) and 'show_on_front' is page
-			if ( empty( $wp->query_vars ) && get_option( 'show_on_front' ) === 'page' ) {
-				// reset and re-parse query vars
-				$wp->query_vars['page_id'] = get_option( 'page_on_front' );
-				$query->parse_query( $wp->query_vars );
-
-			}
-
-			// Reset the query var now that the query has been modified
-			set_query_var( 'wpf_tag', $filter );
-
-		}
-
-	}
-
-
-	/**
-	 * Register WPF query var
-	 *
-	 * @access public
-	 * @return array Vars
-	 */
-
-	public function query_vars( $vars ) {
-
-		$vars[] = "wpf_tag";
-
-		return $vars;
+		return $value;
 
 	}
 
@@ -283,9 +139,9 @@ class WPF_Admin_Bar {
 
 	public function render_admin_bar() {
 
-		if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
+		if ( isset( $_GET['wpf_tag'] ) ) {
 
-			$current_filter = urldecode( $current_filter );
+			$current_filter = urldecode( $_GET['wpf_tag'] );
 
 			if ( $current_filter == 'unlock-all' ) {
 
@@ -315,7 +171,7 @@ class WPF_Admin_Bar {
 		$wp_admin_bar->add_menu( array( 'id' => $menu_id, 'title' => $label ) );
 
 		// If theres'a filter currently set, show the option to remove filters
-		if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
+		if ( isset( $_GET['wpf_tag'] ) ) {
 			$wp_admin_bar->add_menu( array(
 				'parent' => $menu_id,
 				'title'  => 'Remove Filters',
@@ -399,13 +255,13 @@ class WPF_Admin_Bar {
 
 			asort( $available_tags );
 
-			foreach ( $available_tags as $tag ) {
+			foreach ( $available_tags as $id => $tag ) {
 
 				$wp_admin_bar->add_menu( array(
 					'parent' => $menu_id,
 					'title'  => $tag,
-					'id'     => $tag,
-					'href'   => $current_url . '?wpf_tag=' . urlencode( $tag )
+					'id'     => $id,
+					'href'   => $current_url . '?wpf_tag=' . urlencode( $id )
 				) );
 
 			}

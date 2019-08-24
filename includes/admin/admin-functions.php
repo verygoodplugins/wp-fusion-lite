@@ -122,7 +122,28 @@ function wpf_render_tag_multiselect( $args ) {
 					continue;
 				}
 
-				echo '<option value="' . esc_attr( $id ) . '"' . ( is_null( $args["field_sub_id"] ) ? selected( true, in_array( $id, (array) $args["setting"] ), false ) : selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ] ), false ) ) . '>' . esc_html($tag) . '</option>';
+				if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+					$strict = true;
+				} else {
+					$strict = false;
+				}
+
+				echo '<option value="' . esc_attr( $id ) . '"';
+
+					if( is_null( $args["field_sub_id"] ) ) {
+
+						selected( true, in_array( $id, (array) $args["setting"], $strict ) );
+						
+					} else {
+
+						if( ! isset( $args["setting"][ $args["field_sub_id"] ] ) ) {
+							$args["setting"][ $args["field_sub_id"] ] = array();
+						}
+						
+						selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ], $strict ) );
+					}
+
+				echo '>' . esc_html($tag) . '</option>';
 
 			}
 
@@ -239,6 +260,16 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id, $field_su
 			wp_fusion()->settings->set( 'contact_fields', $contact_fields );
 
 		}
+
+	}
+
+	if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+
+		echo '<optgroup label="Tagging">';
+
+			echo '<option ' . selected( esc_attr( $setting ), 'add_tag_' . $field_id ) . ' value="add_tag_' . $field_id . '">+ Create tag(s) from value</option>';
+
+		echo '</optgroup>';
 
 	}
 

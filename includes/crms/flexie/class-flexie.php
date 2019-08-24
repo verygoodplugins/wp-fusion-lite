@@ -217,10 +217,9 @@ class WPF_Flexie {
 
 		$body_json = json_decode( $response['body'], true );
 
-			foreach ($body_json['lists'] as $list) {
-				$avaliable_lists[$list['id']] = $list['name'];
-			}
-
+		foreach ($body_json['lists'] as $list) {
+			$avaliable_lists[$list['id']] = $list['name'];
+		}
 
 		wp_fusion()->settings->set( 'available_tags', $avaliable_lists );
 

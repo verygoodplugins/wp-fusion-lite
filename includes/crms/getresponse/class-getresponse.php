@@ -48,7 +48,6 @@ class WPF_GetResponse {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		// add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-		
 	}
 
 
@@ -62,20 +61,17 @@ class WPF_GetResponse {
 
 	public function format_post_data( $post_data ) {
 
-
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-
-		if( !is_object( $payload ) ) {
+		if ( ! is_object( $payload ) ) {
 			return false;
 		}
 
-
 		$post_data['contact_id'] = $payload->user->id;
-
 
 		return $post_data;
 
@@ -113,27 +109,16 @@ class WPF_GetResponse {
 	 */
 
 	// public function handle_http_response( $response, $args, $url ) {
-
-	// 	if( strpos($url, 'getresponse') !== false ) {
-
-	// 		$code = wp_remote_retrieve_response_code( $response );
-
-	// 		if( $code == 401 ) {
-
-	// 			$response = new WP_Error( 'error', 'Invalid API key' );
-
-	// 		} else {
-
-	// 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-
-	// 		}
-
-	// 	}
-
-	// 	return $response;
-
+	// if( strpos($url, 'getresponse') !== false ) {
+	// $code = wp_remote_retrieve_response_code( $response );
+	// if( $code == 401 ) {
+	// $response = new WP_Error( 'error', 'Invalid API key' );
+	// } else {
+	// $body_json = json_decode( wp_remote_retrieve_body( $response ) );
 	// }
-
+	// }
+	// return $response;
+	// }
 	/**
 	 * Gets params for API calls
 	 *
@@ -144,43 +129,19 @@ class WPF_GetResponse {
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB
-		if ( empty( $api_key )) {
+		if ( empty( $api_key ) ) {
 			$api_key = wp_fusion()->settings->get( 'getresponse_key' );
 		}
 
 		$this->params = array(
-			'timeout'     => 30,
-			'headers'     => array(
-				'X-Auth-Token' =>  'api-key ' . $api_key,
-				'Content-Type'  	  => 'application/json'
-			)
+			'timeout' => 30,
+			'headers' => array(
+				'X-Auth-Token' => 'api-key ' . $api_key,
+				'Content-Type' => 'application/json',
+			),
 		);
 
 		return $this->params;
-	}
-
-
-	/**
-	 * AgileCRM sometimes requires an email to be submitted when contacts are modified
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users( array( 'meta_key'   => 'getresponse_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
-
-
-		if ( ! empty( $users ) ) {
-			return $users[0]->user_email;
-		} else {
-			return false;
-		}
-
 	}
 
 
@@ -204,8 +165,8 @@ class WPF_GetResponse {
 		$request  = 'https://api.getresponse.com/v3/accounts';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
-		
+		if ( is_wp_error( $response ) ) {
+
 			return $response;
 
 		}
@@ -254,28 +215,28 @@ class WPF_GetResponse {
 		$request  = 'http://api.getresponse.com/v3/tags';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach($body_json as $tag){
-			$available_tags[$tag['tagId']] = $tag['name'];
+		foreach ( $body_json as $tag ) {
+			$available_tags[ $tag['tagId'] ] = $tag['name'];
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-	
+
 	}
 
 	/**
-	* Loads all Campaigns lists
-	*
-	* @access public
-	* @return array Campaign lists
-	*/
+	 * Loads all Campaigns lists
+	 *
+	 * @access public
+	 * @return array Campaign lists
+	 */
 
 	public function sync_lists() {
 
@@ -283,8 +244,8 @@ class WPF_GetResponse {
 			$this->get_params();
 		}
 
-		$request				= 'https://api.getresponse.com/v3/campaigns';
-		$response   		= wp_remote_get( $request, $this->params );
+		$request  = 'https://api.getresponse.com/v3/campaigns';
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -298,7 +259,6 @@ class WPF_GetResponse {
 			if ( is_object( $list ) ) {
 				$available_lists[ $list->campaignId ] = $list->name;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
@@ -306,9 +266,9 @@ class WPF_GetResponse {
 		return $available_lists;
 
 	}
-		
 
-		/**
+
+	/**
 	 * Loads all custom fields from CRM and merges with local list
 	 *
 	 * @access public
@@ -321,7 +281,6 @@ class WPF_GetResponse {
 			$this->get_params();
 		}
 
-
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/getresponse-fields.php';
 
@@ -331,24 +290,26 @@ class WPF_GetResponse {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
-
 		$custom_fields = array();
-		$request = "http://api.getresponse.com/v3/custom-fields/";
-		$response   = wp_remote_get( $request, $this->params );
+		$request       = 'http://api.getresponse.com/v3/custom-fields/';
+		$response      = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
-		
-			foreach ($body_json as $field ) {
-				$custom_fields[$field['customFieldId']] = $field['name'];
-			}
+
+		foreach ( $body_json as $field ) {
+			$custom_fields[ $field['customFieldId'] ] = $field['name'];
+		}
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields ); 
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -368,25 +329,21 @@ class WPF_GetResponse {
 			$this->get_params();
 		}
 
-		$params 	  = $this->params;
-		$request      = 'https://api.getresponse.com/v3/contacts?query[email]='. $email_address;
-		$response     = wp_remote_get( $request, $params );
+		$params   = $this->params;
+		$request  = 'https://api.getresponse.com/v3/contacts?query%5Bemail%5D=' . $email_address;
+		$response = wp_remote_get( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
-
-		foreach ($body_json as $key => $contact) {
-			$body_json = $contact['contactId'];
-		}
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json ) ) {
 			return false;
 		}
 
-		return $body_json;
+		return $body_json[0]['contactId'];
 	}
 
 	/**
@@ -402,11 +359,11 @@ class WPF_GetResponse {
 			$this->get_params();
 		}
 
-		$tags 		= array();
-		$request    = 'http://api.getresponse.com/v3/contacts/'. $contact_id . '?fields=tags';
-		$response   = wp_remote_get( $request, $this->params );
+		$tags     = array();
+		$request  = 'http://api.getresponse.com/v3/contacts/' . $contact_id . '?fields=tags';
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -416,8 +373,8 @@ class WPF_GetResponse {
 			return false;
 		}
 
-		foreach( $body_json['tags'] as $tag ){
-			$tags[$tag['tagId']] = $tag['name'];
+		foreach ( $body_json['tags'] as $tag ) {
+			$tags[] = $tag['tagId'];
 		}
 
 		return $tags;
@@ -436,23 +393,21 @@ class WPF_GetResponse {
 			$this->get_params();
 		}
 
-		$email = $this->get_email_from_cid( $contact_id );
+		$apply_tags = array( 'tags' => array() );
 
-
-		foreach($tags as $tag) {
-
-			$request      		= 'https://api.getresponse.com/v3/contacts/'. $contact_id . '/tags';
-			$params           	= $this->params;
-			$params['body']  	= json_encode(array('tagId' => $tag));
-
-			$response = wp_remote_post( $request, $params );
-
-			if( is_wp_error( $response ) ) {
-				return $response;
-			}
-
+		foreach ( $tags as $tag ) {
+			$apply_tags['tags'][] = array( 'tagId' => $tag );
 		}
 
+		$request        = 'https://api.getresponse.com/v3/contacts/' . $contact_id . '/tags';
+		$params         = $this->params;
+		$params['body'] = json_encode( $apply_tags );
+
+		$response = wp_remote_post( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
 
 		return true;
 
@@ -469,7 +424,6 @@ class WPF_GetResponse {
 	public function remove_tags( $tags, $contact_id ) {
 
 		// Currently not Possible
-
 		return true;
 
 	}
@@ -492,89 +446,81 @@ class WPF_GetResponse {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$lists = wp_fusion()->settings->get( 'getresponse_lists' );
+		$list = wp_fusion()->settings->get( 'getresponse_list' );
 
 		// Allow filtering
-		$lists = apply_filters( 'wpf_getresponse_add_contact_lists', $lists );
+		$list = apply_filters( 'wpf_add_contact_lists', $list );
 
+		$contact_data = array();
 
-		// $data = array();
+		if ( ! empty( $list ) ) {
 
-		if ( ! empty( $lists ) ) {
-				$data['campaign']= array(
-					'campaignId' => $lists
-				);
-		}
+			$contact_data['campaign'] = array(
+				'campaignId' => $list,
+			);
 
-		if( empty($lists) ){
+		} else {
 
-			$request			= 'https://api.getresponse.com/v3/campaigns';
-			$response   		= wp_remote_get( $request, $this->params );
+			// Get the first list
+			$request   = 'https://api.getresponse.com/v3/campaigns';
+			$response  = wp_remote_get( $request, $this->params );
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 			foreach ( $body_json as $list ) {
 				if ( is_object( $list ) && $list->isDefault == 'true' ) {
-					$lists = $list->campaignId;
+					$first_list = $list->campaignId;
 				}
 			}
-		
-			$data['campaign'] = array(
-				'campaignId' => $lists
+
+			$contact_data['campaign'] = array(
+				'campaignId' => $first_list,
 			);
-			
+
+			wp_fusion()->settings->set( 'getresponse_list', $first_list );
+
 		}
 
-		$url              = 'https://api.getresponse.com/v3/contacts';
-		$params           = $this->params;
-		$params['body']   = json_encode( $data );
-		
+		if ( isset( $data['name'] ) ) {
+			$contact_data['name'] = $data['name'];
+			unset( $data['name'] );
+		}
+
+		if ( isset( $data['email'] ) ) {
+			$contact_data['email'] = $data['email'];
+			unset( $data['email'] );
+		}
+
+		if ( ! empty( $data ) ) {
+
+			$contact_data['customFieldValues'] = array();
+
+			foreach ( $data as $key => $value ) {
+
+				$contact_data['customFieldValues'][] = array(
+					'customFieldId' => $key,
+					'value'         => array( $value ),
+				);
+
+			}
+		}
+
+		$url            = 'https://api.getresponse.com/v3/contacts';
+		$params         = $this->params;
+		$params['body'] = json_encode( $contact_data );
+
 		$response = wp_remote_post( $url, $params );
 
-
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
-	
-		// return $body->id;
+		// GetResponse just gives us a 202 message, no contact ID
 
-
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
-
-		if( empty($crm_fields['Custom Fields']) ){
-			return $body->id;
-		}
-
-		$attributes = array();
-
-		foreach( $crm_fields['Custom Fields'] as $key => $field ){
-
-			if( isset( $data[ $key ] ) ) {
-				$attributes[ $key ] = $data[ $key ];
-			}
-		}
-
-
-		if( ! empty( $attributes ) ) {
-			$url = 'https://api.getresponse.com/v3/contacts/' . $body->id . '/custom-fields';
-			$params           = $this->params;
-			$params['body']   = json_encode( $attributes );
-
-			$response = wp_remote_post( $url, $params );
-
-		}
-
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-		return $body->id;
+		return true;
 
 	}
 
-		
+
 
 
 
@@ -586,8 +532,7 @@ class WPF_GetResponse {
 	 */
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-		//post update an existing one
-		// could update only custom att 00 check and see if main update api call needs to be sent or just custom attributes.
+
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
@@ -596,62 +541,39 @@ class WPF_GetResponse {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
 		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
 
-		$send = false;
+		$contact_data = array();
 
-		foreach ($crm_fields['Standard Fields'] as $key => $crm_field) {
-
-			if( isset( $data[$key] ) ) {
-				$send = true;
-			}	
+		if ( isset( $data['name'] ) ) {
+			$contact_data['name'] = $data['name'];
+			unset( $data['name'] );
 		}
 
-		if($send == true) {
-
-			$url              = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
-			$params           = $this->params;
-			$params['body']   = json_encode( $data );
-
-			$response = wp_remote_post( $url, $params );
-	
-
-			if( is_wp_error( $response ) ) {
-				return $response;
-			}
-
+		if ( isset( $data['email'] ) ) {
+			$contact_data['email'] = $data['email'];
+			unset( $data['email'] );
 		}
 
-		if( empty($crm_fields['Custom Fields']) ){
-			return true;
+		if ( ! empty( $data ) ) {
+			$contact_data['customFieldValues'] = $data;
 		}
 
-		foreach( $crm_fields['Custom Fields'] as $key => $field ){
+		$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
+		$params         = $this->params;
+		$params['body'] = json_encode( $contact_data );
 
-			if( isset( $data[ $key ] ) ) {
-				$attributes[ $key ] = $data[ $key ];
-			}
+		$response = wp_remote_post( $url, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
-
-		if( ! empty($attributes) ) {
-			$url = 'https://api.getresponse.com/v3/';
-			$params           = $this->params;
-			$params['body']   = json_encode( $attributes );
-			$response = wp_remote_post( $url, $params );
-
-			if( is_wp_error( $response ) ) {
-				return $response;
-			}
-			
-		}
-
 
 		return true;
-
 
 	}
 
@@ -671,20 +593,19 @@ class WPF_GetResponse {
 		$url      = 'https://app.getresponse.com/api/public/users/' . $contact_id;
 		$response = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
-		
 
-		$name = $body_json['name'];
-		$exploded_name = explode(' ', $name);
+		$name                    = $body_json['name'];
+		$exploded_name           = explode( ' ', $name );
 		$body_json['first_name'] = $exploded_name[0];
-		unset($exploded_name[0]);
-		$body_json['last_name'] = implode(' ', $exploded_name);
+		unset( $exploded_name[0] );
+		$body_json['last_name'] = implode( ' ', $exploded_name );
 
 		foreach ( $body_json as $key => $field ) {
 			foreach ( $contact_fields as $field_id => $field_data ) {
@@ -693,7 +614,7 @@ class WPF_GetResponse {
 				}
 			}
 		}
-		
+
 		foreach ( $body_json['attributes'] as $attribute ) {
 			foreach ( $contact_fields as $field_id => $field_data ) {
 				if ( $field_data['active'] == true && $attribute['name_std'] == $field_data['crm_field'] ) {
@@ -716,7 +637,6 @@ class WPF_GetResponse {
 	public function load_contacts( $tag ) {
 
 		// not possible
-
 	}
 
 

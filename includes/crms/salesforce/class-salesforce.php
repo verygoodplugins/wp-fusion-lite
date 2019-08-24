@@ -86,16 +86,57 @@ class WPF_Salesforce {
 
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
+		$defaults = array(
+			'notify'	=> false,
+			'role'		=> false
+		);
+
+		$post_data = array_merge( $defaults, $post_data );
+
 		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
 
-		$data = (string) $xml->children('http://schemas.xmlsoap.org/soap/envelope/')->Body->children('http://soap.sforce.com/2005/09/outbound')->notifications->Notification->sObject->children('urn:sobject.enterprise.soap.sforce.com')->Id;
+		$data = $xml->children('http://schemas.xmlsoap.org/soap/envelope/')->Body->children('http://soap.sforce.com/2005/09/outbound')->notifications;
 
-		if( ! empty( $data ) ) {
-			$post_data['contact_id'] = $data;
+		$notifications_count = count( $data->Notification );
+
+		if ( $notifications_count > 1 ) {
+
+			wp_fusion()->batch->includes();
+			wp_fusion()->batch->init();
+
+		}
+
+		$key = 0;
+
+		while ( $key !== $notifications_count ) {
+
+			$contact_id = (string) $data->Notification[$key]->sObject->children('urn:sobject.enterprise.soap.sforce.com')->Id;
+
+			if ( $key == 0 ) {
+
+				$post_data['contact_id'] = $contact_id;
+				$key++;
+
+				continue;
+
+			} else {
+
+				wp_fusion()->batch->process->push_to_queue( array( 'action' => 'wpf_batch_import_users', 'args' => array( $contact_id, $post_data ) ) );
+
+			}
+
+			$key++;
+
+		}
+
+		if ( $notifications_count > 1 ) {
+
+			wp_fusion()->batch->process->save()->dispatch();
+
 		}
 
 		return $post_data;
@@ -160,22 +201,25 @@ class WPF_Salesforce {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'salesforce') !== false ) {
+		if ( strpos( $url, 'salesforce') !== false ) {
 
-			$response_code = wp_remote_retrieve_response_code( $response );
+			$response_code    = wp_remote_retrieve_response_code( $response );
 			$response_message = wp_remote_retrieve_response_message( $response );
+			$body             = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( $response_code == 401 ) {
+			if ( $response_code == 401 && $body[0]->errorCode == 'INVALID_SESSION_ID' ) {
 
-				// Reauthorize
-				remove_filter( 'http_response', array( $this, 'handle_http_response' ), 10, 3 );
+				// Reauthorize and prevent looping
+				remove_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 				$this->connect(null, null, true);
+
+				$params = $this->get_params();
+				$args['headers'] = $params['headers'];
+
 				$response = wp_remote_request( $url, $args );
 
-			} if( $response_code != 200 && $response_code != 201 && $response_code != 204 && !empty( $response_message ) ) {
-
-				$body = json_decode( wp_remote_retrieve_body( $response ) );
+			} elseif ( $response_code != 200 && $response_code != 201 && $response_code != 204 && !empty( $response_message ) ) {
 
 				if( is_array( $body ) && ! empty( $body[0] ) && ! empty( $body[0]->message ) ) {
 
@@ -188,7 +232,7 @@ class WPF_Salesforce {
 				}
 
 				$response = new WP_Error( 'error', $response_message );
-				
+
 			}
 
 		}
@@ -211,7 +255,7 @@ class WPF_Salesforce {
 		$access_token = wp_fusion()->settings->get( 'sf_access_token' );
 
 		$this->params = array(
-			'timeout'     => 240,
+			'timeout'     => 20,
 			'headers'     => array( 'Authorization' => 'Bearer ' . $access_token )
 		);
 
@@ -220,7 +264,7 @@ class WPF_Salesforce {
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
 
 		return $this->params;
-		
+
 	}
 
 
@@ -250,11 +294,19 @@ class WPF_Salesforce {
 			'password' 		=> urlencode($token)
 		);
 
-		$auth_url = add_query_arg($auth_args, 'https://login.salesforce.com/services/oauth2/token');
+		$url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
+
+		$auth_url = add_query_arg( $auth_args, $url );
 		$response = wp_remote_post( $auth_url );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
+
 			return $response;
+
+		} elseif ( wp_remote_retrieve_response_code( $response ) == 404 ) {
+
+			return new WP_Error( 'error', 'Unable to resolve URL ' . $url );
+
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
@@ -485,7 +537,7 @@ class WPF_Salesforce {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if( empty( $response ) || empty( $response->records ) ) {
-				return false;
+				return $contact_tags;
 			}
 
 			foreach($response->records as $tag) {
@@ -509,7 +561,7 @@ class WPF_Salesforce {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if( empty( $response ) || empty( $response->records ) ) {
-				return false;
+				return $contact_tags;
 			}
 
 			foreach($response->records as $tag) {
@@ -723,14 +775,19 @@ class WPF_Salesforce {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		// LastName is required to create a new contact
+		if ( $this->object_type == 'Contact' && ! isset( $data['LastName'] ) ) {
+			$data['LastName'] = 'unknown';
+		}
+
 		$params['body'] = json_encode( $data );
 		$response = wp_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/', $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body = json_decode(wp_remote_retrieve_body($response));
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
 
@@ -820,6 +877,8 @@ class WPF_Salesforce {
 		$contact_ids = array();
 
 		$tag_type = wp_fusion()->settings->get('sf_tag_type', 'Topics');
+
+		// Limited to 2000 contacts right now
 
 		if( $tag_type == 'Topics' ) {
 

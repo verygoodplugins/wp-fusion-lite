@@ -4,12 +4,27 @@ jQuery(document).ready(function($){
 
 		setTimeout(function() {
 
-			var data = {
-				'action'	 : 'apply_tags',
-				'tags'		 : wpf_ajax.tags
-			};
+			if( wpf_ajax.tags !== null ) {
 
-			$.post(wpf_ajax.ajaxurl, data);
+				var data = {
+					'action'	 : 'apply_tags',
+					'tags'		 : wpf_ajax.tags
+				};
+
+				$.post(wpf_ajax.ajaxurl, data);
+
+			}
+
+			if( wpf_ajax.remove !== null ) {
+
+				var data = {
+					'action'	 : 'remove_tags',
+					'tags'		 : wpf_ajax.remove
+				};
+
+				$.post(wpf_ajax.ajaxurl, data);
+
+			}
 
 		}, wpf_ajax.delay);
 
