@@ -189,7 +189,7 @@ class WPF_AJAX {
 
 		if ( ! wp_script_is( 'wpf-apply-tags' ) && wp_fusion()->settings->get( 'link_click_tracking' ) == true ) {
 
-			wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . '/assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
+			wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . 'assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
 			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', array( 'ajaxurl' => admin_url( 'admin-ajax.php' ) ) );
 
 		}
