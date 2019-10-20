@@ -1010,7 +1010,7 @@ class WPF_Access_Control {
 
 			} else {
 
-				wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . '/assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
+				wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . 'assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
 
 				if( ! isset( $wpf_settings['apply_tags'] ) ) {
 					$wpf_settings['apply_tags'] = null;
