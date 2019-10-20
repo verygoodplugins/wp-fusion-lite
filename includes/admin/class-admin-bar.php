@@ -45,7 +45,7 @@ class WPF_Admin_Bar {
 
 	public function admin_bar_style() {
 
-		wp_enqueue_style( 'wpf-admin-bar', WPF_DIR_URL . '/assets/css/wpf-admin-bar.css', array(), WP_FUSION_VERSION );
+		wp_enqueue_style( 'wpf-admin-bar', WPF_DIR_URL . 'assets/css/wpf-admin-bar.css', array(), WP_FUSION_VERSION );
 
 	}
 
