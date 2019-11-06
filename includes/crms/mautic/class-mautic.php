@@ -82,18 +82,13 @@ class WPF_Mautic {
 		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
 		echo '})(window,document,"script","' . wp_fusion()->settings->get( 'mautic_url' ) . '","mt");';
 
-		if (is_user_logged_in()){
-			$contact_id = wp_fusion()->user->get_contact_id();
-			if (!empty($contact_id)){
-				$userdata = get_userdata( $contact_id );
-				if (!empty($userdata) && !empty($userdata->user_email)){
-					echo 'mt("send", "pageview", {"email": "'.$userdata->user_email.'"});';
-				}else{
-					echo 'mt("send", "pageview");';		
-				}
+		if (is_user_logged_in() && get_current_user_id()){			
+			$userdata = get_userdata( get_current_user_id() );
+			if (!empty($userdata) && !empty($userdata->user_email)){
+				echo 'mt("send", "pageview", {"email": "'.$userdata->user_email.'"});';
 			}else{
-				echo 'mt("send", "pageview");';	
-			}
+				echo 'mt("send", "pageview");';		
+			}			
 		}else{
 			echo 'mt("send", "pageview");';
 		}
