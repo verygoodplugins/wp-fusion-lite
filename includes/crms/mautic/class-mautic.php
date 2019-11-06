@@ -460,7 +460,33 @@ class WPF_Mautic {
 
 		return $contact['id'];
 	}
+	
+	/**
+	 * Validate a contact_id
+	 *
+	 * @access public
+	 * @return int contact_id or false
+	 */
 
+	public function validate_contact_id( $contact_id ) {
+
+		if (empty($contact_id)) {
+			return false;
+		}
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$url      = $this->url . 'api/contacts/' . $contact_id;;
+		$response = wp_remote_get( $url, $this->params );
+
+		if( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		return $contact_id;
+	}
 
 	/**
 	 * Gets all tags currently applied to the user, also update the list of available tags
