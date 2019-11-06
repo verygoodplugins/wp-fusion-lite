@@ -80,7 +80,7 @@ class WPF_Mautic {
 		echo '(function(w,d,t,u,n,a,m){w["MauticTrackingObject"]=n;';
 		echo 'w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)},a=d.createElement(t),';
 		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
-		echo '})(window,document,"script","' . wp_fusion()->settings->get( 'mautic_url' ) . '","mt");';
+		echo '})(window,document,"script","' . rtrim(wp_fusion()->settings->get( 'mautic_url' ),'/') . '/mtc.js","mt");';
 
 		    echo 'mt("send", "pageview");';
 
