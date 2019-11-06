@@ -452,13 +452,15 @@ class WPF_Mautic {
 
 		$body_json    = json_decode( $response['body'], true );
 
-		if ( empty( $body_json['contacts'] ) ) {
+		if ( !empty( $body_json['contacts'] ) ) {
+			$contact = array_shift( $body_json['contacts'] );
+
+			return $contact['id'];		
+		}elseif(!empty($_COOKIE['mtc_id'])){
+			return $_COOKIE['mtc_id'];			
+		}else{
 			return false;
-		}
-
-		$contact = array_shift( $body_json['contacts'] );
-
-		return $contact['id'];
+		}				
 	}
 
 
