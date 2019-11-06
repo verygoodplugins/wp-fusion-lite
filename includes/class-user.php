@@ -357,6 +357,12 @@ class WPF_User {
 
 		$contact_id = get_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', true );
 
+		if (!empty($contact_id)){
+			if (method_exists(wp_fusion()->crm, 'validate_contact_id')){
+				$contact_id = wp_fusion()->crm->validate_contact_id($contact_id);
+			}
+		}
+		
 		// If contact ID is already set
 		if ( ( ! empty( $contact_id ) || $contact_id == false ) && $force_update == false ) {
 			return $contact_id;
