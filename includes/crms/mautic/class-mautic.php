@@ -466,7 +466,30 @@ class WPF_Mautic {
 
 			return $contact['id'];		
 		}elseif(!empty($_COOKIE['mtc_id'])){
-			return $_COOKIE['mtc_id'];			
+			$url      = $this->url . 'api/contacts/' . $contact_id;;
+			$response = wp_remote_get( $url, $this->params );
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body_json    = json_decode( $response['body'], true );
+			if (!empty($body_json['contact']['id'])){
+				if (!empty($body_json['contact']['fields']['all']['email'])){
+					if ($body_json['contact']['fields']['all']['email'] == $email_address){
+						//contact with mtc_id have the same email as the one submitted, proceed with mtc_id
+						return $_COOKIE['mtc_id'];
+					}else{
+						//contact with mtc_id have different email than the one submitted, proceed with creating a new contact
+						return false;		
+					}
+				}else{
+					//contact with mtc_id doesn't have email address, proceed with mtc_id
+					return $_COOKIE['mtc_id'];	
+				}
+			}else{
+				//contact with mtc_id doesn't exist anymore, proceed with creating a new contact
+				return false;
+			}			
 		}else{
 			return false;
 		}				
