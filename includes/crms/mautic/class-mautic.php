@@ -112,7 +112,7 @@ class WPF_Mautic {
 
 		$contact_id = wp_fusion()->user->get_contact_id();
 
-		if( ! empty( $contact_id ) && ! isset( $_COOKIE['mtc_id'] ) ) {
+		if( ! empty( $contact_id ) && ( ! isset( $_COOKIE['mtc_id'] ) || $_COOKIE['mtc_id'] != $contact_id ) ){
 
 			setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
 
