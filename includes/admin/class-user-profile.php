@@ -172,6 +172,8 @@ class WPF_User_Profile {
 
 			}
 
+			$post_data = stripslashes_deep( $post_data );
+
 		}
 
 		return $post_data;

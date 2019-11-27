@@ -621,7 +621,9 @@ class WPF_Admin_Interfaces {
 
 	public function add_meta_box() {
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		$admin_permissions = wp_fusion()->settings->get( 'admin_permissions' );
+
+		if ( true == $admin_permissions && ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
@@ -733,8 +735,7 @@ class WPF_Admin_Interfaces {
 				'post_type'      => $post_type,
 				'posts_per_page' => 200,
 				'orderby'        => 'post_title',
-				'order'          => 'ASC',
-				'post__not_in'   => array( $post->ID )
+				'order'          => 'ASC'
 			) );
 
 			foreach ( $posts as $post ) {
@@ -744,11 +745,6 @@ class WPF_Admin_Interfaces {
 		}
 
 		echo '<p class="wpf-page-redirect-select"><label' . ( $settings['lock_content'] == 1 ? "" : ' class="disabled"' ) . ' for="wpf-redirect"><small>Redirect if access is denied:</small></label>';
-
-		// Compatibility fix for earlier versions where we stored the URL
-		if ( ! empty( $settings['redirect'] ) && ! is_numeric( $settings['redirect'] ) ) {
-			$settings['redirect'] = url_to_postid( $settings['redirect'] );
-		}
 
 		echo '<select' . ( $settings['lock_content'] == 1 ? "" : ' disabled' ) . ' id="wpf-redirect" class="select4-search" style="width: 100%;" data-placeholder="None" name="wpf-settings[redirect]">';
 
@@ -948,23 +944,12 @@ class WPF_Admin_Interfaces {
 
 	function save_meta_box_data( $post_id ) {
 
-		/*
-		 * We need to verify this came from our screen and with proper authorization,
-		 * because the save_post action can be triggered at other times.
-		 */
-
-		// Check if our nonce is set.
-		if ( ! isset( $_POST['wpf_meta_box_nonce'] ) ) {
-			return;
-		}
-
-		// Verify that the nonce is valid.
-		if ( ! wp_verify_nonce( $_POST['wpf_meta_box_nonce'], 'wpf_meta_box' ) ) {
-			return;
-		}
-
 		// If this is an autosave, our form has not been submitted, so we don't want to do anything.
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['wpf-settings'] ) ) {
 			return;
 		}
 
@@ -973,17 +958,13 @@ class WPF_Admin_Interfaces {
 			return;
 		}
 
-		if ( isset( $_POST['wpf-settings'] ) ) {
+		$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
 
-			$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
+		// Allow other plugins to save their own data
+		do_action( 'wpf_meta_box_save', $post_id, $settings );
 
-			// Allow other plugins to save their own data
-			do_action( 'wpf_meta_box_save', $post_id, $settings );
-
-			// Update the meta field in the database.
-			update_post_meta( $post_id, 'wpf-settings', $settings );
-
-		}
+		// Update the meta field in the database.
+		update_post_meta( $post_id, 'wpf-settings', $settings );
 
 	}
 

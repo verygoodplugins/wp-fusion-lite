@@ -24,6 +24,10 @@ class WPF_Zoho {
 
 	public $client_secret_eu;
 
+	public $client_secret_in;
+
+	public $client_secret_au;
+
 	public $api_domain;
 
 	/**
@@ -53,8 +57,11 @@ class WPF_Zoho {
 
 		// OAuth
 		$this->client_id 		= '1000.BC6W0X67OT9F47300RAHN6TOPDG0E3';
+
 		$this->client_secret_us = '3618d9156bc0e54d177585fcc0d6443c6791460c2a';
 		$this->client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
+		$this->client_secret_in = 'bd920ac806f5fe45c63e52fa6ab9416c14d479d20e';
+		$this->client_secret_au = '08dcc7d1734284158f1819af1e06490777a4682323';
 
 		$this->object_type = 'Contacts';
 
@@ -175,6 +182,12 @@ class WPF_Zoho {
 		if( $location == 'eu' ) {
 			$client_secret = $this->client_secret_eu;
 			$accounts_server = 'https://accounts.zoho.eu';
+		} elseif( $location == 'in' ) {
+			$client_secret = $this->client_secret_in;
+			$accounts_server = 'https://accounts.zoho.in';
+		} elseif( $location == 'au' ) {
+			$client_secret = $this->client_secret_au;
+			$accounts_server = 'https://accounts.zoho.com.au';
 		} else {
 			$client_secret = $this->client_secret_us;
 			$accounts_server = 'https://accounts.zoho.com';
@@ -213,6 +226,11 @@ class WPF_Zoho {
 			if( isset( $body_json->code ) && $body_json->code == 'INVALID_TOKEN' ) {
 
 				$access_token = $this->refresh_token();
+
+				if ( is_wp_error( $access_token ) ) {
+					return $access_token;
+				}
+
 				$args['headers']['Authorization'] = 'Zoho-oauthtoken ' . $access_token;
 
 				$response = wp_remote_request( $url, $args );

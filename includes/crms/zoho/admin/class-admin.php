@@ -64,6 +64,12 @@ class WPF_Zoho_Admin {
 			if( $_GET['location'] == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
 				$api_domain = 'https://www.zohoapis.eu';
+			} elseif( $_GET['location'] == 'in' ) {
+				$client_secret = $this->crm->client_secret_in;
+				$api_domain = 'https://www.zohoapis.in';
+			} elseif( $_GET['location'] == 'au' ) {
+				$client_secret = $this->crm->client_secret_au;
+				$api_domain = 'https://www.zohoapis.com.au';
 			} else {
 				$client_secret = $this->crm->client_secret_us;
 				$api_domain = 'https://www.zohoapis.com';

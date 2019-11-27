@@ -53,6 +53,14 @@ class WPF_Groundhogg {
 
 	public function init() {
 
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+
+		// Don't watch GH for changes if staging mode is active
+
+		if ( wp_fusion()->settings->get( 'staging_mode' ) == true ) {
+			return;
+		}
+
 		if ( $this->is_v2 ) {
 
 			add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
@@ -74,6 +82,40 @@ class WPF_Groundhogg {
 			add_action( 'wpgh_delete_tag', array( $this, 'tag_deleted' ) );
 
 		}
+
+	}
+
+	/**
+	 * Formats user entered data to match GH field formats
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( $field == 'gdpr_consent' || $field == 'terms_agreement' ) {
+
+			if( ! empty( $value ) ) {
+				$value = 'yes';
+			} else {
+				$value = 'no';
+			}
+
+		}
+
+		// Maybe fix Country values
+
+		$countries = include dirname( __FILE__ ) . '/countries.php';
+
+		foreach ( $countries as $abbr => $name ) {
+
+			if ( $value == $name ) {
+				$value = $abbr;
+			}
+		}
+
+		return $value;
 
 	}
 
@@ -573,7 +615,13 @@ class WPF_Groundhogg {
 
 			if ( $data['active'] == true && ! empty( $data['crm_field'] ) ) {
 
-				$user_meta[ $key ] = $contact->{$data['crm_field']};
+				$value = $contact->{$data['crm_field']};
+
+				if ( empty( $value ) ) {
+					continue;
+				}
+
+				$user_meta[ $key ] = $value;
 
 			}
 		}

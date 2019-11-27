@@ -77,7 +77,6 @@ class WPF_Batch {
 
 		require_once WPF_DIR_PATH . 'includes/admin/batch/class-async-request.php';
 		require_once WPF_DIR_PATH . 'includes/admin/batch/class-background-process.php';
-		require_once WPF_DIR_PATH . 'includes/admin/batch/class-batch-process.php';
 
 	}
 
@@ -90,7 +89,7 @@ class WPF_Batch {
 
 	public function init() {
 
-		$this->process = new WPF_Batch_Process();
+		$this->process = new WPF_Background_Process();
 
 	}
 
@@ -114,8 +113,11 @@ class WPF_Batch {
 		// Get process status / try and restart stalled processes
 		if ( $this->process->is_process_running() == true ) {
 
-			$active = true;
 			$status = $this->process->get_status();
+
+			if( ! empty( $status ) ) {
+				$active = true;
+			}
 
 		} elseif ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
 
@@ -165,14 +167,24 @@ class WPF_Batch {
 
 		$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
 
-		if( empty( $objects ) ) {
-			echo 0;
+		if ( empty( $objects ) ) {
+			wp_send_json_success( json_encode( $objects ) );
 			die();
 		}
 
 		foreach ( $objects as $object ) {
 			$this->process->push_to_queue( array( 'action' => 'wpf_batch_' . $hook, 'args' => array( $object, $args ) ) );
 		}
+
+		// Save status
+
+		$status = array(
+			'total'      => count( $this->process->data ),
+			'remaining'  => count( $this->process->data ),
+			'max_memory' => $this->process->get_memory_limit(),
+		);
+
+		update_site_option( 'wpfb_status', $status );
 
 		$this->process->save()->dispatch();
 
@@ -207,6 +219,8 @@ class WPF_Batch {
 	public function batch_cancel() {
 
 		$this->process->cancel_process();
+		delete_site_option( 'wpfb_status' );
+
 		die();
 
 	}
@@ -397,7 +411,7 @@ class WPF_Batch {
 
 	public function users_tags_sync_step( $user_id ) {
 
-		wp_fusion()->user->get_tags( $user_id, true );
+		wp_fusion()->user->get_tags( $user_id, true, false );
 
 	}
 

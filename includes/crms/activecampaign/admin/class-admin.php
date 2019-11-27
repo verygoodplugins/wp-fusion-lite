@@ -123,7 +123,6 @@ class WPF_ActiveCampaign_Admin {
 
 		$settings['ac_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
 
-
 		// Add site tracking option
 		$site_tracking = array();
 

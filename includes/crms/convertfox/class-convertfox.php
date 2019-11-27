@@ -142,7 +142,7 @@ class WPF_ConvertFox {
 			$this->get_params( $api_key );
 		}
 
-		$request  = "https://api.convertfox.com/tags";
+		$request  = "https://api.getgist.com/tags";
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -197,7 +197,7 @@ class WPF_ConvertFox {
 
 		$available_tags = array();
 
-		$request  = "https://api.convertfox.com/tags";
+		$request  = "https://api.getgist.com/tags";
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -240,7 +240,7 @@ class WPF_ConvertFox {
 
 		$custom_fields = array();
 
-		$request    = "https://api.convertfox.com/users?page=1&per_page=1";
+		$request    = "https://api.getgist.com/users?page=1&per_page=1";
 		$response   = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -288,7 +288,7 @@ class WPF_ConvertFox {
 		}
 
 		$contact_info = array();
-		$request      = "https://api.convertfox.com/users?email=" . urlencode( $email_address );
+		$request      = "https://api.getgist.com/users?email=" . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -319,7 +319,7 @@ class WPF_ConvertFox {
 		}
 
 		$tags 		= array();
-		$request    = 'https://api.convertfox.com/users/' . $contact_id;
+		$request    = 'https://api.getgist.com/users/' . $contact_id;
 		$response   = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -364,7 +364,7 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$url 		= 'https://api.convertfox.com/tags';
+		$url 		= 'https://api.getgist.com/tags';
 		$params 	= $this->params;
 
 		foreach( $tags as $tag ) {
@@ -401,7 +401,7 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$url 		= 'https://api.convertfox.com/tags';
+		$url 		= 'https://api.getgist.com/tags';
 		$params 	= $this->params;
 
 		foreach( $tags as $tag ) {
@@ -503,7 +503,7 @@ class WPF_ConvertFox {
 		$params           = $this->params;
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( 'https://api.convertfox.com/users', $params );
+		$response = wp_remote_post( 'https://api.getgist.com/users', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -586,7 +586,7 @@ class WPF_ConvertFox {
 		$params           = $this->params;
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( 'https://api.convertfox.com/users', $params );
+		$response = wp_remote_post( 'https://api.getgist.com/users', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -608,7 +608,7 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$url      = 'https://api.convertfox.com/users/' . $contact_id;
+		$url      = 'https://api.getgist.com/users/' . $contact_id;
 		$response = wp_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -680,7 +680,7 @@ class WPF_ConvertFox {
 
 		while($proceed == true) {
 
-			$url      = 'https://api.convertfox.com/users?page=' . $page . '&tags=' . $tag;
+			$url      = 'https://api.getgist.com/users?page=' . $page . '&tags=' . $tag;
 			$response = wp_remote_get( $url, $this->params );
 
 			if( is_wp_error( $response ) ) {

@@ -43,6 +43,38 @@ class WPF_CRM_Queue {
 	}
 
 	/**
+	 * Passes get requests to the base CRM class
+	 *
+	 * @access  public
+	 * @return  void
+	 */
+
+	public function __set( $key, $value ) {
+
+		if ( is_object( $this->crm ) ) {
+			$this->crm->{$key} = $value;
+		}
+
+	}
+
+	/**
+	 * Checks for properties in the base CRM class
+	 *
+	 * @access  public
+	 * @return  bool
+	 */
+
+	public function __isset( $name ) {
+
+		if ( is_object( $this->crm ) && property_exists( $this->crm, $name ) ) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
 	 * Routes queue-able API calls to the buffer
 	 *
 	 * @access  public
@@ -76,6 +108,8 @@ class WPF_CRM_Queue {
 		} else {
 
 			$result = call_user_func_array( array( $this->crm, $method ), $args );
+
+			$result = apply_filters( 'wpf_api_' . $method . '_result', $result, $args );
 
 			return $result;
 
@@ -277,13 +311,9 @@ class WPF_CRM_Queue {
 					$result = call_user_func_array( array( $this->crm, $method ), $args );
 
 					// Error handling
-					if( is_wp_error( $result ) ) {
+					if ( is_wp_error( $result ) ) {
 
 						$user_id = wp_fusion()->user->get_user_id( $cid );
-
-						if( $user_id == false ) {
-							$user_id = 0;
-						}
 
 						wp_fusion()->logger->handle( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
 

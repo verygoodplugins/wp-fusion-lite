@@ -78,20 +78,20 @@ class WPF_AgileCRM {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
 			return;
 		}
 
 		$tracking_id = wp_fusion()->settings->get( 'site_tracking_acct' );
 
-		if( empty( $tracking_id ) ) {
+		if ( empty( $tracking_id ) ) {
 			return;
 		}
 
 		$domain = wp_fusion()->settings->get( 'agile_domain' );
 
-		if( is_user_logged_in() ) {
-			$user = get_userdata( get_current_user_id() );
+		if ( is_user_logged_in() ) {
+			$user  = get_userdata( get_current_user_id() );
 			$email = $user->user_email;
 		}
 
@@ -102,7 +102,7 @@ class WPF_AgileCRM {
 		echo '_agile.track_page_view();';
 		echo '_agile_execute_web_rules();';
 
-		if( isset( $email ) ) {
+		if ( isset( $email ) ) {
 
 			echo '_agile.set_email("' . $email . '");';
 
@@ -124,8 +124,9 @@ class WPF_AgileCRM {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		if ( isset( $post_data['email'] ) ) {
 
@@ -137,19 +138,17 @@ class WPF_AgileCRM {
 
 			} else {
 
-				$contact_id = $this->get_contact_id( $post_data['email'] );
+				$contact_id              = $this->get_contact_id( $post_data['email'] );
 				$post_data['contact_id'] = $contact_id;
 
 			}
-
 		} else {
 
 			$payload = json_decode( file_get_contents( 'php://input' ) );
 
-			if(is_object($payload)) {
+			if ( is_object( $payload ) ) {
 				$post_data['contact_id'] = $payload->eventData->id;
 			}
-
 		}
 
 		return $post_data;
@@ -182,20 +181,19 @@ class WPF_AgileCRM {
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( "m/d/Y", $value );
+			$date = date( 'm/d/Y', $value );
 
 			return $date;
 
 		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
 			if ( empty( $value ) ) {
-				//If checkbox is unselected
+				// If checkbox is unselected
 				return 'off';
 			} else {
 				// If checkbox is selected
 				return 'on';
 			}
-
 		} else {
 
 			return $value;
@@ -229,7 +227,6 @@ class WPF_AgileCRM {
 					if ( strpos( $crm_key, '+' ) !== false ) {
 
 						// For system fields with subtypes
-
 						$field_components = explode( '+', $crm_key );
 
 						if ( $field_components[0] == 'address' ) {
@@ -243,40 +240,33 @@ class WPF_AgileCRM {
 								'type'    => 'SYSTEM',
 								'name'    => $field_components[0],
 								'subtype' => $field_components[1],
-								'value'   => $value
+								'value'   => $value,
 							);
 
 							continue 2;
 
 						}
-
-
 					} else {
 
 						// For standard system fields
-
 						$contact_data['properties'][] = array(
 							'type'  => 'SYSTEM',
 							'name'  => $crm_key,
-							'value' => $value
+							'value' => $value,
 						);
 
 						continue 2;
 
 					}
-
 				}
-
 			}
 
 			// CUSTOM FIELDS
-
 			// If field didn't match a system field
-
 			$contact_data['properties'][] = array(
 				'type'  => 'CUSTOM',
 				'name'  => $crm_key,
-				'value' => $value
+				'value' => $value,
 			);
 
 		}
@@ -287,7 +277,7 @@ class WPF_AgileCRM {
 			$contact_data['properties'][] = array(
 				'type'  => 'SYSTEM',
 				'name'  => 'address',
-				'value' => json_encode($address_data)
+				'value' => json_encode( $address_data ),
 			);
 
 		}
@@ -305,17 +295,16 @@ class WPF_AgileCRM {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'agilecrm') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'agilecrm' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
-			$response_code = wp_remote_retrieve_response_code( $response );
+			$response_code    = wp_remote_retrieve_response_code( $response );
 			$response_message = wp_remote_retrieve_response_message( $response );
 
-			if( $response_code > 204 && ! empty( $response_message ) ) {
+			if ( $response_code > 204 && ! empty( $response_message ) ) {
 
 				$response = new WP_Error( 'error', $response_message . '. ' . wp_remote_retrieve_body( $response ) );
-				
-			}
 
+			}
 		}
 
 		return $response;
@@ -338,19 +327,19 @@ class WPF_AgileCRM {
 			$this->domain = wp_fusion()->settings->get( 'agile_domain' );
 			$user_email   = wp_fusion()->settings->get( 'agile_user_email' );
 			$api_key      = wp_fusion()->settings->get( 'agile_key' );
-			
+
 		} else {
 			$this->domain = $agile_domain;
 		}
 
 		$this->params = array(
-			'timeout'     => 30,
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'headers' => array(
+			'timeout'    => 30,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
 				'Authorization' => 'Basic ' . base64_encode( $user_email . ':' . $api_key ),
 				'Content-type'  => 'application/json',
-				'Accept'        => 'application/json'
-			)
+				'Accept'        => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -366,20 +355,23 @@ class WPF_AgileCRM {
 
 	public function get_email_from_cid( $contact_id ) {
 
-		$users = get_users( array( 'meta_key'   => 'agilecrm_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
+		$users = get_users(
+			array(
+				'meta_key'   => 'agilecrm_contact_id',
+				'meta_value' => $contact_id,
+				'fields'     => array( 'user_email' ),
+			)
+		);
 
 		if ( ! empty( $users ) ) {
 
 			return $users[0]->user_email;
 
 		} else {
-			
+
 			$contact = $this->load_contact( $contact_id );
 
-			if( !is_wp_error( $contact ) ) {
+			if ( ! is_wp_error( $contact ) ) {
 
 				return $contact['user_email'];
 
@@ -388,7 +380,6 @@ class WPF_AgileCRM {
 				return false;
 
 			}
-
 		}
 
 	}
@@ -411,7 +402,7 @@ class WPF_AgileCRM {
 			$this->get_params( $agile_domain, $user_email, $api_key );
 		}
 
-		$request  = "https://" . $this->domain . ".agilecrm.com/dev/api/users/current-user";
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/users/current-user';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( wp_remote_retrieve_response_code( $response ) != 200 ) {
@@ -465,10 +456,10 @@ class WPF_AgileCRM {
 			$this->get_params();
 		}
 
-		$request   = "https://" . $this->domain . ".agilecrm.com/dev/api/tags";
-		$response  = wp_remote_get( $request, $this->params );
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/tags';
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -510,10 +501,12 @@ class WPF_AgileCRM {
 
 		$custom_fields = array();
 
-		$request   = "https://" . $this->domain . ".agilecrm.com/dev/api/search/?q=%&page_size=100&type=PERSON";
-		$response  = wp_remote_get( $request, $this->params );
+		// Agile can't list custom fields so we'll query contacts instead. Not sure about the order of results. Might be oldest first.
 
-		if( is_wp_error( $response ) ) {
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/search/?q=%&page_size=100&type=PERSON';
+		$response = wp_remote_get( $request, $this->params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -526,13 +519,15 @@ class WPF_AgileCRM {
 				if ( $field_object->type == 'CUSTOM' ) {
 					$custom_fields[ $field_object->name ] = $field_object->name;
 				}
-
 			}
 		}
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -553,21 +548,21 @@ class WPF_AgileCRM {
 			$this->get_params();
 		}
 
-		$request  = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts/search/email/" . $email_address;
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/search/email/' . $email_address;
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		if( wp_remote_retrieve_response_code( $response ) == 204 ) {
+		if ( wp_remote_retrieve_response_code( $response ) == 204 ) {
 
 			// No contact found
 			return false;
 
 		}
 
-		$body_json = preg_replace('/("\w+"):(\d+)/', '\\1:"\\2"', wp_remote_retrieve_body( $response ) );
+		$body_json = preg_replace( '/("\w+"):(\d+)/', '\\1:"\\2"', wp_remote_retrieve_body( $response ) );
 		$body_json = json_decode( $body_json );
 
 		if ( empty( $body_json ) ) {
@@ -592,10 +587,10 @@ class WPF_AgileCRM {
 			$this->get_params();
 		}
 
-		$request   = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts/" . $contact_id;
-		$response  = wp_remote_get( $request, $this->params );
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/' . $contact_id;
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -617,7 +612,6 @@ class WPF_AgileCRM {
 			if ( ! isset( $available_tags[ $tag ] ) ) {
 				$available_tags[ $tag ] = $tag;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -641,18 +635,18 @@ class WPF_AgileCRM {
 
 		$contact_json = array(
 			'id'   => $contact_id,
-			'tags' => $tags
+			'tags' => $tags,
 		);
 
 		$nparams           = $this->params;
 		$nparams['method'] = 'PUT';
 		$nparams['body']   = json_encode( $contact_json );
 
-		$request = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts/edit/tags";
-		$response  = wp_remote_request( $request, $nparams );
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/edit/tags';
+		$response = wp_remote_request( $request, $nparams );
 
 		// Error handling
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -689,18 +683,18 @@ class WPF_AgileCRM {
 
 		$contact_json = array(
 			'id'   => $contact_id,
-			'tags' => $tags
+			'tags' => $tags,
 		);
 
 		$nparams           = $this->params;
 		$nparams['method'] = 'PUT';
 		$nparams['body']   = json_encode( $contact_json );
 
-		$request = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts/delete/tags";
-		$response  = wp_remote_request( $request, $nparams );
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/delete/tags';
+		$response = wp_remote_request( $request, $nparams );
 
 		// Error handling
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -731,14 +725,14 @@ class WPF_AgileCRM {
 		$nparams         = $this->params;
 		$nparams['body'] = json_encode( $data );
 
-		$request  = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts";
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts';
 		$response = wp_remote_post( $request, $nparams );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json = preg_replace('/("\w+"):(\d+)/', '\\1:"\\2"', wp_remote_retrieve_body( $response ) );
+		$body_json = preg_replace( '/("\w+"):(\d+)/', '\\1:"\\2"', wp_remote_retrieve_body( $response ) );
 		$body_json = json_decode( $body_json );
 
 		return $body_json->id;
@@ -762,7 +756,7 @@ class WPF_AgileCRM {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
@@ -773,10 +767,10 @@ class WPF_AgileCRM {
 		$nparams['method'] = 'PUT';
 		$nparams['body']   = json_encode( $data );
 
-		$request  = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts/edit-properties";
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/edit-properties';
 		$response = wp_remote_request( $request, $nparams );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -796,10 +790,10 @@ class WPF_AgileCRM {
 			$this->get_params();
 		}
 
-		$request  = "https://" . $this->domain . ".agilecrm.com/dev/api/contacts/" . $contact_id;
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/' . $contact_id;
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -809,35 +803,32 @@ class WPF_AgileCRM {
 
 		foreach ( $body_json->properties as $field_object ) {
 
-			if ( !empty( $field_object->subtype ) ) {
+			if ( ! empty( $field_object->subtype ) ) {
 
 				$loaded_meta[ $field_object->name . '+' . $field_object->subtype ] = $field_object->value;
 
 			} else {
 
-				$maybe_json = json_decode($field_object->value);
+				$maybe_json = json_decode( $field_object->value );
 
-				if (json_last_error() === JSON_ERROR_NONE && is_object($maybe_json)) {
-				   
-					foreach ((array)$maybe_json as $key => $value) {
+				if ( json_last_error() === JSON_ERROR_NONE && is_object( $maybe_json ) ) {
+
+					foreach ( (array) $maybe_json as $key => $value ) {
 						$loaded_meta[ $field_object->name . '+' . $key ] = $value;
 					}
-
 				} else {
 
 					$loaded_meta[ $field_object->name ] = $field_object->value;
 
 				}
-
 			}
-
 		}
 
 		// Fix email fields if no main email is set
-		if(empty($loaded_meta['email'])) {
-			if(!empty($loaded_meta['email+work'])) {
+		if ( empty( $loaded_meta['email'] ) ) {
+			if ( ! empty( $loaded_meta['email+work'] ) ) {
 				$loaded_meta['email'] = $loaded_meta['email+work'];
-			} elseif( !empty($loaded_meta['email+home'])) {
+			} elseif ( ! empty( $loaded_meta['email+home'] ) ) {
 				$loaded_meta['email'] = $loaded_meta['email+home'];
 			}
 		}
@@ -850,19 +841,17 @@ class WPF_AgileCRM {
 			if ( $field_data['active'] == true && isset( $loaded_meta[ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $loaded_meta[ $field_data['crm_field'] ];
 			}
-
 		}
 
 		// Set missing fields
-		$crm_fields = wp_fusion()->settings->get('crm_fields');
+		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
 
-		foreach( $loaded_meta as $name => $value ) {
+		foreach ( $loaded_meta as $name => $value ) {
 
-			if( !isset( $crm_fields['Standard Fields'][ $name ] ) && !isset( $crm_fields['Custom Fields'][ $name ] ) ) {
-				$crm_fields['Custom Fields'][$name] = $name;
+			if ( ! isset( $crm_fields['Standard Fields'][ $name ] ) && ! isset( $crm_fields['Custom Fields'][ $name ] ) ) {
+				$crm_fields['Custom Fields'][ $name ] = $name;
 				wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 			}
-
 		}
 
 		return $user_meta;
@@ -882,30 +871,30 @@ class WPF_AgileCRM {
 			$this->get_params();
 		}
 
-		$request   = "https://" . $this->domain . ".agilecrm.com/dev/api/filters/filter/dynamic-filter";
+		$request = 'https://' . $this->domain . '.agilecrm.com/dev/api/filters/filter/dynamic-filter';
 
-		$params = $this->params;
+		$params                            = $this->params;
 		$params['headers']['Content-type'] = 'application/x-www-form-urlencoded';
 
 		$filter = array(
-			'rules' => array(
+			'rules'        => array(
 				array(
-					'LHS'		=> 'tags',
-					'CONDITION'	=> 'EQUALS',
-					'RHS'		=> $tag
-				)
+					'LHS'       => 'tags',
+					'CONDITION' => 'EQUALS',
+					'RHS'       => $tag,
+				),
 			),
-			'contact_type'	=> 'PERSON'
+			'contact_type' => 'PERSON',
 		);
 
 		$params['body'] = array(
-			'page_size'		=> 1000,
-			'filterJson'	=> json_encode( $filter )
+			'page_size'  => 1000,
+			'filterJson' => json_encode( $filter ),
 		);
 
-		$response  = wp_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 

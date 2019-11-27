@@ -1,6 +1,6 @@
 <?php
 
-class WPF_Intercom_Admin {
+class WPF_Klaviyo_Admin {
 
 	private $slug;
 	private $name;
@@ -20,8 +20,8 @@ class WPF_Intercom_Admin {
 		$this->crm  = $crm;
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_intercom_header_begin', array( $this, 'show_field_intercom_header_begin' ), 10, 2 );
-		add_action( 'show_field_intercom_key_end', array( $this, 'show_field_intercom_key_end' ), 10, 2 );
+		add_action( 'show_field_klaviyo_header_begin', array( $this, 'show_field_klaviyo_header_begin' ), 10, 2 );
+		add_action( 'show_field_klaviyo_key_end', array( $this, 'show_field_klaviyo_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -47,7 +47,7 @@ class WPF_Intercom_Admin {
 
 
 	/**
-	 * Loads Intercom connection information on settings page
+	 * Loads Klaviyo connection information on settings page
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -57,20 +57,20 @@ class WPF_Intercom_Admin {
 
 		$new_settings = array();
 
-		$new_settings['intercom_header'] = array(
-			'title'   => __( 'Intercom Configuration', 'wp-fusion' ),
+		$new_settings['klaviyo_header'] = array(
+			'title'   => __( 'Klaviyo Configuration', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
-		$new_settings['intercom_key'] = array(
-			'title'       => __( 'Access Token', 'wp-fusion' ),
-			'desc'        => __( 'Enter your Intercom access token. You can find it in your Intercom account <a href="https://app.intercom.com/developers/_" target="_blank">here</a>.', 'wp-fusion' ),
+		$new_settings['klaviyo_key'] = array(
+			'title'       => __( 'API Key', 'wp-fusion' ),
+			'desc'        => __( 'Enter your Klaviyo API key. You can generate one in your Klaviyo account under <a href="https://www.klaviyo.com/account#api-keys-tab" target="_blank">API Keys</a>.', 'wp-fusion' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'intercom_key' )
+			'post_fields' => array( 'klaviyo_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -81,7 +81,7 @@ class WPF_Intercom_Admin {
 
 
 	/**
-	 * Loads standard Intercom field names and attempts to match them up with standard local ones
+	 * Loads standard Klaviyo field names and attempts to match them up with standard local ones
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -91,16 +91,14 @@ class WPF_Intercom_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/intercom-fields.php';
+			require_once dirname( __FILE__ ) . '/klaviyo-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
-				if ( isset( $intercom_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
-					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $intercom_fields[ $field ] );
+				if ( isset( $klaviyo_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
+					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $klaviyo_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
@@ -109,13 +107,13 @@ class WPF_Intercom_Admin {
 
 
 	/**
-	 * Puts a div around the Intercom configuration section so it can be toggled
+	 * Puts a div around the Klaviyo configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
-	public function show_field_intercom_header_begin( $id, $field ) {
+	public function show_field_klaviyo_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
@@ -131,7 +129,7 @@ class WPF_Intercom_Admin {
 	 */
 
 
-	public function show_field_intercom_key_end( $id, $field ) {
+	public function show_field_klaviyo_key_end( $id, $field ) {
 
 		if ( $field['desc'] != '' ) {
 			echo '<span class="description">' . $field['desc'] . '</span>';
@@ -140,7 +138,7 @@ class WPF_Intercom_Admin {
 		echo '</tr>';
 
 		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #intercom div
+		echo '</div>'; // close #klaviyo div
 		echo '<table class="form-table">';
 
 	}
@@ -154,7 +152,7 @@ class WPF_Intercom_Admin {
 
 	public function test_connection() {
 
-		$access_key = sanitize_text_field( $_POST['intercom_key'] );
+		$access_key = sanitize_text_field( $_POST['klaviyo_key'] );
 
 		$connection = $this->crm->connect( $access_key, true );
 
@@ -165,7 +163,7 @@ class WPF_Intercom_Admin {
 		} else {
 
 			$options                          = wp_fusion()->settings->get_all();
-			$options['intercom_key']          = $access_key;
+			$options['klaviyo_key']           = $access_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 			wp_fusion()->settings->set_all( $options );

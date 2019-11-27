@@ -122,6 +122,8 @@ function wpf_render_tag_multiselect( $args ) {
 					continue;
 				}
 
+				// Maybe don't need this: (it makes it confusing when switching CRMs)
+
 				if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 					$strict = true;
 				} else {
@@ -132,7 +134,7 @@ function wpf_render_tag_multiselect( $args ) {
 
 					if( is_null( $args["field_sub_id"] ) ) {
 
-						selected( true, in_array( $id, (array) $args["setting"], $strict ) );
+						selected( true, in_array( $id, (array) $args["setting"], false ) );
 						
 					} else {
 
@@ -140,7 +142,7 @@ function wpf_render_tag_multiselect( $args ) {
 							$args["setting"][ $args["field_sub_id"] ] = array();
 						}
 						
-						selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ], $strict ) );
+						selected( true, in_array( $id, (array) $args["setting"][ $args["field_sub_id"] ], false ) );
 					}
 
 				echo '>' . esc_html($tag) . '</option>';
@@ -162,9 +164,17 @@ function wpf_render_tag_multiselect( $args ) {
  * @return mixed HTML field
  */
 
-function wpf_render_crm_field_select( $setting, $meta_name, $field_id, $field_sub_id = null ) {
+function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $field_sub_id = null ) {
 
-	echo '<select id="' . $field_id . ( isset( $field_sub_id ) ? '-' . $field_sub_id : '' ) . '" class="select4-crm-field" name="' . $meta_name . '[' . $field_id . ']' . ( isset( $field_sub_id ) ? '[' . $field_sub_id . ']' : '' ) . '[crm_field]" data-placeholder="Select a field">';
+	if ( false == $field_id ) {
+		$name = $meta_name . '[crm_field]';
+	} elseif ( false == $field_sub_id ) {
+		$name = $meta_name . '[' . $field_id . '][crm_field]';
+	} else {
+		$name = $meta_name . '[' . $field_id . '][' . $field_sub_id . '][crm_field]';
+	}
+
+	echo '<select id="' . $field_id . ( isset( $field_sub_id ) ? '-' . $field_sub_id : '' ) . '" class="select4-crm-field" name="' . $name . '" data-placeholder="Select a field">';
 
 	echo '<option></option>';
 

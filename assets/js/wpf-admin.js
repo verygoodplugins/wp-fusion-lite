@@ -332,7 +332,7 @@ jQuery(document).ready(function($){
 	// Meta boxes
 	//
 
-	$('#wpf-meta [data-unlock]').click(function() {
+	$('#wpf-meta [data-unlock], .wpf-meta [data-unlock]').click(function() {
 
 		var targets = $(this).data('unlock').split(" ");
 		var ischecked = $(this).prop('checked');

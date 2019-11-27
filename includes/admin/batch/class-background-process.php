@@ -13,7 +13,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 	 * @abstract
 	 * @extends WP_Async_Request
 	 */
-	abstract class WPF_Background_Process extends WPF_Async_Request {
+	class WPF_Background_Process extends WPF_Async_Request {
 
 		/**
 		 * Action
@@ -102,17 +102,12 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		public function save() {
 
+			// Key is wpf_background_process_{random}
+
 			$key = $this->generate_key();
 
 			if ( ! empty( $this->data ) ) {
 
-				$status = array(
-					'total'      => count( $this->data ),
-					'remaining'  => count( $this->data ),
-					'max_memory' => $this->get_memory_limit(),
-				);
-
-				update_site_option( 'wpfb_status', $status );
 				update_site_option( $key, $this->data );
 
 			}
@@ -187,8 +182,6 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				// No data to process.
 				wp_die();
 			}
-
-			check_ajax_referer( $this->identifier, 'nonce' );
 
 			$this->handle();
 
@@ -340,11 +333,6 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 				foreach ( $batch->data as $key => $value ) {
 
-					if ( $this->time_exceeded() || $this->memory_exceeded() || ! $this->is_process_running() || $this->is_cancelled() ) {
-						// Batch limits reached / manually cancelled
-						break;
-					}
-
 					$starttime = microtime( true );
 
 					$task = $this->task( $value );
@@ -359,15 +347,32 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 						$status = get_site_option( 'wpfb_status' );
 
-						$status['remaining']      = count( $batch->data );
-						$status['last_step']      = $value;
-						$status['time_last_step'] = microtime( true ) - $starttime;
-						$status['total_time']     = time() - $this->start_time;
-						$status['memory_percent'] = ( memory_get_usage( true ) / $status['max_memory'] ) * 100;
+						if ( false !== $status ) {
 
-						update_site_option( 'wpfb_status', $status );
+							$next_key = $key + 1;
+
+							$status['remaining']      = count( $batch->data );
+							$status['last_step']      = $value;
+							$status['time_last_step'] = microtime( true ) - $starttime;
+
+							if ( isset( $batch->data[ $next_key ] ) ) {
+								$status['next_step']      = $batch->data[ $next_key ];
+							}
+
+							$status['total_time']     = time() - $this->start_time;
+							$status['memory_percent'] = ( memory_get_usage( true ) / $status['max_memory'] ) * 100;
+
+							update_site_option( 'wpfb_status', $status );
+
+						}
 
 					}
+
+					if ( $this->time_exceeded() || $this->memory_exceeded() || $this->is_cancelled() ) {
+						// Batch limits reached.
+						break;
+					}
+
 				}
 
 				// Update or delete current batch.
@@ -412,7 +417,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return bool
 		 */
 		protected function memory_exceeded() {
-			$memory_limit   = $this->get_memory_limit() * 0.85; // 85% of max memory
+			$memory_limit   = $this->get_memory_limit() * 0.80; // 80% of max memory
 			$current_memory = memory_get_usage( true );
 			$return         = false;
 
@@ -428,7 +433,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 *
 		 * @return int
 		 */
-		protected function get_memory_limit() {
+		public function get_memory_limit() {
 			if ( function_exists( 'ini_get' ) ) {
 				$memory_limit = ini_get( 'memory_limit' );
 			} else {
@@ -601,7 +606,22 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 *
 		 * @return mixed
 		 */
-		abstract protected function task( $item );
+		protected function task( $item ) {
+
+			// Disable turbo for bulk processes
+			wp_fusion()->crm = wp_fusion()->crm_base->crm_no_queue;
+
+			do_action_ref_array( $item['action'], $item['args'] );
+
+			$sleep = apply_filters( 'wpf_batch_sleep_time', 0 );
+
+			if( $sleep > 0 ) {
+				sleep( $sleep );
+			}
+
+			return false;
+
+		}
 
 	}
 }

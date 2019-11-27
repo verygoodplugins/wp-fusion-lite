@@ -59,6 +59,7 @@ class WPF_Mautic {
 
 		// Set tracking cookie
 		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
+		add_action( 'wpf_forms_post_submission', array( $this, 'set_tracking_cookie_forms' ), 10, 4 );
 
 	}
 
@@ -72,25 +73,32 @@ class WPF_Mautic {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
 			return;
 		}
+
+		$url = wp_fusion()->settings->get( 'mautic_url' );
 
 		echo '<script>';
 		echo '(function(w,d,t,u,n,a,m){w["MauticTrackingObject"]=n;';
 		echo 'w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)},a=d.createElement(t),';
 		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
-		echo '})(window,document,"script","' . rtrim(wp_fusion()->settings->get( 'mautic_url' ),'/') . '/mtc.js","mt");';
+		echo '})(window,document,"script","' . trailingslashit( $url ) . 'mtc.js","mt");';
 
-		if (is_user_logged_in() && get_current_user_id()){			
-			$userdata = get_userdata( get_current_user_id() );
-			if (!empty($userdata) && !empty($userdata->user_email)){
-				echo 'mt("send", "pageview", {"email": "'.$userdata->user_email.'"});';
-			}else{
-				echo 'mt("send", "pageview");';		
-			}			
-		}else{
+		if ( is_user_logged_in() ) {
+			$cid = get_user_meta( get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
+		}
+
+		if ( is_user_logged_in() && ! empty( $cid ) ) {
+
+			$user = get_userdata( get_current_user_id() );
+
+			echo 'mt("send", "pageview", {"email": "' . $user->user_email . '"});';
+
+		} else {
+
 			echo 'mt("send", "pageview");';
+
 		}
 
 		echo '</script>';
@@ -101,22 +109,35 @@ class WPF_Mautic {
 	 * Set tracking cookie
 	 *
 	 * @access public
-	 * @return mixed
+	 * @return void
 	 */
 
 	public function set_tracking_cookie() {
 
-		if( is_admin() || ! is_user_logged_in() ) {
+		if ( is_admin() || ! is_user_logged_in() || headers_sent() ) {
 			return;
 		}
 
 		$contact_id = wp_fusion()->user->get_contact_id();
 
-		if( ! empty( $contact_id ) && ( ! isset( $_COOKIE['mtc_id'] ) || $_COOKIE['mtc_id'] != $contact_id ) ){
+		if ( ! empty( $contact_id ) && ( ! isset( $_COOKIE['mtc_id'] ) || $_COOKIE['mtc_id'] != $contact_id ) ) {
 
 			setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
 
 		}
+
+	}
+
+	/**
+	 * Set tracking cookie after form submission
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function set_tracking_cookie_forms( $update_data, $user_id, $contact_id, $form_id ) {
+
+		setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
 
@@ -455,44 +476,35 @@ class WPF_Mautic {
 		$request      = $this->url . 'api/contacts?search=' . urlencode( 'email:"+' . $email_address . '"' ) . '&minimal=true';
 		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
-		if ( !empty( $body_json['contacts'] ) ) {
-			$contact = array_shift( $body_json['contacts'] );
+		if ( empty( $body_json['contacts'] ) ) {
 
-			return $contact['id'];		
-		}elseif(!empty($_COOKIE['mtc_id'])){
-			$url      = $this->url . 'api/contacts/' . $contact_id;;
-			$response = wp_remote_get( $url, $this->params );
-			if( is_wp_error( $response ) ) {
-				return $response;
+			// Use tracking cookie if CORS is configured properly
+
+			if ( isset( $_COOKIE['mtc_id'] ) ) {
+
+				$contact_id = $_COOKIE['mtc_id'];
+
+				// Confirm that cookied contact has the same email
+
+				$contact_data = $this->load_contact( $contact_id );
+
+				if ( ! is_wp_error( $contact_data ) && ! empty( $contact_data ) && $contact_data['user_email'] == $email_address ) {
+					return $contact_id;
+				}
 			}
 
-			$body_json    = json_decode( $response['body'], true );
-			if (!empty($body_json['contact']['id'])){
-				if (!empty($body_json['contact']['fields']['all']['email'])){
-					if ($body_json['contact']['fields']['all']['email'] == $email_address){
-						//contact with mtc_id have the same email as the one submitted, proceed with mtc_id
-						return $_COOKIE['mtc_id'];
-					}else{
-						//contact with mtc_id have different email than the one submitted, proceed with creating a new contact
-						return false;		
-					}
-				}else{
-					//contact with mtc_id doesn't have email address, proceed with mtc_id
-					return $_COOKIE['mtc_id'];	
-				}
-			}else{
-				//contact with mtc_id doesn't exist anymore, proceed with creating a new contact
-				return false;
-			}			
-		}else{
 			return false;
-		}				
+		}
+
+		$contact = array_shift( $body_json['contacts'] );
+
+		return $contact['id'];
 	}
 
 
@@ -680,8 +692,27 @@ class WPF_Mautic {
 
 		$response = wp_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
-			return $response;
+		if ( is_wp_error( $response ) ) {
+
+			if ( $response->get_error_message() == 'Item was not found.' ) {
+
+				// Deal with changed CIDs
+
+				$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+				if ( ! empty( $user_id ) ) {
+
+					$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
+
+					if ( ! empty( $contact_id ) ) {
+						$this->update_contact( $contact_id, $data, false );
+					}
+				}
+			} else {
+
+				return $response;
+
+			}
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );

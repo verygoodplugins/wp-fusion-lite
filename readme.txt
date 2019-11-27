@@ -3,21 +3,21 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, user meta, sync, wpfusion, wp-fusion
 Requires at least: 4.0
 Requires PHP: 5.6
-Tested up to: 5.2.2
-Stable tag: 3.25
+Tested up to: 5.3
+Stable tag: 3.27
 
-WP Fusion connects your website to your CRM or marketing automation system.
+WP Fusion integrates your website with your CRM or marketing automation system.
 
 == Description ==
 
-WP Fusion Lite connects to leading CRMs and marketing automation systems to add new WordPress users as contacts when they register on your website, and keep user profiles in sync with CRM contacts.
+WP Fusion Lite allows you to sync user registrations on your website to leading CRMs and marketing automation systems, keep user profiles in sync with CRM contacts, and protect site content based on CRM tags.
 
 = Features =
 
 * Automaticaly create new contacts in your CRM when users register in WordPress
-* Apply tags when users register
-* Synchronize any WordPress user data with custom fields in your CRM
 * Restrict access to site content using tags in your CRM
+* Synchronize any WordPress user data with custom fields in your CRM
+* Apply tags when users register
 * Import contacts from your CRM as new WordPress users
 * Export site users to your CRM as contacts
 
@@ -33,6 +33,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 * ActiveCampaign
 * AgileCRM
 * Autopilot
+* BirdSend
 * Capsule
 * ConvertKit
 * Copper
@@ -47,6 +48,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 * Infusionsoft
 * Intercom
 * Kartra
+* Klaviyo
 * MailChimp
 * MailerLite
 * Mailjet
@@ -80,6 +82,58 @@ Upload and activate the plugin, then go to Settings >> WP Fusion. Select your de
 See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.27 - 8/24/2019 =
+
+##### New CRMs
+
+* BirdSend
+* Klaviyo
+
+##### New Features
+
+* Added Site Lockout feature
+* Added Company, GDPR Consent, and Agreed to Terms fields for sync with Groundhogg
+* Added signup_type field to NationBuilder
+* Added Australia and India data server support to Zoho integration
+* Added "capabilties" format for syncing capability fields
+* Added "ucwords" formatting option to user_meta shortcode
+* Added option to hide WPF meta boxes from non admins
+
+##### Improvements
+
+* Style compatibility updates for WP 5.3
+* Improved Mautic site tracking
+* Improved handling of merged contacts with Mautic
+* Improved site tracking with HubSpot for guests
+* Updated ActiveCampaign site tracking scripts
+* Updated Intercom integration to use API v1.4
+* Enabled Import Users tab for Intercom
+* Improved support for Country field with Groundhogg
+* All site tracking scripts will now recognize auto login sessions
+* Disabled comments during auto login sessions
+* wpf_tags_applied and wpf_tags_removed actions will now run when tags are loaded from the CRM
+* Enabled welcome email in MailPoet when a contact is subscribed to a list
+
+
+##### Bug Fixes
+
+* Sendinblue bugfixes
+* Copper bugfixes
+* Fixed Gist API URL
+* Fixed special characters getting escaped on admin profile updates
+* Fixed NationBuilder not loading more than 100 available tags
+* Fixed fatal error when initializing GetResponse connection
+* Fixes for HubSpot accounts with over 250 lists
+* Fixed Mailchimp contact ID getting disconnected after email address change
+* Fixed NationBuilder Primary address fields not syncing
+* Fixed Mailchimp compatibility with other Mailchimp plugins
+* Fixed tags not being removed with Ontraport
+* Fixed content protection on blog index page
+* Fixed "Create tags from value" option for profile updates
+* Fixed initial connection to Groundhogg on Groundhogg < 2.0
+* Performance improvements and bugfixes for background worker
+
 
 = 3.25 - 8/24/2019 =
 

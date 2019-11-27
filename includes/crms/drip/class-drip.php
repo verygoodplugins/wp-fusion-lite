@@ -54,7 +54,7 @@ class WPF_Drip {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
 		// Add tracking code to footer
-		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
 		// HTTP response filter for API calls outside the SDK
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
@@ -177,6 +177,11 @@ class WPF_Drip {
 			return;
 		}
 
+		// Stop Drip messing with WooCommerce account page (sending email changes automatically)
+		if ( function_exists( 'is_account_page' ) && is_account_page() ) {
+			return;
+		}
+
 		$account_id = wp_fusion()->settings->get('drip_account');
 
 		echo "<!-- Drip -->";
@@ -209,10 +214,27 @@ class WPF_Drip {
 
 			}
 
-			echo '_dcq.push(["identify", {';
-			echo 'email: "' . $user_email . '",';
-			echo 'success: function(response) {}';
-			echo '}]);';
+			// Check to see if we need to set tracking cookies
+
+			$found = false;
+
+			foreach( $_COOKIE as $key => $value ) {
+
+				if ( strpos( $key, 'drip_client' ) !== false ) {
+					$found = true;
+					break;
+				}
+
+			}
+
+			if ( false == $found ) {
+
+				echo '_dcq.push(["identify", {';
+				echo 'email: "' . $user_email . '",';
+				echo 'success: function(response) {}';
+				echo '}]);';
+
+			}
 
 		}
 
@@ -220,7 +242,6 @@ class WPF_Drip {
 		echo "<!-- end Drip -->";
 
 	}
-
 
 	/**
 	 * Drip requires an email to be submitted when contacts are updated
@@ -494,7 +515,7 @@ class WPF_Drip {
 		}
 
 		if ( empty( $result ) || empty( $result['tags'] ) ) {
-			return false;
+			return array();
 		}
 
 		// Set available tags
@@ -662,8 +683,12 @@ class WPF_Drip {
 
 		$result = $this->app->create_or_update_subscriber( $params );
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 			return $result;
+		}
+
+		if ( $result['status'] != 'active' ) {
+			wp_fusion()->logger->handle( 'notice', wp_fusion()->user->get_user_id( $contact_id ), $provided_email . ' has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
 		}
 
 		// Check if we need to change the email address

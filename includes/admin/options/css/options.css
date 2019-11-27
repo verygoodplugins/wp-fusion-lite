@@ -790,13 +790,13 @@ a {
 .btn-default {
     color: #333;
     background-color: #fff;
-    border-color: #ccc;
+    border-color: #7e8993;
 }
 
 .btn-success {
     color: #fff !important;
     background-color: #4cae4c !important;
-    border-color: #4cae4c !important;
+    border-color: #7e8993 !important;
 }
 
 .btn-danger {

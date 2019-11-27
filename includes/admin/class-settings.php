@@ -257,6 +257,11 @@ class WPF_Settings {
 			}
 
 			return $new;
+
+		} else {
+
+			$array = $array + $new_key;
+
 		}
 
 		return $array;
@@ -620,7 +625,7 @@ class WPF_Settings {
 		) );
 
 		if( wp_remote_retrieve_response_code( $response ) == 403 ) {
-			wp_send_json_error( '403 response. Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a>.' );
+			wp_send_json_error( '403 response. Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a>. IP address: ' . $_SERVER['SERVER_ADDR'] );
 		}
 
 		// make sure the response came back okay
@@ -851,11 +856,12 @@ class WPF_Settings {
 
 		$settings['create_users'] = array(
 			'title'   => __( 'Create Contacts', 'wp-fusion' ),
-			'desc'    => sprintf( __( 'Create new contacts in %s when users are added in WordPress.', 'wp-fusion' ), wp_fusion()->crm->name ),
+			'desc'    => sprintf( __( 'Create new contacts in %s when users register in WordPress.', 'wp-fusion' ), wp_fusion()->crm->name ),
 			'std'     => 1,
 			'type'    => 'checkbox',
 			'section' => 'main',
-			'unlock'  => array( 'user_roles', 'wpf_options-assign_tags', 'opportunity_state' )
+			'unlock'  => array( 'user_roles', 'wpf_options-assign_tags', 'opportunity_state' ),
+			'tooltip' => sprintf( __( 'We strongly recommend leaving this setting enabled. If it\'s disabled only profile updates from existing users will be synced with %s. New users or customers will not be synced.', 'wp-fusion' ), wp_fusion()->crm->name ),
 		);
 
 		$settings['assign_tags'] = array(
@@ -926,7 +932,7 @@ class WPF_Settings {
 		*/
 
 		$settings['restrict_access_header'] = array(
-			'title'   => __( 'Restrict Content Access', 'wp-fusion' ),
+			'title'   => __( 'Content Restriction', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'main'
@@ -978,7 +984,7 @@ class WPF_Settings {
 		);
 
 		$settings['restricted_message'] = array(
-			'title'         => __( 'Restricted Content Message', 'wp-fusion' ),
+			'title'         => __( 'Default Restricted Content Message', 'wp-fusion' ),
 			'desc'          => __( 'Restricted content message for when a redirect hasn\'t been specified.', 'wp-fusion' ),
 			'std'           => "<h2 style='text-align:center'>Oops!</h2><p style='text-align:center'>You don't have permission to view this page! Make sure you're logged in and try again, or contact support.</p>",
 			'type'          => 'editor',
@@ -988,15 +994,42 @@ class WPF_Settings {
 
 		$settings['per_post_messages'] = array(
 			'title'   => __( 'Per Post Messages', 'wp-fusion' ),
-			'desc'    => __( 'Enable this setting to allow confuguring a different restricted content message for each page or post.', 'wp-fusion' ),
+			'desc'    => __( 'Enable this setting to allow specifying a different restricted content message for each page or post.', 'wp-fusion' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
 			'std'	  => 0,
 		);
 
 		/*
+		// SITE LOCKOUT
+		*/
+
+		$settings['site_lockout_header'] = array(
+			'title'   => __( 'Site Lockout', 'wp-fusion' ),
+			'std'     => 0,
+			'type'    => 'heading',
+			'section' => 'main',
+			'desc'    => __( 'Site lockout lets you restrict access to all pages on your site if a user has a specific tag (i.e. "Payment Failed"). The only page accessible will be the URL specified as the Lockout Redirect below.', 'wp-fusion' ),
+		);
+
+		$settings['lockout_tags'] = array(
+			'title'   => __( 'Lockout Tags', 'wp-fusion' ),
+			'desc'    => __( 'If the user has any of these tags the lockout will be activated.', 'wp-fusion' ),
+			'type'    => 'assign_tags',
+			'section' => 'main',
+		);
+
+		$settings['lockout_redirect'] = array(
+			'title'   => __( 'Lockout Redirect', 'wp-fusion' ),
+			'desc'    => __( 'URL to redirect to when lockout is active.', 'wp-fusion' ),
+			'std'     => wp_login_url(),
+			'type'    => 'text',
+			'section' => 'main',
+		);
+
+		/*
 		// SEO
-		*/		
+		*/
 
 		$settings['seo_header'] = array(
 			'title'   => __( 'SEO', 'wp-fusion' ),
@@ -1256,11 +1289,21 @@ class WPF_Settings {
 			'section' => 'advanced'
 		);
 
+		$settings['enable_queue'] = array(
+			'title'   => __( 'Enable API Queue', 'wp-fusion' ),
+			'desc'    => __( 'Combine redundant API calls to improve performance.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'std'     => 1,
+			'section' => 'advanced',
+			'tooltip' => 'It is <strong>strongly</strong> recommended to leave this on except for debugging purposes.',
+			'unlock'  => array( 'staging_mode' ),
+		);
+
 		$settings['enable_logging'] = array(
 			'title'   => __( 'Enable Logging', 'wp-fusion' ),
 			'desc'    => __( 'Access detailed activity logs for WP Fusion.', 'wp-fusion' ),
 			'type'    => 'checkbox',
-			'std'     => 0,
+			'std'     => 1,
 			'section' => 'advanced',
 			'unlock'  => array( 'logging_errors_only' )
 		);
@@ -1290,14 +1333,12 @@ class WPF_Settings {
 			'section' => 'advanced',
 		);
 
-		$settings['enable_queue'] = array(
-			'title'   => __( 'Enable API Queue', 'wp-fusion' ),
-			'desc'    => __( 'Combine redundant API calls to improve performance.', 'wp-fusion' ),
+		$settings['admin_permissions'] = array(
+			'title'   => __( 'Admin Permissions', 'wp-fusion' ),
+			'desc'    => __( 'Require the <code>manage_options</code> capability to see WP Fusion meta boxes in the admin.', 'wp-fusion' ),
 			'type'    => 'checkbox',
-			'std'     => 1,
+			'std'     => 0,
 			'section' => 'advanced',
-			'tooltip' => 'It is <strong>strongly</strong> recommended to leave this on except for debugging purposes.',
-			'unlock'  => array( 'staging_mode' )
 		);
 
 		$settings['export_header'] = array(
@@ -1417,7 +1458,7 @@ class WPF_Settings {
 
 		} else {
 
-			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-default">Test Connection</a>';
+			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-default">Connect</a>';
 
 		}
 
@@ -1658,6 +1699,7 @@ class WPF_Settings {
 			'text',
 			'date',
 			'multiselect',
+			'capabilities',
 			'checkbox',
 			'state',
 			'country',
@@ -1940,7 +1982,7 @@ class WPF_Settings {
 
 		if( ! empty( $input['user_email'] ) ) {
 
-			if ( $input['user_email']['active'] == false || empty( $input['user_email']['crm_field'] ) ) {
+			if ( $input['user_email']['active'] != true || empty( $input['user_email']['crm_field'] ) ) {
 				$options_class->errors[] = '<strong>Error:</strong> The field user_email must be enabled for sync, please enable it from the Contact Fields tab.';
 			}
 

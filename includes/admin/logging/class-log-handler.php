@@ -287,6 +287,10 @@ class WPF_Log_Handler {
 	 */
 	public function handle( $level, $user, $message, $context = array() ) {
 
+		$timestamp = current_time( 'timestamp' );
+
+		do_action( 'wpf_handle_log', $timestamp, $level, $user, $message, $context );
+
 		if( wp_fusion()->settings->get('enable_logging') != true ) {
 			return;
 		}
@@ -294,8 +298,6 @@ class WPF_Log_Handler {
 		if( wp_fusion()->settings->get('logging_errors_only') == true && $level != 'error' ) {
 			return;
 		}
-
-		$timestamp = current_time( 'timestamp' );
 
 		if ( isset( $context['source'] ) && $context['source'] ) {
 			$source = $context['source'];
@@ -316,6 +318,10 @@ class WPF_Log_Handler {
 
 			}
 
+		}
+
+		if ( empty( $user ) ) {
+			$user = 0;
 		}
 
 		// Don't log meta data pushes where no enabled fields are being synced

@@ -264,8 +264,20 @@ class WPF_Intercom {
 		$request  = 'https://api.intercom.io/data_attributes/customer';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if( is_wp_error( $response ) && $response->get_error_message() == 'intercom_version_invalid' ) {
+
+			// Try v1.4 API
+			$request  = 'https://api.intercom.io/data_attributes';
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+			
+		} elseif( is_wp_error( $response ) ) {
+
 			return $response;
+
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
@@ -586,21 +598,56 @@ class WPF_Intercom {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag_query ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
 		$contact_ids = array();
-		$offset = 0;
-		$proceed = true;
+		$param       = false;
+		$proceed     = true;
 
-		// while($proceed == true) {
+		while ( $proceed == true ) {
 
-		// 	// @todo
+			$url = 'https://api.intercom.io/users/scroll/';
 
-		// }
+			if ( false !== $param ) {
+				$url .= '?scroll_param=' . $param;
+			}
+
+			$response = wp_remote_get( $url, $this->params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->users ) ) {
+
+				$param = $response->scroll_param;
+
+				foreach ( $response->users as $user ) {
+
+					foreach ( $user->tags->tags as $tag ) {
+
+						if ( $tag->name == $tag_query ) {
+							$contact_ids[] = $user->id;
+							break;
+						}
+
+					}
+
+				}
+
+			} else {
+
+				$proceed = false;
+
+			}
+
+		}
 
 		return $contact_ids;
 

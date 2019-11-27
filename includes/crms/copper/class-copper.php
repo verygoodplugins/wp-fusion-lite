@@ -146,6 +146,10 @@ class WPF_Copper {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
+			} elseif ( isset( $body_json->error ) ) {
+
+				$response = new WP_Error( 'error', $body_json->error );
+
 			}
 
 		}
@@ -330,13 +334,17 @@ class WPF_Copper {
 
 		$custom_fields = array();
 
-		foreach( $response as $field ) {
+		if ( ! empty( $response ) ) {
 
-			$custom_fields[ $field->id ] = ucwords( str_replace( '_', ' ', $field->name ) );
+			foreach( $response as $field ) {
+
+				$custom_fields[ $field->id ] = ucwords( str_replace( '_', ' ', $field->name ) );
+
+			}
+
+			asort( $custom_fields );
 
 		}
-
-		asort( $custom_fields );
 
 		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
 
@@ -368,12 +376,13 @@ class WPF_Copper {
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/fetch_by_email';
 		$response = wp_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'Resource not found' ) {
+			return false;
+		} elseif ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
 
 		if( empty( $response ) || empty( $response->id ) ) {
 			return false;
@@ -563,7 +572,6 @@ class WPF_Copper {
 
 				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
 
-
 			} else {
 
 				$update_data[ $field ] = $value;
@@ -571,6 +579,8 @@ class WPF_Copper {
 			}
 
 		}
+
+		$update_data['name'] = $update_data['first_name'] . ' ' . $update_data['last_name']; // Copper requires a name
 
 		$params = $this->params;
 		$params['body'] = json_encode( $update_data );

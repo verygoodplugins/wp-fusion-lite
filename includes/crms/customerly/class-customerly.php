@@ -277,8 +277,8 @@ class WPF_Customerly {
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 		$current_tags = wp_fusion()->user->get_tags( $user_id );
 
-		$update_data = array( 
-			'users' => array( 
+		$update_data = array(
+			'users' => array(
 				array(
 					'email'	=> $contact_id,
 					'tags' 	=> $current_tags

@@ -133,20 +133,20 @@ class WPF_ActiveCampaign {
 			$trackid = $this->get_tracking_id();
 		}
 
+		echo '<!-- Start ActiveCampaign site tracking -->';
 		echo '<script type="text/javascript">';
-		echo 'var trackcmp_email = "' . $email . '";';
-		echo 'var trackcmp = document.createElement("script");';
-		echo 'trackcmp.async = true;';
-		echo 'trackcmp.type = "text/javascript";';
-		echo 'trackcmp.src = "//trackcmp.net/visit?actid=' . $trackid . '&e="+encodeURIComponent(trackcmp_email)+"&r="+encodeURIComponent(document.referrer)+"&u="+encodeURIComponent(window.location.href);';
-		echo 'var trackcmp_s = document.getElementsByTagName("script");';
-		echo 'if (trackcmp_s.length) {';
-		echo '	trackcmp_s[0].parentNode.appendChild(trackcmp);';
-		echo '} else {';
-		echo '	var trackcmp_h = document.getElementsByTagName("head");';
-		echo '	trackcmp_h.length && trackcmp_h[0].appendChild(trackcmp);';
-		echo '}';
+		echo '(function(e,t,o,n,p,r,i){e.visitorGlobalObjectAlias=n;e[e.visitorGlobalObjectAlias]=e[e.visitorGlobalObjectAlias]||function(){(e[e.visitorGlobalObjectAlias].q=e[e.visitorGlobalObjectAlias].q||[]).push(arguments)};e[e.visitorGlobalObjectAlias].l=(new Date).getTime();r=t.createElement("script");r.src=o;r.async=true;i=t.getElementsByTagName("script")[0];i.parentNode.insertBefore(r,i)})(window,document,"https://diffuser-cdn.app-us1.com/diffuser/diffuser.js","vgo");';
+		echo 'vgo("setAccount", "' . $trackid . '");';
+		echo 'vgo("setTrackByDefault", true);';
+
+		// This does not reliably work when the AC forms plugin is active or any other kind of AC site tracking
+		if ( ! empty( $email ) ) {
+			echo 'vgo("setEmail", "' . $email . '");';
+		}
+
+		echo 'vgo("process");';
 		echo '</script>';
+		echo '<!-- End ActiveCampaign site tracking -->';
 
 	}
 
@@ -677,6 +677,8 @@ class WPF_ActiveCampaign {
 
 	public function load_contacts( $tag ) {
 
+		// Query will only return contacts on at least one list
+
 		$this->connect();
 
 		$contact_ids = array();
@@ -719,6 +721,7 @@ class WPF_ActiveCampaign {
 	//
 	// Deep data stuff
 	//
+
 	/**
 	 * Gets or creates an ActiveCampaign deep data connection
 	 *
@@ -742,7 +745,7 @@ class WPF_ActiveCampaign {
 				'service'    => 'WP Fusion',
 				'externalid' => $_SERVER['SERVER_NAME'],
 				'name'       => get_bloginfo(),
-				'logoUrl'    => 'https://wpfusionplugin.com/wp-content/uploads/2017/03/fb-profile.png',
+				'logoUrl'    => 'https://wpfusion.com/wp-content/uploads/2019/08/logo-mark-500w.png',
 				'linkUrl'    => admin_url( 'options-general.php?page=wpf-settings' ),
 			),
 		);
@@ -879,6 +882,8 @@ class WPF_ActiveCampaign {
 			),
 		);
 
+		wp_fusion()->logger->handle( 'info', $user_id, 'Registering new ecomCustomer:', array( 'source' => 'wpf-ecommerce', 'meta_array_nofilter' => $body ) );
+
 		$args = array(
 			'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
 			'body'    => json_encode( $body ),
@@ -887,24 +892,37 @@ class WPF_ActiveCampaign {
 		$response = wp_remote_post( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key, $args );
 		$body     = json_decode( wp_remote_retrieve_body( $response ) );
 
+		$customer_id = false;
+
 		if ( isset( $body->errors ) && $body->errors[0]->title == 'The ecomCustomer already exists in the system.' ) {
 
-			// Look up an existing customer (AC could have made this way more elegantly)
-			$response = wp_remote_get( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key, $args );
+			$response = wp_remote_get( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key. '&filters[email]=' . $user_email );
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 			foreach ( $body->ecomCustomers as $customer ) {
 
-				if ( $customer->email == $user_email ) {
+				if ( $customer->connectionid == $connection_id ) {
 
 					$customer_id = $customer->id;
 
 				}
 			}
+		} elseif ( isset( $body->errors ) ) {
+
+			wp_fusion()->logger->handle( 'error', $user_id, 'Error creating customer: ' . $body->errors[0]->title, array( 'source' => 'wpf-ecommerce' ) );
+			return false;
+
 		} else {
 
 			$customer_id = $body->ecomCustomer->id;
+
+		}
+
+		if ( false === $customer_id ) {
+
+			wp_fusion()->logger->handle( 'error', $user_id, 'Unable to create customer or find existing customer. Aborting.', array( 'source' => 'wpf-ecommerce' ) );
+			return false;
 
 		}
 

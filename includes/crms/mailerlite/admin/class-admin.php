@@ -119,8 +119,6 @@ class WPF_MailerLite_Admin {
 				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in MailerLite. Read our <a href="https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
 			);
 
-			$settings['access_key']['type'] = 'hidden';
-
 			$new_settings['mailerlite_update_trigger'] = array(
 				'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
 				'desc'		=> __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion' ),

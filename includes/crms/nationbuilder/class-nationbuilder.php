@@ -41,8 +41,8 @@ class WPF_NationBuilder {
 		$this->supports = array( 'add_tags' );
 
 		// OAuth
-		$this->client_id 		= '8c06f23bba8806809b946b0cf07e3bc6788909d806d34fc75d801e32c01f07c0';
-		$this->client_secret 	= '19bb5d590c55e6b1aeabb7f6bd07a14a616e2852b1a55ce6b396aada83c8ea7f';
+		$this->client_id     = '8c06f23bba8806809b946b0cf07e3bc6788909d806d34fc75d801e32c01f07c0';
+		$this->client_secret = '19bb5d590c55e6b1aeabb7f6bd07a14a616e2852b1a55ce6b396aada83c8ea7f';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -215,20 +215,46 @@ class WPF_NationBuilder {
 
 		$available_tags = array();
 
-		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/tags?limit=100&access_token=' . $this->token;
-		$response = wp_remote_get( $request, $this->params );
+		$continue = true;
+		$next_url = false;
 
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
+		while ( $continue ) {
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$request = 'https://' . $this->url_slug . '.nationbuilder.com';
 
-		if( ! empty( $response->results ) ) {
+			if ( false !== $next_url ) {
+				$request .= $next_url;
+			} else {
+				$request .= '/api/v1/tags?limit=100';
+			}
 
-			foreach( $response->results as $tag ) {
+			$request .= '&access_token=' . $this->token;
 
-				$available_tags[ $tag->name ] = $tag->name;
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( ! empty( $response->results ) ) {
+
+				foreach( $response->results as $tag ) {
+
+					$available_tags[ $tag->name ] = $tag->name;
+
+				}
+
+			}
+
+			if ( empty( $response->next ) ) {
+
+				$continue = false;
+
+			} else {
+
+				$next_url = $response->next;
 
 			}
 

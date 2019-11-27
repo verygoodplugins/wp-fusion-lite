@@ -99,7 +99,7 @@ body.term-php .wpf-page-redirect-select label {
 
 /* WPF center column meta boxes */
 
-#post-body #postbox-container-2 .select4-container, #wpf-learndash-meta .select4-container, .cp-box-content .select4-container, #affwp_edit_affiliate .select4-container {
+#post-body #postbox-container-2 .select4-container, #wpf-learndash-meta .select4-container, .cp-box-content .select4-container, #affwp_edit_affiliate .select4-container, #wpf-center-meta .select4-container {
 	min-width: 400px;
 }
 
@@ -225,6 +225,12 @@ body .select4-drop.select4-drop-active {
 
 /* select4 */
 
+.select4-container--default.select4-container--focus .select4-selection--multiple {
+	border-color: #007cba;
+	box-shadow: 0 0 0 1px #007cba;
+	outline: 2px solid transparent;
+}
+
 .select4.select4-container li {
 	margin-bottom: 0px;
 }
@@ -261,7 +267,7 @@ body .select4-drop.select4-drop-active {
 	background-color: #f9f9f9!important;
 }
 
-#wpf-meta .select4-container .select4-selection {
+.select4-container .select4-selection {
 	border-radius: 0px;
 }
 
@@ -317,7 +323,7 @@ a#wpf-select4-tags-resync {
 }
 
 .select4-container .select4-selection {
-	border-color: #ddd;
+	border: 1px solid #7e8993;
 	box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
     -webkit-transition: 50ms border-color ease-in-out;
     transition: 50ms border-color ease-in-out;
@@ -406,11 +412,17 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 
 .select4-search input {
 	background-image: none !important;
+	min-height: auto;
+    line-height: 1;
 }
 
 .options_group.wpf-product small {
 	display: block;
 	margin-top: 5px;
+}
+
+.options_group.wpf-product label {
+	margin-right: 10px;
 }
 
 .select4 + span.description {

@@ -42,6 +42,8 @@ class WPF_SendinBlue {
 			new WPF_SendinBlue_Admin( $this->slug, $this->name, $this );
 		}
 
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
 	}
 
 	/**
@@ -55,7 +57,6 @@ class WPF_SendinBlue {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 	}
 
@@ -68,7 +69,7 @@ class WPF_SendinBlue {
 
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
@@ -92,7 +93,7 @@ class WPF_SendinBlue {
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			$date = date( 'Y-m-d', $value );
 
 			return $date;
 
@@ -113,16 +114,23 @@ class WPF_SendinBlue {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'sendinblue') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'sendinblue' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if ( isset( $body_json->error ) ) {
 
 				$response = new WP_Error( 'error', $body_json->error->message );
 
-			}
+			} elseif ( isset( $body_json->code ) && $body_json->code == 'unauthorized' ) {
 
+				$response = new WP_Error( 'error', 'Invalid API key' );
+
+			} elseif ( isset( $body_json->code ) && $body_json->code == 'invalid_parameter' ) {
+
+				$response = new WP_Error( 'error', $body_json->message );
+
+			}
 		}
 
 		return $response;
@@ -139,17 +147,17 @@ class WPF_SendinBlue {
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB
-		if ( empty( $api_key )) {
+		if ( empty( $api_key ) ) {
 			$api_key = wp_fusion()->settings->get( 'sendinblue_key' );
 		}
 
 		$this->params = array(
-			'timeout'     => 30,
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'headers'     => array(
-				'Content-Type'  	  => 'application/json',
-				'api-key' 			  => $api_key,
-			)
+			'timeout'    => 30,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type' => 'application/json',
+				'api-key'      => $api_key,
+			),
 		);
 
 		return $this->params;
@@ -176,7 +184,7 @@ class WPF_SendinBlue {
 		$request  = 'https://api.sendinblue.com/v3/account';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -220,16 +228,16 @@ class WPF_SendinBlue {
 
 		$available_tags = array();
 
-		$offset = 0;
-		$limit = 50;
+		$offset  = 0;
+		$limit   = 50;
 		$proceed = true;
 
-		while( $proceed == true ) {
+		while ( $proceed == true ) {
 
 			$request  = 'https://api.sendinblue.com/v3/contacts/lists?limit=' . $limit . '&offset=' . $offset;
 			$response = wp_remote_get( $request, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -239,12 +247,11 @@ class WPF_SendinBlue {
 				$available_tags[ $row['id'] ] = $row['name'];
 			}
 
-			if( count( $body_json['lists'] ) < $limit ) {
+			if ( count( $body_json['lists'] ) < $limit ) {
 				$proceed = false;
 			} else {
 				$offset = $offset + $limit;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -266,17 +273,17 @@ class WPF_SendinBlue {
 		}
 
 		$crm_fields = array( 'email' => 'Email Address' );
-		$request    =  "https://api.sendinblue.com/v3/contacts/attributes";
+		$request    = 'https://api.sendinblue.com/v3/contacts/attributes';
 		$response   = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
 		foreach ( $body_json['attributes'] as $field_data ) {
-			$crm_fields[$field_data['name']] =  ucwords( str_replace( '_', ' ', $field_data[ 'name' ] ) );
+			$crm_fields[ $field_data['name'] ] = ucwords( str_replace( '_', ' ', $field_data['name'] ) );
 		}
 
 		asort( $crm_fields );
@@ -303,11 +310,11 @@ class WPF_SendinBlue {
 		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['email'] ) ) {
 			return false;
@@ -329,18 +336,18 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
-		$contact_tags 		= array();
-		$request    = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
-		$response   = wp_remote_get( $request, $this->params );
+		$contact_tags = array();
+		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
+		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json ) || empty( $body_json['listIds'] ) ) {
-			return false;
+			return array();
 		}
 
 		return $body_json['listIds'];
@@ -360,19 +367,18 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
-		foreach ($tags as $tag) {
+		foreach ( $tags as $tag ) {
 
-			$request      		= 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
-			$params           	= $this->params;
-			$params['method'] 	= 'POST';
-			$params['body']  	= json_encode( array( 'emails' => [ $contact_id ] ) );
+			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
+			$params           = $this->params;
+			$params['method'] = 'POST';
+			$params['body']   = json_encode( array( 'emails' => [ $contact_id ] ) );
 
 			$response = wp_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -393,19 +399,18 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
-		foreach ($tags as $tag) {
+		foreach ( $tags as $tag ) {
 
-			$request      		= 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/remove';
-			$params           	= $this->params;
-			$params['method'] 	= 'POST';
-			$params['body']  	= json_encode( array( 'emails' => [ $contact_id ] ) );
-			
-			$response     		    = wp_remote_post( $request, $params );
+			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/remove';
+			$params           = $this->params;
+			$params['method'] = 'POST';
+			$params['body']   = json_encode( array( 'emails' => [ $contact_id ] ) );
 
-			if( is_wp_error( $response ) ) {
+			$response = wp_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -444,17 +449,17 @@ class WPF_SendinBlue {
 		$post_data['email'] = $data['email'];
 		unset( $data['email'] );
 
-		if( ! empty( $data ) ) {
+		if ( ! empty( $data ) ) {
 			$post_data['attributes'] = $data;
 		}
 
-		$url              = 'https://api.sendinblue.com/v3/contacts';
-		$params           = $this->params;
-		$params['body']   = json_encode( $post_data );
+		$url            = 'https://api.sendinblue.com/v3/contacts';
+		$params         = $this->params;
+		$params['body'] = json_encode( $post_data );
 
 		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -481,25 +486,26 @@ class WPF_SendinBlue {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
-		$post_data 	= array ();
+		unset( $data['email'] );
 
-		$url              	 	  = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
-		$post_data['attributes']  = $data;
-		$params          		  = $this->params;
-		$params['method'] 	   	  = 'PUT';
-		$params['body']  	   	  = json_encode( $post_data );
+		$post_data = array( 'attributes' => $data );
+
+		$url                     = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
+		$post_data['attributes'] = $data;
+		$params                  = $this->params;
+		$params['method']        = 'PUT';
+		$params['body']          = json_encode( $post_data );
 
 		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 
 		}
-
 
 		return true;
 	}
@@ -520,7 +526,7 @@ class WPF_SendinBlue {
 		$url      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
 		$response = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -531,15 +537,13 @@ class WPF_SendinBlue {
 		$user_meta['user_email'] = $body_json['email'];
 
 		foreach ( $body_json['attributes'] as $field => $value ) {
-			
+
 			foreach ( $contact_fields as $field_id => $field_data ) {
 
 				if ( $field_data['active'] == true && $field == $field_data['crm_field'] ) {
 					$user_meta[ $field_id ] = $value;
 				}
-
 			}
-
 		}
 
 		return $user_meta;
@@ -561,17 +565,17 @@ class WPF_SendinBlue {
 
 		$contact_ids = array();
 
-		$url     = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts';
+		$url     = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts?limit=500';
 		$results = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $results ) ) {
+		if ( is_wp_error( $results ) ) {
 			return $results;
 		}
 
 		$body_json = json_decode( $results['body'], true );
 
 		foreach ( $body_json['contacts'] as $row => $contact ) {
-			$contact_ids[] = $contact['id'];
+			$contact_ids[] = $contact['email'];
 		}
 
 		return $contact_ids;

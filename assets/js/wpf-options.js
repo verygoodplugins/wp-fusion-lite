@@ -104,8 +104,10 @@ jQuery(document).ready(function($){
 					$('#wpf-batch-status').removeClass('notice-info').addClass('notice-error');
 					$('#wpf-batch-status span.title').html('');
 					$('#wpf-batch-status #cancel-batch').remove();
-					$('#wpf-batch-status span.status').html('<strong>No elligible ' + title + ' found.</strong> Aborting...');
-					$('#wpf-batch-status').slideDown('slow').removeClass('hidden').delay(6000).slideUp('slow').addClass('hidden');
+					$('#wpf-batch-status span.status').html('No eligible ' + title + ' found. Aborting...');
+					$('#wpf-batch-status').removeClass('hidden').slideDown('slow').delay(6000).slideUp('slow').queue(function(){
+    					$(this).addClass('hidden').dequeue();
+    				});
 					return;
 
 				} else {
@@ -128,6 +130,12 @@ jQuery(document).ready(function($){
 
 				console.log( 'BATCH step:' );
 				console.dir( response );
+
+				if ( response == null ) {
+
+					console.log('IS NULL');
+					return;
+				}
 
 				var remaining = parseInt( response.remaining );
 				var total = parseInt( response.total );
@@ -154,6 +162,8 @@ jQuery(document).ready(function($){
 
 					if(completed > 0) {
 						$('#wpf-batch-status span.status').html('Processing ' + completed + ' of ' + total + ' ' + title);
+					} else {
+						$('#wpf-batch-status span.status').html('Processing ' + remaining + ' records');
 					}
 
 					getBatchStatus(total, title, callback);

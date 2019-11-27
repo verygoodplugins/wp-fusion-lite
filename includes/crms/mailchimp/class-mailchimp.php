@@ -40,7 +40,7 @@ class WPF_MailChimp {
 	public function __construct() {
 
 		$this->slug     = 'mailchimp';
-		$this->name     = 'MailChimp';
+		$this->name     = 'Mailchimp';
 		$this->supports = array();
 
 		// Set up admin options
@@ -144,7 +144,7 @@ class WPF_MailChimp {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, 'mailchimp' ) !== false ) {
+		if ( strpos( $url, 'mailchimp' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$code = wp_remote_retrieve_response_code( $response );
 
@@ -249,6 +249,7 @@ class WPF_MailChimp {
 				'Authorization' => 'Basic ' . base64_encode( 'user:' . $api_key ),
 				'Content-Type'  => 'application/json',
 			),
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 		);
 
 		$this->dc   = $dc;
@@ -741,6 +742,16 @@ class WPF_MailChimp {
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
+		}
+
+		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+		if ( false !== $user_id ) {
+
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			update_user_meta( $user_id, 'mailchimp_contact_id', $body->id );
+
 		}
 
 		return true;

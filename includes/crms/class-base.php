@@ -273,6 +273,23 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Determines if a field is active
+	 *
+	 * @access public
+	 * @return bool
+	 */
+
+	public function is_field_active( $meta_key ) {
+
+		if ( ! empty( $contact_fields[ $meta_key ] ) && $contact_fields[ $meta_key ]['active'] == true ) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
 	 * Formats user entered data to match CRM field formats
 	 *
 	 * @access public
@@ -292,6 +309,12 @@ class WPF_CRM_Base {
 		} elseif ( false !== strpos( $field, 'add_tag_' ) ) {
 
 			// Don't modify it if it's a dynamic tag field
+			return $value;
+
+		} elseif ( $field_type == 'capabilities' && is_array( $value ) ) {
+
+			$value = implode( ",", array_keys( $value ) );
+
 			return $value;
 
 		} elseif ( ($field_type == 'multiselect' && is_array($value)) || is_array($value) ) {

@@ -22,7 +22,9 @@ class WPF_Admin_Notices {
 
 	public function plugin_activation() {
 
-		if ( wp_fusion()->settings->get( 'connection_configured' ) == false ) {
+		$screen = get_current_screen();
+
+		if ( wp_fusion()->settings->get( 'connection_configured' ) == false && $screen->id != 'settings_page_wpf-settings' ) {
 
 			$out = '<div id="wpf-needs-setup" class="updated">';
 			$out .= '<p>';

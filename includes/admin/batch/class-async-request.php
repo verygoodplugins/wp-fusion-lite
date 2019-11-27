@@ -50,12 +50,14 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * @var array
 		 * @access protected
 		 */
-		protected $data = array();
+		public $data = array();
 
 		/**
 		 * Initiate new async request
 		 */
 		public function __construct() {
+
+			// Identifier is wpf_background_process
 
 			$this->identifier = $this->prefix . '_' . $this->action;
 
@@ -88,13 +90,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			$url  = add_query_arg( $this->get_query_args(), $this->get_query_url() );
 			$args = $this->get_post_args();
 
-			$result = wp_remote_post( esc_url_raw( $url ), $args );
-
-			if ( is_wp_error( $result ) ) {
-				wp_fusion()->logger->handle( 'error', 0, 'Error dispatching batch: ' . $result->get_error_message(), array( 'source' => 'batch-process' ) );
-			}
-
-			return $result;
+			return wp_remote_post( esc_url_raw( $url ), $args );
 
 		}
 
@@ -145,7 +141,6 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			return array(
 				'timeout'   => 0.01,
 				'blocking'  => false,
-				'body'      => $this->data,
 				'cookies'   => $_COOKIE,
 				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
 			);
@@ -162,12 +157,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			// Don't lock up other requests while processing
 			session_write_close();
 
-			if( strpos( $_POST['hook'], 'wpf_' ) === false ) {
-				wp_die();
-			}
-
-			// Escape args
-			$_POST['args'] = array_map( 'intval', $_POST['args'] );
+			check_ajax_referer( $this->identifier, 'nonce' );
 
 			$this->handle();
 

@@ -485,20 +485,19 @@ class WPF_Ontraport {
 			$this->get_params();
 		}
 
-		$url               = "https://api.ontraport.com/1/objects/tag";
-		$nparams           = $this->params;
-		$alist             = implode( ",", $tags );
-		$post_data         = array(
+		$post_data = array(
 			'objectID' => $this->object_type,
-			'add_list' => $alist,
-			'ids'      => $contact_id
+			'add_list' => implode( ',', $tags ),
+			'ids'      => $contact_id,
 		);
-		$nparams['method'] = 'PUT';
-		$nparams['body']   = json_encode( $post_data );
 
-		$response = wp_remote_post( $url, $nparams );
+		$params           = $this->params;
+		$params['method'] = 'PUT';
+		$params['body']   = json_encode( $post_data );
 
-		if( is_wp_error( $response ) ) {
+		$response = wp_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -518,19 +517,19 @@ class WPF_Ontraport {
 			$this->get_params();
 		}
 
-		$url               = "https://api.ontraport.com/1/objects/tag";
-		$nparams           = $this->params;
-		$alist             = implode( ",", $tags );
-		$post_data         = array(
-			'objectID' 	  => $this->object_type,
-			'remove_list' => $alist,
-			'ids'         => $contact_id
+		$post_data = array(
+			'objectID'    => $this->object_type,
+			'remove_list' => implode( ',', $tags ),
+			'ids'         => $contact_id,
 		);
-		$nparams['method'] = 'DELETE';
-		$nparams['body']   = json_encode( $post_data );
-		$response          = wp_remote_post( $url, $nparams );
 
-		if( is_wp_error( $response ) ) {
+		$params           = $this->params;
+		$params['method'] = 'DELETE';
+		$params['body']   = json_encode( $post_data );
+
+		$response = wp_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 

@@ -299,6 +299,8 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 			$sources = array_unique( $sources );
 
+			sort( $sources );
+
 			$selected_source = isset( $_REQUEST['source'] ) ? esc_attr( $_REQUEST['source'] ) : '';
 			?>
 				<label for="filter-by-source" class="screen-reader-text"><?php _e( 'Filter by source', 'wp-fusion' ); ?></label>

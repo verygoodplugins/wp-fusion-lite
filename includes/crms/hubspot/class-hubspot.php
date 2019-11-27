@@ -79,6 +79,9 @@ class WPF_HubSpot {
 		// Slow down the batch processses to get around the 100 requests per 10s limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
+		add_action( 'wpf_guest_contact_updated', array( $this, 'guest_checkout_complete' ), 10, 2 );
+		add_action( 'wpf_guest_contact_created', array( $this, 'guest_checkout_complete' ), 10, 2 );
+
 	}
 
 	/**
@@ -349,34 +352,46 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request = 'https://api.hubapi.com/contacts/v1/lists/?count=250';
-		$response = wp_remote_get( $request, $this->params );
-
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
 		$available_tags = array();
 
-		if( ! empty( $response->lists ) ) {
+		$continue = true;
+		$offset = 0;
 
-			foreach( $response->lists as $list ) {
+		while ( $continue ) {
 
-				if( $list->listType == 'STATIC' ) {
-					$category = 'Static Lists';
-				} else {
-					$category = 'Active Lists';
+			$request = 'https://api.hubapi.com/contacts/v1/lists/?count=250&offset=' . $offset;
+			$response = wp_remote_get( $request, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if( ! empty( $response->lists ) ) {
+
+				foreach( $response->lists as $list ) {
+
+					if( $list->listType == 'STATIC' ) {
+						$category = 'Static Lists';
+					} else {
+						$category = 'Active Lists';
+					}
+
+					$available_tags[ $list->listId ] = array(
+						'label'    => $list->name,
+						'category' => $category
+					);
+
 				}
-
-				$available_tags[ $list->listId ] = array(
-					'label'    => $list->name,
-					'category' => $category
-				);
 
 			}
 
+			if ( $response->{'has-more'} ) {
+				$offset += 250;
+			} else {
+				$continue = false;
+			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -745,6 +760,19 @@ class WPF_HubSpot {
 
 	}
 
+	/**
+	 * Set a cookie to fix tracking for guest checkouts
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function guest_checkout_complete( $contact_id, $customer_email ) {
+
+		setcookie( 'wpf_guest', $customer_email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+
+	}
+
 
 	/**
 	 * Output tracking code
@@ -768,12 +796,20 @@ class WPF_HubSpot {
 		echo '<!-- Start of HubSpot Embed Code -->';
 		echo '<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/' . $trackid . '.js"></script>';
 
-		if( is_user_logged_in() ) {
+		if ( is_user_logged_in() || isset( $_COOKIE['wpf_guest'] ) ) {
 
-			$user = wp_get_current_user();
+			// This will also merge historical tracking data that was accumulated before a visitor registered
+
+			if ( isset( $_COOKIE['wpf_guest'] ) ) {
+				$email = $_COOKIE['wpf_guest'];
+			} else {
+				$user  = wp_get_current_user();
+				$email = $user->user_email;
+			}
+
 			echo '<script>';
 			echo 'var _hsq = window._hsq = window._hsq || [];';
-			echo '_hsq.push(["identify",{ email: "' . $user->user_email . '" }]);';
+			echo '_hsq.push(["identify",{ email: "' . $email . '" }]);';
 			echo '</script>';
 
 		}

@@ -2,9 +2,9 @@
 
 /*
 Plugin Name: WP Fusion Lite
-Description: WP Fusion connects your website to your CRM or marketing automation system.
+Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 Plugin URI: https://wpfusion.com/
-Version: 3.25
+Version: 3.27
 Author: Very Good Plugins
 Author URI: https://verygoodplugins.com/
 Text Domain: wp-fusion
@@ -29,7 +29,7 @@ Text Domain: wp-fusion
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.25' );
+define( 'WP_FUSION_VERSION', '3.27' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -44,7 +44,7 @@ final class WP_Fusion_Lite {
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
+	 * @var WP_Fusion The one true WP_Fusion
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -149,15 +149,15 @@ final class WP_Fusion_Lite {
 
 
 	/**
-	 * Main WP_Fusion_Lite Instance
+	 * Main WP_Fusion Instance
 	 *
-	 * Insures that only one instance of WP_Fusion_Lite exists in memory at any one
+	 * Insures that only one instance of WP_Fusion exists in memory at any one
 	 * time. Also prevents needing to define globals all over the place.
 	 *
 	 * @since 1.0
 	 * @static
 	 * @static var array $instance
-	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
+	 * @return WP_Fusion The one true WP_Fusion
 	 */
 
 	public static function instance() {
@@ -359,7 +359,7 @@ final class WP_Fusion_Lite {
 				'userengage'     => 'WPF_UserEngage',
 				'convertfox'     => 'WPF_ConvertFox',
 				'salesflare'     => 'WPF_Salesflare',
-				'vtiger'         => 'WPF_Vtiger',
+				//'vtiger'         => 'WPF_Vtiger',
 				'flexie'         => 'WPF_Flexie',
 				'tubular'        => 'WPF_Tubular',
 				'maropost'       => 'WPF_Maropost',
@@ -378,6 +378,8 @@ final class WP_Fusion_Lite {
 				'sendlane'       => 'WPF_Sendlane',
 				'getresponse'    => 'WPF_GetResponse',
 				'mailpoet'       => 'WPF_MailPoet',
+				'klaviyo'        => 'WPF_Klaviyo',
+				'birdsend'       => 'WPF_BirdSend',
 			)
 		);
 

@@ -47,6 +47,11 @@ $nationbuilder_fields[] = array(
 	'crm_label'	=> 'Phone (Fax)'
 );
 
+$nationbuilder_fields[] = array(
+	'crm_field' => 'mobile',
+	'crm_label'	=> 'Phone (Mobile)'
+);
+
 // Billing
 
 $nationbuilder_fields['billing_address_1'] = array(
@@ -79,68 +84,68 @@ $nationbuilder_fields['billing_country'] = array(
 	'crm_label'	=> 'Country (Billing)'
 );
 
-// Primary Address
+// Registered Address
 
 $nationbuilder_fields[] = array(
-	'crm_field' => 'primary_address+address1',
-	'crm_label'	=> 'Address 1 (Primary)'
+	'crm_field' => 'registered_address+address1',
+	'crm_label'	=> 'Address 1 (Registered)'
 );
 
 $nationbuilder_fields[] = array(
-	'crm_field' => 'primary_address+address2',
-	'crm_label'	=> 'Address 2 (Primary)'
+	'crm_field' => 'registered_address+address2',
+	'crm_label'	=> 'Address 2 (Registered)'
 );
 
 $nationbuilder_fields[] = array(
-	'crm_field' => 'primary_address+city',
-	'crm_label'	=> 'City (Primary)'
+	'crm_field' => 'registered_address+city',
+	'crm_label'	=> 'City (Registered)'
 );
 
 $nationbuilder_fields[] = array(
-	'crm_field' => 'primary_address+state',
-	'crm_label'	=> 'State (Primary)'
+	'crm_field' => 'registered_address+state',
+	'crm_label'	=> 'State (Registered)'
 );
 
 $nationbuilder_fields[] = array(
-	'crm_field' => 'primary_address+zip',
-	'crm_label'	=> 'Postcode (Primary)'
+	'crm_field' => 'registered_address+zip',
+	'crm_label'	=> 'Postcode (Registered)'
 );
 
 $nationbuilder_fields[] = array(
-	'crm_field' => 'primary_address+country_code',
-	'crm_label'	=> 'Country (Primary)'
+	'crm_field' => 'registered_address+country_code',
+	'crm_label'	=> 'Country (Registered)'
 );
 
 // Home Address
 
 $nationbuilder_fields['shipping_address_1'] = array(
 	'crm_field' => 'home_address+address1',
-	'crm_label'	=> 'Address 1 (Home)'
+	'crm_label'	=> 'Address 1 (Home / Primary)'
 );
 
 $nationbuilder_fields['shipping_address_2'] = array(
 	'crm_field' => 'home_address+address2',
-	'crm_label'	=> 'Address 2 (Home)'
+	'crm_label'	=> 'Address 2 (Home / Primary)'
 );
 
 $nationbuilder_fields['shipping_city'] = array(
 	'crm_field' => 'home_address+city',
-	'crm_label'	=> 'City (Home)'
+	'crm_label'	=> 'City (Home / Primary)'
 );
 
 $nationbuilder_fields['shipping_state'] = array(
 	'crm_field' => 'home_address+state',
-	'crm_label'	=> 'State (Home)'
+	'crm_label'	=> 'State (Home / Primary)'
 );
 
 $nationbuilder_fields['shipping_postcode'] = array(
 	'crm_field' => 'home_address+zip',
-	'crm_label'	=> 'Postcode (Home)'
+	'crm_label'	=> 'Postcode (Home / Primary)'
 );
 
 $nationbuilder_fields['shipping_country'] = array(
 	'crm_field' => 'home_address+country_code',
-	'crm_label'	=> 'Country (Home)'
+	'crm_label'	=> 'Country (Home / Primary)'
 );
 
 // Other stuff
@@ -287,6 +292,21 @@ $nationbuilder_fields[] = array(
 	'crm_label' => 'Is Party Member?',
 );
 
+$nationbuilder_fields[] = array(
+	'crm_field' => 'occupation',
+	'crm_label' => 'Occupation',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'employer',
+	'crm_label' => 'Employer',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'signup_type',
+	'crm_label' => 'Signup Type',
+);
+
 // Fields to ignore (for now)
 
 $nationbuilder_ignore_fields = array(
@@ -300,7 +320,6 @@ $nationbuilder_ignore_fields = array(
 	'do_not_contact',
 	'dw_id',
 	'email_opt_in',
-	'employer',
 	'external_id',
 	'federal_district',
 	'fire_district',
@@ -316,7 +335,6 @@ $nationbuilder_ignore_fields = array(
 	'nbec_guid',
 	'ngp_id',
 	'note',
-	'occupation',
 	'party',
 	'pf_strat_id',
 	'precinct_id',
@@ -328,7 +346,6 @@ $nationbuilder_ignore_fields = array(
 	'salesforce_id',
 	'school_district',
 	'school_sub_district',
-	'signup_type',
 	'state_file_id',
 	'state_lower_district',
 	'state_upper_district',

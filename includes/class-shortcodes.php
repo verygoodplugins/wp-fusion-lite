@@ -203,7 +203,7 @@ class WPF_Shortcodes {
 
 	public function shortcode_user_meta( $atts, $content = null ) {
 
-		$atts = shortcode_atts( array('field' => '', 'date-format' => ''), $atts );
+		$atts = shortcode_atts( array('field' => '', 'date-format' => '', 'format' => ''), $atts );
 
 		if ( empty( $atts['field'] ) ) {
 			return;
@@ -243,6 +243,10 @@ class WPF_Shortcodes {
 
 			}
 
+		}
+
+		if ( $atts['format'] == 'ucwords' ) {
+			$value = ucwords( $value );
 		}
 
 		if( empty( $value ) ) {

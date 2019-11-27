@@ -53,8 +53,18 @@ $groundhogg_fields['billing_country'] = array(
 );
 
 $groundhogg_fields['company'] = array(
-	'crm_label' => 'Company',
-	'crm_field' => 'company'
+	'crm_label' => 'Company Name',
+	'crm_field' => 'company_name'
+);
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'Job Title',
+	'crm_field' => 'job_title'
+);
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'Full Company Address',
+	'crm_field' => 'company_address'
 );
 
 $groundhogg_fields['website'] = array(
@@ -70,4 +80,14 @@ $groundhogg_fields['user_url'] = array(
 $groundhogg_fields['billing_country'] = array(
 	'crm_label' => 'Country',
 	'crm_field' => 'country'
+);
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'GDPR Consent',
+	'crm_field' => 'gdpr_consent'
+);
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'Agreed to Terms',
+	'crm_field' => 'terms_agreement'
 );

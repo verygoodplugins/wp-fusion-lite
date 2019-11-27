@@ -213,7 +213,7 @@ class WPF_GetResponse_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/GetResponse-fields.php';
+			require_once dirname( __FILE__ ) . '/getresponse-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 

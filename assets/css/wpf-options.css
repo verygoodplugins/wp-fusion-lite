@@ -31,6 +31,8 @@
 #wpf-pro a.button-primary {
 	margin-left: 15px;
 	margin-top: 5px;
+	background-color: #E55B10;
+    border-color: #E55B10;
 }
 
 #wpf-pro hr {
@@ -49,6 +51,24 @@
 
 input[type="checkbox"] {
 	margin-right: 7px;
+	width: 16px;
+    height: 16px;
+    font-size: 15px;
+    padding: 1px 2px !important;
+    -webkit-appearance: checkbox;
+}
+
+input[type="radio"] {
+	width: 16px;
+    height: 16px;
+	-webkit-appearance: radio;
+	top: -2px;
+    position: relative;
+}
+
+input[type="checkbox"]:focus, input[type="radio"]:focus {
+	box-shadow: none;
+	outline: none;
 }
 
 input#app_name {

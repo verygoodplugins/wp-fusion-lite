@@ -225,7 +225,7 @@ class WPF_MailPoet {
 
 			$options = array(
 				'send_confirmation_email'      => false,
-				'schedule_welcome_email'       => false,
+				'schedule_welcome_email'       => true,
 				'skip_subscriber_notification' => true,
 			);
 
