@@ -42,6 +42,7 @@ class WPF_Groundhogg_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ), 10, 2 );
 
 	}
 
@@ -72,6 +73,41 @@ class WPF_Groundhogg_Admin {
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
+
+		return $settings;
+
+	}
+
+	/**
+	 * Set up GH specific settings (Logins Tags Sync and Login Meta Sync aren't necessary with GH since changes are communicated in real time)
+	 *
+	 * @access  public
+	 * @return  array Settings
+	 */
+
+	public function configure_settings( $settings, $options ) {
+
+		unset( $settings['login_sync'] );
+		unset( $settings['login_meta_sync'] );
+
+		$new_settings = array(
+			'gh_default_status' => array(
+				'title'       => __( 'Default Status', 'wp-fusion' ),
+				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion' ),
+				'type'        => 'select',
+				'std'         => 2,
+				'section'     => 'main',
+				'choices'     => array(
+					2 => 'Confirmed',
+					1 => 'Unconfimed',
+					3 => 'Unsubscribed',
+					4 => 'Weekly',
+					5 => 'Monthly',
+				),
+			),
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
 

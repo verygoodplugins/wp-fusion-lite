@@ -54,7 +54,9 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Intercom
 * Kartra
 * Klaviyo
+* Klick-Tipp
 * MailChimp
+* MailEngine
 * MailerLite
 * Mailjet
 * MailPoet
@@ -63,12 +65,15 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * NationBuilder
 * Ontraport
 * Platform.ly
+* Quentn
 * Salesflare
 * Salesforce
+* SendFox
 * SendinBlue
 * Sendlane
 * Tubular
 * UserEngage
+* ZeroBS CRM
 * Zoho
 
 ## Installation ##

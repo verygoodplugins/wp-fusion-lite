@@ -36,7 +36,7 @@ class WPF_AJAX {
 		if( isset( $_POST['user_id'] ) ) {
 			$user_id = intval($_POST['user_id']);
 		} else {
-			$user_id = get_current_user_id();
+			$user_id = wpf_get_current_user_id();
 		}
 
 		if( ! is_array( $tags ) ) {
@@ -71,7 +71,7 @@ class WPF_AJAX {
 		if( isset( $_POST['user_id'] ) ) {
 			$user_id = intval($_POST['user_id']);
 		} else {
-			$user_id = get_current_user_id();
+			$user_id = wpf_get_current_user_id();
 		}
 
 		if( ! is_array( $tags ) ) {
@@ -106,7 +106,7 @@ class WPF_AJAX {
 		if( isset( $_POST['user_id'] ) ) {
 			$user_id = intval($_POST['user_id']);
 		} else {
-			$user_id = get_current_user_id();
+			$user_id = wpf_get_current_user_id();
 		}
 
 		if ( is_array( $update_data ) ) {

@@ -25,9 +25,10 @@ class WPF_Settings {
 
 	public function __construct() {
 
-		$this->options = get_option( 'wpf_options', array() );
-
 		if ( is_admin() ) {
+
+			$this->options = get_option( 'wpf_options', array() ); // No longer loading this on the frontend
+
 			$this->init();
 		}
 
@@ -44,8 +45,7 @@ class WPF_Settings {
 
 		$this->includes();
 
-		// Custom fields 
-		add_action( 'show_field_api_validate', array( $this, 'show_field_api_validate' ), 10, 2 );
+		// Custom fields
 		add_action( 'show_field_contact_fields', array( $this, 'show_field_contact_fields' ), 10, 2 );
 		add_action( 'show_field_contact_fields_begin', array( $this, 'show_field_contact_fields_begin' ), 10, 2 );
 		add_action( 'show_field_assign_tags', array( $this, 'show_field_assign_tags' ), 10, 2 );
@@ -55,8 +55,11 @@ class WPF_Settings {
 		add_action( 'show_field_import_groups', array( $this, 'show_field_import_groups' ), 10, 2 );
 		add_action( 'show_field_export_options', array( $this, 'show_field_export_options' ), 10, 2 );
 		add_action( 'show_field_test_webhooks', array( $this, 'show_field_test_webhooks' ), 10, 2 );
-
 		add_action( 'show_field_crm_field', array( $this, 'show_field_crm_field' ), 10, 2 );
+
+		// CRM setup layouts
+		add_action( 'show_field_api_validate', array( $this, 'show_field_api_validate' ), 10, 2 );
+		add_action( 'show_field_api_validate_end', array( $this, 'show_field_api_validate_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_sync_tags', array( $this, 'sync_tags' ) );
@@ -123,7 +126,7 @@ class WPF_Settings {
 				<p>You're running the <strong>Lite</strong> version of WP Fusion. A paid license includes:</p>
 
 				<ul>
-					<li>60+ plugin integrations</li>
+					<li>80+ plugin integrations like <a href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">WooCommerce</a>, <a href="https://wpfusion.com/documentation/page-builders/elementor/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">Elementor</a>, <a href="https://wpfusion.com/documentation/learning-management/learndash/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">LearnDash</a> and more</li>
 					<li>Hundreds of tag triggers</li>
 					<li>Sync data back to WordPress via webhooks</li>
 					<li>Premium support</li>
@@ -163,6 +166,10 @@ class WPF_Settings {
 	 * @return mixed
 	 */
 	public function get( $key, $default = false ) {
+
+		if ( empty( $this->options ) ) {
+			$this->options = get_option( 'wpf_options', array() );
+		}
 
 		$value = isset( $this->options[ $key ] ) ? $this->options[ $key ] : $default;
 
@@ -529,7 +536,7 @@ class WPF_Settings {
 
 		$status = get_transient( 'wpf_license_check' );
 
-		// Run the license check a maximum of once per day
+		// Run the license check a maximum of once every 10 days
 		if ( false === $status ) {
 
 			$integrations = array();
@@ -553,9 +560,10 @@ class WPF_Settings {
 				'integrations' => $integrations,
 				'version'	 => WP_FUSION_VERSION
 			);
+
 			// Call the custom API.
 			$response = wp_remote_post( WPF_STORE_URL, array(
-				'timeout'   => 30,
+				'timeout'   => 20,
 				'sslverify' => false,
 				'body'      => $api_params
 			) );
@@ -866,7 +874,7 @@ class WPF_Settings {
 
 		$settings['assign_tags'] = array(
 			'title'   => __( 'Assign Tags', 'wp-fusion' ),
-			'desc'    => __( 'The selected tags will be applied to new contacts.', 'wp-fusion' ),
+			'desc'    => __( 'The selected tags will be applied to anyone who registers an account in WordPress.', 'wp-fusion' ),
 			'type'    => 'multi_select',
 			'choices' => array(),
 			'section' => 'main'
@@ -948,7 +956,7 @@ class WPF_Settings {
 
 		$settings['hide_archives'] = array(
 			'title'   => __( 'Filter Queries', 'wp-fusion' ),
-			'desc'    => __( 'Content that the user cannot access will be completely hidden from all post listings, grids, and archives.', 'wp-fusion' ),
+			'desc'    => __( 'Content that the user cannot access will be <strong>completely hidden</strong> from all post listings, grids, archives, and course navigation. <strong>Use with caution</strong>.', 'wp-fusion' ),
 			'std'     => 'off',
 			'type'    => 'select',
 			'section' => 'main',
@@ -1092,7 +1100,7 @@ class WPF_Settings {
 
 			$settings['webhooks_lite_notice'] = array(
 				'type'    => 'paragraph',
-				'desc'    => '<span style="display:inline-block; background: #fff; padding: 10px 15px; font-weight: bold;">' . sprintf( __( 'To send data back to WordPress with %s webhooks please <a href="https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=free-plugin">upgrade to the full version</a> of WP Fusion.', 'wp-fusion' ), wp_fusion()->crm->name ) . '</span>',
+				'desc'    => '<span style="display:inline-block; background: #fff; padding: 10px 15px; font-weight: bold;">' . sprintf( __( 'To sync data bi-directionally with WordPress using %s webhooks please <a href="https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=free-plugin">upgrade to the full version</a> of WP Fusion.', 'wp-fusion' ), wp_fusion()->crm->name ) . '</span>',
 				'section' => 'main'
 			);
 
@@ -1146,7 +1154,7 @@ class WPF_Settings {
 
 		$settings['email_notifications'] = array(
 			'title'   => __( 'Enable Notifications', 'wp-fusion' ),
-			'desc'    => __( 'Send a <a href="https://wpfusion.com/documentation/tutorials/import-users/" target="_blank">welcome email</a> to new users containing their username, password, and login link.', 'wp-fusion' ),
+			'desc'    => __( 'Send a welcome email to new users containing their username and a password reset link.', 'wp-fusion' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'import'
@@ -1283,7 +1291,7 @@ class WPF_Settings {
 
 		$settings['staging_mode'] = array(
 			'title'   => __( 'Staging Mode', 'wp-fusion' ),
-			'desc'    => sprintf( __( 'When staging mode is active, all normal WP Fusion features will be available, but no API calls will be sent to %s.', 'wp-fusion' ), wp_fusion()->crm->name ),
+			'desc'    => sprintf( __( 'When staging mode is active, all normal WP Fusion features will be available, but no API calls will be made to %s.', 'wp-fusion' ), wp_fusion()->crm->name ),
 			'type'    => 'checkbox',
 			'std'     => 0,
 			'section' => 'advanced'
@@ -1336,6 +1344,7 @@ class WPF_Settings {
 		$settings['admin_permissions'] = array(
 			'title'   => __( 'Admin Permissions', 'wp-fusion' ),
 			'desc'    => __( 'Require the <code>manage_options</code> capability to see WP Fusion meta boxes in the admin.', 'wp-fusion' ),
+			'tooltip' => __( 'Enable this setting if you have other user roles editing posts (for example Authors or Editors) and you don\'t want them to see WP Fusion\' access control meta boxes.', 'wp-fusion' ),
 			'type'    => 'checkbox',
 			'std'     => 0,
 			'section' => 'advanced',
@@ -1454,13 +1463,34 @@ class WPF_Settings {
 
 		if ( $this->options['connection_configured'] == true ) {
 
-			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-success" data-toggle="tooltip" data-placement="right" title="' . __( 'Reload all custom fields and available tags from your CRM', 'wp-fusion') . '">' . __( 'Resynchronize Tags &amp; Fields', 'wp-fusion' ) . '</a>';
+			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-success wpf-tip right" data-tip="' . sprintf( __( 'Reload all custom fields and available tags from %s.', 'wp-fusion'), wp_fusion()->crm->name ) . '">' . __( 'Resynchronize Tags &amp; Fields', 'wp-fusion' ) . '</a>';
 
 		} else {
 
 			echo '<a id="test-connection" data-post-fields="' . implode( ',', $field['post_fields'] ) . '" class="btn btn-default">Connect</a>';
 
 		}
+
+	}
+
+	/**
+	 * Close out API validate field
+	 *
+	 * @access  public
+	 * @since   1.0
+	 */
+
+	public function show_field_api_validate_end( $id, $field ) {
+
+		if ( $field['desc'] != '' ) {
+			echo '<span class="description">' . $field['desc'] . '</span>';
+		}
+		echo '</td>';
+		echo '</tr>';
+
+		echo '</table><div id="connection-output"></div>';
+		echo '</div>'; // close CRM div
+		echo '<table class="form-table">';
 
 	}
 
@@ -1487,7 +1517,13 @@ class WPF_Settings {
 
 	public function show_field_edd_license( $id, $field ) {
 
-		echo '<input id="' . $id . '" class="form-control" type="text" name="wpf_options[' . $id . ']" placeholder="' . $field['std'] . '" value="' . esc_attr( $this->options[ $id ] ) . '">';
+		if ( $field['license_status'] == "invalid" ) {
+			$type = 'text';
+		} else {
+			$type = 'password';
+		}
+
+		echo '<input id="' . $id . '" class="form-control" ' . ( $field['license_status'] == 'valid' ? 'disabled' : '' ) . ' type="' . $type . '" name="wpf_options[' . $id . ']" placeholder="' . $field['std'] . '" value="' . esc_attr( $this->options[ $id ] ) . '">';
 
 		if ( $field['license_status'] == "invalid" ) {
 			echo '<a id="edd-license" data-action="edd_activate" class="btn btn-default">Activate License</a>';
@@ -1906,27 +1942,27 @@ class WPF_Settings {
 			'users_sync' => array(
 				'label'     => __( 'Resync contact IDs and tags', 'wp-fusion' ),
 				'title'     => __( 'Users (contact IDs and tags)', 'wp-fusion' ),
-				'tooltip'   => sprintf( __( 'All WordPress users will have their contact IDs checked / updated based on email address and tags will be updated based on their %s contact record', 'wp-fusion' ), wp_fusion()->crm->name )
+				'tooltip'   => sprintf( __( 'All WordPress users will have their contact IDs checked / updated based on email address and tags will be loaded from their %s contact record.', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 			'users_tags_sync' => array(
 				'label'     => __( 'Resync tags', 'wp-fusion' ),
 				'title'     => __( 'Users (tags)', 'wp-fusion' ),
-				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID', 'wp-fusion' ) )
+				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID.', 'wp-fusion' ) )
 			),
 			'users_register' => array(
 				'label'     => __( 'Export users', 'wp-fusion' ),
 				'title'     => __( 'Users', 'wp-fusion' ),
-				'tooltip'   => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts', 'wp-fusion' ), wp_fusion()->crm->name )
+				'tooltip'   => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts.', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 			'users_meta'     => array(
 				'label'     => __( 'Push user meta', 'wp-fusion' ),
 				'title'     => __( 'Users', 'wp-fusion' ),
-				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data pushed to %s, overriding any data on the contact record with the values from WordPress', 'wp-fusion' ), wp_fusion()->crm->name )
+				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data pushed to %s, overriding any data on the contact record with the values from WordPress.', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 			'pull_users_meta'     => array(
 				'label'     => __( 'Pull user meta', 'wp-fusion' ),
 				'title'     => __( 'Users', 'wp-fusion' ),
-				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data loaded from %s, overriding any data in their user meta with the values from their contact record', 'wp-fusion' ), wp_fusion()->crm->name )
+				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data loaded from %s, overriding any data in their user meta with the values from their contact record.', 'wp-fusion' ), wp_fusion()->crm->name )
 			),
 		);
 
@@ -1938,14 +1974,16 @@ class WPF_Settings {
 			echo '<label for="export_' . $key . '">' . $data['label'];
 
 			if(isset($data['tooltip'])) {
-				echo '<i class="fa fa-info-circle" data-placement="right" data-toggle="tooltip" title="' . $data['tooltip'] . '"></i>';
+				echo '<i class="fa fa-info-circle wpf-tip right" data-tip="' . $data['tooltip'] . '"></i>';
 			}
 
 			echo '</label><br />';
 
 		}
 
-		echo '<br /><br /><a id="export-btn" class="btn btn-default">Create Background Task</a>';
+		echo '<br /><br /><a id="export-btn" class="btn btn-default">Create Background Task</a><br />';
+
+		echo '<span class="description">For more information on batch operations, <a target="_blank" href="https://wpfusion.com/documentation/tutorials/exporting-data/">see our documentation</a>.</span>';
 
 	}
 

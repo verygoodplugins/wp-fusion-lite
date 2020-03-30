@@ -320,7 +320,7 @@ class WPF_Copper_Admin {
 		$access_key  = sanitize_text_field( $_POST['copper_key'] );
 		$user_email  = sanitize_email( $_POST['copper_user_email'] );
 
-		$connection = $this->crm->connect( $access_key, true );
+		$connection = $this->crm->connect( $user_email, $access_key, true );
 
 		if ( is_wp_error( $connection ) ) {
 

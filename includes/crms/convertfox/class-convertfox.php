@@ -2,6 +2,10 @@
 
 class WPF_ConvertFox {
 
+	//
+	// Unsubscribes: Gist can return a contact ID and tags from an unsubscribed subscriber, as well as update tags
+	//
+
 	/**
 	 * Contains API params
 	 */
@@ -22,7 +26,6 @@ class WPF_ConvertFox {
 	 */
 
 	public function __construct() {
-
 
 		$this->slug     = 'convertfox';
 		$this->name     = 'Gist';
@@ -47,6 +50,11 @@ class WPF_ConvertFox {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		// Add tracking code to footer
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ), 100 );
+
+		add_action( 'wpf_forms_post_submission', array( $this, 'set_tracking_cookie_forms' ), 10, 4 );
 
 	}
 
@@ -82,7 +90,7 @@ class WPF_ConvertFox {
 
 	public function handle_http_response( $response, $args, $url ) {	
 
-		if( strpos($url, 'convertfox') !== false && strpos($url, '?email=') === false) {
+		if( strpos($url, 'getgist') !== false && strpos($url, '?email=') === false) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -95,6 +103,98 @@ class WPF_ConvertFox {
 		}
 
 		return $response;
+
+	}
+
+	/**
+	 * Output tracking code
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function tracking_code_output() {
+
+		$email = false;
+
+		if ( wpf_is_user_logged_in() ) {
+
+			$user = get_userdata( wpf_get_current_user_id() );
+
+			$email = $user->user_email;
+
+		} elseif ( isset( $_COOKIE['wpf_gist_id'] ) ) {
+
+			$email = $_COOKIE['wpf_gist_id'];
+
+		}
+
+		if ( false !== $email ) {
+
+			echo '<!-- WP Fusion / Gist identify -->';
+			echo '<script type="text/javascript">';
+			echo 'if ( typeof gist !== "undefined" ) {';
+			echo 'gist.identify("' . $email . '");';
+			echo '}';
+			echo '</script>';
+
+		}
+
+	}
+
+	/**
+	 * Identify the user to the tracking script after a form submission
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function set_tracking_cookie_forms( $update_data, $user_id, $contact_id, $form_id ) {
+
+		if ( wpf_is_user_logged_in() || headers_sent() ) {
+			return;
+		}
+
+		setcookie( 'wpf_gist_id', $update_data['email'], time() + DAY_IN_SECONDS * 365, COOKIEPATH, COOKIE_DOMAIN );
+
+	}
+
+
+	/**
+	 * Gist requires an email to be submitted when updating contacts
+	 *
+	 * @access private
+	 * @return string Email
+	 */
+
+	private function get_email_from_cid( $contact_id ) {
+
+		$users = get_users(
+			array(
+				'meta_key'   => 'convertfox_contact_id',
+				'meta_value' => $contact_id,
+				'fields'     => array( 'user_email' ),
+			)
+		);
+
+		if ( ! empty( $users ) ) {
+
+			return $users[0]->user_email;
+
+		} else {
+
+			$url      = 'https://api.getgist.com/contacts/' . $contact_id;
+			$response = wp_remote_get( $url, $this->params );
+
+			if( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			return $response->contact->email;
+
+		}
 
 	}
 
@@ -240,7 +340,7 @@ class WPF_ConvertFox {
 
 		$custom_fields = array();
 
-		$request    = "https://api.getgist.com/users?page=1&per_page=1";
+		$request    = "https://api.getgist.com/contacts?page=1&per_page=1";
 		$response   = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -249,9 +349,9 @@ class WPF_ConvertFox {
 
 		$body_json = json_decode( $response['body'], true );
 
-		if ( isset( $body_json['users'] ) && is_array( $body_json['users'] ) ) {
+		if ( isset( $body_json['contacts'] ) && is_array( $body_json['contacts'] ) ) {
 
-			foreach ( $body_json['users'] as $field_data ) {
+			foreach ( $body_json['contacts'] as $field_data ) {
 
 					foreach ($field_data['custom_properties'] as $key => $value) {
 
@@ -268,7 +368,6 @@ class WPF_ConvertFox {
 		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields ); 
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
-
 
 		return $crm_fields;
 	}
@@ -288,7 +387,7 @@ class WPF_ConvertFox {
 		}
 
 		$contact_info = array();
-		$request      = "https://api.getgist.com/users?email=" . urlencode( $email_address );
+		$request      = "https://api.getgist.com/contacts?email=" . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -297,11 +396,11 @@ class WPF_ConvertFox {
 
 		$body_json    = json_decode( $response['body'], true );
 
-		if ( empty( $body_json['user'] ) ) {
+		if ( empty( $body_json['contact'] ) ) {
 			return false;
 		}
 
-		return $body_json['user']['id'];
+		return $body_json['contact']['id'];
 	}
 
 
@@ -319,7 +418,7 @@ class WPF_ConvertFox {
 		}
 
 		$tags 		= array();
-		$request    = 'https://api.getgist.com/users/' . $contact_id;
+		$request    = 'https://api.getgist.com/contacts/' . $contact_id;
 		$response   = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -328,11 +427,11 @@ class WPF_ConvertFox {
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( empty( $body_json->user->tags ) ) {
+		if ( empty( $body_json->contact->tags ) ) {
 			return $tags;
 		}
 
-		foreach ( $body_json->user->tags as $tag ) {
+		foreach ( $body_json->contact->tags as $tag ) {
 			$tags[] = $tag->name;
 		}
 
@@ -370,8 +469,8 @@ class WPF_ConvertFox {
 		foreach( $tags as $tag ) {
 
 			$update_data = (object) array(
-				'users' => array( (object) array( 'id' => $contact_id ) ),
-				'name'	=> $tag
+				'contacts' => array( (object) array( 'id' => $contact_id ) ),
+				'name'	   => $tag
 			);
 
 			$params['body'] = json_encode( $update_data );
@@ -407,8 +506,8 @@ class WPF_ConvertFox {
 		foreach( $tags as $tag ) {
 
 			$update_data = (object) array(
-				'users' => array( (object) array( 'id' => $contact_id, 'untag' => true ) ),
-				'name'	=> $tag
+				'contacts' => array( (object) array( 'id' => $contact_id, 'untag' => true ) ),
+				'name'	   => $tag
 			);
 
 			$params['body'] = json_encode( $update_data );
@@ -438,24 +537,6 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		// ConvertFox needs a user ID to create a contact
-
-		if( isset( $data['user_id'] ) ) {
-
-			$user_id = $data['user_id'];
-
-		} else {
-
-			$user = get_user_by( 'email', $data['user_email'] );
-
-			if( $user == false ) {
-				$user_id = rand(0, 10000);
-			} else {
-				$user_id = $user->ID;
-			}
-
-		}
-
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
@@ -472,13 +553,23 @@ class WPF_ConvertFox {
 		}
 
 		$update_data = (object) array(
-				'user_id' => $user_id,
-				'custom_properties' => array()
+			'custom_properties' => array()
 		);
+
+		// Gist needs a user ID to create a User, otherwise they'll be created as a Lead
+
+		if( isset( $data['user_id'] ) ) {
+
+			$update_data->user_id = $data['user_id'];
+
+		} elseif ( $user = get_user_by( 'email', $data['email'] ) ) {
+
+			$update_data->user_id = $user->ID;
+
+		}
 
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
-
 
 		foreach( $data as $crm_field => $value ) {
 
@@ -503,7 +594,7 @@ class WPF_ConvertFox {
 		$params           = $this->params;
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( 'https://api.getgist.com/users', $params );
+		$response = wp_remote_post( 'https://api.getgist.com/contacts', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -511,7 +602,7 @@ class WPF_ConvertFox {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $body->user->id;
+		return $body->contact->id;
 
 	}
 
@@ -528,7 +619,9 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		if( isset( $data['user_id'] ) ) {
+		// Maybe send user ID
+
+		if ( isset( $data['user_id'] ) ) {
 			$user_id = $data['user_id'];
 		} else {
 			$user_id = wp_fusion()->user->get_user_id( $contact_id );
@@ -540,6 +633,18 @@ class WPF_ConvertFox {
 
 		if( empty( $data ) ) {
 			return false;
+		}
+
+		// Need email address for updates
+
+		if( ! isset( $data['email'] ) ) {
+
+			$data['email'] = $this->get_email_from_cid( $contact_id );
+
+			if ( is_wp_error( $data['email'] ) ) {
+				return $data['email'];
+			}
+
 		}
 
 		// Fix names
@@ -555,10 +660,13 @@ class WPF_ConvertFox {
 
 
 		$update_data = (object) array(
-			'user_id' => $user_id,
 			'id'	  => $contact_id,
 			'custom_properties' => array()
 		);
+
+		if ( ! empty( $user_id ) ) {
+			$update_data->user_id = $user_id;
+		}
 
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
@@ -586,7 +694,7 @@ class WPF_ConvertFox {
 		$params           = $this->params;
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( 'https://api.getgist.com/users', $params );
+		$response = wp_remote_post( 'https://api.getgist.com/contacts', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -608,7 +716,7 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$url      = 'https://api.getgist.com/users/' . $contact_id;
+		$url      = 'https://api.getgist.com/contacts/' . $contact_id;
 		$response = wp_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -621,10 +729,10 @@ class WPF_ConvertFox {
 
 		// Explode name into first name and last name
 
-		$exploded_name = explode(' ', $body_json['user']['name']);
-		$body_json['user']['first_name'] = $exploded_name[0];
+		$exploded_name = explode(' ', $body_json['contact']['name']);
+		$body_json['contact']['first_name'] = $exploded_name[0];
 		unset( $exploded_name[0] );
-		$body_json['user']['last_name'] = implode(' ', $exploded_name);
+		$body_json['contact']['last_name'] = implode(' ', $exploded_name);
 
 		$user_meta = array();
 
@@ -634,15 +742,15 @@ class WPF_ConvertFox {
 				continue;
 			}
 
-			if( isset( $body_json['user'][ $field_data['crm_field'] ] ) && $field_data['active'] == true ) {
+			if( isset( $body_json['contact'][ $field_data['crm_field'] ] ) && $field_data['active'] == true ) {
 
 				// First level fields
-				$user_meta[ $field_id ] = $body_json['user'][ $field_data['crm_field'] ];
+				$user_meta[ $field_id ] = $body_json['contact'][ $field_data['crm_field'] ];
 
 			} else {
 
 				// Custom fields
-				foreach( $body_json['user']['custom_properties'] as $custom_key => $custom_value ) {
+				foreach( $body_json['contact']['custom_properties'] as $custom_key => $custom_value ) {
 
 					if( $custom_key == $field_data['crm_field'] && $field_data['active'] == true ) {
 
@@ -680,7 +788,7 @@ class WPF_ConvertFox {
 
 		while($proceed == true) {
 
-			$url      = 'https://api.getgist.com/users?page=' . $page . '&tags=' . $tag;
+			$url      = 'https://api.getgist.com/contacts?page=' . $page . '&tags=' . $tag;
 			$response = wp_remote_get( $url, $this->params );
 
 			if( is_wp_error( $response ) ) {
@@ -689,11 +797,11 @@ class WPF_ConvertFox {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			foreach ( $body_json->users as $contact ) {
+			foreach ( $body_json->contacts as $contact ) {
 				$contact_ids[] = $contact->id;
 			}
 
-			if(count($body_json->users) < 50) {
+			if(count($body_json->contacts) < 50) {
 				$proceed = false;
 			} else {
 				$page++;

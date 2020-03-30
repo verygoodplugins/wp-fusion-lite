@@ -60,6 +60,7 @@ class WPF_Ontraport {
 
 	public function init() {
 
+		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_states' ), 10, 2 );
 		// add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
@@ -71,6 +72,21 @@ class WPF_Ontraport {
 	}
 
 	/**
+	 * Register cookies allowed in the async process
+	 *
+	 * @access public
+	 * @return array Cookies
+	 */
+
+	public function allowed_cookies( $cookies ) {
+
+		$cookies[] = 'oprid';
+
+		return $cookies;
+
+	}
+
+	/**
 	 * Formats user entered data to match Ontraport field formats
 	 *
 	 * @access public
@@ -78,6 +94,46 @@ class WPF_Ontraport {
 	 */
 
 	public function format_field_value( $value, $field_type, $field ) {
+
+		$options = wp_fusion()->settings->get( 'ontraport_dropdown_options', array() );
+
+		if ( 'datepicker' == $field_type || 'date' == $field_type && is_numeric( $value ) ) {
+
+			// Dates are a unix timestamp and have to match the timezone set in the Ontraport account. For now we'll assume that is the same as the WP timezone
+
+			return $value;
+
+		} elseif ( isset( $options[ $field ] ) ) {
+
+			if ( 'multiselect' == $field_type || 'checkboxes' == $field_type ) {
+
+				// Maybe convert multiselect options to picklist IDs if matches are found
+
+				$values = explode( ',', $value );
+
+				$maybe_new_values = array();
+
+				foreach ( $values as $v ) {
+
+					$option_id = array_search( $v, $options[ $field ] );
+
+					if ( false !== $option_id ) {
+						$maybe_new_values[] = $option_id;
+					}
+				}
+
+				if ( ! empty( $maybe_new_values ) ) {
+					$value = '*/*' . implode( '*/*', $maybe_new_values ) . '*/*';
+				}
+			} else {
+
+				$option_id = array_search( $value, $options[ $field ] );
+
+				if ( $option_id ) {
+					$value = $option_id;
+				}
+			}
+		}
 
 		return $value;
 
@@ -182,7 +238,7 @@ class WPF_Ontraport {
 			return;
 		}
 
-		if( is_user_logged_in() && ! isset( $_COOKIE['contact_id'] ) ) {
+		if( wpf_is_user_logged_in() && ! isset( $_COOKIE['contact_id'] ) ) {
 
 			$contact_id = wp_fusion()->user->get_contact_id();
 
@@ -359,7 +415,7 @@ class WPF_Ontraport {
 				if( $row['object_type_id'] == $this->object_type ) {
 					$available_tags[ $row['tag_id'] ] = $row['tag_name'];
 				}
-				
+
 			}
 
 			if ( count( $body_json['data'] ) < 50 ) {
@@ -398,9 +454,26 @@ class WPF_Ontraport {
 
 		$body_json = json_decode( $response['body'], true );
 
+		$dropdown_options = array();
+
 		foreach ( $body_json['data'][ $this->object_type ]['fields'] as $key => $field_data ) {
+
+			if ( false == $field_data['editable'] || 'subscription' == $field_data['type'] ) {
+				continue;
+			}
+
 			$crm_fields[ $key ] = $field_data['alias'];
+
+			// Let's save a cache of dropdown field values
+
+			if ( isset( $field_data['options'] ) ) {
+
+				$dropdown_options[ $key ] = $field_data['options'];
+
+			}
 		}
+
+		wp_fusion()->settings->set( 'ontraport_dropdown_options', $dropdown_options );
 
 		asort( $crm_fields );
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
@@ -555,13 +628,19 @@ class WPF_Ontraport {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		if ( empty( $data['email'] ) ) {
+			return false;
+		}
+
 		// Referral data
-		if( isset( $_COOKIE['aff_'] ) ) {
+		if ( isset( $_COOKIE['aff_'] ) ) {
 			$data['freferrer'] = $_COOKIE['aff_'];
 			$data['lreferrer'] = $_COOKIE['aff_'];
 		}
 
-		if( $this->object_type == 0 ) {
+		$data['use_utm_names'] = true;
+
+		if ( $this->object_type == 0 ) {
 			$url = 'https://api.ontraport.com/1/Contacts/saveorupdate';
 		} else {
 			$url = 'https://api.ontraport.com/1/objects';
@@ -578,6 +657,12 @@ class WPF_Ontraport {
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! isset( $body->data->id ) && isset( $body->data->attrs->id ) ) {
+
+			return new WP_Error( 'error', 'Failed to add contact with email ' . $data['email'] . ', contact already exists with ID ' . $body->data->attrs->id );
+
+		}
 
 		return $body->data->id;
 
@@ -600,37 +685,29 @@ class WPF_Ontraport {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
 		// Referral data
-		if( isset( $_COOKIE['aff_'] ) ) {
+		if ( isset( $_COOKIE['aff_'] ) ) {
 			$data['lreferrer'] = $_COOKIE['aff_'];
 		}
 
-		$urlp              = "https://api.ontraport.com/1/objects";
-		$data['objectID']  = $this->object_type;
-		$data['id']        = $contact_id;
-		$nparams           = $this->params;
-		$nparams['method'] = 'PUT';
-		$nparams['body']   = json_encode( $data );
+		$data['objectID'] = $this->object_type;
+		$data['id']       = $contact_id;
 
-		$response = wp_remote_post( $urlp, $nparams );
+		// $data['bulk_mail'] = 1; // Contacts can only be set to 0 (transactional) over the API
 
-		if ( is_wp_error( $response ) && $response->get_error_message() == 'Object not found' ) {
+		$params           = $this->params;
+		$params['method'] = 'PUT';
+		$params['body']   = json_encode( $data );
 
-			// If contact ID changed, try again
-			$user_id = wp_fusion()->user->get_user_id( $contact_id );
-			$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
+		$request = 'https://api.ontraport.com/1/objects';
 
-			if( ! empty( $contact_id ) ) {
+		$response = wp_remote_post( $request, $params );
 
-				$this->update_contact( $contact_id, $data, false );
-
-			}
-
-		} elseif ( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -659,12 +736,22 @@ class WPF_Ontraport {
 
 		$user_meta      = array();
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$options        = wp_fusion()->settings->get( 'ontraport_dropdown_options', array() );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
 			if ( $field_data['active'] == true && isset( $body_json['data'][ $field_data['crm_field'] ] ) ) {
-				$user_meta[ $field_id ] = $body_json['data'][ $field_data['crm_field'] ];
+
+				$value = $body_json['data'][ $field_data['crm_field'] ];
+
+				// Handle dropdowns and picklists
+
+				if ( isset( $options[ $field_data['crm_field'] ] ) && isset( $options[ $field_data['crm_field'] ][ $value ] ) ) {
+					$value = $options[ $field_data['crm_field'] ][ $value ];
+				}
+
+				$user_meta[ $field_id ] = $value;
 			}
 
 		}

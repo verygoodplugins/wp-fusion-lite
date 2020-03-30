@@ -170,44 +170,6 @@ class WPF_Kartra {
 
 	}
 
-	/**
-	 * Kartra requires email addresses to be used when updating contacts
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	public function get_email_from_cid( $contact_id ) {
-
-		$users = get_users( array( 'meta_key'   => 'kartra_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} elseif( isset( $_GET['wpf_action'] ) && $_GET['wpf_action'] == 'add' ) {
-
-			// Try and get CID from server if this is happening during an add webhook
-			return $_POST['kartra_email'];
-
-		} else {
-
-			// Try and load the contact and get the email from local buffer
-			$kartra_email_buffer = get_option( 'wpf_kartra_email_buffer', array() );
-
-			if( ! empty( $kartra_email_buffer[ $contact_id ] ) ) {
-				return $kartra_email_buffer[ $contact_id ];
-			} else {
-				return false;
-			}
-
-		}
-
-	}
-
 
 	/**
 	 * Initialize connection
@@ -463,14 +425,8 @@ class WPF_Kartra {
 			$this->get_params();
 		}
 
-		$email_address = $this->get_email_from_cid( $contact_id );
-
-		if( $email_address == false ) {
-			return new WP_Error( 'error', 'No matching WordPress user found for Kartra contact ID ' . $contact_id );
-		}
-
 		$params = $this->params;
-		$params['body']['get_lead']['email'] = $email_address;
+		$params['body']['get_lead']['id'] = $contact_id;
 
 		$response = wp_remote_post( $this->api_url, $params );
 
@@ -521,22 +477,16 @@ class WPF_Kartra {
 			$this->get_params();
 		}
 
-		$email_address = $this->get_email_from_cid( $contact_id );
-
-		if( $email_address == false ) {
-			return new WP_Error( 'error', 'No matching WordPress user found for Kartra contact ID ' . $contact_id );
-		}
-
 		$params = $this->params;
 
-		$params['body']['lead'] = array( 'email' => $email_address );
+		$params['body']['lead'] = array( 'id' => $contact_id );
 		$params['body']['actions'] = array();
 
 		foreach( $tags as $tag ) {
 			$params['body']['actions'][] = array( 'cmd' => 'assign_tag', 'tag_name' => $tag );
 		}
 
-		$response     = wp_remote_post( $this->api_url, $params );
+		$response = wp_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -559,15 +509,9 @@ class WPF_Kartra {
 			$this->get_params();
 		}
 
-		$email_address = $this->get_email_from_cid( $contact_id );
-
-		if( $email_address == false ) {
-			return new WP_Error( 'error', 'No matching WordPress user found for Kartra contact ID ' . $contact_id );
-		}
-
 		$params = $this->params;
 
-		$params['body']['lead'] = array( 'email' => $email_address );
+		$params['body']['lead'] = array( 'id' => $contact_id );
 		$params['body']['actions'] = array();
 
 		foreach( $tags as $tag ) {
@@ -694,14 +638,8 @@ class WPF_Kartra {
 			$this->get_params();
 		}
 
-		$email_address = $this->get_email_from_cid( $contact_id );
-
-		if( $email_address == false ) {
-			return new WP_Error( 'error', 'No matching WordPress user found for Kartra contact ID ' . $contact_id );
-		}
-
 		$params = $this->params;
-		$params['body']['get_lead']['email'] = $email_address;
+		$params['body']['get_lead']['id'] = $contact_id;
 		
 		$response = wp_remote_post( $this->api_url, $params );
 

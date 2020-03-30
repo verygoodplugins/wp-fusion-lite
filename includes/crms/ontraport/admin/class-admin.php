@@ -21,7 +21,6 @@ class WPF_Ontraport_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_ontraport_header_begin', array( $this, 'show_field_ontraport_header_begin' ), 10, 2 );
-		add_action( 'show_field_op_key_end', array( $this, 'show_field_op_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -198,28 +197,6 @@ class WPF_Ontraport_Admin {
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
 		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
-
-	}
-
-	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_op_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #ontraport div
-		echo '<table class="form-table">';
 
 	}
 

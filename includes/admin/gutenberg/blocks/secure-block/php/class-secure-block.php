@@ -104,12 +104,19 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 					$can_access = true;
 				}
 			}
+		} elseif ( is_user_logged_in() ) {
+
+			$can_access = true;
+
 		}
 
 	}
 
 	$dom = new \DomDocument();
-	$dom->loadXML( $content );
+
+	libxml_use_internal_errors( true ); // Suppress errors
+	$dom->loadHTML( '<?xml encoding="utf-8" ?>' . $content ); // Encoding to fix foreign characters
+	libxml_clear_errors();
 
 	$finder               = new \DomXPath( $dom );
 	$secure_class         = 'wp-block-wp-fusion-secure-block-inner-secure';
@@ -121,19 +128,34 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 	foreach ( $secure_content as $node ) {
 		$secure_content_dom->appendChild( $secure_content_dom->importNode( $node, true ) );
+		break; // Only grab the first match? To prevent the inner nodes from getting duplicated with nested blocks? Makes no sense I know
 	}
 
 	foreach ( $unsecure_content as $node ) {
 		$unsecure_content_dom->appendChild( $unsecure_content_dom->importNode( $node, true ) );
+		break; // Only grab the first match?
 	}
 
 	$secure_content   = trim( $secure_content_dom->saveHTML() );
 	$unsecure_content = trim( $unsecure_content_dom->saveHTML() );
 
-	global $post;
-	$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $post->ID, $restricted_tags );
+	// Don't output HTML if there's nothing in it
 
-	if ( is_user_logged_in() && $can_access ) {
+	if ( empty( strip_tags( $secure_content ) ) ) {
+		$secure_content = false;
+	}
+
+	if ( empty( strip_tags( $unsecure_content ) ) ) {
+		$unsecure_content = false;
+	}
+
+	global $post;
+
+	$can_access = apply_filters( 'wpf_user_can_access_gutenberg', $can_access, $attributes );
+
+	$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $post->ID );
+
+	if ( wpf_is_user_logged_in() && $can_access ) {
 		return $secure_content;
 	} else {
 		return $unsecure_content;

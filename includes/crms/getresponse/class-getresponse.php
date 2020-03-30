@@ -47,7 +47,7 @@ class WPF_GetResponse {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-		// add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 	}
 
 
@@ -108,17 +108,52 @@ class WPF_GetResponse {
 	 * @return HTTP Response
 	 */
 
-	// public function handle_http_response( $response, $args, $url ) {
-	// if( strpos($url, 'getresponse') !== false ) {
-	// $code = wp_remote_retrieve_response_code( $response );
-	// if( $code == 401 ) {
-	// $response = new WP_Error( 'error', 'Invalid API key' );
-	// } else {
-	// $body_json = json_decode( wp_remote_retrieve_body( $response ) );
-	// }
-	// }
-	// return $response;
-	// }
+	public function handle_http_response( $response, $args, $url ) {
+
+		if( strpos($url, 'getresponse') !== false ) {
+
+			$code = wp_remote_retrieve_response_code( $response );
+
+			if( $code == 401 ) {
+
+				$response = new WP_Error( 'error', 'Invalid API key' );
+
+			} elseif( $code > 200 ) {
+
+				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( isset( $body_json->message ) ) {
+
+					$message = $body_json->message;
+
+					if ( ! empty( $body_json->context ) ) {
+
+						$message .= '. <strong>Context</strong>: ';
+
+						foreach ( $body_json->context as $context ) {
+
+							if ( is_object( $context ) ) {
+
+								$message .= $context->fieldName . ': ' . $context->errorDescription . '. ';
+
+							} else {
+
+								$message .= $context;
+
+							}
+						}
+
+					}
+
+					$response = new WP_Error( 'error', $message );
+				}
+
+
+			}
+
+		}
+		return $response;
+	}
 	/**
 	 * Gets params for API calls
 	 *
@@ -514,9 +549,11 @@ class WPF_GetResponse {
 			return $response;
 		}
 
-		// GetResponse just gives us a 202 message, no contact ID
+		// GetResponse just gives us a 202 message, no contact ID, so we look it up
 
-		return true;
+		$contact_id = $this->get_contact_id( $contact_data['email'] );
+
+		return $contact_id;
 
 	}
 
@@ -545,8 +582,6 @@ class WPF_GetResponse {
 			return false;
 		}
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
-
 		$contact_data = array();
 
 		if ( isset( $data['name'] ) ) {
@@ -560,7 +595,17 @@ class WPF_GetResponse {
 		}
 
 		if ( ! empty( $data ) ) {
-			$contact_data['customFieldValues'] = $data;
+
+			$contact_data['customFieldValues'] = array();
+
+			foreach ( $data as $key => $value ) {
+
+				$contact_data['customFieldValues'][] = array(
+					'customFieldId' => $key,
+					'value'         => array( $value ),
+				);
+
+			}
 		}
 
 		$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id;

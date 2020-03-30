@@ -57,7 +57,7 @@ abstract class WPF_Integrations_Base {
 
 	public function guest_registration( $email_address, $update_data ) {
 
-		wp_fusion()->logger->handle( 'info', 0, $this->name . ' guest registration:', array( 'meta_array' => $update_data ) );
+		wpf_log( 'info', 0, $this->name . ' guest registration:', array( 'meta_array' => $update_data ) );
 
 		$contact_id = wp_fusion()->crm->get_contact_id( $email_address );
 
@@ -73,7 +73,7 @@ abstract class WPF_Integrations_Base {
 
 		if ( is_wp_error( $contact_id ) ) {
 
-			wp_fusion()->logger->handle( $contact_id->get_error_code(), 0, 'Error adding contact: ' . $contact_id->get_error_message() );
+			wpf_log( $contact_id->get_error_code(), 0, 'Error adding contact: ' . $contact_id->get_error_message() );
 			return false;
 
 		}

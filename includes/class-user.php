@@ -13,6 +13,7 @@ class WPF_User {
 
 	public function __construct() {
 
+		// Main user hooks
 		add_action( 'user_register', array( $this, 'user_register' ), 20 );
 		add_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
 		add_action( 'delete_user', array( $this, 'user_delete' ) );
@@ -24,23 +25,63 @@ class WPF_User {
 		add_action( 'add_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'remove_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 
+		// User meta
 		add_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		add_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 
+		// After-import actions
 		add_action( 'wpf_user_imported', array( $this, 'return_password' ), 10, 2 );
 
 		// Dyanmic tagging
 		add_filter( 'wpf_user_update', array( $this, 'dynamic_tagging' ), 10, 2 );
-
-		// Lead source tracking
-		add_action( 'init', array( $this, 'set_lead_source' ) );
-		add_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source' ) );
+		add_filter( 'wpf_user_register', array( $this, 'dynamic_tagging' ), 10, 2 );
 
 		// Profile update tags
 		add_action( 'wpf_pushed_user_meta', array( $this, 'pushed_user_meta_tags' ), 10, 2 );
 
 	}
 
+	/**
+	 * Gets the current user ID, with support for auto-logged-in users
+	 *
+	 * @access public
+	 * @return int User ID
+	 */
+
+	public function get_current_user_id() {
+
+		if ( is_user_logged_in() ) {
+			return get_current_user_id();
+		}
+
+		if ( defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
+			return wp_fusion()->auto_login->auto_login_user['user_id'];
+		}
+
+		return 0;
+
+	}
+
+	/**
+	 * Checks if user is logged in, with support for auto-logged-in users
+	 *
+	 * @access public
+	 * @return bool Logged In
+	 */
+
+	public function is_user_logged_in() {
+
+		if ( is_user_logged_in() ) {
+			return true;
+		}
+
+		if ( defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
+			return true;
+		}
+
+		return false;
+
+	}
 
 	/**
 	 * Used by create user to map post data for PHP versions less than 5.3
@@ -51,102 +92,6 @@ class WPF_User {
 
 	public function map_user_meta( $a ) {
 		return maybe_unserialize( $a[0] );
-	}
-
-	/**
-	 * Tries to detect a leadsource for new visitors and makes the data available to integrations
-	 *
-	 * @access  public
-	 * @return  void
-	 */
-
-	function set_lead_source() {
-
-		if ( headers_sent() ) {
-			return;
-		}
-
-		$leadsource_vars = array(
-			'leadsource',
-			'utm_campaign',
-			'utm_medium',
-			'utm_source',
-			'utm_term',
-			'utm_content',
-			'gclid',
-		);
-
-		$leadsource_vars = apply_filters( 'wpf_leadsource_vars', $leadsource_vars );
-
-		$alt_vars = array(
-			'original_ref',
-			'landing_page',
-		);
-
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-
-		foreach ( $leadsource_vars as $var ) {
-
-			if ( isset( $_GET[ $var ] ) && isset( $contact_fields[ $var ] ) && $contact_fields[ $var ]['active'] == true ) {
-				setcookie( 'wpf_leadsource[' . $var . ']', $_GET[ $var ], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
-			}
-		}
-
-		if ( ! is_admin() && empty( $_COOKIE['wpf_ref'] ) ) {
-
-			if ( isset( $contact_fields['original_ref'] ) && $contact_fields['original_ref']['active'] == true && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-				setcookie( 'wpf_ref[original_ref]', $_SERVER['HTTP_REFERER'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
-			}
-
-			if ( isset( $contact_fields['landing_page'] ) && $contact_fields['landing_page']['active'] == true ) {
-				setcookie( 'wpf_ref[landing_page]', $_SERVER['REQUEST_URI'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
-			}
-		}
-
-	}
-
-	/**
-	 * Merges lead source variables on contact add
-	 *
-	 * @access  public
-	 * @return  array Args
-	 */
-
-	function merge_lead_source( $args ) {
-
-		if ( ! isset( $_COOKIE['wpf_leadsource'] ) && ! isset( $_COOKIE['wpf_ref'] ) ) {
-			return $args;
-		}
-
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-
-		// Possibly set lead sources from cookie
-		if ( isset( $_COOKIE['wpf_leadsource'] ) && is_array( $_COOKIE['wpf_leadsource'] ) ) {
-
-			foreach ( $_COOKIE['wpf_leadsource'] as $key => $value ) {
-
-				if ( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
-
-					$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-				}
-			}
-		}
-
-		if ( isset( $_COOKIE['wpf_ref'] ) && is_array( $_COOKIE['wpf_ref'] ) ) {
-
-			foreach ( $_COOKIE['wpf_ref'] as $key => $value ) {
-
-				if ( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
-
-					$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-				}
-			}
-		}
-
-		return $args;
-
 	}
 
 
@@ -162,42 +107,27 @@ class WPF_User {
 	 * @return mixed Contact ID
 	 */
 
-	public function user_register( $user_id, $post_data = null, $force = false ) {
+	public function user_register( $user_id, $post_data = false, $force = false ) {
 
 		remove_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
 
+		// Don't load tags or meta when someone registers
+		remove_action( 'wp_login', array( $this, 'login' ), 10, 2 );
+
 		do_action( 'wpf_user_register_start', $user_id, $post_data );
 
-		if ( empty( $post_data ) && ! empty( $_POST ) ) {
+		// Get posted data from the registration form
 
+		if ( false == $post_data && ! empty( $_POST ) && is_array( $_POST ) ) {
 			$post_data = $_POST;
-
 		} elseif ( empty( $post_data ) ) {
-
-			// If nothing's been supplied, get meta data from DB
-			$post_data = array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
-
+			$post_data = array();
 		}
 
-		// Fill in some blanks from the DB if possible
-		$userdata             = get_userdata( $user_id );
-		$post_data['user_id'] = $user_id;
+		$user_meta = $this->get_user_meta( $user_id );
 
-		if ( is_array( $userdata->roles ) ) {
-			$post_data['role'] = $userdata->roles[0];
-		}
-
-		foreach ( array( 'first_name', 'last_name', 'user_email', 'user_url', 'user_login', 'user_nicename', 'user_registered' ) as $meta_key ) {
-
-			if ( empty( $post_data[ $meta_key ] ) ) {
-				$post_data[ $meta_key ] = $userdata->{$meta_key};
-			}
-		}
-
-		// Get password from Admin >> Add New user screen
-		if ( ! empty( $post_data['pass1'] ) ) {
-			$post_data['user_pass'] = $post_data['pass1'];
-		}
+		// Merge what's in the database with what was submitted on the form
+		$post_data = array_merge( $user_meta, $post_data );
 
 		// Allow outside modification of this data
 		$post_data = apply_filters( 'wpf_user_register', $post_data, $user_id );
@@ -223,21 +153,21 @@ class WPF_User {
 
 			if ( is_array( $valid_roles ) && ! empty( $valid_roles[0] ) && ! in_array( $post_data['role'], $valid_roles ) && $force == false ) {
 
-				wp_fusion()->logger->handle( 'notice', $user_id, 'User not added to ' . wp_fusion()->crm->name . ' because role <strong>' . $post_data['role'] . '</strong> isn\'t enabled for contact creation.' );
+				wpf_log( 'notice', $user_id, 'User not added to ' . wp_fusion()->crm->name . ' because role <strong>' . $post_data['role'] . '</strong> isn\'t enabled for contact creation.' );
 
 				return false;
 
 			}
 
 			// Logger
-			wp_fusion()->logger->handle( 'info', $user_id, 'Adding contact to ' . wp_fusion()->crm->name . ':', array( 'meta_array' => $post_data ) );
+			wpf_log( 'info', $user_id, 'Adding contact to ' . wp_fusion()->crm->name . ':', array( 'meta_array' => $post_data ) );
 
 			$contact_id = wp_fusion()->crm->add_contact( $post_data );
 
 			// Error logging
 			if ( is_wp_error( $contact_id ) ) {
 
-				wp_fusion()->logger->handle( $contact_id->get_error_code(), $user_id, 'Error adding contact to ' . wp_fusion()->crm->name . ': ' . $contact_id->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
+				wpf_log( $contact_id->get_error_code(), $user_id, 'Error adding contact to ' . wp_fusion()->crm->name . ': ' . $contact_id->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
 				return false;
 
 			}
@@ -246,20 +176,19 @@ class WPF_User {
 
 		} else {
 
-			wp_fusion()->logger->handle( 'info', $user_id, 'Updating contact ID ' . $contact_id . ' in ' . wp_fusion()->crm->name . ': ', array( 'meta_array' => $post_data ) );
+			wpf_log( 'info', $user_id, 'Updating contact ID ' . $contact_id . ' in ' . wp_fusion()->crm->name . ': ', array( 'meta_array' => $post_data ) );
 
 			// If contact exists, update data and pull down anything new from the CRM
 			$result = wp_fusion()->crm->update_contact( $contact_id, $post_data );
 
 			if ( is_wp_error( $result ) ) {
 
-				wp_fusion()->logger->handle( $result->get_error_code(), $user_id, 'Error updating contact: ' . $result->get_error_message() );
+				wpf_log( $result->get_error_code(), $user_id, 'Error updating contact: ' . $result->get_error_message() );
 				return false;
 
 			}
 
-			$this->pull_user_meta( $user_id );
-			$this->get_tags( $user_id, true );
+			$this->get_tags( $user_id, true, false );
 
 		}
 
@@ -287,7 +216,7 @@ class WPF_User {
 
 		$bypass = apply_filters( 'wpf_bypass_profile_update', false, $_REQUEST );
 
-		if ( ! empty( $_POST ) && false == $bypass ) {
+		if ( ! empty( $_POST ) && false === $bypass ) {
 			$this->push_user_meta( $user_id, $_POST );
 		}
 
@@ -341,18 +270,17 @@ class WPF_User {
 
 	public function get_contact_id( $user_id = false, $force_update = false ) {
 
-		if ( $user_id == false ) {
-			$user_id = get_current_user_id();
+		if ( false == $user_id ) {
+			$user_id = $this->get_current_user_id();
+		}
+
+		if ( $user_id == 0 ) {
+			return false;
 		}
 
 		do_action( 'wpf_get_contact_id_start', $user_id );
 
 		$contact_id = get_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', true );
-
-		// If contact ID is already set
-		if ( ( ! empty( $contact_id ) || $contact_id == false ) && $force_update == false ) {
-			return $contact_id;
-		}
 
 		$user = get_user_by( 'id', $user_id );
 
@@ -361,6 +289,11 @@ class WPF_User {
 			$user             = new stdClass();
 			$user->user_email = get_user_meta( $user_id, 'user_email', true );
 
+		}
+
+		// If contact ID is already set
+		if ( ( ! empty( $contact_id ) || $contact_id == false ) && $force_update == false ) {
+			return apply_filters( 'wpf_contact_id', $contact_id, $user->user_email );
 		}
 
 		// If no user email set, don't bother with an API call
@@ -372,7 +305,7 @@ class WPF_User {
 
 		if ( is_wp_error( $contact_id ) ) {
 
-			wp_fusion()->logger->handle( $contact_id->get_error_code(), $user_id, 'Error getting contact ID for <strong>' . $user->user_email . '</strong>: ' . $contact_id->get_error_message() );
+			wpf_log( $contact_id->get_error_code(), $user_id, 'Error getting contact ID for <strong>' . $user->user_email . '</strong>: ' . $contact_id->get_error_message() );
 			return false;
 
 		}
@@ -382,7 +315,7 @@ class WPF_User {
 		if ( $contact_id == false ) {
 
 			// Error logging
-			wp_fusion()->logger->handle( 'info', $user_id, 'No contact found in ' . wp_fusion()->crm->name . ' for <strong>' . $user->user_email . '</strong>' );
+			wpf_log( 'info', $user_id, 'No contact found in ' . wp_fusion()->crm->name . ' for <strong>' . $user->user_email . '</strong>' );
 
 		}
 
@@ -412,12 +345,12 @@ class WPF_User {
 		// Error logging
 		if ( is_wp_error( $user_meta ) ) {
 
-			wp_fusion()->logger->handle( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() );
+			wpf_log( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() );
 			return false;
 
 		} elseif ( empty( $user_meta ) ) {
 
-			wp_fusion()->logger->handle( 'notice', $user_id, 'No elligible user meta loaded' );
+			wpf_log( 'notice', $user_id, 'No elligible user meta loaded' );
 			return false;
 
 		}
@@ -425,7 +358,7 @@ class WPF_User {
 		$user_meta = apply_filters( 'wpf_pulled_user_meta', $user_meta, $user_id );
 
 		// Logger
-		wp_fusion()->logger->handle( 'info', $user_id, 'Loaded meta data from ' . wp_fusion()->crm->name . ':', array( 'meta_array' => $user_meta ) );
+		wpf_log( 'info', $user_id, 'Loaded meta data from ' . wp_fusion()->crm->name . ':', array( 'meta_array' => $user_meta ) );
 
 		// Don't push updates back to CRM
 		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
@@ -434,6 +367,34 @@ class WPF_User {
 		$this->set_user_meta( $user_id, $user_meta );
 
 		do_action( 'wpf_user_updated', $user_id, $user_meta );
+
+		return $user_meta;
+
+	}
+
+	/**
+	 * Get all the available metadata from the database for a user
+	 *
+	 * @access public
+	 * @return array User Meta
+	 */
+
+	public function get_user_meta( $user_id ) {
+
+		$user_meta = array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
+		$userdata  = get_userdata( $user_id );
+
+		$user_meta['user_id']         = $user_id;
+		$user_meta['user_login']      = $userdata->user_login;
+		$user_meta['user_email']      = $userdata->user_email;
+		$user_meta['user_registered'] = $userdata->user_registered;
+		$user_meta['user_nicename']   = $userdata->user_nicename;
+		$user_meta['user_url']        = $userdata->user_url;
+		$user_meta['display_name']    = $userdata->display_name;
+
+		if ( is_array( $userdata->roles ) ) {
+			$user_meta['role'] = $userdata->roles[0];
+		}
 
 		return $user_meta;
 
@@ -475,7 +436,7 @@ class WPF_User {
 					// Only update pass if it's changed
 					if ( wp_check_password( $value, $user->data->user_pass, $user_id ) == false ) {
 
-						wp_fusion()->logger->handle( 'notice', $user_id, 'User password set to <strong>' . $value . '</strong>' );
+						wpf_log( 'notice', $user_id, 'User password set to <strong>' . $value . '</strong>' );
 
 						// Don't send it back again
 						remove_action( 'password_reset', array( $this, 'password_reset' ), 10, 2 );
@@ -516,7 +477,7 @@ class WPF_User {
 						)
 					);
 
-				} elseif ( $key == 'role' && ! user_can( $user_id, 'manage_options' ) && wp_roles()->is_role( $value ) ) {
+				} elseif ( $key == 'role' && ! user_can( $user_id, 'manage_options' ) && wp_roles()->is_role( $value ) && ! in_array( $value, (array) $user->roles ) ) {
 
 					// Don't send it back again
 					remove_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3 );
@@ -568,8 +529,8 @@ class WPF_User {
 
 	public function get_tags( $user_id = false, $force_update = false, $lookup_cid = true ) {
 
-		if ( $user_id == false ) {
-			$user_id = get_current_user_id();
+		if ( false == $user_id ) {
+			$user_id = $this->get_current_user_id();
 		}
 
 		do_action( 'wpf_get_tags_start', $user_id );
@@ -608,7 +569,7 @@ class WPF_User {
 
 		if ( is_wp_error( $tags ) ) {
 
-			wp_fusion()->logger->handle( $tags->get_error_code(), $user_id, 'Failed loading tags: ' . $tags->get_error_message() );
+			wpf_log( $tags->get_error_code(), $user_id, 'Failed loading tags: ' . $tags->get_error_message() );
 			return $user_tags;
 
 		} elseif ( $tags == $user_tags ) {
@@ -625,27 +586,13 @@ class WPF_User {
 
 		$tags_applied = array_diff( $tags, $user_tags );
 
-		if ( ! empty( $tags_applied ) ) {
-
-			do_action( 'wpf_tags_applied', $user_id, $tags_applied );
-
-		}
-
 		// Check if tags were removed
 
 		$tags_removed = array_diff( $user_tags, $tags );
 
-		if ( ! empty( $tags_removed ) ) {
-
-			do_action( 'wpf_tags_removed', $user_id, $tags_removed );
-
-		}
-
 		$user_tags = (array) $tags;
 
-		if ( ! empty( $user_tags ) ) {
-			wp_fusion()->logger->handle( 'info', $user_id, 'Loaded tag(s): ', array( 'tag_array' => $user_tags ) );
-		}
+		wpf_log( 'info', $user_id, 'Loaded tag(s): ', array( 'tag_array' => $user_tags ) );
 
 		// Check and see if new tags have been pulled, and if so, resync the available tags list
 		if ( is_admin() ) {
@@ -667,6 +614,16 @@ class WPF_User {
 
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
 
+		// Do some actions
+
+		if ( ! empty( $tags_applied ) ) {
+			do_action( 'wpf_tags_applied', $user_id, $tags_applied );
+		}
+
+		if ( ! empty( $tags_removed ) ) {
+			do_action( 'wpf_tags_removed', $user_id, $tags_removed );
+		}
+
 		do_action( 'wpf_tags_modified', $user_id, $user_tags );
 
 		return apply_filters( 'wpf_user_tags', $user_tags, $user_id );
@@ -682,8 +639,12 @@ class WPF_User {
 
 	public function apply_tags( $tags, $user_id = false ) {
 
-		if ( $user_id == false ) {
-			$user_id = get_current_user_id();
+		if ( empty( $tags ) || ! is_array( $tags ) ) {
+			return;
+		}
+
+		if ( false == $user_id ) {
+			$user_id = $this->get_current_user_id();
 		}
 
 		do_action( 'wpf_apply_tags_start', $user_id, $tags );
@@ -710,12 +671,12 @@ class WPF_User {
 		$user_tags = array_unique( array_merge( $user_tags, $tags ) );
 
 		// Logging
-		wp_fusion()->logger->handle( 'info', $user_id, 'Applying tag(s): ', array( 'tag_array' => $tags ) );
+		wpf_log( 'info', $user_id, 'Applying tag(s): ', array( 'tag_array' => $tags ) );
 
 		$result = wp_fusion()->crm->apply_tags( $tags, $contact_id );
 
 		if ( is_wp_error( $result ) ) {
-			wp_fusion()->logger->handle( $result->get_error_code(), $user_id, 'Error while applying tags: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
+			wpf_log( $result->get_error_code(), $user_id, 'Error while applying tags: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
 			return false;
 		}
 
@@ -737,8 +698,12 @@ class WPF_User {
 
 	public function remove_tags( $tags, $user_id = false ) {
 
-		if ( $user_id == false ) {
-			$user_id = get_current_user_id();
+		if ( empty( $tags ) || ! is_array( $tags ) ) {
+			return;
+		}
+
+		if ( false == $user_id ) {
+			$user_id = $this->get_current_user_id();
 		}
 
 		do_action( 'wpf_remove_tags_start', $user_id, $tags );
@@ -765,12 +730,12 @@ class WPF_User {
 		}
 
 		// Logging
-		wp_fusion()->logger->handle( 'info', $user_id, 'Removing tag(s): ', array( 'tag_array' => $tags ) );
+		wpf_log( 'info', $user_id, 'Removing tag(s): ', array( 'tag_array' => $tags ) );
 
 		$result = wp_fusion()->crm->remove_tags( $tags, $contact_id );
 
 		if ( is_wp_error( $result ) ) {
-			wp_fusion()->logger->handle( $result->get_error_code(), $user_id, 'Error while removing tags: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
+			wpf_log( $result->get_error_code(), $user_id, 'Error while removing tags: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
 			return false;
 		}
 
@@ -792,7 +757,7 @@ class WPF_User {
 
 	public function password_reset( $user, $new_pass ) {
 
-		wp_fusion()->user->push_user_meta( $user->ID, array( 'user_pass' => $new_pass ) );
+		$this->push_user_meta( $user->ID, array( 'user_pass' => $new_pass ) );
 
 	}
 
@@ -806,21 +771,17 @@ class WPF_User {
 
 	public function return_password( $user_id, $user_meta ) {
 
-		if ( wp_fusion()->settings->get( 'return_password' ) != true ) {
-			return;
-		}
-
 		$password_field = wp_fusion()->settings->get( 'return_password_field', array() );
 
-		if ( ! empty( $password_field['crm_field'] ) ) {
+		if ( wp_fusion()->settings->get( 'return_password' ) == true && ! empty( $password_field['crm_field'] ) ) {
 
-			wp_fusion()->logger->handle( 'info', $user_id, 'Returning generated password <strong>' . $user_meta['user_pass'] . '</strong> to ' . wp_fusion()->crm->name );
+			wpf_log( 'info', $user_id, 'Returning generated password <strong>' . $user_meta['user_pass'] . '</strong> to ' . wp_fusion()->crm->name );
 
 			$contact_id = $this->get_contact_id( $user_id );
 			$result     = wp_fusion()->crm->update_contact( $contact_id, array( $password_field['crm_field'] => $user_meta['user_pass'] ), false );
 
 			if ( is_wp_error( $result ) ) {
-				wp_fusion()->logger->handle( $result->get_error_code(), $user_id, 'Error while returning password: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
+				wpf_log( $result->get_error_code(), $user_id, 'Error while returning password: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
 			}
 
 			$this->push_user_meta(
@@ -853,7 +814,7 @@ class WPF_User {
 
 	public function dynamic_tagging( $user_meta, $user_id ) {
 
-		if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+		if ( is_array( $user_meta ) && is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 			$apply_tags = array();
 
@@ -1008,14 +969,10 @@ class WPF_User {
 
 	public function has_tag( $tag, $user_id = false ) {
 
-		if ( $user_id == false ) {
-			$user_id = get_current_user_id();
-		}
-
 		$user_tags = $this->get_tags( $user_id );
 
 		// Allow overrides by admin bar
-		if ( is_user_logged_in() && current_user_can( 'manage_options' ) && get_query_var( 'wpf_tag' ) ) {
+		if ( wpf_is_user_logged_in() && current_user_can( 'manage_options' ) && get_query_var( 'wpf_tag' ) ) {
 
 			if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
 				return true;
@@ -1156,51 +1113,27 @@ class WPF_User {
 
 		do_action( 'wpf_push_user_meta_start', $user_id, $user_meta );
 
-		// If we're submitting from a built in profile edit page
-		if ( isset( $_POST['action'] ) && ( $_POST['action'] == 'createuser' || $_POST['action'] == 'update' ) && $user_meta == false ) {
-
-			$user_meta               = $_POST;
-			$userdata                = get_userdata( $user_id );
-			$user_meta['user_login'] = $userdata->user_login;
-			$user_meta['user_id']    = $user_id;
-
-			if ( is_array( $userdata->roles ) ) {
-				$user_meta['role'] = $userdata->roles[0];
-			}
-		} elseif ( empty( $user_meta ) ) {
-
-			// If nothing's been supplied, get the latest from the DB
-			$user_meta                    = array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
-			$userdata                     = get_userdata( $user_id );
-			$user_meta['user_login']      = $userdata->user_login;
-			$user_meta['user_email']      = $userdata->user_email;
-			$user_meta['user_id']         = $user_id;
-			$user_meta['user_registered'] = $userdata->user_registered;
-
-			if ( is_array( $userdata->roles ) ) {
-				$user_meta['role'] = $userdata->roles[0];
-			}
-		}
+		// If nothing's been supplied, get the latest from the DB
 
 		if ( false === $user_meta ) {
-			$user_meta = array();
+			$user_meta = $this->get_user_meta( $user_id );
 		}
 
 		$user_meta = apply_filters( 'wpf_user_update', $user_meta, $user_id );
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		if ( empty( $user_meta ) || empty( $contact_id ) ) {
+		if ( empty( $user_meta ) || false == $contact_id ) {
 			return;
 		}
 
-		wp_fusion()->logger->handle( 'info', $user_id, 'Pushing meta data to ' . wp_fusion()->crm->name . ': ', array( 'meta_array' => $user_meta ) );
+		wpf_log( 'info', $user_id, 'Pushing meta data to ' . wp_fusion()->crm->name . ': ', array( 'meta_array' => $user_meta ) );
 
 		$result = wp_fusion()->crm->update_contact( $contact_id, $user_meta );
 
 		if ( is_wp_error( $result ) ) {
 
-			wp_fusion()->logger->handle( $result->get_error_code(), $user_id, 'Error while updating meta data: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
+			wpf_log( $result->get_error_code(), $user_id, 'Error while updating meta data: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
 			return false;
 
 		} elseif ( false == $result ) {
@@ -1228,7 +1161,7 @@ class WPF_User {
 		$update_tags = wp_fusion()->settings->get( 'profile_update_tags', false );
 
 		if ( ! empty( $update_tags ) ) {
-			wp_fusion()->crm->apply_tags( $update_tags, $contact_id );
+			$this->apply_tags( $update_tags, $user_id );
 		}
 
 	}
@@ -1284,7 +1217,7 @@ class WPF_User {
 
 		if ( is_wp_error( $user ) ) {
 
-			wp_fusion()->logger->handle( 'error', 0, 'Error importing contact ID ' . $contact_id . ' with error: ' . $user->get_error_message() );
+			wpf_log( 'error', 0, 'Error importing contact ID ' . $contact_id . ' with error: ' . $user->get_error_message() );
 			return false;
 
 		} elseif ( is_object( $user ) ) {
@@ -1330,8 +1263,8 @@ class WPF_User {
 			$user_meta['user_login'] = $user_meta['user_email'];
 		}
 
-		if ( empty( $role ) || $role == 'administrator' ) {
-			$user_meta['role'] = 'subscriber';
+		if ( empty( $role ) || $role == 'administrator' || ! wp_roles()->is_role( $role ) ) {
+			$user_meta['role'] = get_option( 'default_role' );
 		} else {
 			$user_meta['role'] = $role;
 		}
@@ -1373,18 +1306,13 @@ class WPF_User {
 
 		if ( is_wp_error( $user_id ) ) {
 
-			wp_fusion()->logger->handle( 'error', 0, 'Error importing contact ID ' . $contact_id . ' with error: ' . $user_id->get_error_message() );
+			wpf_log( 'error', 0, 'Error importing contact ID ' . $contact_id . ' with error: ' . $user_id->get_error_message() );
 			return false;
 
 		}
 
-		// Send notification
-		if ( $send_notification == true ) {
-			wp_new_user_notification( $user_id, null, 'user' );
-		}
-
 		// Logger
-		wp_fusion()->logger->handle( 'info', $user_id, 'Imported contact ID <strong>' . $contact_id . '</strong>, with meta data: ', array( 'meta_array_nofilter' => $user_meta ) );
+		wpf_log( 'info', $user_id, 'Imported contact ID <strong>' . $contact_id . '</strong>, with meta data: ', array( 'meta_array_nofilter' => $user_meta ) );
 
 		// Remove log data for generated pass
 		unset( $user_meta['generated_user_pass'] );
@@ -1394,6 +1322,11 @@ class WPF_User {
 
 		// Get tags
 		$this->get_tags( $user_id, true );
+
+		// Send notification. This is after loading tags and meta in case any other plugins have modified the password reset key
+		if ( $send_notification == true ) {
+			wp_new_user_notification( $user_id, null, 'user' );
+		}
 
 		// Denote user was imported
 		do_action( 'wpf_user_imported', $user_id, $user_meta );

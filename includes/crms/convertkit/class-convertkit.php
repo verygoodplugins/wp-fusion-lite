@@ -2,11 +2,9 @@
 
 class WPF_ConvertKit {
 
-	/**
-	 * (deprecated)
-	 */
-
-	public $app;
+	//
+	// Unsubscribes: ConvertKit can return a contact ID and tags from an unsubscribed subscriber. Subscriber's with a Cancelled status can be tagged, not sure about others
+	//
 
 	/**
 	 * Contains API secret
@@ -55,6 +53,22 @@ class WPF_ConvertKit {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		// Slow down the batch processses to get around the 120 requests per minute limit
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+	}
+
+	/**
+	 * Slow down batch processses to get around the 120 requests per minute limit
+	 *
+	 * @access public
+	 * @return int Sleep time
+	 */
+
+	public function set_sleep_time( $seconds ) {
+
+		return 1;
+
 	}
 
 	/**
@@ -71,9 +85,13 @@ class WPF_ConvertKit {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if(is_object($payload)) {
+		if( is_object( $payload ) ) {
 
 			$post_data['contact_id'] = $payload->subscriber->id;
+
+			if ( true == wp_fusion()->settings->get( 'ck_import_notification' ) ) {
+				$post_data['send_notification'] = true;
+			}
 
 			// Remove tags
 
@@ -169,6 +187,10 @@ class WPF_ConvertKit {
 			if( isset( $body_json->error ) ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
+
+			} elseif ( 429 == wp_remote_retrieve_response_code( $response ) ) {
+
+				$response = new WP_Error( 'error', 'API limits exceeded. Try again in one minute.' );
 
 			}
 

@@ -201,7 +201,7 @@ class WPF_CRM_Base {
 
 			if( is_wp_error( $result ) ) {
 
-				wp_fusion()->logger->handle( 'error', 0, 'Error performing sync: ' . $result->get_error_message() );
+				wpf_log( 'error', 0, 'Error performing sync: ' . $result->get_error_message() );
 				wp_send_json_error( $result->get_error_message() );
 
 			} else {
@@ -323,7 +323,6 @@ class WPF_CRM_Base {
 
 			return $value;
 
-
 		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
 			if ( empty( $value ) ) {
@@ -333,7 +332,11 @@ class WPF_CRM_Base {
 				// If checkbox is selected
 				return 1;
 			}
-		
+
+		} elseif ( $field_type == 'text' || $field_type == 'textarea' ) {
+
+			return strval( $value );
+
 		} elseif ( $field == 'user_pass' ) {
 
 			// Don't update password if it's empty

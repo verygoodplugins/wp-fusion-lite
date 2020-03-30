@@ -87,6 +87,7 @@ select.wpf_type {
 	box-shadow: none;
 	padding: 0px;
 	color: #000;
+	padding-right: 25px;
 }
 
 button.verify-button {
@@ -299,6 +300,10 @@ th.sync {
 
 #contact-fields td .checkbox {
 	margin-left: 7px;
+}
+
+#wpf-settings #contact-fields input[type="text"] {
+	width: 100%;
 }
 
 #wpf-settings input[type="text"], #wpf-settings input[type="password"] {

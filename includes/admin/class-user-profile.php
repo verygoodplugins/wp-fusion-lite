@@ -148,31 +148,30 @@ class WPF_User_Profile {
 
 		if ( $pagenow == 'profile.php' || $pagenow == 'user-edit.php' || $pagenow == 'user-new.php' ) {
 
-			if ( isset( $post_data['email'] ) ) {
+			$field_map = array(
+				'email'         => 'user_email',
+				'url'           => 'user_url',
+				'pass1-text'    => 'user_pass',
+				'user_password' => 'user_pass',
+				'pass1'         => 'user_pass',
+			);
 
-				$post_data['user_email'] = $post_data['email'];
-				unset( $post_data['email'] );
+			foreach ( $field_map as $key => $field ) {
 
-				if( isset( $post_data['url'] ) ) {
-					$post_data['user_url'] = $post_data['url'];
-					unset( $post_data['url'] );
+				if ( ! empty( $post_data[ $key ] ) ) {
+					$post_data[ $field ] = $post_data[ $key ];
 				}
-
-				if ( isset( $post_data['pass1-text'] ) ) {
-					$post_data['user_pass'] = $post_data['pass1-text'];
-					unset( $post_data['pass1-text'] );
-				}
-
-			}
-
-			if ( isset( $post_data['user_password'] ) ) {
-
-				$post_data['user_pass'] = $post_data['user_password'];
-				unset( $post_data['user_password'] );
-
 			}
 
 			$post_data = stripslashes_deep( $post_data );
+
+			// Merge in some wp_users stuff
+
+			$userdata = get_userdata( $user_id );
+
+			$post_data['user_login']      = $userdata->user_login;
+			$post_data['user_registered'] = $userdata->user_registered;
+			$post_data['user_nicename']   = $userdata->user_nicename;
 
 		}
 
@@ -242,7 +241,7 @@ class WPF_User_Profile {
 
 					<?php else : ?>
 
-						No <?php echo wp_fusion()->crm->name ?> contact record found.
+						No <?php echo wp_fusion()->crm->name ?> contact record found. <a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_register=true"><?php _e( 'Create new contact', 'wp-fusion' ) ?>.</a>
 
 					<?php endif; ?>
 				</td>

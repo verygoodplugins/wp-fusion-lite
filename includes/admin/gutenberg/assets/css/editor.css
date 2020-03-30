@@ -6,6 +6,17 @@
  *
  * The default styles for the block in the editor.
  */
+
+/*.wp-block-wp-fusion-secure-block {
+  padding-left: 15px;
+  padding-right: 15px;
+}*/
+
+.wp-block-wp-fusion-secure-block .editor-block-list__layout.block-editor-block-list__layout {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
 .wp-block-wp-fusion-secure-block__handle {
   position: relative;
   background-color: #f3f3f4;

@@ -43,7 +43,7 @@ class WPF_Shortcodes {
 		), $atts, 'wpf' );
 
 		// Hide content for non-logged in users
-		if ( ! is_user_logged_in() && $atts['logged_out'] == false) {
+		if ( ! wpf_is_user_logged_in() && $atts['logged_out'] == false) {
 			return false;
 		}
 
@@ -149,7 +149,7 @@ class WPF_Shortcodes {
 			$can_access = true;
 		}
 
-		$can_access = apply_filters( 'wpf_user_can_access', $can_access, get_current_user_id(), $post->ID, $tags_split );
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $post->ID, $tags_split );
 
 		if ( $can_access == true ) {
 
@@ -173,8 +173,8 @@ class WPF_Shortcodes {
 
 	public function shortcode_update_tags( $atts ) {
 
-		if ( is_user_logged_in() && ! is_admin() ) {
-			wp_fusion()->user->get_tags( get_current_user_id(), true );
+		if ( wpf_is_user_logged_in() && ! is_admin() ) {
+			wp_fusion()->user->get_tags( wpf_get_current_user_id(), true );
 		}
 
 	}
@@ -188,8 +188,8 @@ class WPF_Shortcodes {
 
 	public function shortcode_update_meta( $atts ) {
 
-		if ( is_user_logged_in() && ! is_admin() ) {
-			wp_fusion()->user->pull_user_meta( get_current_user_id() );
+		if ( wpf_is_user_logged_in() && ! is_admin() ) {
+			wp_fusion()->user->pull_user_meta( wpf_get_current_user_id() );
 		}
 
 	}
@@ -209,7 +209,7 @@ class WPF_Shortcodes {
 			return;
 		}
 
-		if ( ! is_user_logged_in() ) {
+		if ( ! wpf_is_user_logged_in() ) {
 			return do_shortcode( $content );
 		}
 
@@ -217,7 +217,9 @@ class WPF_Shortcodes {
 			$atts['field'] = 'ID';
 		}
 
-		$user_data = get_userdata( get_current_user_id() );
+		$user_id = wpf_get_current_user_id();
+
+		$user_data = get_userdata( $user_id );
 
 		if( is_object($user_data) && property_exists( $user_data->data, $atts['field'] ) ) {
 
@@ -225,7 +227,7 @@ class WPF_Shortcodes {
 
 		} else {
 
-			$value = get_user_meta( get_current_user_id(), $atts['field'], true );
+			$value = get_user_meta( wpf_get_current_user_id(), $atts['field'], true );
 
 		}
 
@@ -266,7 +268,7 @@ class WPF_Shortcodes {
 
 	public function shortcode_loggedin( $atts, $content = null ) {
 
-		if ( ( is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
+		if ( ( wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
 			return do_shortcode( $content );
 		}
 
@@ -282,7 +284,7 @@ class WPF_Shortcodes {
 
 	public function shortcode_loggedout( $atts, $content = null ) {
 
-		if ( ( ! is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
+		if ( ( ! wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
 			return do_shortcode( $content );
 		}
 

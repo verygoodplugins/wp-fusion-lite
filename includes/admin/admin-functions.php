@@ -122,12 +122,11 @@ function wpf_render_tag_multiselect( $args ) {
 					continue;
 				}
 
-				// Maybe don't need this: (it makes it confusing when switching CRMs)
+				// Added is_numeric() check for 3.29.1 to fix "5DD - Customer" tag causing "5" tag to be selected
+				// Tag less than 10 so that tag IDs still show up and can be replaced after switching to a CRM with dynamic tagging
 
-				if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
-					$strict = true;
-				} else {
-					$strict = false;
+				if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) && is_numeric( $tag ) && $tag < 10 ) {
+					continue;
 				}
 
 				echo '<option value="' . esc_attr( $id ) . '"';

@@ -112,6 +112,21 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			}
 
+			if ( count( $this->data ) > 1 ) {
+
+				// Save status for health check. Don't track status on quick-add from Woo orders etc.
+
+				$status = array(
+					'key'        => $key,
+					'total'      => count( $this->data ),
+					'remaining'  => count( $this->data ),
+					'max_memory' => $this->get_memory_limit(),
+				);
+
+				update_site_option( 'wpfb_status', $status );
+
+			}
+
 			return $this;
 		}
 
@@ -189,7 +204,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		}
 
 		/**
-		 * Is queue empty
+		 * Get status
 		 *
 		 * @return bool
 		 */
@@ -198,7 +213,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			$status = get_site_option( 'wpfb_status' );
 
 			if ( empty( $status ) ) {
-				$status = false;
+				return false;
 			}
 
 			return $status;
@@ -318,6 +333,41 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		}
 
 		/**
+		 * Update Status
+		 *
+		 * We'll keep track of what's going on in an option key for troubleshooting
+		 *
+		 */
+
+		protected function update_status( $batch, $key, $starttime ) {
+
+			$status = get_site_option( 'wpfb_status' );
+
+			if ( false !== $status && is_array( $status ) && $status['key'] == $batch->key ) {
+
+				$next_key = $key + 1;
+
+				$status['remaining'] = count( $batch->data );
+				$status['last_step'] = $batch->data[ $key ];
+
+				if ( false !== $starttime ) {
+					$status['time_last_step'] = microtime( true ) - $starttime;
+				}
+
+				if ( isset( $batch->data[ $next_key ] ) ) {
+					$status['next_step']      = $batch->data[ $next_key ];
+				}
+
+				$status['total_time']     = time() - $this->start_time;
+				$status['memory_percent'] = ( memory_get_usage( true ) / $status['max_memory'] ) * 100;
+
+				update_site_option( 'wpfb_status', $status );
+
+			}
+
+		}
+
+		/**
 		 * Handle
 		 *
 		 * Pass each queue item to the task handler, while remaining
@@ -335,36 +385,19 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 					$starttime = microtime( true );
 
+					// Update status before the task in case of timeout
+					$this->update_status( $batch, $key, false );
+
 					$task = $this->task( $value );
 
 					if ( false !== $task ) {
 						$batch->data[ $key ] = $task;
 					} else {
 
+						// Update status after task
+						$this->update_status( $batch, $key, $starttime );
+
 						unset( $batch->data[ $key ] );
-
-						// Update status
-
-						$status = get_site_option( 'wpfb_status' );
-
-						if ( false !== $status ) {
-
-							$next_key = $key + 1;
-
-							$status['remaining']      = count( $batch->data );
-							$status['last_step']      = $value;
-							$status['time_last_step'] = microtime( true ) - $starttime;
-
-							if ( isset( $batch->data[ $next_key ] ) ) {
-								$status['next_step']      = $batch->data[ $next_key ];
-							}
-
-							$status['total_time']     = time() - $this->start_time;
-							$status['memory_percent'] = ( memory_get_usage( true ) / $status['max_memory'] ) * 100;
-
-							update_site_option( 'wpfb_status', $status );
-
-						}
 
 					}
 
@@ -401,7 +434,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			} else {
 
-				$this->complete();
+				$this->complete( $batch->key );
 
 			}
 
@@ -492,13 +525,19 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * Override if applicable, but ensure that the below actions are
 		 * performed, or, call parent::complete().
 		 */
-		protected function complete() {
+		protected function complete( $key ) {
 
 			// Unschedule the cron healthcheck.
 			$this->clear_scheduled_event();
 
-			// Delete counter variable
-			delete_site_option( 'wpfb_status' );
+			$status = get_site_option( 'wpfb_status' );
+
+			if ( ! empty( $status ) && $status[ 'key' ] == $key ) {
+
+				// Delete counter variable
+				delete_site_option( 'wpfb_status' );
+
+			}
 
 		}
 
@@ -588,7 +627,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 				delete_site_option( 'wpfb_status' );
 
-				wp_fusion()->logger->handle( 'notice', 0, 'Batch operation cancelled', array( 'source' => 'batch-process' ) );
+				wpf_log( 'notice', 0, 'Batch operation cancelled', array( 'source' => 'batch-process' ) );
 
 			}
 

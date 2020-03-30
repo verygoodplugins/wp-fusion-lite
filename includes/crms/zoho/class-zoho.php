@@ -56,7 +56,7 @@ class WPF_Zoho {
 		$this->supports = array();
 
 		// OAuth
-		$this->client_id 		= '1000.BC6W0X67OT9F47300RAHN6TOPDG0E3';
+		$this->client_id = '1000.BC6W0X67OT9F47300RAHN6TOPDG0E3';
 
 		$this->client_secret_us = '3618d9156bc0e54d177585fcc0d6443c6791460c2a';
 		$this->client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
@@ -103,7 +103,7 @@ class WPF_Zoho {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
-			if( ! is_numeric( $value ) ) {
+			if ( ! is_numeric( $value ) ) {
 				$value = strtotime( $value );
 			}
 
@@ -114,20 +114,16 @@ class WPF_Zoho {
 
 		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
-			if ( empty( $value ) ) {
-				//If checkbox is unselected
-				return null;
-			} else {
-				// If checkbox is selected
-				return 1;
-			}
-		
-		} elseif ( $field == 'user_pass' ) {
-
-			// Don't update password if it's empty
 			if ( ! empty( $value ) ) {
-				return $value;
+
+				// If checkbox is selected
+				return true;
+
 			}
+
+		} elseif ( $field_type == 'text' || $field_type == 'textarea' ) {
+
+			return strval( $value );
 
 		} else {
 
@@ -154,12 +150,12 @@ class WPF_Zoho {
 		$this->api_domain = wp_fusion()->settings->get( 'zoho_api_domain' );
 
 		$this->params = array(
-			'timeout'     => 120,
+			'timeout'     => 20,
 			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'httpversion' => '1.1',
 			'headers'     => array(
-				'Authorization' => 'Zoho-oauthtoken ' . $access_token
-			)
+				'Authorization' => 'Zoho-oauthtoken ' . $access_token,
+			),
 		);
 
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
@@ -177,30 +173,34 @@ class WPF_Zoho {
 	public function refresh_token() {
 
 		$refresh_token = wp_fusion()->settings->get( 'zoho_refresh_token' );
-		$location = wp_fusion()->settings->get( 'zoho_location' );
+		$location      = wp_fusion()->settings->get( 'zoho_location' );
 
-		if( $location == 'eu' ) {
-			$client_secret = $this->client_secret_eu;
+		if ( $location == 'eu' ) {
+			$client_secret   = $this->client_secret_eu;
 			$accounts_server = 'https://accounts.zoho.eu';
-		} elseif( $location == 'in' ) {
-			$client_secret = $this->client_secret_in;
+		} elseif ( $location == 'in' ) {
+			$client_secret   = $this->client_secret_in;
 			$accounts_server = 'https://accounts.zoho.in';
-		} elseif( $location == 'au' ) {
-			$client_secret = $this->client_secret_au;
+		} elseif ( $location == 'au' ) {
+			$client_secret   = $this->client_secret_au;
 			$accounts_server = 'https://accounts.zoho.com.au';
 		} else {
-			$client_secret = $this->client_secret_us;
+			$client_secret   = $this->client_secret_us;
 			$accounts_server = 'https://accounts.zoho.com';
 		}
 
-		$request = $accounts_server . '/oauth/v2/token?client_id=' . $this->client_id . '&grant_type=refresh_token&client_secret=' . $client_secret . '&refresh_token=' . $refresh_token;
+		$request  = $accounts_server . '/oauth/v2/token?client_id=' . $this->client_id . '&grant_type=refresh_token&client_secret=' . $client_secret . '&refresh_token=' . $refresh_token;
 		$response = wp_remote_post( $request );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! isset( $body_json->access_token ) ) {
+			return new WP_Error( 'error', 'Unable to refresh access token.' );
+		}
 
 		$this->get_params( $body_json->access_token );
 
@@ -219,11 +219,11 @@ class WPF_Zoho {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'zoho') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'zoho' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->code ) && $body_json->code == 'INVALID_TOKEN' ) {
+			if ( isset( $body_json->code ) && $body_json->code == 'INVALID_TOKEN' ) {
 
 				$access_token = $this->refresh_token();
 
@@ -235,38 +235,37 @@ class WPF_Zoho {
 
 				$response = wp_remote_request( $url, $args );
 
-			} elseif( isset( $body_json->code ) && ( $body_json->code == 'INVALID_DATA' || $body_json->code == 'MANDATORY_NOT_FOUND' ) ) {
+			} elseif ( isset( $body_json->code ) && ( $body_json->code == 'INVALID_DATA' || $body_json->code == 'MANDATORY_NOT_FOUND' ) ) {
 
 				$response = new WP_Error( 'error', '<strong>Invalid Data</strong> error: <strong>' . $body_json->message . '</strong>.' );
 
-			} elseif( !empty( $body_json->data ) && isset( $body_json->data[0]->code ) && ( $body_json->data[0]->code == 'INVALID_DATA' || $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) ) {
+			} elseif ( ! empty( $body_json->data ) && isset( $body_json->data[0]->code ) && ( $body_json->data[0]->code == 'INVALID_DATA' || $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) ) {
 
-				if( $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) {
+				if ( $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) {
 
-					$message = 'Mandatory field not found: <strong>' . $body_json->data[0]->details->api_name . '</strong>';
+					$message = 'Mandatory field not found: <pre>' . print_r( $body_json->data[0]->details, true ) . '</pre>';
 
-				} elseif( $body_json->data[0]->code == 'INVALID_DATA' ) {
+				} elseif ( $body_json->data[0]->code == 'INVALID_DATA' ) {
 
-					$message = 'Invalid data passed for field <strong>' . $body_json->data[0]->details->api_name . '</strong>, expected data type: <strong>' . $body_json->data[0]->details->expected_data_type . '</strong>';
+					$message = 'Invalid data passed for field. <pre>' . print_r( $body_json->data[0]->details, true ) . '</pre>';
 
 				}
 
 				$response = new WP_Error( 'error', $message );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 429 ) {
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 429 ) {
 
 				$response = new WP_Error( 'error', 'Number of API requests per minute/day has exceeded the limit.' );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 500 ) {
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 401 ) {
+
+				$response = new WP_Error( 'error', 'Unauthorized. Check your access token on the Setup tab in the WP Fusion settings.' );
+
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 500 ) {
 
 				$response = new WP_Error( 'error', 'Unexpected Zoho server error.' );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 500 ) {
-
-				$response = new WP_Error( 'error', 'Bad request. Please contact support.' );
-
 			}
-
 		}
 
 		return $response;
@@ -295,7 +294,7 @@ class WPF_Zoho {
 		$request  = $this->api_domain . '/crm/v2/contacts';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -339,10 +338,10 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.all';
+		$request  = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.all';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -350,14 +349,13 @@ class WPF_Zoho {
 
 		$available_tags = array();
 
-		if( ! empty( $response->tags ) ) {
+		if ( ! empty( $response->tags ) ) {
 
-			foreach( $response->tags as $tag ) {
+			foreach ( $response->tags as $tag ) {
 
 				$available_tags[ $tag->name ] = $tag->name;
 
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -379,36 +377,37 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request    = $this->api_domain . '/crm/v2/settings/fields?module=' . $this->object_type;
-		$response   = wp_remote_get( $request, $this->params );
+		$request  = $this->api_domain . '/crm/v2/settings/fields?module=' . $this->object_type;
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$built_in_fields = array();
-		$custom_fields = array();
+		$custom_fields   = array();
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( ! empty( $body_json->fields ) ) {
+		if ( ! empty( $body_json->fields ) ) {
 
-			foreach( $body_json->fields as $field ) {
+			foreach ( $body_json->fields as $field ) {
 
-				if( $field->custom_field == false ) {
+				if ( $field->custom_field == false ) {
 					$built_in_fields[ $field->api_name ] = $field->field_label;
 				} else {
 					$custom_fields[ $field->api_name ] = $field->field_label;
 				}
-
 			}
-
 		}
 
 		asort( $built_in_fields );
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -430,10 +429,10 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request    = $this->api_domain . '/crm/v2/settings/layouts?module=' . $this->object_type;
-		$response   = wp_remote_get( $request, $this->params );
+		$request  = $this->api_domain . '/crm/v2/settings/layouts?module=' . $this->object_type;
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -441,7 +440,7 @@ class WPF_Zoho {
 
 		$available_layouts = array();
 
-		foreach( $body_json->layouts as $layout ) {
+		foreach ( $body_json->layouts as $layout ) {
 
 			$available_layouts[ $layout->id ] = $layout->name;
 
@@ -467,16 +466,16 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?email=' . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?email=' . urlencode( $email_address );
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $body_json ) ) {
+		if ( empty( $body_json ) ) {
 			return false;
 		}
 
@@ -498,10 +497,10 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
-		$response     = wp_remote_get( $request, $this->params );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -509,11 +508,11 @@ class WPF_Zoho {
 
 		$tags = array();
 
-		if( empty( $body_json ) || empty( $body_json->data[0]->Tag ) ) {
+		if ( empty( $body_json ) || empty( $body_json->data[0]->Tag ) ) {
 			return $tags;
 		}
 
-		foreach( $body_json->data[0]->Tag as $tag ) {
+		foreach ( $body_json->data[0]->Tag as $tag ) {
 			$tags[] = $tag->name;
 		}
 
@@ -533,10 +532,10 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/add_tags?tag_names=' . implode(',', $tags) . '&over_write=false';
-		$response     = wp_remote_post( $request, $this->params );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/add_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
+		$response = wp_remote_post( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -557,10 +556,10 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/remove_tags?tag_names=' . implode(',', $tags) . '&over_write=false';
-		$response     = wp_remote_post( $request, $this->params );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/remove_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
+		$response = wp_remote_post( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -588,23 +587,22 @@ class WPF_Zoho {
 
 		$layout = wp_fusion()->settings->get( 'zoho_layout', false );
 
-		if( ! empty( $layout ) ) {
+		if ( ! empty( $layout ) ) {
 			$data['Layout'] = $layout;
 		}
 
 		// Contact creation will fail if there isn't a last name
-
-		if( ! isset( $data['Last_Name'] ) ) {
+		if ( ! isset( $data['Last_Name'] ) && $this->object_type == 'Contacts' ) {
 			$data['Last_Name'] = 'unknown';
 		}
 
-		$params 		= $this->params;
+		$params         = $this->params;
 		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
 
-		$request 		= $this->api_domain . '/crm/v2/' . $this->object_type;
-		$response     	= wp_remote_post( $request, $params );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type;
+		$response = wp_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -631,18 +629,18 @@ class WPF_Zoho {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
-		$params 		= $this->params;
-		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
+		$params           = $this->params;
+		$params['body']   = json_encode( array( 'data' => array( $data ) ) );
 		$params['method'] = 'PUT';
 
-		$request 		= $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
-		$response     	= wp_remote_request( $request, $params );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		$response = wp_remote_request( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -665,7 +663,7 @@ class WPF_Zoho {
 		$url      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
 		$response = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -673,7 +671,7 @@ class WPF_Zoho {
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$body_json      = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $body_json->data ) ) {
+		if ( empty( $body_json->data ) ) {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Zoho.' );
 		}
 
@@ -683,12 +681,10 @@ class WPF_Zoho {
 				$user_meta[ $field_id ] = $body_json->data[0]->{$field_data['crm_field']};
 
 				// Fix objects / lookups
-				if( is_object( $user_meta[ $field_id ] ) && isset( $user_meta[ $field_id ]->name ) ) {
+				if ( is_object( $user_meta[ $field_id ] ) && isset( $user_meta[ $field_id ]->name ) ) {
 					$user_meta[ $field_id ] = $user_meta[ $field_id ]->name;
 				}
-
 			}
-
 		}
 
 		return $user_meta;
@@ -709,21 +705,21 @@ class WPF_Zoho {
 		}
 
 		$contact_ids = array();
-		$page = 1;
-		$proceed = true;
+		$page        = 1;
+		$proceed     = true;
 
-		while( $proceed == true ) {
+		while ( $proceed == true ) {
 
-			$url     	= $this->api_domain . '/crm/v2/' . $this->object_type . '/search?word=' . urlencode($tag) . '&page=' . $page;
-			$response 	= wp_remote_get( $url, $this->params );
+			$url      = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?word=' . urlencode( $tag ) . '&page=' . $page;
+			$response = wp_remote_get( $url, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( empty( $body_json->data ) ) {
+			if ( empty( $body_json->data ) ) {
 				return $contact_ids;
 			}
 
@@ -731,12 +727,11 @@ class WPF_Zoho {
 				$contact_ids[] = $contact->id;
 			}
 
-			if( $body_json->info->more_records == false ) {
+			if ( $body_json->info->more_records == false ) {
 				$proceed = false;
 			} else {
 				$page++;
 			}
-
 		}
 
 		return $contact_ids;

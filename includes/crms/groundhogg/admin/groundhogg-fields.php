@@ -83,6 +83,11 @@ $groundhogg_fields['billing_country'] = array(
 );
 
 $groundhogg_fields[] = array(
+	'crm_label' => 'Birthday',
+	'crm_field' => 'birthday'
+);
+
+$groundhogg_fields[] = array(
 	'crm_label' => 'GDPR Consent',
 	'crm_field' => 'gdpr_consent'
 );
@@ -90,4 +95,9 @@ $groundhogg_fields[] = array(
 $groundhogg_fields[] = array(
 	'crm_label' => 'Agreed to Terms',
 	'crm_field' => 'terms_agreement'
+);
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'Optin Status',
+	'crm_field' => 'optin_status'
 );

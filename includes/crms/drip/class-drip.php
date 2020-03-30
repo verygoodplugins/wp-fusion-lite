@@ -94,7 +94,7 @@ class WPF_Drip {
 
 			return $date;
 
-		} elseif( ! empty( $value ) ) {
+		} elseif ( ! empty( $value ) ) {
 
 			return stripslashes($value);
 
@@ -200,13 +200,13 @@ class WPF_Drip {
 
 		// Identify visitor
 
-		if ( is_user_logged_in() && ! empty( wp_fusion()->user->get_contact_id() ) ) {
+		if ( wpf_is_user_logged_in() && ! empty( wp_fusion()->user->get_contact_id() ) ) {
 
 			$userdata = wp_get_current_user();
 
 			if( empty( $userdata ) && defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
 
-				$user_email = get_user_meta( get_current_user_id(), 'user_email', true );
+				$user_email = get_user_meta( wpf_get_current_user_id(), 'user_email', true );
 
 			} else {
 
@@ -688,12 +688,13 @@ class WPF_Drip {
 		}
 
 		if ( $result['status'] != 'active' ) {
-			wp_fusion()->logger->handle( 'notice', wp_fusion()->user->get_user_id( $contact_id ), $provided_email . ' has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
+			wpf_log( 'notice', wp_fusion()->user->get_user_id( $contact_id ), 'Person has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
 		}
 
 		// Check if we need to change the email address
 		if ( isset( $provided_email ) && strtolower( $result['email'] ) != strtolower( $provided_email ) ) {
 
+			$old_email           = $result['email'];
 			$params['new_email'] = $provided_email;
 
 			$result = $this->app->create_or_update_subscriber( $params );
@@ -705,7 +706,7 @@ class WPF_Drip {
 					return true;
 				}
 
-				return $result;
+				return new WP_Error( 'error', 'Failed to update subscriber email address from ' . $old_email . ' to ' . $params['new_email'] . ': ' . $result->get_error_message() );
 			}
 
 			if ( wp_fusion()->settings->get( 'email_change_event' ) == true ) {

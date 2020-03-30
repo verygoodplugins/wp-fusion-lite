@@ -35,7 +35,113 @@ body > .select4-container--open {
 	min-width: 100%;
 }
 
+/* Admin Menus */
+
+.wpf_nav_menu_field select.wpf-nav-menu {
+	width: 100%;
+}
+
+.wpf_nav_menu_tags_field span.select4-container {
+	min-width: 100%;
+	margin-bottom: 10px;
+}
+
+/* Tooltips */
+
+span.wpf-tip {
+	font-size: 1.4em;
+	vertical-align: middle;
+	color: #666;
+	cursor: help;
+}
+
+.tips {
+	cursor: help;
+	text-decoration: none;
+}
+
+img.tips {
+	padding: 5px 0 0;
+}
+
+#tiptip_holder {
+	max-width: 250px !important;
+	display: none;
+	z-index: 8675309;
+	position: absolute;
+	top: 0;
+
+	/*rtl:ignore*/
+	left: 0;
+}
+
+
+#tiptip_holder.tip_top {
+	padding-bottom: 5px;
+}
+
+#tiptip_holder.tip_top #tiptip_arrow_inner {
+	margin-top: -7px;
+	margin-left: -6px;
+	border-top-color: #333;
+}
+
+#tiptip_holder.tip_bottom {
+	padding-top: 5px;
+}
+
+#tiptip_holder.tip_bottom #tiptip_arrow_inner {
+	margin-top: -5px;
+	margin-left: -6px;
+	border-bottom-color: #333;
+}
+
+#tiptip_holder.tip_right {
+	padding-left: 5px;
+}
+
+#tiptip_holder.tip_right #tiptip_arrow_inner {
+	margin-top: -6px;
+	margin-left: -5px;
+	border-right-color: #333;
+}
+
+#tiptip_holder.tip_left {
+	padding-right: 5px;
+}
+
+#tiptip_holder.tip_left #tiptip_arrow_inner {
+	margin-top: -6px;
+	margin-left: -7px;
+	border-left-color: #333;
+}
+
+#tiptip_content, .chart-tooltip {
+	color: #fff;
+	font-size: 0.9em;
+	max-width: 250px;
+	background: #333;
+	text-align: left;
+	border-radius: 3px;
+	padding: 0.618em 1em;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+#tiptip_arrow, #tiptip_arrow_inner {
+	position: absolute;
+	border-color: transparent;
+	border-style: solid;
+	border-width: 6px;
+	height: 0;
+	width: 0;
+}
+
+
 /* Bulk editing */
+
+.wp-list-table .column-wpf_settings {
+	display: none;
+}
 
 .inline-edit-row .inline-edit-col-wpf {
 	border: 1px solid #ddd;
@@ -223,6 +329,10 @@ body .select4-drop.select4-drop-active {
 	min-width: 100%;
 }
 
+div.notice.wpf-tags-notice {
+	margin: 15px 0;
+}
+
 /* select4 */
 
 .select4-container--default.select4-container--focus .select4-selection--multiple {
@@ -389,6 +499,10 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 
 /* WPForms */
 
+#wpforms-settings-providers #wpforms-integration-wp-fusion {
+	display: none;
+}
+
 .wpforms-provider-fields table .select4-container {
 	width: 100% !important;
 }
@@ -486,6 +600,20 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	min-width: 0;
 	width: auto !important;
 	grid-column: 10/13;
+}
+
+/* WP Ultimo */
+
+#wu-product-data ul.wc-tabs li.wp_fusion_options a:before, #wu-coupon-data ul.wc-tabs li.wp_fusion_options a:before, .wu ul.wc-tabs li.wp_fusion_options a:before {
+	content: '\f103';
+}
+
+/* Simple Pay */
+
+#simpay-form-settings #wp-fusion-settings-panel .select4-container {
+	width: 500px !important;
+    max-width: 100% !important;
+    margin-bottom: 5px;
 }
 
 /* Elementor */

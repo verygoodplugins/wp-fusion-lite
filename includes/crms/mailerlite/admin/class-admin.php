@@ -40,7 +40,7 @@ class WPF_MailerLite_Admin {
 
 	public function init() {
 
-		//add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_filter( 'validate_field_mailerlite_update_trigger', array( $this, 'validate_update_trigger' ), 10, 2 );
 		add_filter( 'validate_field_mailerlite_add_tag', array( $this, 'validate_import_trigger' ), 10, 2 );

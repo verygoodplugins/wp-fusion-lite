@@ -189,6 +189,10 @@ class WPF_Salesforce {
 
 			return $date;
 
+		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! empty( $value ) ) {
+
+			return str_replace( ',', ';', $value );
+
 		} else {
 
 			return $value;
@@ -492,6 +496,8 @@ class WPF_Salesforce {
 		}
 
 		$query_args = array( 'q' => 'SELECT Id from ' . $this->object_type . " WHERE Email = '" . $email_address . "'" );
+
+		$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_contact_id' );
 
 		$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
 

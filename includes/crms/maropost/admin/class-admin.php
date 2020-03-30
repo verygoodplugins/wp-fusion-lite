@@ -68,7 +68,7 @@ class WPF_Maropost_Admin {
 
 		$is_config['account_id'] = array(
 			'title'   => __( 'Account ID', 'wp-fusion' ),
-			'desc'    => __( 'Enter the name of your Infusionsoft application (i.e. "1234").', 'wp-fusion' ),
+			'desc'    => __( 'Enter your Maropost account ID (i.e. "1234").', 'wp-fusion' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'

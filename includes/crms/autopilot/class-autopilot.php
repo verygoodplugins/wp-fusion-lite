@@ -25,7 +25,7 @@ class WPF_Autopilot {
 
 		$this->slug     = 'autopilot';
 		$this->name     = 'Autopilot';
-		$this->supports = array( 'add_tags' );
+		$this->supports = array();
 
 
 		// Set up admin options
@@ -50,6 +50,91 @@ class WPF_Autopilot {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		// Tracking stuff
+		add_action( 'init', array( $this, 'maybe_clear_tracking_cookie' ) );
+		add_action( 'wp_footer', array( $this, 'identify' ), 100 );
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_forms' ), 10, 2 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_forms' ), 10, 2 );
+
+	}
+
+	/**
+	 * Clear tracking cookie if someone logs in
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function maybe_clear_tracking_cookie() {
+
+		if ( wpf_is_user_logged_in() && ! empty( $_COOKIE['autopilot_id'] ) ) {
+			setcookie( 'autopilot_id', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
+		}
+
+	}
+
+	/**
+	 * Identify logged in user to tracking script
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function identify() {
+
+		if ( is_admin() ) {
+			return;
+		}
+
+		$email = false;
+
+		if ( wpf_is_user_logged_in() ) {
+
+			$contact_id = wp_fusion()->user->get_contact_id();
+
+			if ( ! empty( $contact_id ) ) {
+
+				$user = wp_get_current_user();
+				$email = $user->user_email;
+
+			}
+
+		} elseif ( ! empty( $_COOKIE['autopilot_id'] ) ) {
+
+			$email = $_COOKIE['autopilot_id'];
+
+		}
+
+		if ( false !== $email ) {
+
+			echo '<script type="text/javascript">
+			  if (typeof Autopilot !== "undefined") {
+
+			  	console.log("doing it");
+
+				Autopilot.run("associate", {
+					_simpleAssociate: true,  
+					Email: "' . $email . '"
+				});
+
+			}
+			</script>';
+
+		}
+
+	}
+
+	/**
+	 * Set tracking cookie after form submission
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function set_tracking_cookie_forms( $contact_id, $email_address ) {
+
+		setcookie( 'autopilot_id', $email_address, time() + DAY_IN_SECONDS * 180, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
 
@@ -104,9 +189,9 @@ class WPF_Autopilot {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if( isset( $body_json->error ) && $body_json->message !== 'Contact could not be found.' ) {
 
-				$response = new WP_Error( 'error', $body_json->error->message );
+				$response = new WP_Error( 'error', $body_json->message );
 
 			}
 
@@ -206,8 +291,8 @@ class WPF_Autopilot {
 			$this->get_params();
 		}
 
-		// Can't currently list tags or list all contacts
-		$tags 		= array();
+		$available_tags = array();
+
 		$request    = 'https://api2.autopilothq.com/v1/lists';
 		$response   = wp_remote_get( $request, $this->params );
 
@@ -215,29 +300,21 @@ class WPF_Autopilot {
 			return $response;
 		}
 
-		$body_json = json_decode( $response['body'], true );
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( empty( $body_json ) ) {
 			return false;
 		}
 
-		foreach ( $body_json['lists'] as $row ) {
-			$tags[] = $row['list_id'];
+		foreach ( $body_json->lists as $list ) {
+			$available_tags[ $list->list_id ] = $list->title;
 		}
 
-		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
-
-		foreach( $body_json['lists'] as $row ) {
-
-			if( !isset( $available_tags[ $row['list_id'] ] ) ) {
-				$available_tags[ $row['list_id'] ] = $row['title'];
-			}
-		}
+		asort( $available_tags );
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
-		return $tags;
+		return $available_tags;
 
 	}
 
@@ -287,7 +364,7 @@ class WPF_Autopilot {
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
-		return $fields;
+		return $crm_fields;
 
 	}
 
@@ -498,7 +575,7 @@ class WPF_Autopilot {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $response->data->id;
+		return $response->contact_id;
 
 	}
 
@@ -519,7 +596,7 @@ class WPF_Autopilot {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-				// Load built in fields to get field types and subtypes
+		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/autopilot-fields.php';
 
 		$update_data = array('contact' => array('custom' => array()));
@@ -574,9 +651,7 @@ class WPF_Autopilot {
 			return $response;
 		}
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		return $response->data->id;
+		return true;
 
 	}
 
@@ -608,13 +683,16 @@ class WPF_Autopilot {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Autopilot.' );
 		}
 
-		foreach ($response->custom_fields as $key => $custom_field) {
+		if ( ! empty( $response->custom_fields ) ) {
 
+			foreach ($response->custom_fields as $key => $custom_field) {
 
-			foreach ( $contact_fields as $field_id => $field_data ) {
+				foreach ( $contact_fields as $field_id => $field_data ) {
 
-				if ( $field_data['active'] == true && ! empty( $response->{ $field_data['crm_field'] } ) ) {
-					$user_meta[ $field_id ] = $response->{ $field_data['crm_field'] };
+					if ( $field_data['active'] == true && ! empty( $response->{ $field_data['crm_field'] } ) ) {
+						$user_meta[ $field_id ] = $response->{ $field_data['crm_field'] };
+					}
+
 				}
 
 			}

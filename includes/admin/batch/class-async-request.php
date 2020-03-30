@@ -138,10 +138,22 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 				return $this->post_args;
 			}
 
+			$cookies = $_COOKIE;
+
+			// Some cookies cause the request to be blocked so we'll only allow desired cookies through
+			$allowed_cookies = apply_filters( 'wpf_async_allowed_cookies', array() );
+
+			foreach ( $cookies as $key => $value ) {
+
+				if ( ! in_array( $key, $allowed_cookies ) ) {
+					unset( $cookies[ $key ] );
+				}
+			}
+
 			return array(
 				'timeout'   => 0.01,
 				'blocking'  => false,
-				'cookies'   => $_COOKIE,
+				'cookies'   => $cookies,
 				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
 			);
 

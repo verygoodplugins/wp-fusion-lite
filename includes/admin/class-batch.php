@@ -32,6 +32,9 @@ class WPF_Batch {
 		add_action( 'wp_ajax_wpf_batch_status', array( $this, 'batch_status' ) );
 		add_action( 'wp_ajax_wpf_batch_cancel', array( $this, 'batch_cancel' ) );
 
+		// Error handling
+		add_action( 'wpf_handle_log', array( $this, 'handle_error' ), 10, 5 );
+
 		// Export users
 		add_filter( 'wpf_batch_users_register_init', array( $this, 'users_register_init' ) );
 		add_action( 'wpf_batch_users_register', array( $this, 'users_register_step' ) );
@@ -176,16 +179,6 @@ class WPF_Batch {
 			$this->process->push_to_queue( array( 'action' => 'wpf_batch_' . $hook, 'args' => array( $object, $args ) ) );
 		}
 
-		// Save status
-
-		$status = array(
-			'total'      => count( $this->process->data ),
-			'remaining'  => count( $this->process->data ),
-			'max_memory' => $this->process->get_memory_limit(),
-		);
-
-		update_site_option( 'wpfb_status', $status );
-
 		$this->process->save()->dispatch();
 
 		wp_send_json_success( json_encode( $objects ) );
@@ -245,6 +238,37 @@ class WPF_Batch {
 	}
 
 	/**
+	 * Record errors to the status tracker
+	 *
+	 * @since 3.29.3
+	 * @return int Remaining
+	 */
+
+	public function handle_error( $timestamp, $level, $user, $message, $context ) {
+
+		if ( 'error' == $level ) {
+
+			$status = get_site_option( 'wpfb_status' );
+
+			if ( ! is_array( $status ) ) {
+				return;
+			}
+
+			if ( ! isset( $status['errors'] ) ) {
+				$status['errors'] = 0;
+			}
+
+			$status['errors']++;
+
+			update_site_option( 'wpfb_status', $status );
+
+
+
+		}
+
+	}
+
+	/**
 	 * Import users batch init
 	 *
 	 * @since 3.0
@@ -257,7 +281,7 @@ class WPF_Batch {
 
 		if( is_wp_error( $contact_ids ) ) {
 
-			wp_fusion()->logger->handle( 'error', 0, 'Error performing batch operation: ' . $contact_ids->get_error_message(), array( 'source' => 'batch-process' ) );
+			wpf_log( 'error', 0, 'Error performing batch operation: ' . $contact_ids->get_error_message(), array( 'source' => 'batch-process' ) );
 			return false;
 
 		} elseif ( empty( $contact_ids ) ) {
@@ -278,7 +302,7 @@ class WPF_Batch {
 
 		}
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Import Contacts</strong> batch operation on ' . count($contact_ids) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>', array( 'source' => 'batch-process' ) );
+		wpf_log( 'info', 0, 'Beginning <strong>Import Contacts</strong> batch operation on ' . count($contact_ids) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>', array( 'source' => 'batch-process' ) );
 
 		// Keep track of import groups so they can be removed later
 		$import_groups = get_option( 'wpf_import_groups', array() );
@@ -307,8 +331,12 @@ class WPF_Batch {
 
 	public function import_users_step( $contact_id, $args ) {
 
-		if( $args['notify'] == 'false' ) {
+		if( ! isset( $args['notify'] ) || $args['notify'] == 'false' ) {
 			$args['notify'] = false;
+		}
+
+		if ( ! isset( $args['role'] ) ) {
+			$args['role'] = false;
 		}
 
 		add_action( 'wpf_user_imported', array( $this, 'count_imported_user' ), 10, 2 );
@@ -350,7 +378,7 @@ class WPF_Batch {
 
 		$users = get_users( $args );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Resync Contact IDs and Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+		wpf_log( 'info', 0, 'Beginning <strong>Resync Contact IDs and Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
 
 		return $users;
 
@@ -396,7 +424,7 @@ class WPF_Batch {
 
 		$users = get_users( $args );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Resync Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+		wpf_log( 'info', 0, 'Beginning <strong>Resync Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
 
 		return $users;
 
@@ -441,7 +469,7 @@ class WPF_Batch {
 
 		$users = get_users( $args );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Export Users</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+		wpf_log( 'info', 0, 'Beginning <strong>Export Users</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
 
 		return $users;
 
@@ -487,7 +515,7 @@ class WPF_Batch {
 
 		$users = get_users( $args );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Push User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+		wpf_log( 'info', 0, 'Beginning <strong>Push User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
 
 		return $users;
 
@@ -533,7 +561,7 @@ class WPF_Batch {
 
 		$users = get_users( $args );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Beginning <strong>Pull User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
+		wpf_log( 'info', 0, 'Beginning <strong>Pull User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
 
 		return $users;
 

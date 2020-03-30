@@ -158,6 +158,9 @@ class WPF_AWeber {
 			require dirname( __FILE__ ) . '/includes/aweber.php';
 		}
 
+		$this->consumer_key    = apply_filters( 'wpf_aweber_key', $this->consumer_key );
+		$this->consumer_secret = apply_filters( 'wpf_aweber_secret', $this->consumer_secret );
+
 		$app = new AWeberAPI($this->consumer_key, $this->consumer_secret);
 
 		if ( $test == true ) {

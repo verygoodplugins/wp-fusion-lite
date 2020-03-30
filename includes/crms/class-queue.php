@@ -87,7 +87,7 @@ class WPF_CRM_Queue {
 
 		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || defined( 'WPF_STAGING_MODE' ) ) {
 
-			wp_fusion()->logger->handle( 'notice', 0, 'Staging mode enabled. Method ' . $method . ':', array( 'source' => $this->crm->slug, 'args' => $args ) );
+			wpf_log( 'notice', 0, 'Staging mode enabled. Method ' . $method . ':', array( 'source' => $this->crm->slug, 'args' => $args ) );
 
 			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
 			$staging_crm = new WPF_Staging;
@@ -315,7 +315,7 @@ class WPF_CRM_Queue {
 
 						$user_id = wp_fusion()->user->get_user_id( $cid );
 
-						wp_fusion()->logger->handle( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
+						wpf_log( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
 
 					} else {
 

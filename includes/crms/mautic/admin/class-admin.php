@@ -206,7 +206,7 @@ class WPF_Mautic_Admin {
 
 		$mautic_url       = esc_url_raw( $_POST['mautic_url'] );
 		$mautic_username  = sanitize_text_field( $_POST['mautic_username'] );
-		$mautic_password  = sanitize_text_field( $_POST['mautic_password'] );
+		$mautic_password  = stripslashes( sanitize_text_field( $_POST['mautic_password'] ) ); // stripslashes to deal with special characters in passwords
 
 		$connection = $this->crm->connect( $mautic_url, $mautic_username, $mautic_password, true );
 

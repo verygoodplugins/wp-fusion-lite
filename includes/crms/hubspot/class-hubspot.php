@@ -375,7 +375,7 @@ class WPF_HubSpot {
 					if( $list->listType == 'STATIC' ) {
 						$category = 'Static Lists';
 					} else {
-						$category = 'Active Lists';
+						$category = 'Active Lists (Read Only)';
 					}
 
 					$available_tags[ $list->listId ] = array(
@@ -796,7 +796,7 @@ class WPF_HubSpot {
 		echo '<!-- Start of HubSpot Embed Code -->';
 		echo '<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/' . $trackid . '.js"></script>';
 
-		if ( is_user_logged_in() || isset( $_COOKIE['wpf_guest'] ) ) {
+		if ( wpf_is_user_logged_in() || isset( $_COOKIE['wpf_guest'] ) ) {
 
 			// This will also merge historical tracking data that was accumulated before a visitor registered
 

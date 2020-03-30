@@ -223,6 +223,23 @@ label.iPhoneCheckLabelOff, label.iPhoneCheckLabelOn {
 .alert-success, .alert-success .alert-heading {
 	color:#468847;
 }*/
+
+h2#wpf-settings-header {
+    display: inline-block;
+    vertical-align: middle;
+    padding: 0px;
+}
+
+img#wpf-settings-logo {
+    display: inline-block;
+    width: 32px;
+    vertical-align: middle;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
 .widget-sort, .at-repeater-block {
 	background-color:#F5F5F5;
 	background-image:-moz-linear-gradient(center top, #F9F9F9, #F5F5F5);
@@ -545,6 +562,7 @@ tr.disabled {
 }
 
 .settings_page_wpf-settings-tab-content > .tab-pane {
+    margin-top: 20px;
     display: none;
 }
 
@@ -911,7 +929,8 @@ a {
     padding: 15px;
     margin-bottom: 20px;
     border: 1px solid transparent;
-    border-radius: 4px
+    border-radius: 4px;
+    max-width: 975px;
 }
 
 .alert h4 {

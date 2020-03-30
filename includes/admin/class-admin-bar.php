@@ -22,7 +22,7 @@ class WPF_Admin_Bar {
 
 	public function init() {
 
-		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
+		if ( ! wpf_is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 

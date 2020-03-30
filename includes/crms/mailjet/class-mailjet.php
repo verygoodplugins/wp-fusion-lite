@@ -599,17 +599,17 @@ class WPF_Mailjet {
 
 		$body_json_body  = json_decode( $response_body['body'], true );
 
-			foreach ( $body_json_body['Data'] as $field_body => $value_body ) {
+		foreach ( $body_json_body['Data'] as $field_body => $value_body ) {
 
-				foreach ( $contact_fields as $field_id => $field_data ) {
+			foreach ( $contact_fields as $field_id => $field_data ) {
 
-					if ( $field_data['active'] == true && $value_body == $field_data['crm_field']) {
-						$user_meta[ $field_id ] = $value_body[$field_data['crm_field']];
-					} 
-
-				}
+				if ( $field_data['active'] == true && $value_body == $field_data['crm_field']) {
+					$user_meta[ $field_id ] = $value_body[$field_data['crm_field']];
+				} 
 
 			}
+
+		}
 
 		return $user_meta;
 

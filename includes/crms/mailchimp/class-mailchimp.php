@@ -324,7 +324,7 @@ class WPF_MailChimp {
 
 		$available_lists = array();
 
-		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/';
+		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/?count=1000';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -370,7 +370,7 @@ class WPF_MailChimp {
 
 		$available_tags = array();
 
-		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=200';
+		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=1000';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -482,6 +482,7 @@ class WPF_MailChimp {
 
 				if ( $member->list_id == $this->list ) {
 					$contact_id = $member->id;
+					break;
 				}
 			}
 		} elseif ( isset( $body->full_search ) && ! empty( $body->full_search->members ) ) {
@@ -490,6 +491,7 @@ class WPF_MailChimp {
 
 				if ( $member->list_id == $this->list ) {
 					$contact_id = $member->id;
+					break;
 				}
 			}
 		}
@@ -513,7 +515,7 @@ class WPF_MailChimp {
 		}
 
 		$tags     = array();
-		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
+		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/?count=1000';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {

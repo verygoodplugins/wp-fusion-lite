@@ -227,7 +227,7 @@ class Request {
 			// the encoding is not UTF8 and there are non-ascii chars in the text, we try to work round that...
 			// The following code might be better for mb_string enabled installs, but
 			// makes the lib about 200% slower...
-			//if (!is_valid_charset($respEncoding, array('UTF-8')))
+			//if (!is_valid_charset($respEncoding, array('UTF-8'))) {
 			if ( ! in_array( $respEncoding, array( 'UTF-8', 'US-ASCII' ) ) && ! XMLParser::hasEncoding( $data ) ) {
 				if ( $respEncoding == 'ISO-8859-1' ) {
 					$data = utf8_encode( $data );
@@ -259,7 +259,7 @@ class Request {
 		xml_set_object( $parser, $xmlRpcParser );
 
 		if ( $returnType == 'phpvals' ) {
-			xml_set_element_handler( $parser, 'xmlrpc_se', 'xmlrpc_ee_fast' );
+		 	xml_set_element_handler( $parser, 'xmlrpc_se', 'xmlrpc_ee_fast' );
 		} else {
 			xml_set_element_handler( $parser, 'xmlrpc_se', 'xmlrpc_ee' );
 		}
@@ -267,8 +267,15 @@ class Request {
 		xml_set_character_data_handler( $parser, 'xmlrpc_cd' );
 		xml_set_default_handler( $parser, 'xmlrpc_dh' );
 
+		// See if special characters need to be removed from tags (for Hoang)
+
+		if ( strpos( $data, 'GroupCategoryId') !== false ) {
+			$data = preg_replace('/[^A-Za-z0-9\-\<\>\s\"\=\/\?\.\_]/', '', $data);
+		}
+
 		// first error check: xml not well formed
 		if ( ! xml_parse( $parser, $data ) ) {
+
 			// thanks to Peter Kocks <peter.kocks@baygate.com>
 			if ( ( xml_get_current_line_number( $parser ) ) == 1 ) {
 				$errStr = 'XML error at line 1, check URL';
@@ -289,6 +296,7 @@ class Request {
 
 			return $r;
 		}
+
 		xml_parser_free( $parser );
 		// second error check: xml well formed but not xml-rpc compliant
 		if ( $xmlRpcParser->_xh['isf'] > 1 ) {

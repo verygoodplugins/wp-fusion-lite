@@ -602,6 +602,9 @@ Class WPF_Drip_Api {
 		if ( empty( $res['buffer'] ) ) {
 			$this->error_message = "Response from the server.";
 			$this->error_code    = $res['http_code'];
+		} elseif ( $res['http_code'] == 422 ) {
+			$this->error_message = "HTTP Error 422: Unprocessable Entity.";
+			$this->error_code    = $res['http_code'];
 		} elseif ( ! empty( $res['buffer'] ) ) {
 			$json_arr = json_decode( $res['buffer'], true );
 

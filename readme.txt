@@ -3,29 +3,29 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, user meta, sync, wpfusion, wp-fusion
 Requires at least: 4.0
 Requires PHP: 5.6
-Tested up to: 5.3
-Stable tag: 3.27
+Tested up to: 5.4
+Stable tag: 3.31
 
 WP Fusion integrates your website with your CRM or marketing automation system.
 
 == Description ==
 
-WP Fusion Lite allows you to sync user registrations on your website to leading CRMs and marketing automation systems, keep user profiles in sync with CRM contacts, and protect site content based on CRM tags.
+WP Fusion Lite synchronizes your WordPress users with leading CRMs and marketing automation systems, keeps user profiles in sync with CRM contact records, and lets you protect site content based on CRM tags.
 
 = Features =
 
 * Automaticaly create new contacts in your CRM when users register in WordPress
-* Restrict access to site content using tags in your CRM
+* Restrict access to site content using tags or lists in your CRM
 * Synchronize any WordPress user data with custom fields in your CRM
 * Apply tags when users register
-* Import contacts from your CRM as new WordPress users
-* Export site users to your CRM as contacts
+* Import contacts from your CRM as new WordPress users and generate passwords for them
+* Export site users to your CRM as contact records
 
 = Lite Version =
 
 This is a free version of [WP Fusion](https://wpfusion.com/?utm_campaign=free-plugin&utm_source=wp-org). It includes support for WordPress core and synchronizing users with contact records, but does not have plugin-specific integrations or advanced tagging features.
 
-For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 60 other popular WordPress plugins, check out [one of our paid licenses](https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=wp-org).
+For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 80 other popular WordPress plugins, check out [one of our paid licenses](https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=wp-org).
 
 = Supported CRMs =
 
@@ -49,7 +49,9 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 * Intercom
 * Kartra
 * Klaviyo
+* Klick-Tipp
 * MailChimp
+* MailEngine
 * MailerLite
 * Mailjet
 * MailPoet
@@ -58,12 +60,15 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 * NationBuilder
 * Ontraport
 * Platform.ly
+* Quentn
 * Salesflare
 * Salesforce
+* SendFox
 * SendinBlue
 * Sendlane
 * Tubular
 * UserEngage
+* ZeroBS CRM
 * Zoho
 
 == Screenshots ==
@@ -71,7 +76,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and over 6
 1. Sync any WordPress user fields with contact records in your CRM
 2. View and manage contact tags within WordPress
 3. Restrict access to content based on a contact's tags
-4. Use the Gutenberg block to show and hide content within a page based on a contact's tags
+4. Use the Gutenberg block to show and hide content within a page based on a contact's CRM tags
 
 == Installation ==
 
@@ -83,7 +88,81 @@ See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
 
-= 3.27 - 8/24/2019 =
+= 3.31 - 3/30/2020 =
+
+##### New CRMs
+
+* ZeroBS CRM
+* MailEngine
+* Klick-Tipp
+* Quentn
+* SendFox
+
+##### New Features
+
+* Added option to restrict access to individual menu items
+* Added Apply Tags on View option for taxonomy terms
+* Added Required Tags (not) setting to access control meta box
+* contactId can now be used as a URL parameter for auto-login with Infusionsoft
+* Added automatic data conversion for dropdown fields with Ontraport
+* Added data-remove-tags option to link click tracking
+* Added option to send welcome email to new users imported from ConvertKit
+* Added Default Optin Status option and optin_status syncing with Groundhogg
+* Added an alert to the status bar of the background worker if API errors were encountered during data export
+* Added Entries Per Page to Screen Options in logs
+* Added logging for API throttling with ConvertKit
+* Added support for dropdown-type fields with Copper
+* Added additional built in Gist fields for syncing
+
+##### Improvements
+
+* Removed extra column in admin list table and moved lock symbol to after the post title
+* Contacts will no longer be created in Ontraport without an email address
+* Removed non-editable fields from Ontraport fields dropdowns
+* Stopped loading meta for new user registrations with existing contact records
+* Leads will now be created in Gist instead of Users if the subscriber doesn't have a user account
+* Logged in users and form submissions will now be identified to the Gist tracking script
+* Logged in users and guest form submissions will now be identified to the Autopilot tracking script
+* Slowed down batch operations with ConvertKit to get around API throttling
+* Improved debugging tools for background worker
+* Improvements to applying tags with Kartra using the new Kartra API endpoints
+* Gutenberg block will no longer output HTML if there's nothing to display
+
+##### Bug Fixes
+
+* Fixed duplicate content in Gutenberg block
+* Fixed messed up formatting of foreign characters in Gutenberg block
+* Fixed duplicate contact ID lookup API call for new user registrations with existing contact records
+* Fixed restricted content message not being output when multiple content areas were on a page
+* Fixed user_activation_key getting reset when importing new users and breaking Better Notifications welcome emails
+* Fixed "Return After Login" not working with WooCommerce account login
+* Fixed lead source variables not syncing to Ontraport
+* Stopped converting dates to GMT with Ontraport
+* Fixed Duplicate and Delete tool for MailerLite email address changes
+* Fixed New User Benchmark not firing with Groundhogg
+* Fixed changed email addresses not syncing to Sendinblue
+* Fixed bug in Import Tool with Sendinblue
+* Fixed Mautic not listing more than 30 custom fields
+* Fixed Mailchimp not loading more than 200 tags
+* Fixed underscores not loading in Infusionsoft tag labels
+* Fixed Invalid Data errors when syncing a number to a text field in Zoho
+* Fixed ActiveCampaign contact ID lookups returning error message when connected to non-English ActiveCampaign accounts
+* Gist compatibility updates for changed API methods
+* Fixed missing email addresses causing BirdSend API calls to fail
+* Fixed BirdSend only loading 15 available tags
+
+##### Developer
+
+* Added wpf_get_current_user_id() function
+* Added wpf_is_user_logged_in() function
+* Auto login system no longer sets $current_user global
+* Removed admin authentication cookies from background worker
+* Added wpf_auto_login_cookie_expiration filter
+* Added wpf_salesforce_query_args filter
+* Added wpf_aweber_key and wpf_aweber_secret filters
+
+
+= 3.27 - 11/27/2019 =
 
 ##### New CRMs
 

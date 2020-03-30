@@ -134,6 +134,14 @@ class WPF_ConvertKit_Admin {
 			'section'	=> 'main'
 			);
 
+		$new_settings['ck_import_notification'] = array(
+			'title'   => __( 'Enable Notifications', 'wp-fusion' ),
+			'desc'    => __( 'Send a welcome email to new users containing their username and a password reset link.', 'wp-fusion' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'std'	  => 0
+			);
+
 		$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
 
 		$new_settings = array();

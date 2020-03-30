@@ -33,7 +33,7 @@ class WPF_SendinBlue {
 	public function __construct() {
 
 		$this->slug     = 'sendinblue';
-		$this->name     = 'SendinBlue';
+		$this->name     = 'Sendinblue';
 		$this->supports = array();
 
 		// Set up admin options
@@ -75,7 +75,40 @@ class WPF_SendinBlue {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = $payload->email;
+		if ( isset( $payload->email ) ) {
+
+			$post_data['contact_id'] = $payload->email;
+
+		} elseif ( isset( $payload->content ) ) {
+
+			// Global webhooks
+
+			$post_data['contact_id'] = $payload->content[0]->email;
+
+			// Handle email changes
+
+			if ( ! empty( $payload->content[0]->updated_email ) ) {
+
+				$user = get_user_by( 'email', $payload->content[0]->email );
+
+				if ( ! empty( $user ) ) {
+
+					$userdata = array(
+						'ID'         => $user->ID,
+						'user_email' => $payload->content[0]->updated_email,
+					);
+
+					wp_update_user( $userdata );
+
+					update_user_meta( $user->ID, 'sendinblue_contact_id', $payload->content[0]->updated_email );
+
+					$post_data['contact_id'] = $payload->content[0]->updated_email;
+
+				}
+
+			}
+
+		}
 
 		return $post_data;
 
@@ -96,6 +129,16 @@ class WPF_SendinBlue {
 			$date = date( 'Y-m-d', $value );
 
 			return $date;
+
+		} elseif ( $field_type == 'checkbox' && $value == null ) {
+
+			// Sendinblue only treats false as a No for checkboxes
+			return false;
+
+		} elseif ( $field_type == 'checkbox' && ! empty( $value ) ) {
+
+			// Sendinblue only treats true as a Yes for checkboxes
+			return true;
 
 		} else {
 
@@ -376,9 +419,10 @@ class WPF_SendinBlue {
 
 			$response = wp_remote_post( $request, $params );
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		return true;
@@ -408,9 +452,10 @@ class WPF_SendinBlue {
 
 			$response = wp_remote_post( $request, $params );
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		return true;
@@ -490,6 +535,22 @@ class WPF_SendinBlue {
 			return false;
 		}
 
+		// Email address changes
+
+		if ( isset( $data['email'] ) && $data['email'] != $contact_id ) {
+
+			$data['EMAIL'] = $data['email'];
+
+			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+			if ( $user_id ) {
+
+				update_user_meta( $user_id, 'sendinblue_contact_id', $data['email'] );
+
+			}
+
+		}
+
 		unset( $data['email'] );
 
 		$post_data = array( 'attributes' => $data );
@@ -541,7 +602,15 @@ class WPF_SendinBlue {
 			foreach ( $contact_fields as $field_id => $field_data ) {
 
 				if ( $field_data['active'] == true && $field == $field_data['crm_field'] ) {
+
+					// Checkboxes
+
+					if ( $value === false ) {
+						$value = null;
+					}
+
 					$user_meta[ $field_id ] = $value;
+
 				}
 			}
 		}

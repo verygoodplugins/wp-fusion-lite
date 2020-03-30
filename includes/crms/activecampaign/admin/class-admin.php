@@ -22,7 +22,6 @@ class WPF_ActiveCampaign_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_activecampaign_header_begin', array( $this, 'show_field_activecampaign_header_begin' ), 10, 2 );
-		add_action( 'show_field_ac_key_end', array( $this, 'show_field_ac_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -124,9 +123,9 @@ class WPF_ActiveCampaign_Admin {
 		$settings['ac_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
 
 		// Add site tracking option
-		$site_tracking = array();
+		$new_settings = array();
 
-		$site_tracking['site_tracking_header'] = array(
+		$new_settings['site_tracking_header'] = array(
 			'title'   => __( 'ActiveCampaign Site Tracking', 'wp-fusion' ),
 			'desc'    => '',
 			'std'     => '',
@@ -134,7 +133,7 @@ class WPF_ActiveCampaign_Admin {
 			'section' => 'main'
 		);
 
-		$site_tracking['site_tracking'] = array(
+		$new_settings['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion' ),
 			'desc'    => __( 'Enable <a target="_blank" href="https://help.activecampaign.com/hc/en-us/articles/221493708-How-to-set-up-Site-Tracking">ActiveCampaign site tracking</a>.', 'wp-fusion' ),
 			'std'     => 0,
@@ -142,13 +141,23 @@ class WPF_ActiveCampaign_Admin {
 			'section' => 'main'
 		);
 
-		$site_tracking['site_tracking_id'] = array(
+		$new_settings['site_tracking_id'] = array(
 			'std'     => '',
 			'type'    => 'hidden',
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $new_settings );
+
+		$new_settings = array();
+
+		$new_settings['ac_import_p'] = array(
+			'desc'    => '<div class="alert alert-info">' . __( '<strong>Note:</strong> Contacts cannot be imported from ActiveCampaign unless they are on at least one list.' ) . '</div>',
+			'type'    => 'paragraph',
+			'section' => 'import',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'import_users_p', $settings, $new_settings );
 
 		return $settings;
 
@@ -251,28 +260,6 @@ class WPF_ActiveCampaign_Admin {
 	}
 
 	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_ac_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #activecampaign div
-		echo '<table class="form-table">';
-
-	}
-
-	/**
 	 * Verify connection credentials
 	 *
 	 * @access public
@@ -335,6 +322,5 @@ class WPF_ActiveCampaign_Admin {
 		update_user_meta( $user_id, 'activecampaign_lists', $lists );
 
 	}
-
 
 }

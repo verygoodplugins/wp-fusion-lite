@@ -77,6 +77,10 @@ class WPF_Log_Handler {
 		add_action( 'admin_menu', array($this, 'register_logger_subpage'));
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
+		// Screen options
+		add_action( 'load-settings_page_wpf-settings-logs', array( $this, 'add_screen_options' ) );
+		add_filter( 'set-screen-option', array( $this, 'set_screen_option' ), 10, 3 );
+
 		$this->create_update_table();
 
 	}
@@ -90,13 +94,14 @@ class WPF_Log_Handler {
  
 	public function register_logger_subpage() {
 
-	    add_submenu_page( 
+	    $page = add_submenu_page( 
 	        'options-general.php',
 	        'WP Fusion Activity Logs',
 	        'WP Fusion Logs',
 	        'manage_options',
 	        'wpf-settings-logs',
-	        array( $this, 'show_logs_section') );
+	        array( $this, 'show_logs_section')
+	    );
 
 	}
 
@@ -111,7 +116,7 @@ class WPF_Log_Handler {
 
 		$screen = get_current_screen();
 
-		if($screen->id != 'settings_page_wpf-settings-logs')
+		if( $screen->id != 'settings_page_wpf-settings-logs' )
 			return;
 
 		wp_enqueue_style( 'wpf-options', WPF_DIR_URL . 'assets/css/wpf-options.css', array(), WP_FUSION_VERSION );
@@ -119,6 +124,40 @@ class WPF_Log_Handler {
 
 
 	}
+
+	/**
+	 * Adds per-page screen option
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	 public function add_screen_options() {
+
+		$args = array(
+			'label' => __( 'Entries per page', 'wp-fusion' ),
+			'default' => 20,
+			'option' => 'wpf_status_log_items_per_page'
+		);
+
+		add_screen_option( 'per_page', $args );
+
+	 }
+
+	/**
+	 * Save screen options
+	 *
+	 * @access public
+	 * @return int Value
+	 */
+
+	 public function set_screen_option( $status, $option, $value ) {
+
+	 	if ( 'wpf_status_log_items_per_page' == $option ) {
+	 		return $value;
+	 	}
+
+	 }
 
 	/**
 	 * Adds logging tab to main settings for access
@@ -161,7 +200,7 @@ class WPF_Log_Handler {
 				log_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				timestamp datetime NOT NULL,
 				level smallint(4) NOT NULL,
-				user int(8) NOT NULL,
+				user bigint(8) NOT NULL,
 				source varchar(200) NOT NULL,
 				message longtext NOT NULL,
 				context longtext NULL,

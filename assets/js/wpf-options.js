@@ -6,8 +6,6 @@ jQuery(document).ready(function($){
 
 		var spinnerIcon = "data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1s%0D%0AbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNCIgaGVpZ2h0%0D%0APSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KPHBhdGggZD0iTTQuMTA5IDEwLjg5MXEwIDAuNDE0%0D%0ALTAuMjkzIDAuNzA3dC0wLjcwNyAwLjI5M3EtMC40MDYgMC0wLjcwMy0wLjI5N3QtMC4yOTctMC43%0D%0AMDNxMC0wLjQxNCAwLjI5My0wLjcwN3QwLjcwNy0wLjI5MyAwLjcwNyAwLjI5MyAwLjI5MyAwLjcw%0D%0AN3pNOCAxMi41cTAgMC40MTQtMC4yOTMgMC43MDd0LTAuNzA3IDAuMjkzLTAuNzA3LTAuMjkzLTAu%0D%0AMjkzLTAuNzA3IDAuMjkzLTAuNzA3IDAuNzA3LTAuMjkzIDAuNzA3IDAuMjkzIDAuMjkzIDAuNzA3%0D%0Aek0yLjUgN3EwIDAuNDE0LTAuMjkzIDAuNzA3dC0wLjcwNyAwLjI5My0wLjcwNy0wLjI5My0wLjI5%0D%0AMy0wLjcwNyAwLjI5My0wLjcwNyAwLjcwNy0wLjI5MyAwLjcwNyAwLjI5MyAwLjI5MyAwLjcwN3pN%0D%0AMTEuODkxIDEwLjg5MXEwIDAuNDA2LTAuMjk3IDAuNzAzdC0wLjcwMyAwLjI5N3EtMC40MTQgMC0w%0D%0ALjcwNy0wLjI5M3QtMC4yOTMtMC43MDcgMC4yOTMtMC43MDcgMC43MDctMC4yOTMgMC43MDcgMC4y%0D%0AOTMgMC4yOTMgMC43MDd6TTQuMzU5IDMuMTA5cTAgMC41MTYtMC4zNjcgMC44ODN0LTAuODgzIDAu%0D%0AMzY3LTAuODgzLTAuMzY3LTAuMzY3LTAuODgzIDAuMzY3LTAuODgzIDAuODgzLTAuMzY3IDAuODgz%0D%0AIDAuMzY3IDAuMzY3IDAuODgzek0xMy41IDdxMCAwLjQxNC0wLjI5MyAwLjcwN3QtMC43MDcgMC4y%0D%0AOTMtMC43MDctMC4yOTMtMC4yOTMtMC43MDcgMC4yOTMtMC43MDcgMC43MDctMC4yOTMgMC43MDcg%0D%0AMC4yOTMgMC4yOTMgMC43MDd6TTguNSAxLjVxMCAwLjYyNS0wLjQzOCAxLjA2MnQtMS4wNjIgMC40%0D%0AMzgtMS4wNjItMC40MzgtMC40MzgtMS4wNjIgMC40MzgtMS4wNjIgMS4wNjItMC40MzggMS4wNjIg%0D%0AMC40MzggMC40MzggMS4wNjJ6TTEyLjY0MSAzLjEwOXEwIDAuNzI3LTAuNTE2IDEuMjM4dC0xLjIz%0D%0ANCAwLjUxMnEtMC43MjcgMC0xLjIzOC0wLjUxMnQtMC41MTItMS4yMzhxMC0wLjcxOSAwLjUxMi0x%0D%0ALjIzNHQxLjIzOC0wLjUxNnEwLjcxOSAwIDEuMjM0IDAuNTE2dDAuNTE2IDEuMjM0eiI+PC9wYXRo%0D%0APgo8L3N2Zz4K";
 
-		$('[data-toggle="tooltip"]').tooltip({html:true});
-
 		$('table [data-toggle="toggle"]').change(function(){
 			$(this).parent().find('label').toggleClass('collapsed');
 			$(this).parents().next('.table-collapse').toggleClass('hide');
@@ -16,20 +14,6 @@ jQuery(document).ready(function($){
 		//
 		// Import Users
 		//
-
-		// Callback for completion of import users
-		var importUsersComplete = function(total, title) {
-
-			$( "#import-users-btn" ).html('Import');
-			$( "#import-users-btn" ).removeAttr('disabled');
-
-			if(total > 0) {
-				$('#import-output').html('<div class="updated"><p><strong>Success:</strong> ' + total + ' new contacts imported.</p></div>');
-			} else {
-				$('#import-output').html('<div class="error"><p><strong>Error:</strong> No new contacts found.</p></div>');
-			}
-
-		}
 
 		// Start import
 		$( "#import-users-btn" ).on( "click", function() {
@@ -55,7 +39,7 @@ jQuery(document).ready(function($){
 				'notify'	: $('#email_notifications').is(':checked')
 			}
 
-			startBatch(button, data, args, importUsersComplete);
+			startBatch(button, data, args);
 
 		});
 
@@ -92,7 +76,7 @@ jQuery(document).ready(function($){
 
 		// Get status of batch process
 
-		var getBatchStatus = function(total, title, callback = false) {
+		var getBatchStatus = function( total, title ) {
 
 			if($('#wpf-batch-status').hasClass('hidden')) {
 
@@ -139,18 +123,21 @@ jQuery(document).ready(function($){
 
 				var remaining = parseInt( response.remaining );
 				var total = parseInt( response.total );
+				var errors = parseInt( response.errors );
+				var misc = '';
 
-				if(remaining == 0 || isNaN(remaining)) {
+				if ( errors > 0 ) {
+					misc = '- ' + response.errors + ' errors encountered. Check the logs for more details.';
+				}
+
+				if( remaining == 0 || isNaN(remaining) ) {
 
 					$('#wpf-batch-status span.title').html('');
 					$('#wpf-batch-status #cancel-batch').remove();
-					$('#wpf-batch-status span.status').html('<strong>Operation complete:</strong> ' + total + ' ' + title + ' processed. Terminating...');
-					$('#wpf-batch-status').delay(6000).slideUp('slow').addClass('hidden');
-
-					// Maybe trigger callback
-					if(callback != false) {
-						callback(total, title);
-					}
+					$('#wpf-batch-status span.status').html('<strong>Operation complete.</strong> Terminating...');
+					$('#wpf-batch-status').delay(3000).queue(function(){
+    					$(this).slideUp('slow').dequeue();
+    				});
 
 					return;
 
@@ -161,12 +148,12 @@ jQuery(document).ready(function($){
 					var completed = total - remaining;
 
 					if(completed > 0) {
-						$('#wpf-batch-status span.status').html('Processing ' + completed + ' of ' + total + ' ' + title);
+						$('#wpf-batch-status span.status').html('Processing ' + completed + ' of ' + total + ' ' + title + ' ' + misc);
 					} else {
-						$('#wpf-batch-status span.status').html('Processing ' + remaining + ' records');
+						$('#wpf-batch-status span.status').html('Processing ' + remaining + ' records ' + misc);
 					}
 
-					getBatchStatus(total, title, callback);
+					getBatchStatus(total, title);
 
 				}, 5000);
 
@@ -210,7 +197,7 @@ jQuery(document).ready(function($){
 
 		// Start export stage
 
-		var startBatch = function(button, action, args = false, callback = false) {
+		var startBatch = function( button, action, args = false ) {
 
 			button.attr('disabled', 'disabled');
 			button.html('<img class="rotating" src="' + spinnerIcon + '"/><div style="margin-left:20px;">Beginning ' + action.title + ' Processing</div>');
@@ -229,7 +216,7 @@ jQuery(document).ready(function($){
 				console.dir( items );
 
 				button.html('Background Task Created');
-				getBatchStatus( items.length, action.title, callback);
+				getBatchStatus( $(items).length, action.title );
 
 			});
 

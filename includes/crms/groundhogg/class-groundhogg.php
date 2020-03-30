@@ -61,6 +61,8 @@ class WPF_Groundhogg {
 			return;
 		}
 
+		add_action( 'plugins_loaded', array( $this, 'remove_actions' ) );
+
 		if ( $this->is_v2 ) {
 
 			add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
@@ -86,6 +88,19 @@ class WPF_Groundhogg {
 	}
 
 	/**
+	 * Let WP Fusion create contacts from users, not GH
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function remove_actions() {
+
+		remove_action( 'user_register', 'Groundhogg\convert_user_to_contact_when_user_registered' );
+
+	}
+
+	/**
 	 * Formats user entered data to match GH field formats
 	 *
 	 * @access public
@@ -100,6 +115,23 @@ class WPF_Groundhogg {
 				$value = 'yes';
 			} else {
 				$value = 'no';
+			}
+
+		}
+
+		if ( $field == 'optin_status' && ! is_numeric( $field ) ) {
+
+			// Convert optin status strings to proper format
+
+			$value = strtoupper( $value );
+
+			$refl = new ReflectionClass( '\Groundhogg\Preferences' );
+			$vars = $refl->getConstants();
+
+			if ( isset( $vars[ $value ] ) ) {
+				$value = $vars[ $value ];
+			} else {
+				$value = false;
 			}
 
 		}
@@ -128,6 +160,11 @@ class WPF_Groundhogg {
 	 */
 
 	public function tag_applied( $contact, $tag_id ) {
+
+		// This action triggers apply_tags_to_contact_from_new_roles in GH and can create a situation where recently applied tags get overwritten
+		if ( did_action( 'add_user_role' ) > 0 || did_action( 'set_user_role' ) > 0 ) {
+			return;
+		}
 
 		if ( $this->is_v2 ) {
 
@@ -503,8 +540,24 @@ class WPF_Groundhogg {
 
 	public function add_contact( $data, $map_meta_fields = true ) {
 
+		if ( ! empty( $data['user_id'] ) ) {
+			$user_id = $data['user_id'];
+		}
+
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
+		}
+
+		// If we're creating a contact from a user, pass that through
+
+		if ( isset( $user_id ) ) {
+			$data['user_id'] = $user_id;
+		}
+
+		// Set to opted in by default unless otherwise specified
+
+		if ( ! isset( $data['optin_status'] ) ) {
+			$data['optin_status'] = wp_fusion()->settings->get( 'gh_default_status', 2 );
 		}
 
 		if ( $this->is_v2 ) {
@@ -536,6 +589,15 @@ class WPF_Groundhogg {
 		foreach ( $data as $key => $value ) {
 
 			$contact->update_meta( $key, $value );
+
+		}
+
+		// Trigger user created benchmarks
+
+		if ( isset( $user_id ) ) {
+
+			$user = get_userdata( $user_id );
+			do_action( 'groundhogg/contact_created_from_user', $user, $contact );
 
 		}
 

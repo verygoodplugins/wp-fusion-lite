@@ -51,6 +51,7 @@ class WPF_Copper {
 		add_action( 'init', array( $this, 'get_actions' ), 5 );
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 	}
@@ -78,6 +79,30 @@ class WPF_Copper {
 				}
 
 			}
+
+		}
+
+	}
+
+
+	/**
+	 * Formats user entered data to match Copper field formats
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+
+			// Make sure dates are ints and not strings
+
+			return (int) $value;
+
+		} else {
+
+			return $value;
 
 		}
 
@@ -165,7 +190,7 @@ class WPF_Copper {
 	 * @return  array Params
 	 */
 
-	public function get_params($user_email = null, $access_key = null ) {
+	public function get_params( $user_email = null, $access_key = null ) {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) || empty( $user_email ) ) {
@@ -196,10 +221,10 @@ class WPF_Copper {
 	 * @return  bool
 	 */
 
-	public function connect( $access_key = null, $test = false ) {
+	public function connect( $email = null, $access_key = null, $test = false ) {
 
 		if ( ! $this->params ) {
-			$this->get_params( $access_key );
+			$this->get_params( $email, $access_key );
 		}
 
 		if ( $test == false ) {
@@ -334,11 +359,22 @@ class WPF_Copper {
 
 		$custom_fields = array();
 
+		// For Dropdown type fields
+		$option_ids = array();
+
 		if ( ! empty( $response ) ) {
 
 			foreach( $response as $field ) {
 
 				$custom_fields[ $field->id ] = ucwords( str_replace( '_', ' ', $field->name ) );
+
+				if ( ! empty( $field->options ) ) {
+
+					foreach ( $field->options as $option ) {
+						$option_ids[ $option->name ] = $option->id;
+					}
+
+				}
 
 			}
 
@@ -349,6 +385,10 @@ class WPF_Copper {
 		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+
+		if ( ! empty( $option_ids ) ) {
+			wp_fusion()->settings->set( 'copper_option_ids', $option_ids );
+		}
 
 		return $crm_fields;
 
@@ -545,6 +585,8 @@ class WPF_Copper {
 
 		$update_data = array();
 
+		$option_ids = wp_fusion()->settings->get( 'copper_option_ids', array() );
+
 		foreach( $data as $field => $value ) {
 
 			if( $field == 'email' ) {
@@ -568,6 +610,11 @@ class WPF_Copper {
 				// Custom fields
 				if( ! isset( $update_data['custom_fields'] ) ) {
 					$update_data['custom_fields'] = array();
+				}
+
+				// Convert dropdown options to their IDs
+				if ( isset( $option_ids[ $value ] ) ) {
+					$value = $option_ids[ $value ];
 				}
 
 				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
@@ -617,6 +664,8 @@ class WPF_Copper {
 
 		$update_data = array();
 
+		$option_ids = wp_fusion()->settings->get( 'copper_option_ids', array() );
+
 		foreach( $data as $field => $value ) {
 
 			if( $field == 'email' ) {
@@ -640,6 +689,11 @@ class WPF_Copper {
 				// Custom fields
 				if( ! isset( $update_data['custom_fields'] ) ) {
 					$update_data['custom_fields'] = array();
+				}
+
+				// Convert dropdown options to their IDs
+				if ( isset( $option_ids[ $value ] ) ) {
+					$value = $option_ids[ $value ];
 				}
 
 				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
@@ -698,24 +752,59 @@ class WPF_Copper {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Copper.' );
 		}
 
-		foreach ($response as $key => $address_field) {
+		$option_ids = wp_fusion()->settings->get( 'copper_option_ids', array() );
 
-			foreach ( $contact_fields as $field_id => $field_data ) {
+		foreach ( $contact_fields as $field_id => $field_data ) {
 
-				if ( $field_data['active'] == true && ! empty( $response->{ $field_data['crm_field'] } ) ) {
-					$user_meta[ $field_id ] = $response->{ $field_data['crm_field'] };
+			if ( $field_data['active'] != true ) {
+				continue;
+			}
+
+			if ( ! empty( $response->{ $field_data['crm_field'] } ) ) {
+				$user_meta[ $field_id ] = $response->{ $field_data['crm_field'] };
+			}
+
+			if ( ! empty( $response->emails[0]->{ $field_data['crm_field'] } ) ) {
+				$user_meta[ $field_id ] = $response->emails[0]->{ $field_data['crm_field'] };
+			}
+
+			if ( ! empty( $response->phone_numbers[0]->{ $field_data['crm_field'] } ) ) {
+				$user_meta[ $field_id ] = $response->phone_numbers[0]->{ $field_data['crm_field'] };
+			}
+
+			// Address parts
+
+			foreach ( $response->address as $key => $value ) {
+
+				if ( $key == $field_data['crm_field'] && ! empty( $value ) ) {
+					$user_meta[ $field_id ] = $value;
 				}
 
-				if ( $field_data['active'] == true && ! empty( $response->emails[0]->{ $field_data['crm_field'] } ) ) {
-					$user_meta[ $field_id ] = $response->emails[0]->{ $field_data['crm_field'] };
-				}
+			}
 
-				if ( $field_data['active'] == true && ! empty( $response->phone_numbers[0]->{ $field_data['crm_field'] } ) ) {
-					$user_meta[ $field_id ] = $response->phone_numbers[0]->{ $field_data['crm_field'] };
-				}
+			// Custom fields
 
-				elseif ($field_data['active'] == true && ! empty( $address_field->{ $field_data['crm_field'] } ) ) {
-					$user_meta[ $field_id ] = $address_field->{ $field_data['crm_field'] };
+			if ( ! empty( $response->custom_fields ) ) {
+
+				foreach ( $response->custom_fields as $field ) {
+
+					if ( $field->custom_field_definition_id == $field_data['crm_field'] && ! empty( $field->value ) ) {
+
+						// Dropdowns
+
+						if ( is_numeric( $field->value ) ) {
+
+							$key = array_search( $field->value, $option_ids );
+
+							if ( false !== $key ) {
+								$field->value = $key;
+							}
+
+						}
+
+						$user_meta[ $field_id ] = $field->value;
+					}
+
 				}
 
 			}

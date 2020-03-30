@@ -711,8 +711,8 @@ class WPF_Options {
 		<?php $page = apply_filters( $this->setup['project_slug'] . '_configure_sections', $page, $this->options ); ?>
 
 		<div class="wrap">
-		<div class="icon32" id="icon-<?php echo $this->setup['page_icon']; ?>"></div>
-		<h2><?php echo $page['page_title']; ?> </h2>
+		<img id="wpf-settings-logo" src="<?php echo WPF_DIR_URL; ?>/assets/img/logo-sm-trans.png">
+		<h2 id="wpf-settings-header"><?php echo $page['page_title']; ?> </h2>
 
 		<?php do_action( 'wpf_settings_after_page_title' ); ?>
 
@@ -1310,7 +1310,7 @@ class WPF_Options {
 		}
 
 		if ( isset( $field['tooltip'] ) ) {
-			echo '<i class="fa fa-info-circle" data-placement="right" data-toggle="tooltip" title="' . $field['tooltip'] . '"></i>';
+			echo '<i class="fa fa-info-circle wpf-tip right" data-tip="' . $field['tooltip'] . '"></i>';
 		}
 
 	}

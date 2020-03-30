@@ -52,13 +52,31 @@ class WPF_Infusionsoft_iSDK {
 
 	public function init() {
 
+		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 		add_action( 'wpf_contact_updated', array( $this, 'send_api_call' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_filter( 'wpf_auto_login_query_var', array( $this, 'auto_login_query_var' ) );
 		add_filter( 'random_password', array( $this, 'generate_password' ) );
 
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+
+	}
+
+	/**
+	 * Register cookies allowed in the async process
+	 *
+	 * @access public
+	 * @return array Cookies
+	 */
+
+	public function allowed_cookies( $cookies ) {
+
+		$cookies[] = 'is_aff';
+		$cookies[] = 'is_affcode';
+
+		return $cookies;
 
 	}
 
@@ -110,6 +128,19 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $post_data;
+
+	}
+
+	/**
+	 * Allow using contactId query var for auto login (redirect from Infusionsoft forms)
+	 *
+	 * @access public
+	 * @return array
+	 */
+
+	public function auto_login_query_var( $var ) {
+
+		return 'contactId';
 
 	}
 
@@ -289,7 +320,7 @@ class WPF_Infusionsoft_iSDK {
 			return $categories;
 		}
 
-		$fields     = array( 'Id', 'GroupName', 'GroupCategoryId' );
+		$fields = array( 'Id', 'GroupName', 'GroupCategoryId' );
 
 		foreach ( $categories as $category ) {
 
@@ -298,7 +329,7 @@ class WPF_Infusionsoft_iSDK {
 			$result = $this->app->dsQuery( 'ContactGroup', 1000, 0, $query, $fields );
 
 			if ( is_wp_error( $result ) ) {
-				return $result;
+				continue;
 			}
 
 			foreach ( $result as $tag ) {
@@ -626,8 +657,12 @@ class WPF_Infusionsoft_iSDK {
 
 		}
 
-		// Opt-in the email since email address changes cause opt-outs
-		$this->app->optIn( $data['Email'] );
+		if ( isset( $data['Email'] ) ) {
+
+			// Opt-in the email since email address changes cause opt-outs
+			$this->app->optIn( $data['Email'] );
+
+		}
 
 		do_action( 'wpf_contact_updated', $contact_id );
 

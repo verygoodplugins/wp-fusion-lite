@@ -110,7 +110,11 @@ class WPF_AWeber_Admin {
 			try {
 			
 				$this->crm->connect();
-				list($request_token, $request_token_secret) = $this->crm->app->getRequestToken(get_admin_url() . 'options-general.php?page=wpf-settings#setup');
+
+				$redirect_uri = get_admin_url() . 'options-general.php?page=wpf-settings#setup';
+				$redirect_uri = apply_filters( 'wpf_aweber_redirect_uri', $redirect_uri );
+
+				list($request_token, $request_token_secret) = $this->crm->app->getRequestToken( $redirect_uri );
 
 				setcookie('request_token_secret', $request_token_secret );
 

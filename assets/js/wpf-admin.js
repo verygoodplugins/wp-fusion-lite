@@ -180,6 +180,24 @@ jQuery(document).ready(function($){
 		
 	}
 
+	// Tooltips
+
+	$( '.wpf-tip.right' ).tipTip({
+		'attribute': 'data-tip',
+		'fadeIn': 50,
+		'fadeOut': 50,
+		'delay': 200,
+		'defaultPosition': 'right',
+	});
+
+	$( '.wpf-tip.bottom' ).tipTip({
+		'attribute': 'data-tip',
+		'fadeIn': 50,
+		'fadeOut': 50,
+		'delay': 200,
+		'defaultPosition': 'bottom',
+	});
+
 	// CRM field select
 
 	function initializeCRMFieldSelect() {
@@ -344,6 +362,22 @@ jQuery(document).ready(function($){
 
 	});
 
+	// Warn on linked tag change
+
+	$('select[name*="tag_link"], select[name*="link_tag"]').change(function(event) {
+
+		var selected = $('option:selected', this ).text();
+
+		if ( selected.length == 0 ) {
+			return;
+		}
+
+		var content = '<div class="notice notice-warning wpf-tags-notice"><p>It looks like you\'ve just changed a linked tag. To manually trigger automated enrollments, run a <em>Resync Tags</em> operation from the <a target="_blank" href="' + wpf_admin.settings_page + '#advanced">WP Fusion settings page</a>. Any user with the <strong>' + selected + '</strong> tag will be enrolled. Any user without the <strong>' + selected + '</strong> tag will be unenrolled.</p></div>';
+
+		$(this).next( 'span.select4' ).after( content );
+
+	});
+
 	// Remove "disabled" on select so the data still gets posted
 	$('form').bind('submit', function() {
 		$(this).find('#wpf-meta :input').removeAttr('disabled');
@@ -429,6 +463,26 @@ jQuery(document).ready(function($){
 		
 	});
 
+
+	//
+	// Admin menu editor
+	//
+
+	// on in/out/role change, hide/show the roles
+	$('#menu-to-edit').on('change', 'select.wpf-nav-menu', function() {
+
+		if( $(this).val() === '1' ){
+
+			initializeTagsSelect('#menu-to-edit');
+			$(this).closest('.wpf_nav_menu_field').next('.wpf_nav_menu_tags_field').slideDown();
+
+		} else {
+
+			$(this).closest('.wpf_nav_menu_field').next('.wpf_nav_menu_tags_field').slideUp();
+
+		}
+	});
+
  
 	//
 	// WooCommerce functions
@@ -453,26 +507,6 @@ jQuery(document).ready(function($){
 				}
 
 			}
-		});
-
-		// Show / hide subscription fields
-
-		function showHideSubscriptionFields() {
-
-			if($( "select#product-type option:selected" ).val() == 'subscription' || $( "select#product-type option:selected" ).val() == 'variable-subscription') {
-				$('.wpf_show_if_subscription').show();
-			} else {
-				$('.wpf_show_if_subscription').hide();
-			}
-
-		}
-
-		showHideSubscriptionFields();
-
-		// Trigger on product type change
-
-		$('select#product-type').change(function(event) {
-			showHideSubscriptionFields();
 		});
 
 	}

@@ -15,6 +15,18 @@ class WPF_ActiveCampaign {
 	public $supports;
 
 	/**
+	 * HTTP API parameters
+	 */
+
+	public $params;
+
+	/**
+	 * API url for the account
+	 */
+
+	public $api_url;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -44,8 +56,12 @@ class WPF_ActiveCampaign {
 
 	public function init() {
 
+		$this->get_params();
+
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
@@ -106,6 +122,65 @@ class WPF_ActiveCampaign {
 	}
 
 	/**
+	 * Get common params for the HTTP API
+	 *
+	 * @access public
+	 * @return array Params
+	 */
+
+	public function get_params() {
+
+		$params = array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 15,
+			'headers'    => array(
+				'Content-Type' => 'application/json; charset=utf-8',
+				'Api-Token'    => wp_fusion()->settings->get( 'ac_key' ),
+			),
+		);
+
+		$this->api_url = wp_fusion()->settings->get( 'ac_url' );
+		$this->params  = $params;
+
+		return $params;
+
+	}
+
+	/**
+	 * Check HTTP Response for errors and return WP_Error if found
+	 *
+	 * @access public
+	 * @return HTTP Response
+	 */
+
+	public function handle_http_response( $response, $args, $url ) {
+
+		$api_url = wp_fusion()->settings->get( 'ac_url' );
+
+		if ( ! empty( $api_url ) && strpos( $url, $api_url ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+
+			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( isset( $body_json->errors ) ) {
+
+				$response = new WP_Error( 'error', $body_json->errors[0]->title );
+
+			} elseif ( isset( $body_json->error ) ) {
+
+				$response = new WP_Error( 'error', $body_json->message . ': ' . $body_json->error );
+
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 500 ) {
+
+				$response = new WP_Error( 'error', '500 Internal Server Error from ActiveCampaign.' );
+
+			}
+		}
+
+		return $response;
+
+	}
+
+	/**
 	 * Output tracking code
 	 *
 	 * @access public
@@ -118,10 +193,10 @@ class WPF_ActiveCampaign {
 			return;
 		}
 
-		$cid = get_user_meta( get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
+		$cid = get_user_meta( wpf_get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
 
 		if ( ! empty( $cid ) ) {
-			$user  = get_userdata( get_current_user_id() );
+			$user  = get_userdata( wpf_get_current_user_id() );
 			$email = $user->user_email;
 		} else {
 			$email = '';
@@ -389,18 +464,18 @@ class WPF_ActiveCampaign {
 
 	public function get_contact_id( $email_address ) {
 
-		$this->connect();
+		$response = wp_remote_get( $this->api_url . '/api/3/contacts?email=' . urlencode( $email_address ), $this->params );
 
-		$result = $this->app->api( 'contact/view?email=' . urlencode( $email_address ) );
-
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
-		if ( is_object( $result ) && $result->success == 1 ) {
-			return $result->id;
-		} else {
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $response->contacts ) ) {
 			return false;
+		} else {
+			return $response->contacts[0]->id;
 		}
 
 	}
@@ -421,24 +496,13 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		} elseif ( isset( $result->error ) ) {
+			return new WP_Error( 'error', $result->error );
 		}
 
 		if ( empty( $result->tags ) ) {
 			return array();
 		}
-
-		// Merge tags with available ones
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
-
-		if ( ! is_array( $available_tags ) ) {
-			$available_tags = array();
-		}
-
-		foreach ( $result->tags as $i => $tag ) {
-			$available_tags[ $tag ] = $tag;
-		}
-
-		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $result->tags;
 
@@ -464,6 +528,8 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		} elseif ( isset( $result->error ) ) {
+			return new WP_Error( 'error', $result->error );
 		}
 
 		// Possibly update available tags if it's a newly created one
@@ -505,6 +571,8 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		} elseif ( isset( $result->error ) ) {
+			return new WP_Error( 'error', $result->error );
 		}
 
 		return true;
@@ -543,6 +611,8 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		} elseif ( isset( $result->error ) ) {
+			return new WP_Error( 'error', $result->error );
 		}
 
 		return $result->subscriber_id;
@@ -585,6 +655,8 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		} elseif ( isset( $result->error ) ) {
+			return new WP_Error( 'error', $result->error );
 		}
 
 		return true;
@@ -605,7 +677,13 @@ class WPF_ActiveCampaign {
 		$result = $this->app->api( 'contact/view?id=' . $contact_id );
 
 		if ( is_wp_error( $result ) ) {
+
 			return $result;
+
+		} elseif ( isset( $result->error ) ) {
+
+			return new WP_Error( 'error', $result->error );
+
 		}
 
 		$user_meta = array();
@@ -678,7 +756,6 @@ class WPF_ActiveCampaign {
 	public function load_contacts( $tag ) {
 
 		// Query will only return contacts on at least one list
-
 		$this->connect();
 
 		$contact_ids = array();
@@ -721,7 +798,6 @@ class WPF_ActiveCampaign {
 	//
 	// Deep data stuff
 	//
-
 	/**
 	 * Gets or creates an ActiveCampaign deep data connection
 	 *
@@ -750,36 +826,22 @@ class WPF_ActiveCampaign {
 			),
 		);
 
-		$args = array(
-			'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
-			'body'    => json_encode( $body ),
-		);
+		$args         = $this->get_params();
+		$args['body'] = json_encode( $body );
 
-		wp_fusion()->logger->handle( 'info', 0, 'Opening ActiveCampaign Deep Data connection', array( 'source' => 'wpf-ecommerce' ) );
+		wpf_log( 'info', 0, 'Opening ActiveCampaign Deep Data connection', array( 'source' => 'wpf-ecommerce' ) );
 
 		$response = wp_remote_post( $api_url . '/api/3/connections?api_key=' . $api_key, $args );
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'The integration already exists in the system.' ) {
 
-		if ( ! is_object( $body ) ) {
+			// Try to look up an existing connection
 
-			return false;
+			unset( $args['body'] );
 
-		} elseif ( isset( $body->message ) ) {
+			$response = wp_remote_get( $api_url . '/api/3/connections?api_key=' . $api_key, $args );
 
-			// If Deep Data not enabled
-			wp_fusion()->logger->handle( 'info', 0, 'Unable to open Deep Data Connection: ' . $body->message, array( 'source' => 'wpf-ecommerce' ) );
-			update_option( 'wpf_ac_connection_id', false );
-
-			return false;
-
-		} elseif ( isset( $body->errors ) ) {
-
-			if ( $body->errors[0]->title == 'The integration already exists in the system.' ) {
-
-				// Try to look up an existing connection
-				unset( $args['body'] );
-				$response = wp_remote_get( $api_url . '/api/3/connections?api_key=' . $api_key, $args );
+			if ( ! is_wp_error( $response ) ) {
 
 				$response = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -793,9 +855,30 @@ class WPF_ActiveCampaign {
 
 					}
 				}
+
 			}
 
-			wp_fusion()->logger->handle( 'info', 0, 'Unable to open Deep Data Connection: ' . $body->errors[0]->title, array( 'source' => 'wpf-ecommerce' ) );
+		}
+
+		if ( is_wp_error( $response ) ) {
+
+			wpf_log( 'info', 0, 'Unable to open Deep Data Connection: ' . $response->get_error_message(), array( 'source' => 'wpf-ecommerce' ) );
+			update_option( 'wpf_ac_connection_id', false );
+
+			return false;
+
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! is_object( $body ) ) {
+
+			return false;
+
+		} elseif ( isset( $body->message ) ) {
+
+			// If Deep Data not enabled
+			wpf_log( 'info', 0, 'Unable to open Deep Data Connection: ' . $body->message, array( 'source' => 'wpf-ecommerce' ) );
 			update_option( 'wpf_ac_connection_id', false );
 
 			return false;
@@ -824,7 +907,7 @@ class WPF_ActiveCampaign {
 			'method' => 'DELETE',
 		);
 
-		wp_fusion()->logger->handle( 'notice', 0, 'Closing ActiveCampaign Deep Data connection ID <strong>' . $connection_id . '</strong>', array( 'source' => 'wpf-ecommerce' ) );
+		wpf_log( 'notice', 0, 'Closing ActiveCampaign Deep Data connection ID <strong>' . $connection_id . '</strong>', array( 'source' => 'wpf-ecommerce' ) );
 
 		wp_remote_request( $api_url . '/api/3/connections/' . $connection_id . '?api_key=' . $api_key, $args );
 
@@ -882,21 +965,25 @@ class WPF_ActiveCampaign {
 			),
 		);
 
-		wp_fusion()->logger->handle( 'info', $user_id, 'Registering new ecomCustomer:', array( 'source' => 'wpf-ecommerce', 'meta_array_nofilter' => $body ) );
-
-		$args = array(
-			'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
-			'body'    => json_encode( $body ),
+		wpf_log(
+			'info', $user_id, 'Registering new ecomCustomer:', array(
+				'source'              => 'wpf-ecommerce',
+				'meta_array_nofilter' => $body,
+			)
 		);
 
+		$args         = $this->get_params();
+		$args['body'] = json_encode( $body );
+
 		$response = wp_remote_post( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key, $args );
-		$body     = json_decode( wp_remote_retrieve_body( $response ) );
 
 		$customer_id = false;
 
-		if ( isset( $body->errors ) && $body->errors[0]->title == 'The ecomCustomer already exists in the system.' ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'The ecomCustomer already exists in the system.' ) {
 
-			$response = wp_remote_get( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key. '&filters[email]=' . $user_email );
+			// Try to look up an existing customer
+
+			$response = wp_remote_get( $api_url . '/api/3/ecomCustomers?api_key=' . $api_key . '&filters[email]=' . $user_email );
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -908,20 +995,28 @@ class WPF_ActiveCampaign {
 
 				}
 			}
-		} elseif ( isset( $body->errors ) ) {
 
-			wp_fusion()->logger->handle( 'error', $user_id, 'Error creating customer: ' . $body->errors[0]->title, array( 'source' => 'wpf-ecommerce' ) );
+
+		} elseif ( is_wp_error( $response ) ) {
+
+			wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message(), array( 'source' => 'wpf-ecommerce' ) );
 			return false;
 
 		} else {
 
-			$customer_id = $body->ecomCustomer->id;
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( is_object( $body ) ) {
+
+				$customer_id = $body->ecomCustomer->id;
+
+			}
 
 		}
 
 		if ( false === $customer_id ) {
 
-			wp_fusion()->logger->handle( 'error', $user_id, 'Unable to create customer or find existing customer. Aborting.', array( 'source' => 'wpf-ecommerce' ) );
+			wpf_log( 'error', $user_id, 'Unable to create customer or find existing customer. Aborting.', array( 'source' => 'wpf-ecommerce' ) );
 			return false;
 
 		}

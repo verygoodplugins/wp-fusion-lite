@@ -46,4 +46,20 @@ jQuery(document).ready(function($){
 		}
 	});
 
+	$(document).on('mousedown', '[data-remove-tags]', function(e) {
+
+		if( e.which <= 2 ) {
+
+			var tags = $(this).attr('data-remove-tags');
+
+			var data = {
+				'action'	 : 'remove_tags',
+				'tags'		 : tags.split(',')
+			};
+
+			$.post(wpf_ajax.ajaxurl, data);
+
+		}
+	});
+
 });

@@ -85,13 +85,13 @@ class WPF_Mautic {
 		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
 		echo '})(window,document,"script","' . trailingslashit( $url ) . 'mtc.js","mt");';
 
-		if ( is_user_logged_in() ) {
-			$cid = get_user_meta( get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
+		if ( wpf_is_user_logged_in() ) {
+			$cid = get_user_meta( wpf_get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
 		}
 
-		if ( is_user_logged_in() && ! empty( $cid ) ) {
+		if ( wpf_is_user_logged_in() && ! empty( $cid ) ) {
 
-			$user = get_userdata( get_current_user_id() );
+			$user = get_userdata( wpf_get_current_user_id() );
 
 			echo 'mt("send", "pageview", {"email": "' . $user->user_email . '"});';
 
@@ -114,7 +114,7 @@ class WPF_Mautic {
 
 	public function set_tracking_cookie() {
 
-		if ( is_admin() || ! is_user_logged_in() || headers_sent() ) {
+		if ( is_admin() || ! wpf_is_user_logged_in() || headers_sent() ) {
 			return;
 		}
 
@@ -256,7 +256,7 @@ class WPF_Mautic {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos( (string) $url, $this->url ) !== false ) {
+		if( strpos( $url, $this->url ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -437,7 +437,7 @@ class WPF_Mautic {
 		}
 
 		$crm_fields = array();
-		$request  = $this->url . 'api/fields/contact';
+		$request  = $this->url . 'api/fields/contact?limit=1000';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {

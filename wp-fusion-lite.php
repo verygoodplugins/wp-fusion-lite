@@ -1,15 +1,17 @@
 <?php
 
-/*
-Plugin Name: WP Fusion Lite
-Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
-Plugin URI: https://wpfusion.com/
-Version: 3.27
-Author: Very Good Plugins
-Author URI: https://verygoodplugins.com/
-Text Domain: wp-fusion
-*/
-
+/**
+ * Plugin Name: WP Fusion Lite
+ * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
+ * Plugin URI: https://wpfusion.com/
+ * Version: 3.31
+ * Author: Very Good Plugins
+ * Author URI: https://verygoodplugins.com/
+ * Text Domain: wp-fusion
+ *
+ * WC requires at least: 3.0
+ * WC tested up to: 4.0.1
+ */
 
 /**
  * @copyright Copyright (c) 2018. All rights reserved.
@@ -29,7 +31,7 @@ Text Domain: wp-fusion
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.27' );
+define( 'WP_FUSION_VERSION', '3.31' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -44,7 +46,7 @@ final class WP_Fusion_Lite {
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion The one true WP_Fusion
+	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -122,7 +124,7 @@ final class WP_Fusion_Lite {
 
 
 	/**
-	 * Handles resticted content and redirects
+	 * Handles restricted content and redirects
 	 *
 	 * @var WPF_Access_Control
 	 * @since 3.12
@@ -133,10 +135,19 @@ final class WP_Fusion_Lite {
 	/**
 	 * Handles auto login sessions
 	 *
-	 * @var WPF_Admin_Interfaces
+	 * @var WPF_Auto_Login
 	 * @since 3.12
 	 */
 	public $auto_login;
+
+
+	/**
+	 * Handles lead source tracking
+	 *
+	 * @var WPF_Lead_Sources
+	 * @since 3.30.4
+	 */
+	public $lead_source_tracking;
 
 
 	/**
@@ -149,15 +160,15 @@ final class WP_Fusion_Lite {
 
 
 	/**
-	 * Main WP_Fusion Instance
+	 * Main WP_Fusion_Lite Instance
 	 *
-	 * Insures that only one instance of WP_Fusion exists in memory at any one
+	 * Insures that only one instance of WP_Fusion_Lite exists in memory at any one
 	 * time. Also prevents needing to define globals all over the place.
 	 *
 	 * @since 1.0
 	 * @static
 	 * @static var array $instance
-	 * @return WP_Fusion The one true WP_Fusion
+	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
 	 */
 
 	public static function instance() {
@@ -165,6 +176,7 @@ final class WP_Fusion_Lite {
 		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion_Lite ) ) {
 
 			self::$instance = new WP_Fusion_Lite();
+
 			self::$instance->setup_constants();
 
 			// If PHP version not met
@@ -178,8 +190,7 @@ final class WP_Fusion_Lite {
 			self::$instance->settings = new WPF_Settings();
 
 			// Load active CRM
-			self::$instance->crm_base = new WPF_CRM_Base();
-			self::$instance->crm      = self::$instance->crm_base->crm;
+			self::$instance->init_crm();
 
 			// Only useful if a CRM is selected and valid
 			if ( ! empty( self::$instance->crm ) ) {
@@ -187,12 +198,13 @@ final class WP_Fusion_Lite {
 				self::$instance->setup_crm_constants();
 				self::$instance->includes();
 
-				self::$instance->logger     = new WPF_Log_Handler();
-				self::$instance->user       = new WPF_User();
-				self::$instance->access     = new WPF_Access_Control();
-				self::$instance->auto_login = new WPF_Auto_Login();
-				self::$instance->ajax       = new WPF_AJAX();
-				self::$instance->batch      = new WPF_Batch();
+				self::$instance->logger               = new WPF_Log_Handler();
+				self::$instance->user                 = new WPF_User();
+				self::$instance->lead_source_tracking = new WPF_Lead_Source_Tracking();
+				self::$instance->access               = new WPF_Access_Control();
+				self::$instance->auto_login           = new WPF_Auto_Login();
+				self::$instance->ajax                 = new WPF_AJAX();
+				self::$instance->batch                = new WPF_Batch();
 
 				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
 				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
@@ -380,6 +392,11 @@ final class WP_Fusion_Lite {
 				'mailpoet'       => 'WPF_MailPoet',
 				'klaviyo'        => 'WPF_Klaviyo',
 				'birdsend'       => 'WPF_BirdSend',
+				'zerobscrm'      => 'WPF_ZeroBSCRM',
+				'mailengine'     => 'WPF_MailEngine',
+				'klick-tipp'     => 'WPF_KlickTipp',
+				'sendfox'        => 'WPF_SendFox',
+				'quentn'         => 'WPF_Quentn',
 			)
 		);
 
@@ -393,6 +410,9 @@ final class WP_Fusion_Lite {
 	 */
 
 	private function init_includes() {
+
+		// Functions
+		require_once WPF_DIR_PATH . 'includes/functions.php';
 
 		// Settings
 		require_once WPF_DIR_PATH . 'includes/admin/class-settings.php';
@@ -423,6 +443,7 @@ final class WP_Fusion_Lite {
 
 		require_once WPF_DIR_PATH . 'includes/admin/logging/class-log-handler.php';
 		require_once WPF_DIR_PATH . 'includes/class-user.php';
+		require_once WPF_DIR_PATH . 'includes/class-lead-source-tracking.php';
 		require_once WPF_DIR_PATH . 'includes/class-ajax.php';
 		require_once WPF_DIR_PATH . 'includes/class-access-control.php';
 		require_once WPF_DIR_PATH . 'includes/class-auto-login.php';
@@ -449,6 +470,22 @@ final class WP_Fusion_Lite {
 			require_once WPF_DIR_PATH . 'includes/class-api.php';
 
 		}
+
+	}
+
+	/**
+	 * Initialize the CRM object based on the currently configured options
+	 *
+	 * @access private
+	 * @return object CRM Interface
+	 */
+
+	public function init_crm() {
+
+		self::$instance->crm_base = new WPF_CRM_Base();
+		self::$instance->crm      = self::$instance->crm_base->crm;
+
+		return self::$instance->crm;
 
 	}
 

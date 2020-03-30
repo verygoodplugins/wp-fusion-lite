@@ -90,8 +90,8 @@ class WPF_AgileCRM {
 
 		$domain = wp_fusion()->settings->get( 'agile_domain' );
 
-		if ( is_user_logged_in() ) {
-			$user  = get_userdata( get_current_user_id() );
+		if ( wpf_is_user_logged_in() ) {
+			$user  = get_userdata( wpf_get_current_user_id() );
 			$email = $user->user_email;
 		}
 

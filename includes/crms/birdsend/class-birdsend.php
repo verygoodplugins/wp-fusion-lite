@@ -2,6 +2,10 @@
 
 class WPF_BirdSend {
 
+	//
+	// Unsubscribes: BirdSend can return a contact ID and tags from an unsubscribed subscriber, as well as update tags
+	//
+
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
@@ -62,6 +66,45 @@ class WPF_BirdSend {
 
 	}
 
+	/**
+	 * BirdSend requires an email to be submitted when contacts are modified
+	 *
+	 * @access private
+	 * @return string Email
+	 */
+
+	private function get_email_from_cid( $contact_id ) {
+
+		$users = get_users( array( 'meta_key'   => 'birdsend_contact_id',
+		                           'meta_value' => $contact_id,
+		                           'fields'     => array( 'user_email' )
+		) );
+
+		if ( ! empty( $users ) ) {
+
+			return $users[0]->user_email;
+			
+		} else {
+			
+			// Try an API lookup
+
+			$data = $this->load_contact( $contact_id );
+
+			if( ! is_wp_error( $data ) && ! empty( $data['user_email'] ) ) {
+
+				return $data['user_email'];
+
+			} else {
+
+				return false;
+
+			}
+
+		}
+
+
+	}
+
 
 	/**
 	 * Gets params for API calls
@@ -105,7 +148,19 @@ class WPF_BirdSend {
 
 				$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-				$response = new WP_Error( 'error', $body->message );
+				$message = $body->message;
+
+				if ( ! empty( $body->errors ) ) {
+
+					foreach ( $body->errors as $error ) {
+
+						$message .= ' ' . implode( '. ', $error );
+
+					}
+
+				}
+
+				$response = new WP_Error( 'error', $message );
 
 			}
 		}
@@ -260,7 +315,7 @@ class WPF_BirdSend {
 
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
 	 * @access public
 	 * @return int Contact ID
@@ -460,6 +515,11 @@ class WPF_BirdSend {
 		if ( isset( $update_data['fields']['email'] ) ) {
 			$update_data['email'] = $update_data['fields']['email'];
 			unset( $update_data['fields']['email'] );
+		} else {
+
+			// Email is required for updates
+			$update_data['email'] = $this->get_email_from_cid( $contact_id );
+
 		}
 
 		$params           = $this->params;

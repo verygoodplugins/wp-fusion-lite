@@ -44,7 +44,7 @@ class WPF_Auto_Login {
 
 	public function start_auto_login( $contact_id = false ) {
 
-		if ( is_user_logged_in() ) {
+		if ( wpf_is_user_logged_in() ) {
 			return;
 		}
 
@@ -123,6 +123,13 @@ class WPF_Auto_Login {
 				}
 
 				$contact_data['user_id'] = $user_id;
+
+			} else {
+
+				// If the temp user already exists but ?cid= is in the URL, update their tags anyway
+
+				wp_fusion()->user->get_tags( $contact_data['user_id'], true, false );
+
 			}
 		}
 
@@ -133,17 +140,13 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		// Set the current user
-
-		global $current_user;
-		$current_user->ID = $contact_data['user_id'];
-
 		// Set the user in the cache
-		$user             = new stdClass();
-		$user->ID         = $contact_data['user_id'];
-		$user->user_email = get_user_meta( $contact_data['user_id'], 'user_email', true );
-		$user->first_name = get_user_meta( $contact_data['user_id'], 'first_name', true );
-		$user->last_name  = get_user_meta( $contact_data['user_id'], 'last_name', true );
+		$user              = new stdClass();
+		$user->ID          = $contact_data['user_id'];
+		$user->user_email  = get_user_meta( $contact_data['user_id'], 'user_email', true );
+		$user->first_name  = get_user_meta( $contact_data['user_id'], 'first_name', true );
+		$user->last_name   = get_user_meta( $contact_data['user_id'], 'last_name', true );
+		$user->user_status = 0;
 
 		wp_cache_set( $contact_data['user_id'], $user, 'users' );
 
@@ -172,7 +175,9 @@ class WPF_Auto_Login {
 
 		$request_uris = array(
 			'login',
-			'register'
+			'register',
+			'order-received',
+			'purchase-confirmation',
 		);
 
 		$request_uris = apply_filters( 'wpf_end_auto_login_request_uris', $request_uris );
@@ -246,7 +251,9 @@ class WPF_Auto_Login {
 			'user_id'    => $user_id,
 		);
 
-		setcookie( 'wpf_contact', json_encode( $contact_data ), time() + DAY_IN_SECONDS * 180, COOKIEPATH, COOKIE_DOMAIN );
+		$cookie_expiration = apply_filters( 'wpf_auto_login_cookie_expiration', DAY_IN_SECONDS * 180 );
+
+		setcookie( 'wpf_contact', json_encode( $contact_data ), time() + $cookie_expiration, COOKIEPATH, COOKIE_DOMAIN );
 
 		// Load meta data
 		wp_fusion()->user->pull_user_meta( $user_id );
@@ -257,6 +264,7 @@ class WPF_Auto_Login {
 		return $user_id;
 
 	}
+
 
 	/**
 	 * Ends session on user login or logout
@@ -282,7 +290,7 @@ class WPF_Auto_Login {
 				wp_destroy_current_session();
 				wp_clear_auth_cookie();
 
-			} elseif ( is_user_logged_in() ) {
+			} elseif ( wpf_is_user_logged_in() ) {
 
 				// If headers have been sent, set a transient to clear the cookie on next load
 				set_transient( 'wpf_end_auto_login_' . $contact_data['contact_id'], true, 60 * 60 );
