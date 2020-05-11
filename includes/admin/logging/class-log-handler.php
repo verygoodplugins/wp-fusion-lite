@@ -156,6 +156,7 @@ class WPF_Log_Handler {
 	 	if ( 'wpf_status_log_items_per_page' == $option ) {
 	 		return $value;
 	 	}
+	 	return $status;
 
 	 }
 
