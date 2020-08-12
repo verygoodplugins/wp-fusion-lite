@@ -293,8 +293,15 @@ final class WP_Fusion_Lite {
 			add_action( 'admin_notices', array( self::$instance, 'php_version_notice' ) );
 		}
 
-		if ( ! $this->is_full_version() && is_plugin_active( 'wp-fusion/wp-fusion.php' ) ) {
-			add_action( 'admin_notices', array( self::$instance, 'full_version_notice' ) );
+		if ( ! $this->is_full_version() ) {
+
+			if ( ! function_exists( 'is_plugin_active' ) ) {
+				require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+			}
+
+			if ( is_plugin_active( 'wp-fusion/wp-fusion.php' ) ) {
+				add_action( 'admin_notices', array( self::$instance, 'full_version_notice' ) );
+			}
 		}
 
 	}
@@ -589,7 +596,7 @@ final class WP_Fusion_Lite {
 	public function full_version_notice() {
 
 		echo '<div class="notice notice-error">';
-		echo '<p><strong>Warning:</strong> It looks like the full version of WP Fusion has been installed. Please deactivate the WP Fusion Lite plugin.</p>';
+		echo '<p><strong>Warning:</strong> It looks like the full version of WP Fusion has been installed. Please deactivate the <strong>WP Fusion Lite</strong> plugin.</p>';
 		echo '</div>';
 
 	}
