@@ -109,7 +109,7 @@ class WPF_Drift_Admin {
 		$new_settings = array();
 
 		$new_settings['drift_header'] = array(
-			'title'   => __( 'Drift Configuration', 'wp-fusion' ),
+			'title'   => __( 'Drift Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -125,14 +125,14 @@ class WPF_Drift_Admin {
 		} else {
 
 			$new_settings['drift_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion' ),
+				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'std'     => '',
 				'type'    => 'text',
 				'section' => 'setup'
 			);
 
 			$new_settings['drift_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion' ),
+				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',

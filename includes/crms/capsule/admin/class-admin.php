@@ -59,15 +59,15 @@ class WPF_Capsule_Admin {
 		$new_settings = array();
 
 		$new_settings['capsule_header'] = array(
-			'title'   => __( 'Capsule Configuration', 'wp-fusion' ),
+			'title'   => __( 'Capsule Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['capsule_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key by going to My Preferences >> API Authentication Tokens in your Capsule account.<br />Click on Personal Access Tokens, and generate a new token for WP Fusion.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key by going to My Preferences >> API Authentication Tokens in your Capsule account.<br />Click on Personal Access Tokens, and generate a new token for WP Fusion.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

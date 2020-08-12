@@ -62,23 +62,23 @@ class WPF_Copper_Admin {
 		$new_settings = array();
 
 		$new_settings['copper_header'] = array(
-			'title'   => __( 'Copper Configuration', 'wp-fusion' ),
+			'title'   => __( 'Copper Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['copper_user_email'] = array(
-			'title'   => __( 'User Email', 'wp-fusion' ),
-			'desc'    => __( 'Enter the email address for your Copper account.', 'wp-fusion' ),
+			'title'   => __( 'User Email', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the email address for your Copper account.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['copper_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can generate an API key in your Copper account, under Settings &raquo; API Keys.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can generate an API key in your Copper account, under Settings &raquo; API Keys.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -103,7 +103,7 @@ class WPF_Copper_Admin {
 		if( wp_fusion()->is_full_version() ) {
 
 			$new_settings['contact_copy_header'] = array(
-				'title'   => __( 'Copper Settings', 'wp-fusion' ),
+				'title'   => __( 'Copper Settings', 'wp-fusion-lite' ),
 				'type'    => 'heading',
 				'section' => 'general'
 			);
@@ -114,14 +114,14 @@ class WPF_Copper_Admin {
 				'std'     => 0,
 				'type'    => 'paragraph',
 				'section' => 'main',
-				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in Copper. Read our <a href="https://wpfusion.com/documentation/webhooks/copper-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
+				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in Copper. Read our <a href="https://wpfusion.com/documentation/webhooks/copper-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion-lite' ),
 			);
 
 			$settings['access_key']['type'] = 'hidden';
 
 			$new_settings['copper_update_trigger'] = array(
-				'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
-				'desc'		=> __( 'When a subscriber is updated in Copper, send their data back to WordPress.', 'wp-fusion' ),
+				'title' 	=> __( 'Update Trigger', 'wp-fusion-lite' ),
+				'desc'		=> __( 'When a subscriber is updated in Copper, send their data back to WordPress.', 'wp-fusion-lite' ),
 				'std'		=> 0,
 				'type'		=> 'checkbox',
 				'section'	=> 'main'
@@ -134,8 +134,8 @@ class WPF_Copper_Admin {
 				);
 
 			$new_settings['copper_add_tag'] = array(
-				'title' 	=> __( 'Import Tag', 'wp-fusion' ),
-				'desc'		=> __( 'When a person is added to this tag in Copper, they will be imported as a new WordPres user.', 'wp-fusion' ),
+				'title' 	=> __( 'Import Tag', 'wp-fusion-lite' ),
+				'desc'		=> __( 'When a person is added to this tag in Copper, they will be imported as a new WordPres user.', 'wp-fusion-lite' ),
 				'type'		=> 'assign_tags',
 				'section'	=> 'main',
 				'placeholder' => 'Select a tag',

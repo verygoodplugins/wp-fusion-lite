@@ -60,23 +60,23 @@ class WPF_Kartra_Admin {
 		$new_settings = array();
 
 		$new_settings['kartra_header'] = array(
-			'title'   => __( 'Kartra Configuration', 'wp-fusion' ),
+			'title'   => __( 'Kartra Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['kartra_api_key'] = array(
-			'title'   => __( 'API Key', 'wp-fusion' ),
-			'desc'    => __( 'Enter the API Key for your Kartra account. You can find your key under <a href="https://app.kartra.com/integrations/api/key" target="_blank">the My Integrations menu</a>.', 'wp-fusion' ),
+			'title'   => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the API Key for your Kartra account. You can find your key under <a href="https://app.kartra.com/integrations/api/key" target="_blank">the My Integrations menu</a>.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['kartra_api_password'] = array(
-			'title'       => __( 'API Password', 'wp-fusion' ),
-			'desc'        => __( 'The API password will be displayed next to your API Key.', 'wp-fusion' ),
+			'title'       => __( 'API Password', 'wp-fusion-lite' ),
+			'desc'        => __( 'The API password will be displayed next to your API Key.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -103,8 +103,8 @@ class WPF_Kartra_Admin {
 		}
 
 		$new_settings['kartra_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion' ),
-			'desc'        => __( 'New users will be automatically added to the selected lists.', 'wp-fusion' ),
+			'title'       => __( 'Lists', 'wp-fusion-lite' ),
+			'desc'        => __( 'New users will be automatically added to the selected lists.', 'wp-fusion-lite' ),
 			'type'        => 'multi_select',
 			'placeholder' => 'Select lists',
 			'section'     => 'main',

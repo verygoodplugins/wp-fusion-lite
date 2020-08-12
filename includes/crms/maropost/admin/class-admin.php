@@ -60,15 +60,15 @@ class WPF_Maropost_Admin {
 		$is_config = array();
 
 		$is_config['maropost_header'] = array(
-			'title'   => __( 'Maropost Configuration', 'wp-fusion' ),
+			'title'   => __( 'Maropost Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$is_config['account_id'] = array(
-			'title'   => __( 'Account ID', 'wp-fusion' ),
-			'desc'    => __( 'Enter your Maropost account ID (i.e. "1234").', 'wp-fusion' ),
+			'title'   => __( 'Account ID', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter your Maropost account ID (i.e. "1234").', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
@@ -76,8 +76,8 @@ class WPF_Maropost_Admin {
 
 
 		$is_config['maropost_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'Find your API key under connections in your account settings on Maropost.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'Find your API key under connections in your account settings on Maropost.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -88,7 +88,7 @@ class WPF_Maropost_Admin {
 		if( $settings['connection_configured'] == true && wp_fusion()->settings->get('crm') == 'maropost') {
 
 			$is_config['mp_list'] = array(
-				'title'   => __( 'Maropost Default List', 'wp-fusion' ),
+				'title'   => __( 'Maropost Default List', 'wp-fusion-lite' ),
 				'std'     => 'Personal',
 				'type'    => 'select',
 				'section' => 'setup',

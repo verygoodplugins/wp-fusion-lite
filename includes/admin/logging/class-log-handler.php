@@ -19,10 +19,11 @@ class WPF_Log_Handler {
 	 *
 	 * @see @link {https://tools.ietf.org/html/rfc5424}
 	 */
-	const ERROR     = 'error';
-	const WARNING   = 'warning';
-	const NOTICE    = 'notice';
-	const INFO      = 'info';
+	const ERROR   = 'error';
+	const WARNING = 'warning';
+	const NOTICE  = 'notice';
+	const INFO    = 'info';
+	const HTTP    = 'http';
 
 	/**
 	 * Level strings mapped to integer severity.
@@ -30,10 +31,11 @@ class WPF_Log_Handler {
 	 * @var array
 	 */
 	protected static $level_to_severity = array(
-		self::ERROR     => 500,
-		self::WARNING   => 400,
-		self::NOTICE    => 300,
-		self::INFO      => 200
+		self::ERROR   => 500,
+		self::WARNING => 400,
+		self::NOTICE  => 300,
+		self::INFO    => 200,
+		self::HTTP    => 100,
 	);
 
 	/**
@@ -47,7 +49,8 @@ class WPF_Log_Handler {
 		500 => self::ERROR,
 		400 => self::WARNING,
 		300 => self::NOTICE,
-		200 => self::INFO
+		200 => self::INFO,
+		100 => self::HTTP,
 	);
 
 	/**
@@ -68,20 +71,57 @@ class WPF_Log_Handler {
 
 	public function init() {
 
-		if( wp_fusion()->settings->get('enable_logging') != true ) {
+		if ( wp_fusion()->settings->get( 'enable_logging' ) != true ) {
 			return;
 		}
 
 		add_filter( 'wpf_configure_sections', array( $this, 'configure_sections' ), 10, 2 );
 
-		add_action( 'admin_menu', array($this, 'register_logger_subpage'));
+		add_action( 'admin_menu', array( $this, 'register_logger_subpage' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
 		// Screen options
-		add_action( 'load-settings_page_wpf-settings-logs', array( $this, 'add_screen_options' ) );
-		add_filter( 'set-screen-option', array( $this, 'set_screen_option' ), 10, 3 );
+		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'add_screen_options' ) );
+		add_filter( 'set_screen_option_wpf_status_log_items_per_page', array( $this, 'set_screen_option' ), 10, 3 );
 
-		$this->create_update_table();
+		// HTTP API logging
+		if ( wp_fusion()->settings->get( 'logging_http_api' ) ) {
+			add_action( 'http_api_debug', array( $this, 'http_api_debug' ), 10, 5 );
+		}
+
+		// Error handling
+		add_action( 'shutdown', array( $this, 'shutdown' ) );
+
+		// Create the table if it hasn't been created yet
+
+		if ( empty( wp_fusion()->settings->get( 'log_table_version' ) ) ) {
+
+			$this->create_update_table();
+
+		}
+
+	}
+
+	/**
+	 * Log HTTP API calls
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function http_api_debug( $response, $context, $class, $parsed_args, $url ) {
+
+		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] ) {
+			return;
+		}
+
+		$message  = '<ul>';
+		$message .= '<li><strong>Request:</strong> ' . $url . '</li>';
+		$message .= '<li><strong>Params:</strong> <pre>' . print_r( $parsed_args, true ) . '</pre></li>';
+		$message .= '<li><strong>Response:</strong><br /><pre>' .  print_r( $response, true ) . '</pre></li>';
+		$message .= '</ul>';
+
+		$this->handle( 'http', 0, $message );
 
 	}
 
@@ -91,17 +131,17 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
- 
+
 	public function register_logger_subpage() {
 
-	    $page = add_submenu_page( 
-	        'options-general.php',
-	        'WP Fusion Activity Logs',
-	        'WP Fusion Logs',
-	        'manage_options',
-	        'wpf-settings-logs',
-	        array( $this, 'show_logs_section')
-	    );
+		$page = add_submenu_page(
+			'tools.php',
+			'WP Fusion Activity Logs',
+			'WP Fusion Logs',
+			'manage_options',
+			'wpf-settings-logs',
+			array( $this, 'show_logs_section' )
+		);
 
 	}
 
@@ -116,12 +156,12 @@ class WPF_Log_Handler {
 
 		$screen = get_current_screen();
 
-		if( $screen->id != 'settings_page_wpf-settings-logs' )
+		if ( 'tools_page_wpf-settings-logs' !== $screen->id ) {
 			return;
+		}
 
 		wp_enqueue_style( 'wpf-options', WPF_DIR_URL . 'assets/css/wpf-options.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_style( 'wpf-admin', WPF_DIR_URL . 'assets/css/wpf-admin.css', array(), WP_FUSION_VERSION );
-
 
 	}
 
@@ -132,17 +172,17 @@ class WPF_Log_Handler {
 	 * @return void
 	 */
 
-	 public function add_screen_options() {
+	public function add_screen_options() {
 
 		$args = array(
-			'label' => __( 'Entries per page', 'wp-fusion' ),
+			'label'   => __( 'Entries per page', 'wp-fusion-lite' ),
 			'default' => 20,
-			'option' => 'wpf_status_log_items_per_page'
+			'option'  => 'wpf_status_log_items_per_page',
 		);
 
 		add_screen_option( 'per_page', $args );
 
-	 }
+	}
 
 	/**
 	 * Save screen options
@@ -151,14 +191,15 @@ class WPF_Log_Handler {
 	 * @return int Value
 	 */
 
-	 public function set_screen_option( $status, $option, $value ) {
+	public function set_screen_option( $status, $option, $value ) {
 
-	 	if ( 'wpf_status_log_items_per_page' == $option ) {
-	 		return $value;
-	 	}
-	 	return $status;
+		if ( 'wpf_status_log_items_per_page' == $option && isset( $_POST['wp_screen_options'] ) ) {
+			return $_POST['wp_screen_options']['value'];
+		}
 
-	 }
+		return $status;
+
+	}
 
 	/**
 	 * Adds logging tab to main settings for access
@@ -169,7 +210,14 @@ class WPF_Log_Handler {
 
 	public function configure_sections( $page, $options ) {
 
-		$page['sections'] = wp_fusion()->settings->insert_setting_after( 'advanced', $page['sections'], array( 'logs' => array('title' => __( 'Logs', 'wp-fusion' ), 'slug' => 'wpf-settings-logs' ) ) );
+		$page['sections'] = wp_fusion()->settings->insert_setting_after(
+			'advanced', $page['sections'], array(
+				'logs' => array(
+					'title' => __( 'Logs', 'wp-fusion-lite' ),
+					'slug'  => 'wpf-settings-logs',
+				),
+			)
+		);
 
 		return $page;
 
@@ -187,9 +235,9 @@ class WPF_Log_Handler {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'wpf_logging';
 
-		if( $wpdb->get_var("show tables like '$table_name'") != $table_name) {
+		if ( $wpdb->get_var( "show tables like '$table_name'" ) != $table_name ) {
 
-			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 			$collate = '';
 
@@ -197,7 +245,7 @@ class WPF_Log_Handler {
 				$collate = $wpdb->get_charset_collate();
 			}
 
-			$sql = "CREATE TABLE " . $table_name . " (
+			$sql = 'CREATE TABLE ' . $table_name . " (
 				log_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				timestamp datetime NOT NULL,
 				level smallint(4) NOT NULL,
@@ -213,6 +261,8 @@ class WPF_Log_Handler {
 
 		}
 
+		wp_fusion()->settings->set( 'log_table_version', WP_FUSION_VERSION );
+
 	}
 
 	/**
@@ -224,11 +274,16 @@ class WPF_Log_Handler {
 
 	public function show_logs_section() {
 
-		include_once( WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php' );
+		include_once WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php';
 
 		// Flush
 		if ( ! empty( $_REQUEST['flush-logs'] ) ) {
+
 			self::flush();
+
+			// Redirect to clear the URL
+			wp_redirect( admin_url( 'tools.php?page=wpf-settings-logs' ) );
+			exit;
 		}
 
 		// Bulk actions
@@ -237,20 +292,14 @@ class WPF_Log_Handler {
 		}
 
 		$log_table_list = new WPF_Log_Table_List();
-		$log_table_list->prepare_items(); 
-
-		// Stop _wp_http_referer getting appended to the logs URL, so it doesn't get too long
-		add_filter( 'removable_query_args', function( $query_args ) {
-
-			$query_args[] = '_wp_http_referer';
-			return $query_args;
-
-		} );
+		$log_table_list->prepare_items();
 
 		?>
 
 		<div class="wrap">
-	        <h1><?php _e( 'WP Fusion Activity Log', 'wp-fusion' ); ?></h1>
+			<h1><?php _e( 'WP Fusion Activity Log', 'wp-fusion-lite' ); ?></h1>
+
+			<span class="description" style="display: inline-block; padding: 5px 0;"><?php printf( __( 'For more information on the logs, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/getting-started/activity-logs/" target="_blank">', '</a>' ); ?></span>
 
 			<form method="get" id="mainform">
 
@@ -258,7 +307,7 @@ class WPF_Log_Handler {
 
 				<?php $log_table_list->display(); ?>
 
-				<?php submit_button( __( 'Flush all logs', 'wp-fusion' ), 'delete', 'flush-logs' ); ?>
+				<?php submit_button( __( 'Flush all logs', 'wp-fusion-lite' ), 'delete', 'flush-logs' ); ?>
 				<?php wp_nonce_field( 'wp-fusion-status-logs' ); ?>
 
 			</form>
@@ -311,11 +360,11 @@ class WPF_Log_Handler {
 	/**
 	 * Handle a log entry.
 	 *
-	 * @param int $timestamp Log timestamp.
+	 * @param int    $timestamp Log timestamp.
 	 * @param string $level emergency|alert|critical|error|warning|notice|info|debug
 	 * @param string $message Log message.
-	 * @param array $context {
-	 *     Additional information for log handlers.
+	 * @param array  $context {
+	 *      Additional information for log handlers.
 	 *
 	 *     @type string $source Optional. Source will be available in log table.
 	 *                  If no source is provided, attempt to provide sensible default.
@@ -331,11 +380,11 @@ class WPF_Log_Handler {
 
 		do_action( 'wpf_handle_log', $timestamp, $level, $user, $message, $context );
 
-		if( wp_fusion()->settings->get('enable_logging') != true ) {
+		if ( wp_fusion()->settings->get( 'enable_logging' ) != true ) {
 			return;
 		}
 
-		if( wp_fusion()->settings->get('logging_errors_only') == true && $level != 'error' ) {
+		if ( wp_fusion()->settings->get( 'logging_errors_only' ) == true && $level != 'error' ) {
 			return;
 		}
 
@@ -345,19 +394,21 @@ class WPF_Log_Handler {
 			$source = $this->get_log_source();
 		}
 
+		// Change "tags" to "lists" etc. in the message
+
+		$message = wp_fusion()->settings->set_tag_labels( $message, false, 'wp-fusion-lite' );
+
 		// Filter out irrelevant meta fields
 		if ( isset( $context['meta_array'] ) && $context['meta_array'] ) {
 
-			$contact_fields = wp_fusion()->settings->get('contact_fields');
+			$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
-			foreach( $context['meta_array'] as $key => $data ) {
+			foreach ( $context['meta_array'] as $key => $data ) {
 
-				if( !isset( $contact_fields[$key] ) || $contact_fields[$key]['active'] == false ) {
-					unset($context['meta_array'][$key]);
+				if ( ! isset( $contact_fields[ $key ] ) || $contact_fields[ $key ]['active'] == false ) {
+					unset( $context['meta_array'][ $key ] );
 				}
-
 			}
-
 		}
 
 		if ( empty( $user ) ) {
@@ -365,7 +416,7 @@ class WPF_Log_Handler {
 		}
 
 		// Don't log meta data pushes where no enabled fields are being synced
-		if( isset( $context['meta_array'] ) && empty( $context['meta_array'] ) ) {
+		if ( isset( $context['meta_array'] ) && empty( $context['meta_array'] ) ) {
 			return;
 		}
 
@@ -380,9 +431,9 @@ class WPF_Log_Handler {
 	 * @param string $level emergency|alert|critical|error|warning|notice|info|debug
 	 * @param string $message Log message.
 	 * @param string $source Log source. Useful for filtering and sorting.
-	 * @param array $context {
-	 *     Context will be serialized and stored in database.
-	 * }
+	 * @param array  $context {
+	 *      Context will be serialized and stored in database.
+	 *  }
 	 *
 	 * @return bool True if write was successful.
 	 */
@@ -391,10 +442,10 @@ class WPF_Log_Handler {
 
 		$insert = array(
 			'timestamp' => date( 'Y-m-d H:i:s', $timestamp ),
-			'level' => self::get_level_severity( $level ),
-			'user'	=> $user,
-			'message' => $message,
-			'source' => $source,
+			'level'     => self::get_level_severity( $level ),
+			'user'      => $user,
+			'message'   => $message,
+			'source'    => $source,
 		);
 
 		$format = array(
@@ -412,18 +463,20 @@ class WPF_Log_Handler {
 
 		$result = $wpdb->insert( "{$wpdb->prefix}wpf_logging", $insert, $format );
 
-		if( $result === false ) {
+		if ( $result === false ) {
 			return false;
 		}
 
-		$rowcount = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}wpf_logging");
+		$rowcount = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}wpf_logging" );
 
-		if( $rowcount > 10000 ) {
-			$wpdb->query( "DELETE FROM {$wpdb->prefix}wpf_logging ORDER BY log_id ASC LIMIT 1" );
+		$max_log_size = apply_filters( 'wpf_log_max_entries', 10000 );
+
+		if ( $rowcount > $max_log_size ) {
+			$wpdb->query( "DELETE FROM {$wpdb->prefix}wpf_logging ORDER BY log_id ASC LIMIT 100" ); // Delete 100 so we don't need to run this with every new entry
 		}
 
 		return $result;
-		
+
 	}
 
 	/**
@@ -445,7 +498,7 @@ class WPF_Log_Handler {
 	private function log_table_bulk_actions() {
 
 		if ( empty( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'wp-fusion-status-logs' ) ) {
-			wp_die( __( 'Action failed. Please refresh the page and retry.', 'wp-fusion' ) );
+			wp_die( __( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
 		}
 
 		$log_ids = array_map( 'absint', (array) $_REQUEST['log'] );
@@ -496,6 +549,7 @@ class WPF_Log_Handler {
 
 		/**
 		 * PHP < 5.3.6 correct behavior
+		 *
 		 * @see http://php.net/manual/en/function.debug-backtrace.php#refsect1-function.debug-backtrace-parameters
 		 */
 
@@ -507,7 +561,7 @@ class WPF_Log_Handler {
 
 		$full_trace = debug_backtrace( $debug_backtrace_arg );
 
-		$slugs = array( 'user-profile', 'class-api', 'access-control', 'class-auto-login', 'class-ajax' );
+		$slugs = array( 'user-profile', 'api', 'access-control', 'class-auto-login', 'class-ajax' );
 
 		foreach ( wp_fusion()->get_integrations() as $slug => $integration ) {
 			$slugs[] = $slug;
@@ -525,7 +579,7 @@ class WPF_Log_Handler {
 						continue;
 					}
 
-					if ( strpos( $trace['file'], $slug ) !== false) {
+					if ( strpos( $trace['file'], $slug ) !== false ) {
 
 						$found_integrations[] = $slug;
 					}
@@ -534,7 +588,6 @@ class WPF_Log_Handler {
 		}
 
 		// Figure out most likely integration
-
 		if ( ! empty( $found_integrations ) ) {
 
 			$source = serialize( array_reverse( array_unique( $found_integrations ) ) );
@@ -546,5 +599,75 @@ class WPF_Log_Handler {
 		return $source;
 	}
 
+
+	/**
+	 * Check for PHP errors on shutdown and log them
+	 *
+	 * @access public
+	 * @return void
+	 */
+	public function shutdown() {
+
+		$error = error_get_last();
+
+		if ( is_null( $error ) ) {
+			return;
+		}
+
+		if ( false !== strpos( $error['message'], 'Allowed memory size' ) ) {
+
+			// Out of memory
+
+			$this->handle( 'error', wpf_get_current_user_id(), '<strong>PHP out of memory error.</strong> This may have affected WP Fusion\'s functionality. Consider increasing the available memory on your site or deactivating some plugins. ' . nl2br( $error['message'] ) . '<br /><br />' . $error['file'] . ':' . $error['line'] );
+
+		} elseif ( false !== strpos( $error['message'], 'Maximum execution time' ) ) {
+
+			// Max execution time
+
+			$this->handle( 'error', wpf_get_current_user_id(), '<strong>PHP fatal error: ' . $error['message'] . '.</strong> This may have affected WP Fusion\'s functionality. Consider increasing the available memory on your site or deactivating some plugins.<br /><br />' . $error['file'] . ':' . $error['line'] );
+
+		} elseif ( false !== strpos( $error['file'], 'wp-fusion-lite' ) || false !== strpos( $error['message'], 'wp-fusion-lite' ) ) {
+
+			// WPF errors
+
+			if ( E_ERROR == $error['type'] || E_WARNING == $error['type'] ) {
+
+				// Get the source
+
+				$source = 'unknown';
+
+				$slugs = array( 'user-profile', 'api', 'access-control', 'class-auto-login', 'class-ajax', 'class-user' );
+
+				foreach ( wp_fusion()->get_integrations() as $slug => $integration ) {
+					$slugs[] = $slug;
+				}
+
+				foreach ( $slugs as $slug ) {
+
+					if ( empty( $slug ) ) {
+						continue;
+					}
+
+					if ( strpos( $error['file'], $slug ) !== false ) {
+
+						$source = $slug;
+						break;
+
+					}
+				}
+
+				if ( E_ERROR == $error['type'] ) {
+					$level = 'error';
+				} elseif ( E_WARNING == $error['type'] ) {
+					$level = 'warning';
+				}
+
+				$this->handle( $level, wpf_get_current_user_id(), '<strong>PHP error:</strong> ' . nl2br( $error['message'] ) . '<br /><br />' . $error['file'] . ':' . $error['line'], array( 'source' => $source ) );
+
+			}
+
+		}
+
+	}
 
 }

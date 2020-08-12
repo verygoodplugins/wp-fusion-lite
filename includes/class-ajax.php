@@ -33,12 +33,6 @@ class WPF_AJAX {
 
 		$tags = $_POST['tags'];
 
-		if( isset( $_POST['user_id'] ) ) {
-			$user_id = intval($_POST['user_id']);
-		} else {
-			$user_id = wpf_get_current_user_id();
-		}
-
 		if( ! is_array( $tags ) ) {
 			$tags = explode(',', $tags);
 		}
@@ -48,17 +42,31 @@ class WPF_AJAX {
 		$tags_to_apply = array();
 
 		foreach ( $tags as $tag ) {
-			$tags_to_apply[] = wp_fusion()->user->get_tag_id( $tag );
+
+			$tag_id = wp_fusion()->user->get_tag_id( $tag );
+
+			if ( false === $tag_id ) {
+
+				wpf_log( 'notice', $user_id, 'Unable to determine tag ID from tag with name <strong>' . $tag . '</strong>. Tag will not be applied.' );
+				continue;
+
+			}
+
+			$tags_to_apply[] = $tag_id;
 		}
 
-		wp_fusion()->user->apply_tags( $tags_to_apply, $user_id );
+		if ( ! empty( $tags_to_apply ) ) {
+
+			wp_fusion()->user->apply_tags( $tags_to_apply );
+
+		}
 
 		die();
 
 	}
 
 	/**
-	 * Applies tags to a given user via AJAX call
+	 * Removes tags from a given user via AJAX call
 	 *
 	 * @access public
 	 * @return void
@@ -67,12 +75,6 @@ class WPF_AJAX {
 	public function remove_tags() {
 
 		$tags = $_POST['tags'];
-
-		if( isset( $_POST['user_id'] ) ) {
-			$user_id = intval($_POST['user_id']);
-		} else {
-			$user_id = wpf_get_current_user_id();
-		}
 
 		if( ! is_array( $tags ) ) {
 			$tags = explode(',', $tags);
@@ -83,10 +85,24 @@ class WPF_AJAX {
 		$tags_to_remove = array();
 
 		foreach ( $tags as $tag ) {
-			$tags_to_remove[] = wp_fusion()->user->get_tag_id( $tag );
+
+			$tag_id = wp_fusion()->user->get_tag_id( $tag );
+
+			if ( false === $tag_id ) {
+
+				wpf_log( 'notice', $user_id, 'Unable to determine tag ID from tag with name <strong>' . $tag . '</strong>. Tag will not be applied.' );
+				continue;
+
+			}
+
+			$tags_to_remove[] = $tag_id;
 		}
 
-		wp_fusion()->user->remove_tags( $tags_to_remove, $user_id );
+		if ( ! empty( $tags_to_remove ) ) {
+
+			wp_fusion()->user->remove_tags( $tags_to_remove );
+
+		}
 
 		die();
 
@@ -103,11 +119,7 @@ class WPF_AJAX {
 
 		$update_data = json_decode( stripslashes( $_POST['data'] ), true );
 
-		if( isset( $_POST['user_id'] ) ) {
-			$user_id = intval($_POST['user_id']);
-		} else {
-			$user_id = wpf_get_current_user_id();
-		}
+		$user_id = wpf_get_current_user_id();
 
 		if ( is_array( $update_data ) ) {
 
@@ -116,7 +128,7 @@ class WPF_AJAX {
 			// Figure out how we're doing the update
 
 			$contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
-			$crm_fields = wp_fusion()->settings->get( 'crm_fields', array() );
+			$crm_fields     = wp_fusion()->settings->get( 'crm_fields', array() );
 
 			// CRMs with field groupings
 

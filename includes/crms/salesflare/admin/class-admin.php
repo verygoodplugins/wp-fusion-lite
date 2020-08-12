@@ -58,15 +58,15 @@ class WPF_Salesflare_Admin {
 		$new_settings = array();
 
 		$new_settings['salesflare_header'] = array(
-			'title'   => __( 'Salesflare Configuration', 'wp-fusion' ),
+			'title'   => __( 'Salesflare Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['salesflare_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.salesflare.com/#/settings/apikeys" target="_blank">API Key</a> settings of your Salesflare account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.salesflare.com/#/settings/apikeys" target="_blank">API Key</a> settings of your Salesflare account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

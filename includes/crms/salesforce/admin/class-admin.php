@@ -58,30 +58,30 @@ class WPF_Salesforce_Admin {
 		$new_settings = array();
 
 		$new_settings['salesforce_header'] = array(
-			'title'   => __( 'Salesforce Configuration', 'wp-fusion' ),
+			'title'   => __( 'Salesforce Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['sf_username'] = array(
-			'title'   => __( 'Username', 'wp-fusion' ),
-			'desc'    => __( 'Enter the username for the administrator of your Salesforce account (usually an email address).', 'wp-fusion' ),
+			'title'   => __( 'Username', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the username for the administrator of your Salesforce account (usually an email address).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['sf_pass'] = array(
-			'title'   => __( 'Password', 'wp-fusion' ),
+			'title'   => __( 'Password', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'password',
 			'section' => 'setup'
 		);
 
 		$new_settings['sf_token'] = array(
-			'title'       => __( 'Security Token', 'wp-fusion' ),
-			'desc'        => __( 'You can generate a security token by visiting the My Settings page and navigating to Personal >> Reset My Security Token.', 'wp-fusion' ),
+			'title'       => __( 'Security Token', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can generate a security token by visiting the My Settings page and navigating to Personal >> Reset My Security Token.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -91,7 +91,7 @@ class WPF_Salesforce_Admin {
 		if($settings['connection_configured'] == true && wp_fusion()->settings->get('crm') == 'salesforce') {
 
 			$new_settings['sf_tag_type'] = array(
-				'title'   => __( 'Salesforce Tag Type', 'wp-fusion' ),
+				'title'   => __( 'Salesforce Tag Type', 'wp-fusion-lite' ),
 				'std'     => 'Topics',
 				'type'    => 'radio',
 				'section' => 'setup',
@@ -100,7 +100,7 @@ class WPF_Salesforce_Admin {
 					'Personal'	=> 'Personal tags',
 					'Public'	=> 'Public tags'
 					),
-				'desc'	  => __( 'After changing the tag type, save the settings page and click Resynchronize above.', 'wp-fusion' ),
+				'desc'	  => __( 'After changing the tag type, save the settings page and click Resynchronize above.', 'wp-fusion-lite' ),
 			);
 
 		}
@@ -156,12 +156,11 @@ class WPF_Salesforce_Admin {
 	}
 
 	/**
-	 * Close out Active Campaign section
+	 * Close out Salesforce API section
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
-
 
 	public function show_field_sf_token_end( $id, $field ) {
 

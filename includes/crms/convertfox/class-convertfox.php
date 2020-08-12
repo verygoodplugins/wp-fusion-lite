@@ -214,6 +214,7 @@ class WPF_ConvertFox {
 		}
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 20,
 			'headers'     => array( 
 				'Authorization' => 'Bearer ' . $api_key,

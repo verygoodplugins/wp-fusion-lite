@@ -58,15 +58,15 @@ class WPF_SendinBlue_Admin {
 		$new_settings = array();
 
 		$new_settings['sendinblue_header'] = array(
-			'title'   => __( 'SendinBlue Configuration', 'wp-fusion' ),
+			'title'   => __( 'SendinBlue Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['sendinblue_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API v3 key in the <a href="https://account.sendinblue.com/advanced/api/" target="_blank">API settings</a> of your SendinBlue account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API v3 key in the <a href="https://account.sendinblue.com/advanced/api/" target="_blank">API settings</a> of your SendinBlue account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

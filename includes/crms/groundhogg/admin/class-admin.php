@@ -58,14 +58,14 @@ class WPF_Groundhogg_Admin {
 		$new_settings = array();
 
 		$new_settings['groundhogg_header'] = array(
-			'title'   => __( 'Groundhogg Configuration', 'wp-fusion' ),
+			'title'   => __( 'Groundhogg Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['groundhogg_connect'] = array(
-			'title'       => __( 'Connect', 'wp-fusion' ),
+			'title'       => __( 'Connect', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -92,8 +92,8 @@ class WPF_Groundhogg_Admin {
 
 		$new_settings = array(
 			'gh_default_status' => array(
-				'title'       => __( 'Default Status', 'wp-fusion' ),
-				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion' ),
+				'title'       => __( 'Default Status', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
 				'type'        => 'select',
 				'std'         => 2,
 				'section'     => 'main',

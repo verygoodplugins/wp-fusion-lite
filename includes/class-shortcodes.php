@@ -15,6 +15,8 @@ class WPF_Shortcodes {
 		add_shortcode( 'wpf_loggedin', array( $this, 'shortcode_loggedin' ) );
 		add_shortcode( 'wpf_loggedout', array( $this, 'shortcode_loggedout' ) );
 
+		add_shortcode( 'wpf_user_can_access', array( $this, 'shortcode_user_can_access' ) );
+
 		if( ! shortcode_exists( 'user_meta' ) ) {
 			add_shortcode( 'user_meta', array( $this, 'shortcode_user_meta' ), 10, 2 );
 		}
@@ -62,7 +64,7 @@ class WPF_Shortcodes {
 				if ( is_numeric( $tag ) ) {
 					$tags[] = $tag;
 				} else {
-					$tags[] = wp_fusion()->user->get_tag_id( trim( $tag ) );
+					$tags[] = wp_fusion()->user->get_tag_id( $tag );
 				}
 			}
 
@@ -94,7 +96,6 @@ class WPF_Shortcodes {
 		} else {
 			$proceed_tag = true;
 		}
-
 
 		if ( ! empty( $atts['not'] ) ) {
 
@@ -131,9 +132,18 @@ class WPF_Shortcodes {
 		}
 
 		// Check for else condition
-		if ( preg_match('/(?<=\[else\]).*(?=\[\/else])/s', $content, $else_content) ) {
-			$else_content = $else_content[0];
-			$content = preg_replace('/\[else\].*\[\/else]/s', '', $content );
+
+		if ( false !== strpos( $content, '[else]' ) ) {
+
+			// Clean up old [/else] from pre 3.33.19
+			$content = str_replace( '[/else]', '', $content );
+
+			$else_content = explode( '[else]', $content );
+
+			// Remove the else content from the main content
+			$content      = $else_content[0];
+			$else_content = $else_content[1];
+
 		}
 
 		if( $proceed_tag == true && $proceed_not == true ) {
@@ -227,8 +237,22 @@ class WPF_Shortcodes {
 
 		} else {
 
-			$value = get_user_meta( wpf_get_current_user_id(), $atts['field'], true );
+			$value = get_user_meta( $user_id, $atts['field'], true );
 
+		}
+
+		// Maybe refresh the data once from the CRM if the key doesn't exist at all
+
+		if ( empty( $value ) && wp_fusion()->crm_base->is_field_active( $atts['field'] ) ) {
+
+			if ( ! metadata_exists( 'user', $user_id, $atts['field'] ) ) {
+
+				$user_meta = wp_fusion()->user->pull_user_meta();
+
+				if ( isset( $user_meta[ $atts['field'] ] ) ) {
+					$value = $user_meta[ $atts['field'] ];
+				}
+			}
 		}
 
 		$value = apply_filters( 'wpf_user_meta_shortcode_value', $value, $atts['field'] );
@@ -260,7 +284,59 @@ class WPF_Shortcodes {
 	}
 
 	/**
-	 * Show content only for logged in users 
+	 * User can access shortcode
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function shortcode_user_can_access( $atts, $content = '' ) {
+
+		$defaults = array(
+			'id' => false,
+		);
+
+		$atts = shortcode_atts( $defaults, $atts, 'wpf_user_can_access' );
+
+		if ( false == $atts['id'] ) {
+			$atts['id'] = get_the_ID();
+		}
+
+		// Check for else condition
+
+		if ( false !== strpos( $content, '[else]' ) ) {
+
+			$else_content = explode( '[else]', $content );
+
+			// Remove the else content from the main content
+			$content      = $else_content[0];
+			$else_content = $else_content[1];
+
+		}
+
+		$can_access = wp_fusion()->access->user_can_access( $atts['id'] );
+
+		// If admins are excluded from restrictions
+		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+			$can_access = true;
+		}
+
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $atts['id'] );
+
+		if ( true == $can_access ) {
+
+			return do_shortcode( shortcode_unautop( $content ) );
+
+		} elseif ( ! empty( $else_content ) ) {
+
+			return do_shortcode( shortcode_unautop( $else_content ) );
+
+		}
+
+	}
+
+	/**
+	 * Show content only for logged in users
 	 *
 	 * @access public
 	 * @return string Content
@@ -276,7 +352,7 @@ class WPF_Shortcodes {
 
 
 	/**
-	 * Show content only for logged out users 
+	 * Show content only for logged out users
 	 *
 	 * @access public
 	 * @return string Content

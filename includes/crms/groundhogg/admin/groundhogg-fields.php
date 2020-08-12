@@ -19,7 +19,7 @@ $groundhogg_fields['user_email'] = array(
 
 $groundhogg_fields['phone_number'] = array(
 	'crm_label' => 'Phone',
-	'crm_field' => 'phone'
+	'crm_field' => 'primary_phone'
 );
 
 $groundhogg_fields['billing_address_1'] = array(

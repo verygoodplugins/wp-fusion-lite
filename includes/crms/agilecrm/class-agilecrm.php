@@ -180,8 +180,15 @@ class WPF_AgileCRM {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			// Agile has a weird thing with timezones that we don't understand...
+
+			// Since only the date is displayed in Agile, lets incremement the timestamp by 12h to make sure the date doesn't show as the previous day
+
+			if ( 00 == date( 'H', $value ) ) {
+				$value += 12 * HOUR_IN_SECONDS;
+			}
+
+			$date = date( 'm/d/Y H:i:s', $value );
 
 			return $date;
 
@@ -562,8 +569,16 @@ class WPF_AgileCRM {
 
 		}
 
-		$body_json = preg_replace( '/("\w+"):(\d+)/', '\\1:"\\2"', wp_remote_retrieve_body( $response ) );
-		$body_json = json_decode( $body_json );
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $body_json ) ) {
+
+			// Try cleaning up some stuff? Don't remember why this is here
+
+			$body_json = preg_replace( '/("\w+"):(\d+)/', '\\1:"\\2"', wp_remote_retrieve_body( $response ) );
+			$body_json = json_decode( $body_json );
+
+		}
 
 		if ( empty( $body_json ) ) {
 			return false;
@@ -631,6 +646,14 @@ class WPF_AgileCRM {
 
 		if ( ! $this->params ) {
 			$this->get_params();
+		}
+
+		// "Tag name should start with an alphabet and cannot contain special characters other than underscore and space."
+
+		foreach ( $tags as $tag ) {
+			if ( preg_match( '/[\'\.^£$%&*()}{@#~?><>,|=+¬-]/', $tag ) ) {
+				return new WP_Error( 'error', 'Tag name cannot contain special characters other than underscore and space.' );
+			}
 		}
 
 		$contact_json = array(
@@ -887,25 +910,46 @@ class WPF_AgileCRM {
 			'contact_type' => 'PERSON',
 		);
 
-		$params['body'] = array(
-			'page_size'  => 1000,
-			'filterJson' => json_encode( $filter ),
-		);
-
-		$response = wp_remote_post( $request, $params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-
 		$contact_ids = array();
+		$cursor      = false;
+		$proceed     = true;
 
-		foreach ( $body_json as $i => $contact_object ) {
+		while ( true == $proceed ) {
 
-			$contact_ids[] = $contact_object->id;
+			$params['body'] = array(
+				'page_size'  => 5000,
+				'filterJson' => json_encode( $filter ),
+			);
 
+			if ( $cursor ) {
+				$params['body']['cursor'] = $cursor;
+			}
+
+			$response = wp_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( empty( $body_json ) ) {
+				$proceed = false;
+				continue;
+			}
+
+			foreach ( $body_json as $i => $contact_object ) {
+
+				$contact_ids[] = $contact_object->id;
+
+			}
+
+			// Check for cursor on last contact
+			if ( isset( $contact_object->cursor ) ) {
+				$cursor = $contact_object->cursor;
+			} else {
+				$proceed = false;
+			}
 		}
 
 		return $contact_ids;

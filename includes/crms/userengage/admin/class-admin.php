@@ -58,19 +58,27 @@ class WPF_UserEngage_Admin {
 		$new_settings = array();
 
 		$new_settings['userengage_header'] = array(
-			'title'   => __( 'UserEngage Configuration', 'wp-fusion' ),
+			'title'   => __( 'User.com Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
+		);
+
+		$new_settings['userengage_domain'] = array(
+			'title'   => __( 'App Subdomain', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the subdomain for your User.com account. For example if your app URL is <code>https://verygoodplugins.user.com</code>, your app subdomain would be <code>verygoodplugins</code>.', 'wp-fusion-lite' ),
+			'std'     => '',
+			'type'    => 'text',
+			'section' => 'setup',
 		);
 
 		$new_settings['userengage_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your Public API key in your UserEngage account under Settings &raquo; App Settings &raquo; Public API keys.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your Public API key in your UserEngage account under Settings &raquo; App Settings &raquo; Advanced &raquo; Public REST API keys.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'userengage_key' )
+			'post_fields' => array( 'userengage_key', 'userengage_domain' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -98,9 +106,7 @@ class WPF_UserEngage_Admin {
 				if ( isset( $userengage_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $userengage_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
@@ -140,13 +146,11 @@ class WPF_UserEngage_Admin {
 		echo '</tr>';
 
 		echo '</table><div id="connection-output"></div>';
-		if( wp_fusion()->crm->slug == 'userengage' ) {
+		if ( wp_fusion()->crm->slug == 'userengage' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 		echo '</div>'; // close #UserEngage div
 		echo '<table class="form-table">';
-
-
 
 	}
 
@@ -159,9 +163,10 @@ class WPF_UserEngage_Admin {
 
 	public function test_connection() {
 
+		$domain  = sanitize_text_field( $_POST['userengage_domain'] );
 		$api_key = sanitize_text_field( $_POST['userengage_key'] );
 
-		$connection = $this->crm->connect( $api_key, true );
+		$connection = $this->crm->connect( $domain, $api_key, true );
 
 		if ( is_wp_error( $connection ) ) {
 
@@ -171,6 +176,7 @@ class WPF_UserEngage_Admin {
 
 			$options                          = wp_fusion()->settings->get_all();
 			$options['userengage_key']        = $api_key;
+			$options['userengage_domain']     = $domain;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 			wp_fusion()->settings->set_all( $options );

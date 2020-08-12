@@ -59,15 +59,15 @@ class WPF_Customerly_Admin {
 		$new_settings = array();
 
 		$new_settings['customerly_header'] = array(
-			'title'   => __( 'Customerly Configuration', 'wp-fusion' ),
+			'title'   => __( 'Customerly Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['customerly_key'] = array(
-			'title'       => __( 'Access Token', 'wp-fusion' ),
-			'desc'        => __( 'You can create an access token by going to App Settings &raquo; Integrations &raquo; API in your Customerly account.', 'wp-fusion' ),
+			'title'       => __( 'Access Token', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can create an access token by going to App Settings &raquo; Integrations &raquo; API in your Customerly account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

@@ -317,14 +317,16 @@ class WPF_CRM_Queue {
 
 						wpf_log( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
 
+						do_action( 'wpf_api_error', $method, $args, $cid, $result );
+
+						do_action( 'wpf_api_error_' . $method, $args, $cid, $result );
+
 					} else {
 
-						do_action( 'wpf_api_did_' . $method, $args, $result );
+						do_action( 'wpf_api_did_' . $method, $args, $cid, $result );
 
 					}
-
 				}
-
 			}
 		}
 

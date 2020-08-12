@@ -396,7 +396,7 @@ jQuery(document).ready(function($){
 	//
 
 	// Toggle tag select visibility
-	$('.widget-filter-by-tag').live('click', function(event) {
+	$('.widget-filter-by-tag').on('click', function(event) {
 
 		if($(this).prop('checked') === true) {
             $(this).parent().next('.tags-container').show();
@@ -420,7 +420,7 @@ jQuery(document).ready(function($){
 	// Bulk Edit tool
 	//
 
-	$( '#bulk_edit' ).live( 'click', function(event) {
+	$( '#bulk_edit' ).on( 'click', function(event) {
 
 		// define the bulk edit row
 		var $bulk_row = $( '#bulk-edit' );

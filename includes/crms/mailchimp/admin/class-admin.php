@@ -77,22 +77,22 @@ class WPF_MailChimp_Admin {
 		$new_settings = array();
 
 		$new_settings['mailchimp_header'] = array(
-			'title'   => __( 'MailChimp Configuration', 'wp-fusion' ),
+			'title'   => __( 'MailChimp Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['mailchimp_dc'] = array(
-			'title'       => __( 'Data Server', 'wp-fusion' ),
-			'desc'        => __( 'Your data server is the first part of your MailChimp account URL (like "us1").', 'wp-fusion' ),
+			'title'       => __( 'Data Server', 'wp-fusion-lite' ),
+			'desc'        => __( 'Your data server is the first part of your MailChimp account URL (like "us1").', 'wp-fusion-lite' ),
 			'type'        => 'hidden',
 			'section'     => 'setup',
 		);
 
 		$new_settings['mailchimp_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can create an API key by navigating to Account &raquo; Extras &raquo; API Keys.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can create an API key by navigating to Account &raquo; Extras &raquo; API Keys.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -115,17 +115,27 @@ class WPF_MailChimp_Admin {
 
 	public function register_settings( $settings, $options ) {
 
-		if( ! isset( $options['mc_lists'] ) ) {
+		if ( ! isset( $options['mc_lists'] ) ) {
 			$options['mc_lists'] = array();
 		}
 
+		$new_settings = array();
+
 		$new_settings['mc_default_list'] = array(
-			'title'       => __( 'MailChimp List', 'wp-fusion' ),
-			'desc'        => __( 'Select a list to use for WP Fusion. If you change the list, you may need to Resynchronize from the Setup tab to update your fields and tags.', 'wp-fusion' ),
+			'title'       => __( 'MailChimp Audience', 'wp-fusion-lite' ),
+			'desc'        => __( 'Select an audience to use for WP Fusion. If you change the audience, you\'ll need to Resynchronize from the Setup tab to update your available fields and tags.', 'wp-fusion-lite' ),
 			'type'        => 'select',
-			'placeholder' => 'Select list',
+			'placeholder' => 'Select Audience',
 			'section'     => 'main',
 			'choices'     => $options['mc_lists']
+		);
+
+		$new_settings['mc_optin'] = array(
+			'title'   => __( 'Double Optin', 'wp-fusion-lite' ),
+			'desc'    => __( 'Send an optin confirmation email from MailChimp when new subscribers are added to your audience.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'std'     => false,
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
@@ -197,8 +207,6 @@ class WPF_MailChimp_Admin {
 		echo '</table><div id="connection-output"></div>';
 		echo '</div>'; // close #MailChimp div
 		echo '<table class="form-table">';
-
-
 
 	}
 

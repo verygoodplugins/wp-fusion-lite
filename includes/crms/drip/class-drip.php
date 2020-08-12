@@ -2,11 +2,22 @@
 
 class WPF_Drip {
 
+	// Unsubscribes:
+	// When someone unsubscribes get_contact_id() will return Not Found unless the peson has been reactivated
+	// update_contact() will work but will return the "status" indicating they're unsubscribed
+	// apply_tags() does work
+
 	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
 	 */
 
 	public $app;
+
+	/**
+	 * API params for v3 API methods
+	 */
+
+	public $params;
 
 	/**
 	 * Account ID (used for API queries)
@@ -105,6 +116,30 @@ class WPF_Drip {
 	}
 
 	/**
+	 * Get API params for v3 API calls
+	 *
+	 * @access public
+	 * @return array Params
+	 */
+
+	public function get_params() {
+
+		$api_token = wp_fusion()->settings->get( 'drip_token' );
+
+		$this->params = array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 15,
+			'headers'    => array(
+				'Authorization' => 'Basic ' . base64_encode( $api_token ),
+				'Content-Type'  => 'application/json',
+			),
+		);
+
+		return $this->params;
+
+	}
+
+	/**
 	 * Check HTTP Response for errors and return WP_Error if found
 	 *
 	 * @access public
@@ -184,7 +219,7 @@ class WPF_Drip {
 
 		$account_id = wp_fusion()->settings->get('drip_account');
 
-		echo "<!-- Drip -->";
+		echo "<!-- Drip (via WP Fusion) -->";
 		echo '<script type="text/javascript">';
 		echo "var _dcq = _dcq || [];";
 		echo "var _dcs = _dcs || {};";
@@ -348,7 +383,7 @@ class WPF_Drip {
 			}
 
 			if ( $valid_id == false ) {
-				return new WP_Error( 'error', __( 'Access denied: Your API token doesn\'t have access to this account.', 'wp-fusion' ) );
+				return new WP_Error( 'error', __( 'Access denied: Your API token doesn\'t have access to this account.', 'wp-fusion-lite' ) );
 			}
 
 		}
@@ -442,13 +477,17 @@ class WPF_Drip {
 
 		$response = json_decode( $response['buffer'] );
 
-		$crm_fields = array('email' => 'email');
+		$crm_fields = array( 'email' => 'email' );
 
 		if ( ! empty( $response->custom_field_identifiers ) ) {
 			foreach ( $response->custom_field_identifiers as $field_id ) {
 				$crm_fields[ $field_id ] = $field_id;
 			}
 		}
+
+		asort( $crm_fields );
+
+		$crm_fields['status'] = 'Status';
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -666,13 +705,13 @@ class WPF_Drip {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
-		if( isset( $data['email'] ) ) {
+		if ( isset( $data['email'] ) ) {
 			$provided_email = $data['email'];
-			unset($data['email']);
+			unset( $data['email'] );
 		}
 
 		$params = array(
@@ -681,6 +720,22 @@ class WPF_Drip {
 			'custom_fields' => $data,
 		);
 
+		if ( isset( $data['status'] ) ) {
+
+			if ( true === $data['status'] ) {
+				$data['status'] = 'active';
+			} elseif ( null === $data['status'] ) {
+				$data['status'] = 'unsubscribed';
+			}
+
+			$params['status'] = $data['status'];
+
+			unset( $params['custom_fields']['status'] );
+
+		}
+
+		// Maybe update optin status
+
 		$result = $this->app->create_or_update_subscriber( $params );
 
 		if ( is_wp_error( $result ) ) {
@@ -688,7 +743,13 @@ class WPF_Drip {
 		}
 
 		if ( $result['status'] != 'active' ) {
-			wpf_log( 'notice', wp_fusion()->user->get_user_id( $contact_id ), 'Person has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
+
+			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+			wpf_log( 'notice', $user_id, 'Person has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
+
+			if ( false !== $user_id ) {
+				update_user_meta( $user_id, 'drip_inactive', true );
+			}
 		}
 
 		// Check if we need to change the email address
@@ -743,7 +804,7 @@ class WPF_Drip {
 			'subscriber_id' => $contact_id
 		) );
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
@@ -756,18 +817,19 @@ class WPF_Drip {
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if( empty( $field_data['crm_field'] ) ) {
+			if ( empty( $field_data['crm_field'] ) ) {
 				continue;
 			}
 
-			if ( $field_data['active'] == true && isset( $result['custom_fields'][ $field_data['crm_field'] ] ) ) {
+			if ( $field_data['active'] == true && isset( $result[ $field_data['crm_field'] ] ) ) {
+
+				$user_meta[ $field_id ] = $result[ $field_data['crm_field'] ];
+
+			} elseif ( $field_data['active'] == true && isset( $result['custom_fields'][ $field_data['crm_field'] ] ) ) {
+
 				$user_meta[ $field_id ] = $result['custom_fields'][ $field_data['crm_field'] ];
-			}
 
-			if ( $field_id == 'user_email' ) {
-				$user_meta['user_email'] = $result['email'];
 			}
-
 		}
 
 		return $user_meta;

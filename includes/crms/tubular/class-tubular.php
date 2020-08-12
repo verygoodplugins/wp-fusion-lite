@@ -137,6 +137,7 @@ class WPF_Tubular {
 		}
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 30,
 			'headers'     => array(
 				'Authorization' => 'token ' . $api_key,

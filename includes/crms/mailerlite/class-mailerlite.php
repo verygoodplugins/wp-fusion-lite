@@ -100,7 +100,7 @@ class WPF_MailerLite {
 
 		$contact_ids = array();
 
-		if ( $post_data['wpf_action'] == 'update' ) {
+		if ( $post_data['wpf_action'] == 'update' || $post_data['wpf_action'] == 'update_tags' ) {
 
 			foreach ( $payload->events as $event ) {
 
@@ -109,6 +109,10 @@ class WPF_MailerLite {
 				}
 			}
 		} elseif ( $post_data['wpf_action'] == 'add' ) {
+
+			if ( true == wp_fusion()->settings->get( 'mailerlite_import_notification' ) ) {
+				$post_data['send_notification'] = true;
+			}
 
 			$tag = wp_fusion()->settings->get( 'mailerlite_add_tag' );
 
@@ -121,6 +125,10 @@ class WPF_MailerLite {
 		}
 
 		if ( empty( $contact_ids ) ) {
+
+			if ( $post_data['wpf_action'] == 'add' ) {
+				$post_data['message'] = 'Import webhook received but subscriber does not have import group <strong>' . wp_fusion()->user->get_tag_label( $tag[0] ) . '</strong>. This error is not serious and can be ignored.';
+			}
 
 			// No one found
 			$post_data['contact_id'] = false;
@@ -151,6 +159,10 @@ class WPF_MailerLite {
 			}
 
 			wp_fusion()->batch->process->save()->dispatch();
+
+			$post_data['message'] = 'Webhook received for multiple subscribers. Beginning background process to load ' . count( $contact_ids ) . ' subscribers.';
+
+			return $post_data;
 
 		}
 
@@ -240,8 +252,9 @@ class WPF_MailerLite {
 		}
 
 		$this->params = array(
-			'timeout' => 30,
-			'headers' => array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
 				'X-MailerLite-ApiKey' => $api_key,
 				'Content-Type'        => 'application/json',
 			),
@@ -386,12 +399,12 @@ class WPF_MailerLite {
 		return $available_tags;
 	}
 
-		/**
-		 * Loads all custom fields from CRM and merges with local list
-		 *
-		 * @access public
-		 * @return array CRM Fields
-		 */
+	/**
+	 * Loads all custom fields from CRM and merges with local list
+	 *
+	 * @access public
+	 * @return array CRM Fields
+	 */
 
 	public function sync_crm_fields() {
 
@@ -446,13 +459,15 @@ class WPF_MailerLite {
 
 		}
 
-		$body_json = json_decode( $response['body'], true );
+		// JSON_BIGINT_AS_STRING so contact IDs don't get truncated when PHP_INT_MAX is only 32 bit
 
-		if ( empty( $body_json['fields'] ) ) {
+		$body_json = json_decode( $response['body'], false, 512, JSON_BIGINT_AS_STRING );
+
+		if ( empty( $body_json->fields ) ) {
 			return false;
 		}
 
-		return $body_json['id'];
+		return $body_json->id;
 	}
 
 	/**
@@ -766,7 +781,7 @@ class WPF_MailerLite {
 
 		$contact_ids = array();
 
-		$url     = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers';
+		$url     = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers/?limit=1000';
 		$results = wp_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $results ) ) {
@@ -784,7 +799,31 @@ class WPF_MailerLite {
 	}
 
 	/**
-	 * Sets up hooks specific to this CRM
+	 * Get all webhooks
+	 *
+	 * @access public
+	 * @return array Webhooks
+	 */
+
+	public function get_webhooks() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request  = 'https://api.mailerlite.com/api/v2/webhooks';
+		$response = wp_remote_get( $request, $this->params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return json_decode( wp_remote_retrieve_body( $response ) );
+
+	}
+
+	/**
+	 * Create a webhook
 	 *
 	 * @access public
 	 * @return array Rule IDs
@@ -825,7 +864,7 @@ class WPF_MailerLite {
 				'event' => 'subscriber.' . $event_type,
 			);
 
-			$request          = 'http://api.mailerlite.com/api/v2/webhooks';
+			$request          = 'https://api.mailerlite.com/api/v2/webhooks';
 			$params           = $this->params;
 			$params['method'] = 'POST';
 			$params['body']   = json_encode( $data );
@@ -848,7 +887,7 @@ class WPF_MailerLite {
 	}
 
 	/**
-	 * Sets up hooks specific to this CRM
+	 * Destroy a previously created webhook
 	 *
 	 * @access public
 	 * @return void
@@ -860,7 +899,7 @@ class WPF_MailerLite {
 			$this->get_params();
 		}
 
-		$request          = 'http://api.mailerlite.com/api/v2/webhooks/' . $rule_id;
+		$request          = 'https://api.mailerlite.com/api/v2/webhooks/' . $rule_id;
 		$params           = $this->params;
 		$params['method'] = 'DELETE';
 

@@ -19,6 +19,8 @@ class WPF_Lead_Source_Tracking {
 		add_filter( 'wpf_user_register', array( $this, 'merge_lead_source' ), 10, 2 );
 		add_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
 
+		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
+
 	}
 
 
@@ -181,6 +183,22 @@ class WPF_Lead_Source_Tracking {
 		}
 
 		return $args;
+
+	}
+
+	/**
+	 * Allow the leadsource cookies in the async process
+	 *
+	 * @access  public
+	 * @return  array Cookies
+	 */
+
+	function allowed_cookies( $cookies ) {
+
+		$cookies[] = 'wpf_leadsource';
+		$cookies[] = 'wpf_ref';
+
+		return $cookies;
 
 	}
 

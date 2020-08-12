@@ -61,8 +61,8 @@ class WPF_GetResponse_Admin {
 		}
 
 		$new_settings['getresponse_list'] = array(
-			'title'       => __( 'List', 'wp-fusion' ),
-			'desc'        => __( 'New users will be automatically added to the selected list.', 'wp-fusion' ),
+			'title'       => __( 'List', 'wp-fusion-lite' ),
+			'desc'        => __( 'New users will be automatically added to the selected list.', 'wp-fusion-lite' ),
 			'type'        => 'select',
 			'placeholder' => 'Select list',
 			'section'     => 'main',
@@ -78,15 +78,15 @@ class WPF_GetResponse_Admin {
 		$settings['getresponse_list']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
 
 		$new_settings['getresponse_header'] = array(
-			'title'   => __( 'GetResponse Configuration', 'wp-fusion' ),
+			'title'   => __( 'GetResponse Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['getresponse_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.getresponse.com/api/" target="_blank">API settings</a> of your GetResponse account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.getresponse.com/api/" target="_blank">API settings</a> of your GetResponse account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

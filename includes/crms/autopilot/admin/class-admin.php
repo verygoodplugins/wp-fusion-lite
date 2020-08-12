@@ -62,15 +62,15 @@ class WPF_Autopilot_Admin {
 		$new_settings = array();
 
 		$new_settings['autopilot_header'] = array(
-			'title'   => __( 'Autopilot Configuration', 'wp-fusion' ),
+			'title'   => __( 'Autopilot Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['autopilot_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.autopilothq.com/#settings/api">Developer API</a> settings of your Autopilot account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.autopilothq.com/#settings/api">Developer API</a> settings of your Autopilot account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -93,7 +93,7 @@ class WPF_Autopilot_Admin {
 	public function register_settings( $settings, $options ) {
 
 		$new_settings['autopilot_header'] = array(
-			'title'   => __( 'Autopilot Settings', 'wp-fusion' ),
+			'title'   => __( 'Autopilot Settings', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'advanced'
 		);
@@ -106,14 +106,14 @@ class WPF_Autopilot_Admin {
 				'std'     => 0,
 				'type'    => 'paragraph',
 				'section' => 'main',
-				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in Autopilot. Read our <a href="https://wpfusion.com/documentation/webhooks/autopilot-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
+				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in Autopilot. Read our <a href="https://wpfusion.com/documentation/webhooks/autopilot-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion-lite' ),
 			);
 
 			$settings['access_key']['type'] = 'hidden';
 
 			$new_settings['autopilot_update_trigger'] = array(
-				'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
-				'desc'		=> __( 'When a subscriber is updated in Autopilot, send their data back to WordPress.', 'wp-fusion' ),
+				'title' 	=> __( 'Update Trigger', 'wp-fusion-lite' ),
+				'desc'		=> __( 'When a subscriber is updated in Autopilot, send their data back to WordPress.', 'wp-fusion-lite' ),
 				'std'		=> 0,
 				'type'		=> 'checkbox',
 				'section'	=> 'main'
@@ -126,8 +126,8 @@ class WPF_Autopilot_Admin {
 				);
 
 			$new_settings['autopilot_add_tag'] = array(
-				'title' 	=> __( 'Import Group', 'wp-fusion' ),
-				'desc'		=> __( 'When a contact is added to this list in Autopilot, they will be imported as a new WordPres user.', 'wp-fusion' ),
+				'title' 	=> __( 'Import Group', 'wp-fusion-lite' ),
+				'desc'		=> __( 'When a contact is added to this list in Autopilot, they will be imported as a new WordPres user.', 'wp-fusion-lite' ),
 				'type'		=> 'assign_tags',
 				'section'	=> 'main',
 				'placeholder' => 'Select a list',

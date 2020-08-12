@@ -106,8 +106,9 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			}
 
 			return array(
-				'action' => $this->identifier,
-				'nonce'  => wp_create_nonce( $this->identifier )
+				'action'       => $this->identifier,
+				'nonce'        => wp_create_nonce( $this->identifier ),
+				'cachebuster'  => microtime(),
 			);
 
 		}

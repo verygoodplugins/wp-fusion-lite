@@ -59,15 +59,15 @@ class WPF_Tubular_Admin {
 		$new_settings = array();
 
 		$new_settings['tubular_header'] = array(
-			'title'   => __( 'Tubular Configuration', 'wp-fusion' ),
+			'title'   => __( 'Tubular Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['tubular_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in Tubular\'s <a href="https://app.tubular.io/#/settings" target="_blank">Settings page</a>, at the bottom of the Integrations section.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key in Tubular\'s <a href="https://app.tubular.io/#/settings" target="_blank">Settings page</a>, at the bottom of the Integrations section.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

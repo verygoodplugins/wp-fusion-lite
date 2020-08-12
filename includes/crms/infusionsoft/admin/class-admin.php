@@ -59,23 +59,23 @@ class WPF_Infusionsoft_iSDK_Admin {
 		$is_config = array();
 
 		$is_config['infusionsoft_header'] = array(
-			'title'   => __( 'Infusionsoft Configuration', 'wp-fusion' ),
+			'title'   => __( 'Infusionsoft Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$is_config['app_name'] = array(
-			'title'   => __( 'Application Name', 'wp-fusion' ),
-			'desc'    => __( 'Enter the name of your Infusionsoft application (i.e. "ab123").', 'wp-fusion' ),
+			'title'   => __( 'Application Name', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the name of your Infusionsoft application (i.e. "ab123").', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$is_config['api_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'For help generating an API key, please read <a target="_blank" href="http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key">this knowledgebase article</a>.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'For help generating an API key, please read <a target="_blank" href="http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key">this knowledgebase article</a>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -98,8 +98,8 @@ class WPF_Infusionsoft_iSDK_Admin {
 	public function register_settings( $settings, $options ) {
 
 		$new_settings['api_call'] = array(
-			'title'   => __( 'API Call', 'wp-fusion' ),
-			'desc'    => __( 'Check this box to make an API call when a profile is updated. See <a target="_blank" href="https://wpfusion.com/documentation/tutorials/infusionsoft-api-goals/">the documentation</a> for more info.', 'wp-fusion' ),
+			'title'   => __( 'API Call', 'wp-fusion-lite' ),
+			'desc'    => __( 'Check this box to make an API call when a profile is updated. See <a target="_blank" href="https://wpfusion.com/documentation/tutorials/infusionsoft-api-goals/">the documentation</a> for more info.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main',
@@ -107,7 +107,7 @@ class WPF_Infusionsoft_iSDK_Admin {
 		);
 
 		$new_settings['api_call_integration'] = array(
-			'title'   => __( 'Integration', 'wp-fusion' ),
+			'title'   => __( 'Integration', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'text',
@@ -115,7 +115,7 @@ class WPF_Infusionsoft_iSDK_Admin {
 		);
 
 		$new_settings['api_call_name'] = array(
-			'title'   => __( 'Call Name', 'wp-fusion' ),
+			'title'   => __( 'Call Name', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => 'contactUpdated',
 			'type'    => 'text',
@@ -123,7 +123,7 @@ class WPF_Infusionsoft_iSDK_Admin {
 		);
 
 		$new_settings['site_tracking_header'] = array(
-			'title'   => __( 'Infusionsoft Site Tracking', 'wp-fusion' ),
+			'title'   => __( 'Infusionsoft Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -131,14 +131,14 @@ class WPF_Infusionsoft_iSDK_Admin {
 		);
 
 		$new_settings['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://help.infusionsoft.com/userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-infusionsoft-tracking-code-into-your-website">Infusionsoft site tracking</a>.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://help.infusionsoft.com/userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-infusionsoft-tracking-code-into-your-website">Infusionsoft site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $new_settings );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $new_settings );
 
 		$settings['api_call_name']['disabled']        = ( wp_fusion()->settings->get( 'api_call' ) == 0 ? true : false );
 		$settings['api_call_integration']['std']      = wp_fusion()->settings->get( 'app_name' );

@@ -58,15 +58,15 @@ class WPF_Klaviyo_Admin {
 		$new_settings = array();
 
 		$new_settings['klaviyo_header'] = array(
-			'title'   => __( 'Klaviyo Configuration', 'wp-fusion' ),
+			'title'   => __( 'Klaviyo Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['klaviyo_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'Enter your Klaviyo API key. You can generate one in your Klaviyo account under <a href="https://www.klaviyo.com/account#api-keys-tab" target="_blank">API Keys</a>.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter your Klaviyo API key. You can generate one in your Klaviyo account under <a href="https://www.klaviyo.com/account#api-keys-tab" target="_blank">API Keys</a>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

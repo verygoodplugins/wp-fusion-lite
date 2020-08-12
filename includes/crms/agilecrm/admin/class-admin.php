@@ -59,31 +59,31 @@ class WPF_AgileCRM_Admin {
 		$new_settings = array();
 
 		$new_settings['agilecrm_header'] = array(
-			'title'   => __( 'Agile CRM Configuration', 'wp-fusion' ),
+			'title'   => __( 'Agile CRM Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['agile_domain'] = array(
-			'title'   => __( 'Subdomain', 'wp-fusion' ),
-			'desc'    => __( 'Enter your Agile CRM account subdomain (not the full URL).', 'wp-fusion' ),
+			'title'   => __( 'Subdomain', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter your Agile CRM account subdomain (not the full URL).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['agile_user_email'] = array(
-			'title'   => __( 'User Email', 'wp-fusion' ),
-			'desc'    => __( 'Enter the email address for your AgileCRM account.', 'wp-fusion' ),
+			'title'   => __( 'User Email', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the email address for your AgileCRM account.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['agile_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'The API key will appear under Admin Settings &raquo; API &raquo; REST API.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'The API key will appear under Admin Settings &raquo; API &raquo; REST API.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -110,7 +110,7 @@ class WPF_AgileCRM_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'AgileCRM Site Tracking', 'wp-fusion' ),
+			'title'   => __( 'AgileCRM Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -118,22 +118,22 @@ class WPF_AgileCRM_Admin {
 		);
 
 		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://www.agilecrm.com/marketing-automation/web-rules">AgileCRM analytics and web rules</a> scripts.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://www.agilecrm.com/marketing-automation/web-rules">AgileCRM analytics and web rules</a> scripts.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
 		);
 
 		$site_tracking['site_tracking_acct'] = array(
-			'title'   => __( 'Account ID', 'wp-fusion' ),
-			'desc'    => __( 'Your account ID can be found in the Tracking Code in your AgileCRM account, under Admin Settings &raquo; Analytics. For example: <code>8g8fejferfqbi4g4mradq09373</code>', 'wp-fusion' ),
+			'title'   => __( 'Account ID', 'wp-fusion-lite' ),
+			'desc'    => __( 'Your account ID can be found in the Tracking Code in your AgileCRM account, under Admin Settings &raquo; Analytics. For example: <code>8g8fejferfqbi4g4mradq09373</code>', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
 

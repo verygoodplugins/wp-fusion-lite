@@ -59,31 +59,31 @@ class WPF_Mautic_Admin {
 		$new_settings = array();
 
 		$new_settings['mautic_header'] = array(
-			'title'   => __( 'Mautic Configuration', 'wp-fusion' ),
+			'title'   => __( 'Mautic Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'	  => __( 'Before attempting to connect to Mautic, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion' )
+			'desc'	  => __( 'Before attempting to connect to Mautic, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' )
 		);
 
 		$new_settings['mautic_url'] = array(
-			'title'   => __( 'URL', 'wp-fusion' ),
-			'desc'    => __( 'Enter the URL for your Mautic account (like http://app.mautic.net/).', 'wp-fusion' ),
+			'title'   => __( 'URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the URL for your Mautic account (like http://app.mautic.net/).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['mautic_username'] = array(
-			'title'   => __( 'Username', 'wp-fusion' ),
-			'desc'    => __( 'Enter the Username for your Mautic account.', 'wp-fusion' ),
+			'title'   => __( 'Username', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the Username for your Mautic account.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['mautic_password'] = array(
-			'title'       => __( 'Password', 'wp-fusion' ),
+			'title'       => __( 'Password', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -136,22 +136,38 @@ class WPF_Mautic_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'Mautic Site Tracking', 'wp-fusion' ),
-			'desc'    => '',
+			'title'   => __( 'Mautic Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => sprintf( __( 'For more information on these settings, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#mautic" target="_blank">', '</a>' ),
 			'std'     => '',
 			'type'    => 'heading',
 			'section' => 'main'
 		);
 
 		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://www.mautic.org/docs/en/contacts/contact_monitoring.html">Mautic site tracking</a>.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://www.mautic.org/docs/en/contacts/contact_monitoring.html">Mautic site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
+			'unlock'  => array( 'advanced_site_tracking' ),
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+		if ( true == $options['site_tracking'] ) {
+			$std = true;
+		} else {
+			$std = false;
+		}
+
+		$site_tracking['advanced_site_tracking'] = array(
+			'title'   => __( 'Advanced Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => sprintf( __( 'Identify logged in users to Mautic, and merge anonymous visitors with contacts after signup. %1$sSee here for more information%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#mautic" target="_blank">', '</a>' ),
+			'std'     => $std,
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'tooltip' => __( 'Enabling this option improves tracking page views against identified contacts, but may have problems when caching is used that cause contact records to become merged. For optimal results make sure logged in users are excluded from all page caching.', 'wp-fusion-lite' ),
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
 

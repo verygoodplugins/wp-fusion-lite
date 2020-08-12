@@ -59,20 +59,20 @@ class WPF_Zoho_Admin {
 
 	public function maybe_oauth_complete() {
 
-		if( isset( $_GET['code'] ) && isset( $_GET['location'] ) ) {
+		if( isset( $_GET['code'] ) && isset( $_GET['location'] ) && isset( $_GET['crm'] ) && 'zoho' == $_GET['crm'] ) {
 
 			if( $_GET['location'] == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
-				$api_domain = 'https://www.zohoapis.eu';
+				$api_domain    = 'https://www.zohoapis.eu';
 			} elseif( $_GET['location'] == 'in' ) {
 				$client_secret = $this->crm->client_secret_in;
-				$api_domain = 'https://www.zohoapis.in';
+				$api_domain    = 'https://www.zohoapis.in';
 			} elseif( $_GET['location'] == 'au' ) {
 				$client_secret = $this->crm->client_secret_au;
-				$api_domain = 'https://www.zohoapis.com.au';
+				$api_domain    = 'https://www.zohoapis.com.au';
 			} else {
 				$client_secret = $this->crm->client_secret_us;
-				$api_domain = 'https://www.zohoapis.com';
+				$api_domain    = 'https://www.zohoapis.com';
 			}
 
 			$response = wp_remote_post( $_GET['accounts-server'] . '/oauth/v2/token?code=' . $_GET['code'] . '&client_id=' . $this->crm->client_id . '&grant_type=authorization_code&client_secret=' . $client_secret . '&redirect_uri=https%3A%2F%2Fwpfusionplugin.com%2Fparse-zoho-oauth.php' );
@@ -86,9 +86,9 @@ class WPF_Zoho_Admin {
 			if( isset( $body->error ) ) {
 				return false;
 			}
-			
+
 			wp_fusion()->settings->set( 'zoho_location', $_GET['location'] );
-			wp_fusion()->settings->set( 'zoho_api_domain', $api_domain );
+			wp_fusion()->settings->set( 'zoho_api_domain', $body->api_domain );
 			wp_fusion()->settings->set( 'zoho_token', $body->access_token );
 			wp_fusion()->settings->set( 'zoho_refresh_token', $body->refresh_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
@@ -113,7 +113,7 @@ class WPF_Zoho_Admin {
 		$new_settings = array();
 
 		$new_settings['zoho_header'] = array(
-			'title'   => __( 'Zoho Configuration', 'wp-fusion' ),
+			'title'   => __( 'Zoho Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -123,24 +123,25 @@ class WPF_Zoho_Admin {
 
 			$new_settings['zoho_header']['desc'] = '<table class="form-table"><tr>';
 			$new_settings['zoho_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="https://wpfusion.com/parse-zoho-oauth.php?redirect=' .  urlencode( get_admin_url() . './options-general.php?page=wpf-settings' ) . '&action=wpf_get_zoho_token&client_id=' . $this->crm->client_id . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="https://wpfusion.com/parse-zoho-oauth.php?redirect=' .  urlencode( admin_url( 'options-general.php?page=wpf-settings&crm=zoho' ) ) . '&action=wpf_get_zoho_token&client_id=' . $this->crm->client_id . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['zoho_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
 
 			$new_settings['zoho_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion' ),
+				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'std'     => '',
 				'type'    => 'text',
 				'section' => 'setup'
 			);
 
 			$new_settings['zoho_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion' ),
+				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
-				'post_fields' => array( 'zoho_token', 'zoho_refresh_token' )
+				'post_fields' => array( 'zoho_token', 'zoho_refresh_token' ),
+				'desc'        => sprintf( __( 'If your connection with %s is broken you can erase the refresh token and save the settings page to re-authorize with %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
 			);
 
 		}
@@ -162,24 +163,38 @@ class WPF_Zoho_Admin {
 
 		$new_settings = array();
 
-		if( ! isset( $options['zoho_layouts'] ) ) {
+		if ( ! isset( $options['zoho_layouts'] ) ) {
 			$options['zoho_layouts'] = array();
 		}
 
 		$new_settings['zoho_layout'] = array(
-			'title'       => __( 'Contact Layout', 'wp-fusion' ),
-			'desc'        => __( 'Select a layout to be used for new contacts.', 'wp-fusion' ),
+			'title'       => __( 'Contact Layout', 'wp-fusion-lite' ),
+			'desc'        => __( 'Select a layout to be used for new contacts.', 'wp-fusion-lite' ),
 			'type'        => 'select',
-			'placeholder' => 'Select layout',
+			'placeholder' => __( 'Select layout', 'wp-fusion-lite' ),
 			'section'     => 'main',
-			'choices'     => $options['zoho_layouts']
+			'choices'     => $options['zoho_layouts'],
 		);
+
+		if ( ! empty( $options['zoho_users'] ) ) {
+
+			$new_settings['zoho_owner'] = array(
+				'title'       => __( 'Contact Owner', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select an owner to be used for new contacts.', 'wp-fusion-lite' ),
+				'std'         => false,
+				'type'        => 'select',
+				'placeholder' => __( 'Select owner', 'wp-fusion-lite' ),
+				'section'     => 'main',
+				'choices'     => $options['zoho_users'],
+			);
+
+		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'create_users', $settings, $new_settings );
 
 		$new_settings = array(
 			'import_notice' => array(
-				'desc'        => __( '<strong>Note:</strong> Imports with Zoho use a loose word match on the contact record. That means if your import tag is "gmail", it will also import any contacts with an <em>@gmail.com</em> email address. Please use a unique tag name for imports.', 'wp-fusion' ),
+				'desc'        => __( '<strong>Note:</strong> Imports with Zoho use a loose word match on the contact record. That means if your import tag is "gmail", it will also import any contacts with an <em>@gmail.com</em> email address. Please use a unique tag name for imports.', 'wp-fusion-lite' ),
 				'type'        => 'paragraph',
 				'section'     => 'import',
 			)

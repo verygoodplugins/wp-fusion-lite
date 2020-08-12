@@ -68,6 +68,8 @@ class WPF_NationBuilder_Admin {
 				'redirect_uri'	=> 'https://wpfusion.com/parse-nationbuilder-oauth.php'
 			);
 
+			wpf_log( 'info', 0, 'Requesting authorization token from NationBuilder:', array( 'meta_array_nofilter' => $body ) );
+
 			$params = array(
 				'timeout' 		=> 30,
 				'user-agent' 	=> 'WP Fusion; ' . home_url(),
@@ -80,12 +82,13 @@ class WPF_NationBuilder_Admin {
 
 			$response = wp_remote_post( 'https://' . $_GET['slug'] . '.nationbuilder.com/oauth/token', $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
+				wpf_log( 'error', 0, 'Error getting authorization token: ' . $response->get_error_message() );
 				return false;
 			}
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
-			
+
 			wp_fusion()->settings->set( 'nationbuilder_slug', $_GET['slug'] );
 			wp_fusion()->settings->set( 'nationbuilder_token', $response->access_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
@@ -110,14 +113,14 @@ class WPF_NationBuilder_Admin {
 		$new_settings = array();
 
 		$new_settings['nationbuilder_header'] = array(
-			'title'   => __( 'NationBuilder Configuration', 'wp-fusion' ),
+			'title'   => __( 'NationBuilder Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['nationbuilder_slug'] = array(
-			'title'   => __( 'Nation Slug', 'wp-fusion' ),
+			'title'   => __( 'Nation Slug', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
@@ -140,7 +143,7 @@ class WPF_NationBuilder_Admin {
 		} else {
 
 			$new_settings['nationbuilder_token'] = array(
-				'title'       => __( 'Access Token', 'wp-fusion' ),
+				'title'       => __( 'Access Token', 'wp-fusion-lite' ),
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',

@@ -22,6 +22,8 @@ class WPF_HubSpot {
 
 	public $client_secret;
 
+	public $app_id;
+
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -46,8 +48,9 @@ class WPF_HubSpot {
 		$this->supports = array();
 
 		// OAuth
-		$this->client_id 		= '959bd865-5a24-4a43-a8bf-05a69c537938';
-		$this->client_secret 	= '56cc5735-c274-4e43-99d4-3660d816a624';
+		$this->client_id     = '959bd865-5a24-4a43-a8bf-05a69c537938';
+		$this->client_secret = '56cc5735-c274-4e43-99d4-3660d816a624';
+		$this->app_id        = 180159;
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -181,6 +184,7 @@ class WPF_HubSpot {
 		}
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 120,
 			'httpversion' => '1.1',
 			'headers'     => array(
@@ -260,6 +264,8 @@ class WPF_HubSpot {
 				}
 
 			} elseif( isset( $body_json->status ) && $body_json->status == 'error' ) {
+
+				error_log(print_r($body_json, true));
 
 				$message = $body_json->message;
 
@@ -769,6 +775,10 @@ class WPF_HubSpot {
 
 	public function guest_checkout_complete( $contact_id, $customer_email ) {
 
+		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+			return;
+		}
+
 		setcookie( 'wpf_guest', $customer_email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
@@ -845,6 +855,35 @@ class WPF_HubSpot {
 		return $body_json->portalId;
 
 	}
+
+	//
+	//
+	// WORKFLOW ACTIONS
+	//
+	//
+
+
+	/**
+	 * Get all workflow actions
+	 *
+	 * @access public
+	 * @return array Workflow actions
+	 */
+
+	public function get_actions() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request  = 'https://api.hubapi.com/automation/v4/actions/180159';
+		error_log('request to ' . $request);
+		$response = wp_remote_get( $request, $this->params );
+
+		error_log(print_r($response, true));
+
+	}
+
 
 
 }

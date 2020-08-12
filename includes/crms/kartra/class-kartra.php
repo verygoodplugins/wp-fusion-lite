@@ -155,6 +155,7 @@ class WPF_Kartra {
 		}
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 30,
 			'headers'     => array(
 				'Content-Type'	=> 'application/x-www-form-urlencoded'
@@ -389,7 +390,7 @@ class WPF_Kartra {
 		$params = $this->params;
 
 		$params['body']['get_lead']['email'] = $email_address;
-		
+
 		$response = wp_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
@@ -405,7 +406,7 @@ class WPF_Kartra {
 		// Save to local buffer
 		$kartra_email_buffer = get_option( 'wpf_kartra_email_buffer', array() );
 		$kartra_email_buffer[ $response->lead_details->id ] = $email_address;
-		update_option( 'wpf_kartra_email_buffer', $kartra_email_buffer );
+		update_option( 'wpf_kartra_email_buffer', $kartra_email_buffer, false );
 
 		return $response->lead_details->id;
 
@@ -575,7 +576,7 @@ class WPF_Kartra {
 		// Save to local buffer
 		$kartra_email_buffer = get_option( 'wpf_kartra_email_buffer', array() );
 		$kartra_email_buffer[ $body->actions[0]->create_lead->lead_details->id ] = $data['email'];
-		update_option( 'wpf_kartra_email_buffer', $kartra_email_buffer );
+		update_option( 'wpf_kartra_email_buffer', $kartra_email_buffer, false );
 
 		return $body->actions[0]->create_lead->lead_details->id;
 

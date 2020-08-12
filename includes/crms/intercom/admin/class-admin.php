@@ -58,15 +58,15 @@ class WPF_Intercom_Admin {
 		$new_settings = array();
 
 		$new_settings['intercom_header'] = array(
-			'title'   => __( 'Intercom Configuration', 'wp-fusion' ),
+			'title'   => __( 'Intercom Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['intercom_key'] = array(
-			'title'       => __( 'Access Token', 'wp-fusion' ),
-			'desc'        => __( 'Enter your Intercom access token. You can find it in your Intercom account <a href="https://app.intercom.com/developers/_" target="_blank">here</a>.', 'wp-fusion' ),
+			'title'       => __( 'Access Token', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter your Intercom access token. You can generate one in the Developer Hub in your Intercom account <a href="https://app.intercom.com/developers/_" target="_blank">here</a>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

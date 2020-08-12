@@ -247,3 +247,12 @@ $infusionsoft_fields[] = array(
 	'crm_field' => 'ContactType',
 );
 
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Time Zone',
+	'crm_field' => 'TimeZone',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Language',
+	'crm_field' => 'Language',
+);

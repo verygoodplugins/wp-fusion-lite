@@ -23,11 +23,17 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * Initialize the log table list.
 	 */
 	public function __construct() {
+
 		parent::__construct( array(
 			'singular' => 'wpf-log',
 			'plural'   => 'wpf-logs',
 			'ajax'     => false,
 		) );
+
+		// Stop _wp_http_referer getting appended to the logs URL, so it doesn't get too long
+
+		$_SERVER['REQUEST_URI'] = remove_query_arg( '_wp_http_referer', $_SERVER['REQUEST_URI'] );
+
 	}
 
 	/**
@@ -38,17 +44,18 @@ class WPF_Log_Table_List extends WP_List_Table {
 	public function level_dropdown() {
 
 		$levels = array(
-			array( 'value' => 'error',     'label' => __( 'Error',     'wp-fusion' ) ),
-			array( 'value' => 'warning',   'label' => __( 'Warning',   'wp-fusion' ) ),
-			array( 'value' => 'notice',    'label' => __( 'Notice',    'wp-fusion' ) ),
-			array( 'value' => 'info',      'label' => __( 'Info',      'wp-fusion' ) )
+			array( 'value' => 'error',     'label' => __( 'Error',     'wp-fusion-lite' ) ),
+			array( 'value' => 'warning',   'label' => __( 'Warning',   'wp-fusion-lite' ) ),
+			array( 'value' => 'notice',    'label' => __( 'Notice',    'wp-fusion-lite' ) ),
+			array( 'value' => 'info',      'label' => __( 'Info',      'wp-fusion-lite' ) ),
+			array( 'value' => 'http',      'label' => __( 'HTTP',      'wp-fusion-lite' ) )
 		);
 
 		$selected_level = isset( $_REQUEST['level'] ) ? esc_attr( $_REQUEST['level'] ) : '';
 		?>
-			<label for="filter-by-level" class="screen-reader-text"><?php _e( 'Filter by level', 'wp-fusion' ); ?></label>
+			<label for="filter-by-level" class="screen-reader-text"><?php _e( 'Filter by level', 'wp-fusion-lite' ); ?></label>
 			<select name="level" id="filter-by-level">
-				<option<?php selected( $selected_level, '' ); ?> value=""><?php _e( 'All levels', 'wp-fusion' ); ?></option>
+				<option<?php selected( $selected_level, '' ); ?> value=""><?php _e( 'All levels', 'wp-fusion-lite' ); ?></option>
 				<?php foreach ( $levels as $l ) {
 					printf( '<option%1$s value="%2$s">%3$s</option>',
 						selected( $selected_level, $l['value'], false ),
@@ -67,12 +74,11 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 */
 	public function get_columns() {
 		return array(
-			'cb'        => '<input type="checkbox" />',
-			'timestamp' => __( 'Timestamp', 'wp-fusion' ),
-			'level'     => __( 'Level',     'wp-fusion' ),
-			'user'     	=> __( 'User',     'wp-fusion' ),
-			'message'   => __( 'Message',   'wp-fusion' ),
-			'source'    => __( 'Source',    'wp-fusion' ),
+			'timestamp' => __( 'Timestamp', 'wp-fusion-lite' ),
+			'level'     => __( 'Level',     'wp-fusion-lite' ),
+			'user'     	=> __( 'User',     'wp-fusion-lite' ),
+			'message'   => __( 'Message',   'wp-fusion-lite' ),
+			'source'    => __( 'Source',    'wp-fusion-lite' ),
 		);
 	}
 
@@ -94,7 +100,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 */
 	public function column_timestamp( $log ) {
 		return esc_html( mysql2date(
-			get_option( 'date_format' ) . ' ' . get_option( 'time_format' ),
+			get_option( 'date_format' ) . ' H:i:s',
 			$log['timestamp']
 		) );
 	}
@@ -108,10 +114,11 @@ class WPF_Log_Table_List extends WP_List_Table {
 	public function column_level( $log ) { 
 		$level_key = wp_fusion()->logger->get_severity_level( $log['level'] );
 		$levels    = array(
-			'error'     => __( 'Error',     'wp-fusion' ),
-			'warning'   => __( 'Warning',   'wp-fusion' ),
-			'notice'    => __( 'Notice',    'wp-fusion' ),
-			'info'      => __( 'Info',      'wp-fusion' )
+			'error'     => __( 'Error',     'wp-fusion-lite' ),
+			'warning'   => __( 'Warning',   'wp-fusion-lite' ),
+			'notice'    => __( 'Notice',    'wp-fusion-lite' ),
+			'info'      => __( 'Info',      'wp-fusion-lite' ),
+			'http'      => __( 'HTTP',      'wp-fusion-lite' ),
 		);
 
 		if ( isset( $levels[ $level_key ] ) ) {
@@ -231,9 +238,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * @return array
 	 */
 	protected function get_bulk_actions() {
-		return array(
-			'delete' => __( 'Delete', 'wp-fusion' ),
-		);
+		return array();
 	}
 
 	/**
@@ -247,7 +252,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 				$this->level_dropdown();
 				$this->source_dropdown();
 				$this->user_dropdown();
-				submit_button( __( 'Filter', 'wp-fusion' ), '', 'filter-action', false );
+				submit_button( __( 'Filter', 'wp-fusion-lite' ), '', 'filter-action', false );
 			echo '</div>';
 		}
 	}
@@ -303,9 +308,9 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 			$selected_source = isset( $_REQUEST['source'] ) ? esc_attr( $_REQUEST['source'] ) : '';
 			?>
-				<label for="filter-by-source" class="screen-reader-text"><?php _e( 'Filter by source', 'wp-fusion' ); ?></label>
+				<label for="filter-by-source" class="screen-reader-text"><?php _e( 'Filter by source', 'wp-fusion-lite' ); ?></label>
 				<select name="source" id="filter-by-source">
-					<option<?php selected( $selected_source, '' ); ?> value=""><?php _e( 'All sources', 'wp-fusion' ); ?></option>
+					<option<?php selected( $selected_source, '' ); ?> value=""><?php _e( 'All sources', 'wp-fusion-lite' ); ?></option>
 					<?php foreach ( $sources as $s ) {
 						printf( '<option%1$s value="%2$s">%3$s</option>',
 							selected( $selected_source, $s, false ),
@@ -348,10 +353,10 @@ class WPF_Log_Table_List extends WP_List_Table {
 			natcasesort( $users_list );
 
 			?>
-				<label for="filter-by-user" class="screen-reader-text"><?php _e( 'Filter by user', 'wp-fusion' ); ?></label>
+				<label for="filter-by-user" class="screen-reader-text"><?php _e( 'Filter by user', 'wp-fusion-lite' ); ?></label>
 				<select name="user" id="filter-by-user">
 
-					<option<?php selected( $selected_user, '' ); ?> value=""><?php _e( 'All users', 'wp-fusion' ); ?></option>
+					<option<?php selected( $selected_user, '' ); ?> value=""><?php _e( 'All users', 'wp-fusion-lite' ); ?></option>
 
 					<?php foreach ( $users_list as $user_id => $user_login ) {
 
@@ -473,7 +478,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		$where_conditions = array();
 		$where_values     = array();
 		if ( ! empty( $_REQUEST['level'] ) && wp_fusion()->logger->is_valid_level( $_REQUEST['level'] ) ) {
-			$where_conditions[] = 'level >= %d';
+			$where_conditions[] = 'level = %d';
 			$where_values[]     = wp_fusion()->logger->get_level_severity( $_REQUEST['level'] );
 		}
 		if ( ! empty( $_REQUEST['source'] ) ) {

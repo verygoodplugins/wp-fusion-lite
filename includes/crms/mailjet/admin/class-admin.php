@@ -58,26 +58,26 @@ class WPF_Mailjet_Admin {
 		$new_settings = array();
 
 		$new_settings['mailjet_header'] = array(
-			'title'   => __( 'Mailjet Configuration', 'wp-fusion' ),
+			'title'   => __( 'Mailjet Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'desc'    => __( 'You can find your API Key and Secret Key in the <a href="https://app.mailjet.com/account/api_keys" target="_blank">API key management</a> section of your Mailjet account.', 'wp-fusion' ),
+			'desc'    => __( 'You can find your API Key and Secret Key in the <a href="https://app.mailjet.com/account/api_keys" target="_blank">API key management</a> section of your Mailjet account.', 'wp-fusion-lite' ),
 			'section' => 'setup'
 		);
 
 		$new_settings['mailjet_username'] = array(
-			'title'   => __( 'API Key', 'wp-fusion' ),
-			'desc'    => __( 'Enter the API Key for your Mailjet account.', 'wp-fusion' ),
+			'title'   => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the API Key for your Mailjet account.', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['mailjet_password'] = array(
-			'title'       => __( 'Secret Key', 'wp-fusion' ),
+			'title'       => __( 'Secret Key', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'desc'		  => __( 'Enter the Secret Key for your Mailjet account.', 'wp-fusion' ),
+			'desc'		  => __( 'Enter the Secret Key for your Mailjet account.', 'wp-fusion-lite' ),
 			'post_fields' => array( 'mailjet_username', 'mailjet_password' )
 		);
 

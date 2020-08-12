@@ -59,23 +59,23 @@ class WPF_KlickTipp_Admin {
 		$new_settings = array();
 
 		$new_settings['klicktipp_header'] = array(
-			'title'   => __( 'Klick-Tipp Configuration', 'wp-fusion' ),
+			'title'   => __( 'Klick-Tipp Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['klicktipp_user'] = array(
-			'title'   => __( 'Username', 'wp-fusion' ),
-			'desc'    => __( 'Your Klick-Tipp username', 'wp-fusion' ),
+			'title'   => __( 'Username', 'wp-fusion-lite' ),
+			'desc'    => __( 'Your Klick-Tipp username', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
 		$new_settings['klicktipp_pass'] = array(
-			'title'       => __( 'Password', 'wp-fusion' ),
-			'desc'        => __( 'Your Klick-Tipp password.', 'wp-fusion' ),
+			'title'       => __( 'Password', 'wp-fusion-lite' ),
+			'desc'        => __( 'Your Klick-Tipp password.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

@@ -139,11 +139,13 @@ class WPF_Intercom {
 		}
 
 		$this->params = array(
-			'timeout'     => 30,
-			'headers'     => array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
 				'Accept' 			=> 'application/json',
 				'Authorization'   	=> 'Bearer ' . $access_key,
-				'Content-Type' 		=> 'application/json'
+				'Content-Type' 		=> 'application/json',
+				'Intercom-Version'  => '1.4',
 			)
 		);
 
@@ -284,7 +286,7 @@ class WPF_Intercom {
 
 		foreach( $response->data_attributes as $field ) {
 
-			if( $field->api_writable == true ) {
+			if( $field->api_writable == true && 'customer' == $field->model ) {
 				$crm_fields[ $field->name ] = $field->label;
 			}
 

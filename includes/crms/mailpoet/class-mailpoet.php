@@ -39,7 +39,7 @@ class WPF_MailPoet {
 	public function __construct() {
 
 		$this->slug     = 'mailpoet';
-		$this->name     = 'MailPoet';
+		$this->name     = __( 'MailPoet', 'wp-fusion-lite' );
 		$this->supports = array();
 
 		// Set up admin options
@@ -221,10 +221,12 @@ class WPF_MailPoet {
 
 		$this->connect();
 
+		$send_confirmation = wp_fusion()->settings->get( 'mailpoet_send_confirmation', false );
+
 		try {
 
 			$options = array(
-				'send_confirmation_email'      => false,
+				'send_confirmation_email'      => $send_confirmation,
 				'schedule_welcome_email'       => true,
 				'skip_subscriber_notification' => true,
 			);

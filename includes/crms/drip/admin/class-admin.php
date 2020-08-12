@@ -41,8 +41,65 @@ class WPF_Drip_Admin {
 
 	public function init() {
 
+		add_action( 'wpf_user_profile_after_contact_id', array( $this, 'show_inactive_badge' ) );
+		add_filter( 'wpf_users_list_filter_options', array( $this, 'filter_options' ) );
+		add_filter( 'wpf_users_list_meta_query', array( $this, 'users_list_meta_query' ), 10, 2 );
+
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+
+	}
+
+
+	/**
+	 * Show badge next to users who are inactive
+	 *
+	 * @access  public
+	 * @since   3.33.12
+	 */
+
+	public function show_inactive_badge( $user_id ) {
+
+		if ( ! empty( get_user_meta( $user_id, 'drip_inactive', true ) ) ) {
+			echo '<span class="label label-default"><strong><em>(Inactive - <a href="https://wpfusion.com/documentation/crm-specific-docs/inactive-people-in-drip/" target="_blank">May not be updatable over the API</a>)</em></strong></span>';
+		}
+
+	}
+
+	/**
+	 * Add Inactive to filter options on All Users list
+	 *
+	 * @access  public
+	 * @since   3.33.12
+	 */
+
+	public function filter_options( $options ) {
+
+		$options['inactive'] = __( '(Inactive in Drip)', 'wp-fusion-lite' );
+
+		return $options;
+
+	}
+
+	/**
+	 * Custom meta query for filtering by Inactives in All Users list
+	 *
+	 * @access  public
+	 * @since   3.33.12
+	 */
+
+	public function users_list_meta_query( $meta_query, $filter ) {
+
+		if ( 'inactive' == $filter ) {
+			$meta_query = array(
+				array(
+					'key'     => 'drip_inactive',
+					'compare' => 'EXISTS',
+				),
+			);
+		}
+
+		return $meta_query;
 
 	}
 
@@ -59,23 +116,23 @@ class WPF_Drip_Admin {
 		$new_settings = array();
 
 		$new_settings['drip_header'] = array(
-			'title'   => __( 'Drip Configuration', 'wp-fusion' ),
+			'title'   => __( 'Drip Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['drip_account'] = array(
-			'title'   => __( 'Account ID', 'wp-fusion' ),
-			'desc'    => __( 'Enter the Account ID for your Drip account (find it under Settings >> Site Setup >> 3rd Party Integrations).', 'wp-fusion' ),
+			'title'   => __( 'Account ID', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the Account ID for your Drip account (find it under Settings >> Site Setup >> 3rd Party Integrations).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['drip_token'] = array(
-			'title'       => __( 'API Token', 'wp-fusion' ),
-			'desc'        => __( 'Enter your Drip API token. You can find it in your Drip account <a href="https://www.getdrip.com/user/edit" target="_blank">here</a>.', 'wp-fusion' ),
+			'title'       => __( 'API Token', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter your Drip API token. You can find it in your Drip account <a href="https://www.getdrip.com/user/edit" target="_blank">here</a>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -128,7 +185,7 @@ class WPF_Drip_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'Drip Settings', 'wp-fusion' ),
+			'title'   => __( 'Drip Settings', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -136,22 +193,22 @@ class WPF_Drip_Admin {
 		);
 
 		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="http://kb.getdrip.com/general/installing-your-javascript-snippet/">Drip site tracking</a>.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="http://kb.getdrip.com/general/installing-your-javascript-snippet/">Drip site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
 		);
 
 		$site_tracking['email_change_event'] = array(
-			'title'   => __( 'Email Change Event', 'wp-fusion' ),
-			'desc'    => __( 'Send an <code>Email Changed</code> event when a user changes their email address.', 'wp-fusion' ),
+			'title'   => __( 'Email Change Event', 'wp-fusion-lite' ),
+			'desc'    => __( 'Send an <code>Email Changed</code> event when a user changes their email address.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
 

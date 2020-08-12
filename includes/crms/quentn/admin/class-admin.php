@@ -58,23 +58,23 @@ class WPF_Quentn_Admin {
 		$new_settings = array();
 
 		$new_settings['quentn_header'] = array(
-			'title'   => __( 'Quentn Configuration', 'wp-fusion' ),
+			'title'   => __( 'Quentn Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['quentn_url'] = array(
-			'title'   => __( 'API Base URL', 'wp-fusion' ),
-			'desc'    => __( 'Enter the API URL for your Quentn account (find it under Settings >> API Info in your account).', 'wp-fusion' ),
+			'title'   => __( 'API Base URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the API URL for your Quentn account (find it under Settings >> API Info in your account).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
 		$new_settings['quentn_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can create a new API key in the API Info settings of your Quentn account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can create a new API key in the API Info settings of your Quentn account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

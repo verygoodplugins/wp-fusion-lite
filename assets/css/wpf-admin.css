@@ -51,8 +51,12 @@ body > .select4-container--open {
 span.wpf-tip {
 	font-size: 1.4em;
 	vertical-align: middle;
-	color: #666;
-	cursor: help;
+	color: #777;
+	cursor: pointer;
+}
+
+span.wpf-tip:hover {
+	color: #333;
 }
 
 .tips {
@@ -165,29 +169,7 @@ img.tips {
 	width: 80px;
 }
 
-/* User Filter */
-
-#wpf-user-filter select {
-	display: none;
-}
-
-#wpf-user-filter span.select4-container {
-	top: -2px;
-}
-
-#wpf-user-filter span.select4-container .select4-selection {
-	min-height: 32px;
-    height: 32px;
-}
-
-#wpf-user-filter span.select4-container .select4-selection__rendered {
-	max-height: 32px;
-	white-space: nowrap;
-}
-
-#wpf-user-filter .select4-container .select4-search--inline {
-	float: none;
-}
+/* Accessally */
 
 #aa-pagination {
 	border: 1px solid #ddd;
@@ -201,6 +183,12 @@ img.tips {
 
 body.term-php .wpf-page-redirect-select label {
 	display: none;
+}
+
+/* Gutenberg / LearnDash inputs */
+
+#learndash-course-access-settings .select4-container {
+	min-width: 400px;
 }
 
 /* WPF center column meta boxes */
@@ -229,6 +217,12 @@ body.term-php .wpf-page-redirect-select label {
  	vertical-align: top;
 	margin-top: 2px;
 	margin-left: 2px;
+}
+
+#wpf-meta label > small {
+	display: inline;
+    width: auto;
+    float: none;
 }
 
 #wpf-meta input[type=text] {
@@ -265,6 +259,23 @@ body .select4-drop.select4-drop-active {
 	display: block;
 }
 
+/* LearnDash / other metaboxes with notices */
+
+#wpf-meta .wpf-metabox-notice {
+	font-size: 90%;
+    background: #f6f6f6;
+    line-height: 1.6;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+}
+
+#wpf-meta .wpf-metabox-notice span.notice-required-tags {
+	display: inline-block;
+	margin-top: 5px;
+	font-style: italic;
+}
+
 /* Formidable */
 .frm_form_settings #wp_fusion_settings table td, .frm_single_wpfusion_settings table td {
 	vertical-align: middle;
@@ -292,6 +303,10 @@ body .select4-drop.select4-drop-active {
 /* RCP */
 #rcp-edit-subscription .select4-container {
 	min-width: 300px !important;
+}
+
+#rcpga-edit-group-info .select4-container {
+	min-width: 360px;
 }
 
 
@@ -535,10 +550,6 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	margin-top: 5px;
 }
 
-.options_group.wpf-product label {
-	margin-right: 10px;
-}
-
 .select4 + span.description {
 	display: block;
 	margin-top: 4px;
@@ -554,9 +565,21 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 
 /* wpForo / Private Messages / Generic */
 
-#wpf-settings-table .select4-container {
+#wpf-settings-table, .wpf-settings-table {
+	max-width: 800px;
+}
+
+#wpf-settings-table .select4-container, .wpf-settings-table .select4-container {
 	width: 100% !important;
 	max-width: 380px;
+}
+
+#wpf-settings-table tr:hover, .wpf-settings-table tr:hover {
+	background-color: rgba(0,0,0,.02);
+}
+
+#wpf-settings-table th, .wpf-settings-table th {
+	text-align: left;
 }
 
 /* WC addons */
@@ -600,6 +623,12 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	min-width: 0;
 	width: auto !important;
 	grid-column: 10/13;
+}
+
+/* Ultimate Member */
+
+#um-admin-form-admin .select4-container {
+	width: 100%;
 }
 
 /* WP Ultimo */

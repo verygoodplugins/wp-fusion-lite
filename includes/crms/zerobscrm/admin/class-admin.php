@@ -57,14 +57,14 @@ class WPF_ZeroBSCRM_Admin {
 		$new_settings = array();
 
 		$new_settings['zerobscrm_header'] = array(
-			'title'   => __( 'ZeroBSCRM Configuration', 'wp-fusion' ),
+			'title'   => __( 'ZeroBSCRM Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['zerobscrm_connect'] = array(
-			'title'       => __( 'Connect', 'wp-fusion' ),
+			'title'       => __( 'Connect', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

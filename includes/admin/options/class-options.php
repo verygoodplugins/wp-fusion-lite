@@ -712,7 +712,7 @@ class WPF_Options {
 
 		<div class="wrap">
 		<img id="wpf-settings-logo" src="<?php echo WPF_DIR_URL; ?>/assets/img/logo-sm-trans.png">
-		<h2 id="wpf-settings-header"><?php echo $page['page_title']; ?> </h2>
+		<h2 id="wpf-settings-header"><?php echo $page['page_title']; ?> <?php do_action( 'wpf_settings_page_title' ); ?></h2>
 
 		<?php do_action( 'wpf_settings_after_page_title' ); ?>
 
@@ -842,7 +842,7 @@ class WPF_Options {
 					<?php $isfirst = false; ?>
 				<?php } ?>
 			</div>
-			<p class="submit"><input name="Submit" type="submit" class="button-primary" value="Save Changes" /></p>
+			<p class="submit"><input name="Submit" type="submit" class="button-primary" value="<?php _e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
 		</form>
 
 	<?php
@@ -989,7 +989,13 @@ class WPF_Options {
 	 */
 	private function show_field_begin( $id, $field ) {
 		echo '<tr valign="top"' . ( ! empty( $field['disabled'] ) ? ' class="disabled"' : '' ) . '>';
-		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label></th>';
+		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label>';
+
+		if ( isset( $field['tooltip'] ) ) {
+			echo ' <i class="fa fa-question-circle wpf-tip right" data-tip="' . $field['tooltip'] . '"></i>';
+		}
+
+		echo '</th>';
 		echo '<td>';
 	}
 
@@ -1261,7 +1267,7 @@ class WPF_Options {
 	 */
 	private function show_field_textarea( $id, $field ) {
 
-		echo '<textarea class="form-control ' . $field['class'] . '" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" placeholder="' . $field['std'] . '" rows="' . $field['rows'] . '" cols="' . $field['cols'] . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . wp_htmledit_pre( $this->options[ $id ] ) . '</textarea>';
+		echo '<textarea class="form-control ' . $field['class'] . '" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" placeholder="' . $field['placeholder'] . '" rows="' . $field['rows'] . '" cols="' . $field['cols'] . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . format_for_editor( $this->options[ $id ] ) . '</textarea>';
 	}
 
 	/**
@@ -1307,10 +1313,6 @@ class WPF_Options {
 
 		if ( $field['desc'] != '' ) {
 			echo '<label for="' . $id . '">' . $field['desc'] . '</label>';
-		}
-
-		if ( isset( $field['tooltip'] ) ) {
-			echo '<i class="fa fa-info-circle wpf-tip right" data-tip="' . $field['tooltip'] . '"></i>';
 		}
 
 	}
@@ -2081,7 +2083,7 @@ class WPF_Options {
 
 	private function show_field_import( $id, $field ) {
 
-		echo '<textarea class="form-control ' . $field['class'] . '" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" placeholder="' . $field['std'] . '" rows="3" cols="39" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . wp_htmledit_pre( $this->options[ $id ] ) . '</textarea>';
+		echo '<textarea class="form-control ' . $field['class'] . '" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" placeholder="' . $field['std'] . '" rows="3" cols="39" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . format_for_editor( $this->options[ $id ] ) . '</textarea>';
 	}
 
 	/**

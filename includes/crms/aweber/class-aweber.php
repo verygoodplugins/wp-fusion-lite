@@ -30,7 +30,7 @@ class WPF_AWeber {
 
 	/**
 	 * List to use
-	 */	
+	 */
 
 	public $list;
 
@@ -333,7 +333,7 @@ class WPF_AWeber {
 		} catch (Exception $e) {
 
 			return new WP_Error( 'error', $e->getMessage() );
-			
+
 		}
 
 		if ( ! empty( $subscriber->data['entries'] ) ) {
@@ -363,11 +363,11 @@ class WPF_AWeber {
 		} catch (Exception $e) {
 
 			return new WP_Error( 'error', $e->getMessage() );
-			
+
 		}
 
 		if( empty( $subscriber->data ) || empty( $subscriber->data['tags'] ) ) {
-			return false;
+			return array();
 		}
 
 		// Merge tags with available ones
@@ -405,7 +405,7 @@ class WPF_AWeber {
 		} catch (Exception $e) {
 
 			return new WP_Error( 'error', $e->getMessage() );
-			
+
 		}
 
 		$subscriber->tags = array(

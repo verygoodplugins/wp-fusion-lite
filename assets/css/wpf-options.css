@@ -5,8 +5,8 @@
     background: #fff;
     padding: 15px 30px 25px;
     box-shadow: 0px 1px 5px rgba(0,0,0,0.25);
-    z-index: 999;
-    max-width: 360px;
+    z-index: 0;
+    max-width: 320px;
 }
 
 #wpf-pro #wpf-pro-top {
@@ -51,19 +51,12 @@
 
 input[type="checkbox"] {
 	margin-right: 7px;
-	width: 16px;
-    height: 16px;
-    font-size: 15px;
-    padding: 1px 2px !important;
-    -webkit-appearance: checkbox;
 }
 
 input[type="radio"] {
-	width: 16px;
-    height: 16px;
-	-webkit-appearance: radio;
-	top: -2px;
+	top: -1px;
     position: relative;
+    display: inline-block !important;
 }
 
 input[type="checkbox"]:focus, input[type="radio"]:focus {
@@ -247,7 +240,11 @@ th.sync {
 	width: 30px;
 }
 
-#contact-fields tr.group-header td {
+#contact-fields > table > tbody > tr > td {
+	padding: 0px;
+}
+
+#contact-fields-table tr.group-header td {
 	padding: 10px 15px;
     border: 1px solid #ccc;
     font-weight: bold;
@@ -256,53 +253,53 @@ th.sync {
     position: relative;
 }
 
-#contact-fields tr.group-header td .group-header-title {
+#contact-fields-table tr.group-header td .group-header-title {
 	font-weight: bold;
 	width: 100%;
 }
 
-#contact-fields tr.group-header td .group-header-title i.fa {
+#contact-fields-table tr.group-header td .group-header-title i.fa {
 	float: right;
     font-size: 24px;
     line-height: 20px;
     padding-right: 10px;
 }
 
-#contact-fields tr.group-header td .group-header-title i.fa.fa-angle-down {
+#contact-fields-table tr.group-header td .group-header-title i.fa.fa-angle-down {
 	display: none;
 }
 
-#contact-fields tr.group-header td .group-header-title.collapsed i.fa.fa-angle-down {
+#contact-fields-table tr.group-header td .group-header-title.collapsed i.fa.fa-angle-down {
 	display: block;
 }
 
-#contact-fields tr.group-header td .group-header-title.collapsed i.fa.fa-angle-up {
+#contact-fields-table tr.group-header td .group-header-title.collapsed i.fa.fa-angle-up {
 	display: none;
 }
 
-#contact-fields tr.group-header td input {
+#contact-fields-table tr.group-header td input {
 	display: none;
 }
 
-#contact-fields td, #import-groups td {
+#contact-fields-table td, #import-groups td {
 	padding: 4px 8px;
 }
 
-#contact-fields td.wp_field_label label {
+#contact-fields-table td.wp_field_label label {
 	position: relative;
 	top: -2px;
 }
 
-#contact-fields td.wp_field_type input[type="text"] {
+#contact-fields-table td.wp_field_type input[type="text"] {
 	width: auto;
 	max-width: 80px;
 }
 
-#contact-fields td .checkbox {
+#contact-fields-table td .checkbox {
 	margin-left: 7px;
 }
 
-#wpf-settings #contact-fields input[type="text"] {
+#wpf-settings #contact-fields-table input[type="text"] {
 	width: 100%;
 }
 
@@ -316,7 +313,7 @@ th.sync {
 }
 
 #wpf-settings input[type="text"], #wpf-settings input[type="password"] {
-    width: 300px;
+    width: 318px;
 }
 
 
@@ -325,15 +322,16 @@ th.sync {
 	min-width: 600px;
 }
 
-#wpf-settings i.fa-info-circle{
+#wpf-settings i.wpf-tip {
 	padding-left: 4px;
 	font-size: 16px;
 	line-height: 1.5;
 	vertical-align: middle;
 	color: #666;
+	cursor: pointer;
 }
 
-#wpf-settings i.tooltip:hover {
+#wpf-settings i.wpf-tip:hover {
 	color: #333;
 }
 
@@ -381,8 +379,8 @@ th.sync {
 	background-color: #0074d9;
 }
 
-.wp-list-table.wpf-logs .log-level--debug {
-	background-color: #3d9970;
+.wp-list-table.wpf-logs .log-level--http {
+	background-color: #5fc15d;
 }
 
 .wp-list-table.wpf-logs .log-level {
@@ -398,6 +396,12 @@ th.sync {
 	border-radius: .2em;
 }
 
+.wp-list-table.wpf-logs .column-message pre {
+	background: #eee;
+    padding: 10px;
+    overflow-x: scroll;
+}
+
 
 @media screen and (min-width: 783px) {
 	.wp-list-table.wpf-logs .column-timestamp {
@@ -410,7 +414,7 @@ th.sync {
 		width: 10%;
 	}
 	.wp-list-table.wpf-logs .column-user {
-		width: 20%
+		width: 15%
 	}
 	.wp-list-table.wpf-logs .column-level {
 		width: 10%;

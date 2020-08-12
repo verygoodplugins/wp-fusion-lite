@@ -76,7 +76,7 @@ class WPF_CRM_Base {
 
 		// Default field value formatting
 
-		if( ! isset( $this->crm_no_queue->override_filters ) ) {
+		if ( ! isset( $this->crm_no_queue->override_filters ) ) {
 
 			add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 5, 3 );
 
@@ -229,21 +229,28 @@ class WPF_CRM_Base {
 		foreach ( (array) wp_fusion()->settings->get( 'contact_fields' ) as $field => $field_data ) {
 
 			// If field exists in form and sync is active
-			if ( array_key_exists($field, $user_data) && $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
+			if ( array_key_exists( $field, $user_data ) && $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
 
-				if( empty( $field_data['type'] ) ) {
+				if ( empty( $field_data['type'] ) ) {
 					$field_data['type'] = 'text';
 				}
 
 				$value = apply_filters( 'wpf_format_field_value', $user_data[ $field ], $field_data['type'], $field_data['crm_field'] );
 
 				// Allow overriding empty() check by returning null from wpf_format_field_value
-				if ( $value === null ) {
-					$update_data[ $field_data['crm_field'] ] = '';
-				} elseif( ! empty( $value ) ) {
-					$update_data[ $field_data['crm_field'] ] = $value;
-				}
+				if ( is_null( $value ) ) {
 
+					$update_data[ $field_data['crm_field'] ] = '';
+
+				} elseif ( 0 === $value || '0' === $value ) {
+
+					$update_data[ $field_data['crm_field'] ] = 0;
+
+				} elseif ( ! empty( $value ) ) {
+
+					$update_data[ $field_data['crm_field'] ] = $value;
+
+				}
 			}
 		}
 
@@ -260,14 +267,14 @@ class WPF_CRM_Base {
 	 * @return string / false
 	 */
 
-	public function get_crm_field( $meta_key ) {
+	public function get_crm_field( $meta_key, $default = false ) {
 
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
 		if ( ! empty( $contact_fields[ $meta_key ] ) && ! empty( $contact_fields[ $meta_key ]['crm_field'] ) ) {
 			return $contact_fields[ $meta_key ]['crm_field'];
 		} else {
-			return false;
+			return $default;
 		}
 
 	}
@@ -280,6 +287,8 @@ class WPF_CRM_Base {
 	 */
 
 	public function is_field_active( $meta_key ) {
+
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
 		if ( ! empty( $contact_fields[ $meta_key ] ) && $contact_fields[ $meta_key ]['active'] == true ) {
 			return true;
@@ -311,15 +320,9 @@ class WPF_CRM_Base {
 			// Don't modify it if it's a dynamic tag field
 			return $value;
 
-		} elseif ( $field_type == 'capabilities' && is_array( $value ) ) {
-
-			$value = implode( ",", array_keys( $value ) );
-
-			return $value;
-
 		} elseif ( ($field_type == 'multiselect' && is_array($value)) || is_array($value) ) {
 
-			$value = implode( ",", $value );
+			$value = implode( ',', $value );
 
 			return $value;
 

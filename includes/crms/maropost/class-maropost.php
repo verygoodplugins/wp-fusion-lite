@@ -112,17 +112,30 @@ class WPF_Maropost {
 
 			$code = wp_remote_retrieve_response_code( $response );
 
-			if ( $code == 401 ) {
-				$response = new WP_Error( 'error', 'Invalid API key.' );
-			} elseif ( $code == 422 ) {
-				$response = new WP_Error( 'error', 'Unprocessable entity.' );
-			}
-
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $body_json->error ) ) {
 
 				$response = new WP_Error( 'error', $body_json->error );
+
+			} elseif ( $code == 401 ) {
+
+				$response = new WP_Error( 'error', 'Invalid API key.' );
+
+			} elseif ( $code == 403 ) {
+
+				$response = new WP_Error( 'error', 'Forbidden.' );
+
+			} elseif ( $code == 422 ) {
+
+				if ( ! empty( $body_json ) ) {
+
+					$response = new WP_Error( 'error', 'Unprocessable entity: ' . print_r( $body_json, true ) );
+
+				} else {
+					$response = new WP_Error( 'error', 'Unprocessable entity.' );
+				}
+
 			}
 		}
 
@@ -149,8 +162,9 @@ class WPF_Maropost {
 		$this->api_key    = $api_key;
 
 		$this->params = array(
-			'timeout' => 20,
-			'headers' => array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 20,
+			'headers'    => array(
 				'Content-Type' => 'application/json',
 				'Accept'       => 'application/json',
 			),
@@ -231,8 +245,17 @@ class WPF_Maropost {
 		if ( ! empty( $users ) ) {
 			return $users[0]->user_email;
 		} else {
-			return false;
+
+			// Load contact
+
+			$user_meta = $this->load_contact( $contact_id );
+
+			if ( ! empty( $user_meta['user_email'] ) ) {
+				return $user_meta['user_email'];
+			}
 		}
+
+		return false;
 
 	}
 
@@ -528,9 +551,25 @@ class WPF_Maropost {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+
+		$standard_fields = $crm_fields['Standard Fields'];
+		$custom_fields   = $crm_fields['Custom Fields'];
+
+		$custom_data   = array_intersect_key( $data, $custom_fields );
+		$standard_data = array_intersect_key( $data, $standard_fields );
+
+		$field_data = array(
+			'contact' => $standard_data,
+		);
+
+		if ( ! empty( $custom_data ) ) {
+			$field_data['custom_field'] = $custom_data;
+		}
+
 		$url            = 'http://api.maropost.com/accounts/' . $this->account_id . '/lists/' . $mp_list . '/contacts.json?auth_token=' . $this->api_key;
 		$params         = $this->params;
-		$params['body'] = json_encode( array( 'contact' => $data ) );
+		$params['body'] = json_encode( $field_data );
 
 		$response = wp_remote_post( $url, $params );
 

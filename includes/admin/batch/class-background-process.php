@@ -106,23 +106,56 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			$key = $this->generate_key();
 
-			if ( ! empty( $this->data ) ) {
-
-				update_site_option( $key, $this->data );
-
-			}
-
 			if ( count( $this->data ) > 1 ) {
 
 				// Save status for health check. Don't track status on quick-add from Woo orders etc.
 
 				$status = array(
-					'key'        => $key,
-					'total'      => count( $this->data ),
-					'remaining'  => count( $this->data ),
-					'max_memory' => $this->get_memory_limit(),
+					'key'       => $key,
+					'total'     => count( $this->data ),
+					'remaining' => count( $this->data ),
 				);
 
+				// Get max packet size
+
+				global $wpdb;
+				$max_packet_size = $wpdb->get_var( "SHOW VARIABLES LIKE 'max_allowed_packet'", 1 );
+
+				$max_packet_size           = $max_packet_size / 1024 / 1024;
+				$status['max_packet_size'] = $max_packet_size . 'MB';
+
+				// Get data size
+
+				if ( function_exists( 'mb_strlen' ) ) {
+
+					$data_size           = mb_strlen( serialize( $this->data ), '8bit' );
+					$data_size           = $data_size / 1024;
+					$status['data_size'] = round( $data_size ) . 'KB';
+
+				}
+
+				// Get human readable max memory
+
+				$max_memory = $this->get_memory_limit();
+				$max_memory = $max_memory / 1024 / 1024;
+
+				$status['max_memory'] = $max_memory;
+
+				update_site_option( 'wpfb_status', $status );
+
+			}
+
+			if ( ! empty( $this->data ) ) {
+
+				$result = update_site_option( $key, $this->data );
+
+			}
+
+			// Cases where the data is too big to be saved
+
+			if ( false === $result && isset( $status ) ) {
+
+				$status['saved'] = 'Failed to save';
 				update_site_option( 'wpfb_status', $status );
 
 			}
@@ -424,7 +457,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			$this->unlock_process();
 
 			// Start next batch or complete process.
-			if( $this->is_cancelled() ) {
+			if ( $this->is_cancelled() ) {
 
 				$this->cancel_process();
 
@@ -573,6 +606,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * and data exists in the queue.
 		 */
 		public function handle_cron_healthcheck() {
+
 			if ( $this->is_process_running() ) {
 				// Background process already running.
 				exit;
@@ -650,7 +684,17 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			// Disable turbo for bulk processes
 			wp_fusion()->crm = wp_fusion()->crm_base->crm_no_queue;
 
-			do_action_ref_array( $item['action'], $item['args'] );
+			if ( isset( $item['action'] ) ) {
+
+				do_action_ref_array( $item['action'], $item['args'] );
+
+			} else {
+
+				// New minified method
+
+				do_action_ref_array( 'wpf_batch_' . $item[0], $item[1] );
+
+			}
 
 			$sleep = apply_filters( 'wpf_batch_sleep_time', 0 );
 

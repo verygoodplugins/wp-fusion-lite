@@ -45,8 +45,29 @@ class WPF_HubSpot_Admin {
 
 	public function init() {
 
+		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+
+	}
+
+
+	/**
+	 * Compatibility checks
+	 *
+	 * @access public
+	 * @return array Notices
+	 */
+
+	public function compatibility_notices( $notices ) {
+
+		if ( is_plugin_active( 'leadin/leadin.php' ) ) {
+
+			$notices['hs-plugin'] = 'The <strong>HubSpot for WordPress</strong> plugin is active. For best compatibility with WP Fusion it\'s recommended to deactivate support for Non-HubSpot Forms at Forms &raquo; Non-HubSpot Forms <a href="' . admin_url( 'admin.php?page=leadin_settings' ) . '">in the settings</a>.';
+
+		}
+
+		return $notices;
 
 	}
 
@@ -109,7 +130,7 @@ class WPF_HubSpot_Admin {
 		$new_settings = array();
 
 		$new_settings['hubspot_header'] = array(
-			'title'   => __( 'HubSpot Configuration', 'wp-fusion' ),
+			'title'   => __( 'HubSpot Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -121,20 +142,20 @@ class WPF_HubSpot_Admin {
 
 			$new_settings['hubspot_header']['desc'] = '<table class="form-table"><tr>';
 			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="https://app.hubspot.com/oauth/authorize?redirect_uri=' .  urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts">Authorize with HubSpot</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="https://app.hubspot.com/oauth/authorize?redirect_uri=' .  urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts%20oauth&optional_scope=automation">Authorize with HubSpot</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['hubspot_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
 
 			$new_settings['hubspot_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion' ),
+				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'std'     => '',
 				'type'    => 'text',
 				'section' => 'setup'
 			);
 
 			$new_settings['hubspot_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion' ),
+				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
@@ -162,7 +183,7 @@ class WPF_HubSpot_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'HubSpot Site Tracking', 'wp-fusion' ),
+			'title'   => __( 'HubSpot Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -170,8 +191,8 @@ class WPF_HubSpot_Admin {
 		);
 
 		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://knowledge.hubspot.com/articles/kcs_article/account/how-does-hubspot-track-visitors">HubSpot site tracking</a>.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://knowledge.hubspot.com/articles/kcs_article/account/how-does-hubspot-track-visitors">HubSpot site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
@@ -183,7 +204,7 @@ class WPF_HubSpot_Admin {
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
 

@@ -58,15 +58,15 @@ class WPF_Platformly_Admin {
 		$new_settings = array();
 
 		$new_settings['platformly_header'] = array(
-			'title'   => __( 'Platformly Configuration', 'wp-fusion' ),
+			'title'   => __( 'Platformly Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['platformly_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can create an API key from the API Docs &amp; Keys section of your Platform.ly account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can create an API key from the API Docs &amp; Keys section of your Platform.ly account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -76,7 +76,7 @@ class WPF_Platformly_Admin {
 		if( $settings['connection_configured'] == true && wp_fusion()->settings->get('crm') == 'platformly' ) {
 
 			$new_settings['platformly_project'] = array(
-				'title'   => __( 'Project', 'wp-fusion' ),
+				'title'   => __( 'Project', 'wp-fusion-lite' ),
 				'std'     => false,
 				'type'    => 'select',
 				'section' => 'setup',

@@ -62,15 +62,15 @@ class WPF_ConvertKit_Admin {
 		$new_settings = array();
 
 		$new_settings['convertkit_header'] = array(
-			'title'   => __( 'ConvertKit Configuration', 'wp-fusion' ),
+			'title'   => __( 'ConvertKit Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['ck_secret'] = array(
-			'title'       => __( 'API Secret', 'wp-fusion' ),
-			'desc'        => __( 'Enter the API Secret for your ConvertKit account (you can find your API Secret in the ConvertKit Account page).', 'wp-fusion' ),
+			'title'       => __( 'API Secret', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter the API Secret for your ConvertKit account (you can find your API Secret in the ConvertKit Account page).', 'wp-fusion-lite' ),
 			'std'         => '',
 			'type'        => 'api_validate',
 			'section'     => 'setup',
@@ -97,14 +97,14 @@ class WPF_ConvertKit_Admin {
 			'std'     => 0,
 			'type'    => 'paragraph',
 			'section' => 'main',
-			'desc'    => __( 'Configuring the fields below allows ConvertKit to add new users to your site and update existing users when specific tags are applied from within ConvertKit. Read our <a href="https://wpfusion.com/documentation/webhooks/convertkit-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
+			'desc'    => __( 'Configuring the fields below allows ConvertKit to add new users to your site and update existing users when specific tags are applied from within ConvertKit. Read our <a href="https://wpfusion.com/documentation/webhooks/convertkit-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion-lite' ),
 		);
 
 		$new_settings = array();
 
 		$new_settings['ck_update_tag'] = array(
-			'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
-			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion' ),
+			'title' 	=> __( 'Update Trigger', 'wp-fusion-lite' ),
+			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion-lite' ),
 			'type'		=> 'assign_tags',
 			'section'	=> 'main',
 			'placeholder' => 'Select a tag',
@@ -119,8 +119,8 @@ class WPF_ConvertKit_Admin {
 			);
 
 		$new_settings['ck_add_tag'] = array(
-			'title' 	=> __( 'Import Trigger', 'wp-fusion' ),
-			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, they will be imported as a new WordPres user.', 'wp-fusion' ),
+			'title' 	=> __( 'Import Trigger', 'wp-fusion-lite' ),
+			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, they will be imported as a new WordPres user.', 'wp-fusion-lite' ),
 			'type'		=> 'assign_tags',
 			'section'	=> 'main',
 			'placeholder' => 'Select a tag',
@@ -135,8 +135,8 @@ class WPF_ConvertKit_Admin {
 			);
 
 		$new_settings['ck_import_notification'] = array(
-			'title'   => __( 'Enable Notifications', 'wp-fusion' ),
-			'desc'    => __( 'Send a welcome email to new users containing their username and a password reset link.', 'wp-fusion' ),
+			'title'   => __( 'Enable Notifications', 'wp-fusion-lite' ),
+			'desc'    => __( 'Send a welcome email to new users containing their username and a password reset link.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
 			'std'	  => 0
@@ -147,14 +147,14 @@ class WPF_ConvertKit_Admin {
 		$new_settings = array();
 
 		$new_settings['ck_header'] = array(
-			'title'   => __( 'ConvertKit Settings', 'wp-fusion' ),
+			'title'   => __( 'ConvertKit Settings', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'advanced'
 		);
 
 		$new_settings['ck_notify_unsubscribe'] = array(
-			'title' 	=> __( 'Notify on Unsubscribe', 'wp-fusion' ),
-			'desc'		=> __( 'Send a notification email when a subscriber with a WordPress user account unsubscribes. See <a href="https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/">the documentation</a> for more info.', 'wp-fusion' ),
+			'title' 	=> __( 'Notify on Unsubscribe', 'wp-fusion-lite' ),
+			'desc'		=> __( 'Send a notification email when a subscriber with a WordPress user account unsubscribes. See <a href="https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/">the documentation</a> for more info.', 'wp-fusion-lite' ),
 			'type'		=> 'checkbox',
 			'section'	=> 'advanced',
 			'std'		=> 0,
@@ -169,8 +169,8 @@ class WPF_ConvertKit_Admin {
 			);
 
 		$new_settings['ck_notify_email'] = array(
-			'title' 	=> __( 'Notification Email', 'wp-fusion' ),
-			'desc'		=> __( 'The notification will be sent to this email.', 'wp-fusion' ),
+			'title' 	=> __( 'Notification Email', 'wp-fusion-lite' ),
+			'desc'		=> __( 'The notification will be sent to this email.', 'wp-fusion-lite' ),
 			'type'		=> 'text',
 			'section'	=> 'advanced',
 			'std'		=> get_option( 'admin_email' ),

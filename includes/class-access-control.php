@@ -36,11 +36,17 @@ class WPF_Access_Control {
 		// Site lockout
 		add_action( 'template_redirect', array( $this, 'maybe_do_lockout' ), 13 );
 
-		// Return after login
-		add_action( 'wp_login', array( $this, 'return_after_login' ), 10, 2 );
-
 		// Apply tags on view scripts
 		add_action( 'wp_enqueue_scripts', array( $this, 'apply_tags_on_view' ) );
+
+		// Return after login
+
+		if ( wp_fusion()->settings->get( 'return_after_login' ) ) {
+
+			$priority = wp_fusion()->settings->get( 'return_after_login_priority', 10 );
+			add_action( 'wp_login', array( $this, 'return_after_login' ), intval( $priority ), 2 );
+
+		}
 
 	}
 
@@ -66,6 +72,10 @@ class WPF_Access_Control {
 		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && user_can( $user_id, 'manage_options' ) ) {
 			return true;
 		}
+
+		// Allow inheriting protections from another post
+
+		$post_id = apply_filters( 'wpf_user_can_access_post_id', $post_id );
 
 		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
 
@@ -155,7 +165,6 @@ class WPF_Access_Control {
 			}
 		}
 
-		// If no tags matched
 		return apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id );
 
 	}
@@ -242,8 +251,8 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		if ( $user_id == false ) {
-			$user_id == wpf_get_current_user_id();
+		if ( false == $user_id ) {
+			$user_id = wpf_get_current_user_id();
 		}
 
 		// We need to un-hide hidden terms to see if the post is accessible
@@ -261,15 +270,23 @@ class WPF_Access_Control {
 
 		foreach ( $terms as $term_id ) {
 
-			if ( ! isset( $taxonomy_rules[ $term_id ] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_content'] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_posts'] ) || ! isset( $taxonomy_rules[ $term_id ]['allow_tags'] ) ) {
+			if ( empty( $taxonomy_rules[ $term_id ] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_posts'] ) ) {
 				continue;
 			}
 
-			$result = array_intersect( $taxonomy_rules[ $term_id ]['allow_tags'], $user_tags );
-
-			if ( empty( $result ) ) {
+			if ( ! wpf_is_user_logged_in() ) {
 				$can_access = false;
 				break;
+			}
+
+			if ( ! empty( $taxonomy_rules[ $term_id ]['allow_tags'] ) ) {
+
+				$result = array_intersect( $taxonomy_rules[ $term_id ]['allow_tags'], $user_tags );
+
+				if ( empty( $result ) ) {
+					$can_access = false;
+					break;
+				}
 			}
 		}
 
@@ -359,15 +376,22 @@ class WPF_Access_Control {
 
 		foreach ( $terms as $term_id ) {
 
-			if ( ! isset( $taxonomy_rules[ $term_id ] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_content'] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_posts'] ) || ! isset( $taxonomy_rules[ $term_id ]['allow_tags'] ) ) {
+			if ( ! isset( $taxonomy_rules[ $term_id ] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_content'] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_posts'] ) ) {
 				continue;
 			}
 
-			// If user doesn't have the tags to access that term, return the redirect for that term
-			$result = array_intersect( $taxonomy_rules[ $term_id ]['allow_tags'], $user_tags );
+			if ( ! wpf_is_user_logged_in() && empty( $taxonomy_rules[ $term_id ]['allow_tags'] ) ) {
 
-			if ( empty( $result ) ) {
 				return $taxonomy_rules[ $term_id ];
+
+			} elseif ( ! empty( $taxonomy_rules[ $term_id ]['allow_tags'] ) ) {
+
+				// If user doesn't have the tags to access that term, return the redirect for that term
+				$result = array_intersect( $taxonomy_rules[ $term_id ]['allow_tags'], $user_tags );
+
+				if ( empty( $result ) ) {
+					return $taxonomy_rules[ $term_id ];
+				}
 			}
 		}
 
@@ -394,7 +418,7 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		if ( is_admin() || is_search() ) {
+		if ( is_admin() || is_search() || ( is_front_page() && is_home() ) ) { // Don't run if the front page is the blog index page
 
 			return true;
 
@@ -436,7 +460,7 @@ class WPF_Access_Control {
 
 			if ( ! empty( $redirect ) ) {
 
-				wp_redirect( $redirect );
+				wp_redirect( $redirect, 302, 'WP Fusion; Term ID ' . $queried_object->term_id );
 				exit();
 
 			}
@@ -483,7 +507,7 @@ class WPF_Access_Control {
 				// Return after login
 				$this->set_return_after_login( $post_id );
 
-				wp_redirect( $redirect );
+				wp_redirect( $redirect, 302, 'WP Fusion; Post ID ' . $post_id );
 				exit();
 
 			} else {
@@ -645,15 +669,34 @@ class WPF_Access_Control {
 				return;
 			}
 
-			$post_id = url_to_postid( $lockout_url );
+			$lockout_urls = array( $lockout_url );
+
+			$additional_urls = wp_fusion()->settings->get( 'lockout_allowed_urls' );
+
+			if ( ! empty( $additional_urls ) ) {
+
+				$additional_urls = explode( PHP_EOL, $additional_urls );
+				$additional_urls = array_map( 'trim', $additional_urls );
+
+				$lockout_urls = array_merge( $lockout_urls, $additional_urls );
+
+			}
+
+			// Check the current post to see if it's allowed
 
 			global $post;
 
-			if ( ! empty( $post_id ) && $post->ID == $post_id ) {
-				return;
+			foreach ( $lockout_urls as $url ) {
+
+				$post_id = url_to_postid( $url );
+
+				if ( ! empty( $post_id ) && $post->ID == $post_id ) {
+					return;
+				}
+
 			}
 
-			wp_redirect( $lockout_url );
+			wp_redirect( $lockout_url, 302, 'WP Fusion; Lockout' );
 			exit();
 
 		}
@@ -675,7 +718,7 @@ class WPF_Access_Control {
 			$agent = strtolower( $_SERVER['HTTP_USER_AGENT'] );
 		}
 
-		$known_engines = array( 'google', 'bing', 'msn', 'yahoo', 'ask' );
+		$known_engines = array( 'google', 'bing', 'msn', 'yahoo', 'ask', 'facebook' );
 
 		foreach ( $known_engines as $engine ) {
 
@@ -687,6 +730,10 @@ class WPF_Access_Control {
 				$hostname = gethostbyaddr( $ip_to_check );
 
 				if ( $engine == 'google' && ! preg_match( '#^.*\.googlebot\.com$#', $hostname ) ) {
+					break;
+				}
+
+				if ( $engine == 'facebook' && ! preg_match( '#^.*\.fbsv\.net$#', $hostname ) ) {
 					break;
 				}
 
@@ -767,7 +814,7 @@ class WPF_Access_Control {
 
 					unset( $items[ $key ] );
 
-				} elseif ( $this->user_can_access( $item->object_id ) === false ) {
+				} elseif ( $item->type == 'post_type' && $this->user_can_access( $item->object_id ) === false ) {
 
 					unset( $items[ $key ] );
 
@@ -779,10 +826,20 @@ class WPF_Access_Control {
 
 		foreach ( $items as $key => $item ) {
 
+			$item_id = $item->ID;
+
 			$settings = get_post_meta( $item->ID, 'wpf-settings', true );
 
 			if ( empty( $settings ) ) {
-				continue;
+
+				$item_id = $item->menu_item_parent;
+
+				// Also hide if parent is hidden
+				$settings = get_post_meta( $item_id, 'wpf-settings', true );
+
+				if ( empty( $settings ) ) {
+					continue;
+				}
 			}
 
 			// Skip for loggedout setting
@@ -790,7 +847,7 @@ class WPF_Access_Control {
 				continue;
 			}
 
-			if ( ! $this->user_can_access( $item->ID ) ) {
+			if ( ! $this->user_can_access( $item_id ) ) {
 
 				unset( $items[ $key ] );
 
@@ -819,7 +876,7 @@ class WPF_Access_Control {
 			return;
 		}
 
-		if ( ( ! is_admin() || defined( 'DOING_AJAX' ) ) && ! $query->is_main_query() || $query->is_search() || $query->is_archive() ) {
+		if ( ( ! is_admin() || defined( 'DOING_AJAX' ) ) && ( ! $query->is_main_query() || $query->is_search() || $query->is_archive() || $query->is_home() ) ) {
 
 			$setting = wp_fusion()->settings->get( 'hide_archives' );
 
@@ -831,7 +888,11 @@ class WPF_Access_Control {
 
 				$post_type = $query->get( 'post_type' );
 
-				if( empty( $post_type ) ) {
+				if ( empty( $post_type ) && $query->is_search() ) {
+
+					$post_type = 'any'; // This will be slower but allows filtering to work on search results
+
+				} elseif ( empty( $post_type ) ) {
 					return;
 				}
 
@@ -890,6 +951,10 @@ class WPF_Access_Control {
 			return $args;
 		}
 
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return $args;
+		}
+
 		// Stop this from breaking things if it's called before pluggable.php is loaded
 
 		if ( ! function_exists( 'wp_get_current_user' ) ) {
@@ -936,7 +1001,7 @@ class WPF_Access_Control {
 	}
 
 	/**
-	 * Removes restricted products from shop archives
+	 * Removes restricted posts if Filter Queries is on
 	 *
 	 * @access  public
 	 * @return  array Posts
@@ -948,7 +1013,7 @@ class WPF_Access_Control {
 			return $posts;
 		}
 
-		if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ( $query->is_main_query() && ! $query->is_archive() && ! $query->is_search() ) ) {
+		if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ( $query->is_main_query() && ! $query->is_archive() && ! $query->is_search() && ! $query->is_home() ) ) {
 			return $posts;
 		}
 
@@ -1043,6 +1108,7 @@ class WPF_Access_Control {
 				setcookie( 'wpf_return_to_override', '', time() - ( 15 * 60 ) );
 				setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
 
+				wp_redirect( $url, 302, 'WP Fusion; Return after login' );
 				wp_redirect( $url );
 				exit();
 
@@ -1059,7 +1125,7 @@ class WPF_Access_Control {
 
 			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
 
-				wp_redirect( $url );
+				wp_redirect( $url, 302, 'WP Fusion; Return after login' );
 				exit();
 
 			}

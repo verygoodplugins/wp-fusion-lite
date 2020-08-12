@@ -60,15 +60,15 @@ class WPF_MailerLite_Admin {
 		$new_settings = array();
 
 		$new_settings['mailerlite_header'] = array(
-			'title'   => __( 'MailerLite Configuration', 'wp-fusion' ),
+			'title'   => __( 'MailerLite Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['mailerlite_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.mailerlite.com/integrations/api/" target="_blank">Developer API</a> settings of your MailerLite account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.mailerlite.com/integrations/api/" target="_blank">Developer API</a> settings of your MailerLite account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -91,13 +91,13 @@ class WPF_MailerLite_Admin {
 	public function register_settings( $settings, $options ) {
 
 		$new_settings['contact_copy_header'] = array(
-			'title'   => __( 'MailerLite Settings', 'wp-fusion' ),
+			'title'   => __( 'MailerLite Settings', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'advanced'
 		);
 
 		$new_settings['email_changes'] = array(
-			'title'   => __( 'Email Address Changes', 'wp-fusion' ),
+			'title'   => __( 'Email Address Changes', 'wp-fusion-lite' ),
 			'type'    => 'select',
 			'section' => 'advanced',
 			'std'	  => 'ignore',
@@ -105,7 +105,7 @@ class WPF_MailerLite_Admin {
 				'ignore'	=> 'Ignore',
 				'duplicate' => 'Duplicate and Delete'
 			),
-			'desc'    => __( 'MailerLite doesn\'t allow for changing the email address of an existing subscriber. Choose <strong>Ignore</strong> and WP Fusion will continue updating a single subscriber, ignoring email address changes. Choose <strong>Duplicate and Delete</strong> and WP Fusion will attempt to create a new subscriber with the same details when an email address has been changed, and remove the original subscriber.', 'wp-fusion' ),
+			'desc'    => __( 'MailerLite doesn\'t allow for changing the email address of an existing subscriber. Choose <strong>Ignore</strong> and WP Fusion will continue updating a single subscriber, ignoring email address changes. Choose <strong>Duplicate and Delete</strong> and WP Fusion will attempt to create a new subscriber with the same details when an email address has been changed, and remove the original subscriber.', 'wp-fusion-lite' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
@@ -116,12 +116,32 @@ class WPF_MailerLite_Admin {
 				'std'     => 0,
 				'type'    => 'paragraph',
 				'section' => 'main',
-				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in MailerLite. Read our <a href="https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion' ),
+				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in MailerLite. Read our <a href="https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion-lite' ),
 			);
 
+			if ( isset( $_GET['ml_debug'] ) ) {
+
+				$webhooks = wp_fusion()->crm->get_webhooks();
+
+				if ( isset( $_GET['ml_destroy_all_webhooks'] ) ) {
+
+					foreach ( $webhooks->webhooks as $webhook ) {
+
+						wp_fusion()->crm->destroy_webhook( $webhook->id );
+
+					}
+
+					$webhooks = 'Destroyed ' . count( $webhooks->webhooks ) . ' webhooks.';
+
+				}
+
+				$settings['access_key_desc']['desc'] .= '<pre>' . print_r( $webhooks, true ) . '</pre>';
+
+			}
+
 			$new_settings['mailerlite_update_trigger'] = array(
-				'title' 	=> __( 'Update Trigger', 'wp-fusion' ),
-				'desc'		=> __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion' ),
+				'title' 	=> __( 'Update Trigger', 'wp-fusion-lite' ),
+				'desc'		=> __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion-lite' ),
 				'std'		=> 0,
 				'type'		=> 'checkbox',
 				'section'	=> 'main'
@@ -146,8 +166,8 @@ class WPF_MailerLite_Admin {
 				);
 
 			$new_settings['mailerlite_add_tag'] = array(
-				'title' 	=> __( 'Import Group', 'wp-fusion' ),
-				'desc'		=> __( 'When a contact is added to this group in MailerLite, they will be imported as a new WordPres user.', 'wp-fusion' ),
+				'title' 	=> __( 'Import Group', 'wp-fusion-lite' ),
+				'desc'		=> __( 'When a contact is added to this group in MailerLite, they will be imported as a new WordPress user.', 'wp-fusion-lite' ),
 				'type'		=> 'assign_tags',
 				'section'	=> 'main',
 				'placeholder' => 'Select a group',
@@ -158,6 +178,14 @@ class WPF_MailerLite_Admin {
 				'std'		=> false,
 				'type'		=> 'hidden',
 				'section'	=> 'main'
+				);
+
+			$new_settings['mailerlite_import_notification'] = array(
+				'title'   => __( 'Enable Notifications', 'wp-fusion-lite' ),
+				'desc'    => __( 'Send a welcome email to new users containing their username and a password reset link.', 'wp-fusion-lite' ),
+				'type'    => 'checkbox',
+				'section' => 'main',
+				'std'	  => 0
 				);
 
 			$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );

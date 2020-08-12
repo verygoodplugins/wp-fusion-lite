@@ -2,6 +2,9 @@
 
 class WPF_Ontraport {
 
+	// 
+	// Note: OP support says their API can take up to 60s to give a response
+
 	/**
 	 * (deprecated)
 	 */
@@ -100,6 +103,11 @@ class WPF_Ontraport {
 		if ( 'datepicker' == $field_type || 'date' == $field_type && is_numeric( $value ) ) {
 
 			// Dates are a unix timestamp and have to match the timezone set in the Ontraport account. For now we'll assume that is the same as the WP timezone
+
+			// strtotime() in CRM_Base seems to give us UTC, so this will switch it back to local? I really have no idea....
+
+			$offset = get_option( 'gmt_offset' );
+			$value -= ( $offset * 60 * 60 );
 
 			return $value;
 
@@ -317,12 +325,13 @@ class WPF_Ontraport {
 		}
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 20,
 			'httpversion' => '1.1',
 			'headers'     => array(
-				"Api-Appid" => $api_url,
-				"Api-Key"   => $api_key
-			)
+				'Api-Appid' => $api_url,
+				'Api-Key'   => $api_key,
+			),
 		);
 
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
@@ -638,6 +647,7 @@ class WPF_Ontraport {
 			$data['lreferrer'] = $_COOKIE['aff_'];
 		}
 
+		// To automatically update Campaign / Lead Source / Medium relational fields
 		$data['use_utm_names'] = true;
 
 		if ( $this->object_type == 0 ) {

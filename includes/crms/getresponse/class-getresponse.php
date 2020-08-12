@@ -169,8 +169,9 @@ class WPF_GetResponse {
 		}
 
 		$this->params = array(
-			'timeout' => 30,
-			'headers' => array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
 				'X-Auth-Token' => 'api-key ' . $api_key,
 				'Content-Type' => 'application/json',
 			),

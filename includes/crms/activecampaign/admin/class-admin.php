@@ -63,23 +63,23 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings = array();
 
 		$new_settings['activecampaign_header'] = array(
-			'title'   => __( 'ActiveCampaign Configuration', 'wp-fusion' ),
+			'title'   => __( 'ActiveCampaign Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['ac_url'] = array(
-			'title'   => __( 'API URL', 'wp-fusion' ),
-			'desc'    => __( 'Enter the API URL for your ActiveCampaign account (find it under Settings >> Developer in your account).', 'wp-fusion' ),
+			'title'   => __( 'API URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the API URL for your ActiveCampaign account (find it under Settings >> Developer in your account).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['ac_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'The API key will appear beneath the API URL on the Developer settings page.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'The API key will appear beneath the API URL on the Developer settings page.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -106,8 +106,8 @@ class WPF_ActiveCampaign_Admin {
 		}
 
 		$new_settings['ac_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion' ),
-			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion' ),
+			'title'       => __( 'Lists', 'wp-fusion-lite' ),
+			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion-lite' ),
 			'type'        => 'multi_select',
 			'placeholder' => 'Select lists',
 			'section'     => 'main',
@@ -126,7 +126,7 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings = array();
 
 		$new_settings['site_tracking_header'] = array(
-			'title'   => __( 'ActiveCampaign Site Tracking', 'wp-fusion' ),
+			'title'   => __( 'ActiveCampaign Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -134,8 +134,8 @@ class WPF_ActiveCampaign_Admin {
 		);
 
 		$new_settings['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://help.activecampaign.com/hc/en-us/articles/221493708-How-to-set-up-Site-Tracking">ActiveCampaign site tracking</a>.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://help.activecampaign.com/hc/en-us/articles/221493708-How-to-set-up-Site-Tracking">ActiveCampaign site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
@@ -147,7 +147,7 @@ class WPF_ActiveCampaign_Admin {
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $new_settings );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $new_settings );
 
 		$new_settings = array();
 

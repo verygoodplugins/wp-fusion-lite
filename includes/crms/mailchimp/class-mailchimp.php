@@ -154,6 +154,10 @@ class WPF_MailChimp {
 
 				$message = '<strong>' . $body->title . ':</strong> ' . $body->detail;
 
+				if ( 'Resource Not Found' == $body->title ) {
+					$message .= '. This usually indicates either the contact record was deleted, or the selected list is no longer valid.';
+				}
+
 				if ( isset( $body->errors ) ) {
 
 					$message .= '<ul>';
@@ -437,7 +441,7 @@ class WPF_MailChimp {
 					continue;
 				}
 
-				$crm_fields[ $field->tag ] = $field->name;
+				$crm_fields[ $field->tag ] = preg_replace( '/[\x00-\x1F\x80-\xFF]/', '', $field->name );
 
 			}
 		}
@@ -642,6 +646,10 @@ class WPF_MailChimp {
 			'merge_fields'  => $data,
 		);
 
+		if ( true == wp_fusion()->settings->get( 'mc_optin' ) ) {
+			$payload['status'] = 'pending';
+		}
+
 		unset( $payload['merge_fields']['email_address'] );
 
 		if ( empty( $payload['merge_fields'] ) ) {
@@ -828,7 +836,7 @@ class WPF_MailChimp {
 
 		$contact_ids = array();
 
-		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/';
+		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members?count=1000';
 		$response = wp_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {

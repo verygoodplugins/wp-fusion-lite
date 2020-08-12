@@ -289,11 +289,7 @@ Class WPF_Drip_Api {
 			$raw_json = json_decode( $res['buffer'], true );
 		}
 
-		$data = empty( $raw_json )
-			? false
-			: empty( $raw_json['subscribers'] )
-				? array()
-				: $raw_json['subscribers'][0];
+		$data = ( empty( $raw_json ) ? false : empty( $raw_json['subscribers'] ) ) ? array() : $raw_json['subscribers'][0];
 
 		return $data;
 	}

@@ -58,15 +58,15 @@ class WPF_ConvertFox_Admin {
 		$new_settings = array();
 
 		$new_settings['convertfox_header'] = array(
-			'title'   => __( 'Gist Configuration', 'wp-fusion' ),
+			'title'   => __( 'Gist Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['convertfox_key'] = array(
-			'title'       => __( 'Access Token', 'wp-fusion' ),
-			'desc'        => __( 'You can find your Access Token by going to Settings and clicking the menu option for Access Token in your Gist account.', 'wp-fusion' ),
+			'title'       => __( 'Access Token', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your Access Token by going to Settings and clicking the menu option for Access Token in your Gist account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

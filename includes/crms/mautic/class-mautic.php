@@ -30,7 +30,7 @@ class WPF_Mautic {
 	public function __construct() {
 
 		$this->slug     = 'mautic';
-		$this->name     = 'Mautic';
+		$this->name     = 'Mautic v2';
 		$this->supports = array( 'add_tags', 'combined_updates' );
 
 		// Set up admin options
@@ -79,19 +79,20 @@ class WPF_Mautic {
 
 		$url = wp_fusion()->settings->get( 'mautic_url' );
 
+		echo '<!-- WP Fusion Mautic site tracking -->';
 		echo '<script>';
 		echo '(function(w,d,t,u,n,a,m){w["MauticTrackingObject"]=n;';
 		echo 'w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)},a=d.createElement(t),';
 		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
 		echo '})(window,document,"script","' . trailingslashit( $url ) . 'mtc.js","mt");';
 
-		if ( wpf_is_user_logged_in() ) {
-			$cid = get_user_meta( wpf_get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
-		}
-
-		if ( wpf_is_user_logged_in() && ! empty( $cid ) ) {
+		if ( true == wp_fusion()->settings->get( 'advanced_site_tracking' ) && wpf_is_user_logged_in() ) {
 
 			$user = get_userdata( wpf_get_current_user_id() );
+
+			// This is required to track against the correct contact record for the current user
+
+			// NB: Does not work if you're currently logged into Mautic with the same email, test incognito
 
 			echo 'mt("send", "pageview", {"email": "' . $user->user_email . '"});';
 
@@ -102,6 +103,7 @@ class WPF_Mautic {
 		}
 
 		echo '</script>';
+		echo '<!-- End WP Fusion Mautic site tracking -->';
 
 	}
 
@@ -115,6 +117,10 @@ class WPF_Mautic {
 	public function set_tracking_cookie() {
 
 		if ( is_admin() || ! wpf_is_user_logged_in() || headers_sent() ) {
+			return;
+		}
+
+		if ( true != wp_fusion()->settings->get( 'advanced_site_tracking' ) ) {
 			return;
 		}
 
@@ -158,7 +164,17 @@ class WPF_Mautic {
 
 		if ( isset( $payload->{'mautic.lead_post_save_update'} ) ) {
 
-			$contact_id = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
+			$contact_id = false;
+
+			if ( isset( $payload->{'mautic.lead_post_save_update'}[0]->lead ) ) {
+
+				$contact_id = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
+
+			} elseif ( isset( $payload->{'mautic.lead_post_save_update'}[0]->contact ) ) {
+
+				$contact_id = $payload->{'mautic.lead_post_save_update'}[0]->contact->id;
+
+			}
 
 			$post_data['contact_id'] = $contact_id;
 
@@ -199,6 +215,10 @@ class WPF_Mautic {
 			$date = date( "Y-m-d", $value );
 
 			return $date;
+
+		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! is_array( $value ) ) {
+
+			return explode( ',', $value );
 
 		} elseif ( $field_type == 'country' ) {
 
@@ -256,7 +276,7 @@ class WPF_Mautic {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos( $url, $this->url ) !== false ) {
+		if( ! empty( $this->url ) && strpos( $url, $this->url ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -291,6 +311,7 @@ class WPF_Mautic {
 		$auth_key = base64_encode($mautic_username . ':' . $mautic_password);
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 30,
 			'httpversion' => '1.1',
 			'headers'     => array(
@@ -484,18 +505,19 @@ class WPF_Mautic {
 
 		if ( empty( $body_json['contacts'] ) ) {
 
-			// Use tracking cookie if CORS is configured properly
+			// Use tracking cookie if CORS is configured properly and the tracked contact doesn't have an email address
 
-			if ( isset( $_COOKIE['mtc_id'] ) ) {
+			if ( true == wp_fusion()->settings->get( 'advanced_site_tracking' ) ) {
 
-				$contact_id = $_COOKIE['mtc_id'];
+				if ( isset( $_COOKIE['mtc_id'] ) && ( ! is_admin() || defined( 'DOING_AJAX' ) ) ) {
 
-				// Confirm that cookied contact has the same email
+					$contact_data = $this->load_contact( $_COOKIE['mtc_id'] );
 
-				$contact_data = $this->load_contact( $contact_id );
+					if ( ! is_wp_error( $contact_data ) && empty( $contact_data['user_email'] ) ) {
 
-				if ( ! is_wp_error( $contact_data ) && ! empty( $contact_data ) && $contact_data['user_email'] == $email_address ) {
-					return $contact_id;
+						return $_COOKIE['mtc_id'];
+
+					}
 				}
 			}
 
@@ -657,8 +679,12 @@ class WPF_Mautic {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
 
-		// Set cookie
-		setcookie( 'mtc_id', $body->contact->id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
+		if ( ! is_admin() ) {
+
+			// Set cookie
+			setcookie( 'mtc_id', $body->contact->id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
+
+		}
 
 		return $body->contact->id;
 
@@ -705,7 +731,7 @@ class WPF_Mautic {
 					$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
 
 					if ( ! empty( $contact_id ) ) {
-						$this->update_contact( $contact_id, $data, false );
+						return $this->update_contact( $contact_id, $data, false );
 					}
 				}
 			} else {
@@ -813,25 +839,35 @@ class WPF_Mautic {
 			$this->get_params();
 		}
 
-		$url      = $this->url . 'api/contacts?search=' . urlencode( 'tag:"+' . $tag . '"' );
-		$response = wp_remote_get( $url, $this->params );
-
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
+		$start       = 0;
+		$proceeed    = true;
 		$contact_ids = array();
 
-		if( ! empty( $response->contacts ) ) {
+		while ( $proceeed ) {
 
-			foreach( $response->contacts as $contact ) {
+			$url      = $this->url . 'api/contacts?limit=1000&minimal=true&search=' . urlencode( 'tag:"+' . $tag . '"' ) . '&start=' . $start;
+			$response = wp_remote_get( $url, $this->params );
 
-				$contact_ids[] = $contact->id;
-
+			if ( is_wp_error( $response ) ) {
+				return $response;
 			}
 
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->contacts ) ) {
+
+				foreach ( $response->contacts as $contact ) {
+
+					$contact_ids[] = $contact->id;
+
+				}
+			}
+
+			$start += 1000;
+
+			if ( $response->total <= $start ) {
+				$proceeed = false;
+			}
 		}
 
 		return $contact_ids;

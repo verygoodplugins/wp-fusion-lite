@@ -269,7 +269,7 @@ class Request {
 
 		// See if special characters need to be removed from tags (for Hoang)
 
-		if ( strpos( $data, 'GroupCategoryId') !== false ) {
+		if ( apply_filters( 'wpf_infusionsoft_safe_tags', false ) && strpos( $data, 'GroupCategoryId') !== false ) {
 			$data = preg_replace('/[^A-Za-z0-9\-\<\>\s\"\=\/\?\.\_]/', '', $data);
 		}
 

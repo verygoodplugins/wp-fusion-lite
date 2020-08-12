@@ -59,23 +59,23 @@ class WPF_Ontraport_Admin {
 		$new_settings = array();
 
 		$new_settings['ontraport_header'] = array(
-			'title'   => __( 'Ontraport Configuration', 'wp-fusion' ),
+			'title'   => __( 'Ontraport Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['op_url'] = array(
-			'title'   => __( 'App ID', 'wp-fusion' ),
-			'desc'    => __( 'Enter the App ID for your Ontraport account (find it under Settings >> Administration >> Ontraport API in your account).', 'wp-fusion' ),
+			'title'   => __( 'App ID', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the App ID for your Ontraport account (find it under Settings >> Administration >> Ontraport API in your account).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['op_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'The API key will appear next to the App ID on the API Keys page.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'The API key will appear next to the App ID on the API Keys page.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -130,7 +130,7 @@ class WPF_Ontraport_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'Ontraport Site Tracking', 'wp-fusion' ),
+			'title'   => __( 'Ontraport Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -138,8 +138,8 @@ class WPF_Ontraport_Admin {
 		);
 
 		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://support.ontraport.com/hc/en-us/articles/217882408-Web-Page-Tracking">Ontraport site tracking</a>.', 'wp-fusion' ),
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://support.ontraport.com/hc/en-us/articles/217882408-Web-Page-Tracking">Ontraport site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
@@ -151,7 +151,7 @@ class WPF_Ontraport_Admin {
 			'section' => 'main'
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $site_tracking );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
 

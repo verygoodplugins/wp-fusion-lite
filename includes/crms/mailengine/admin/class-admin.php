@@ -97,40 +97,40 @@ class WPF_MailEngine_Admin {
 		$new_settings = array();
 
 		$new_settings['mailengine_header'] = array(
-			'title'   => __( 'MailEngine Configuration', 'wp-fusion' ),
+			'title'   => __( 'MailEngine Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'    => __( 'Before attempting to connect to MailEngine, you\'ll first need to enable Soap access. You can do this by requesting a <strong>client_id</strong> and get the <strong>subscribe_id</strong> from the group configuration screen. The <strong>wsdl url</strong> can be found in the developers guide (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>)', 'wp-fusion' ),
+			'desc'    => __( 'Before attempting to connect to MailEngine, you\'ll first need to enable Soap access. You can do this by requesting a <strong>client_id</strong> and get the <strong>subscribe_id</strong> from the group configuration screen. The <strong>wsdl url</strong> can be found in the developers guide (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>)', 'wp-fusion-lite' ),
 		);
 
 		$new_settings['mailengine_developers_guide'] = array(
-			'title'   => __( 'Developers guide', 'wp-fusion' ),
+			'title'   => __( 'Developers guide', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'    => __( '<ul><li><a href="' . static::$docs['hu'] . '" target="_blank">Hungarian</a></li><li><a href="' . static::$docs['en'] . '" target="_blank">English</a></li></ul>', 'wp-fusion' ),
+			'desc'    => __( '<ul><li><a href="' . static::$docs['hu'] . '" target="_blank">Hungarian</a></li><li><a href="' . static::$docs['en'] . '" target="_blank">English</a></li></ul>', 'wp-fusion-lite' ),
 		);
 
 		$new_settings['mailengine_wsdl_url'] = array(
-			'title'   => __( 'URL', 'wp-fusion' ),
-			'desc'    => __( 'URL of your MailEngine WSDL', 'wp-fusion' ),
+			'title'   => __( 'URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'URL of your MailEngine WSDL', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
 		$new_settings['mailengine_subscribe_id'] = array(
-			'title'   => __( 'Subscribe id', 'wp-fusion' ),
-			'desc'    => __( 'Enter the Subscribe id for your MailEngine group.', 'wp-fusion' ),
+			'title'   => __( 'Subscribe id', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the Subscribe id for your MailEngine group.', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup',
 			'class'   => 'api_key',
 		);
 
 		$new_settings['mailengine_client_id'] = array(
-			'title'       => __( 'Client id', 'wp-fusion' ),
-			'desc'        => __( 'Enter the Client id for your MailEngine account.', 'wp-fusion' ),
+			'title'       => __( 'Client id', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter the Client id for your MailEngine account.', 'wp-fusion-lite' ),
 			'std'         => '',
 			'type'        => 'api_validate',
 			'class'       => 'api_key',
@@ -212,7 +212,7 @@ class WPF_MailEngine_Admin {
 		$mailengine_main_settings = array();
 
 		$mailengine_main_settings['mailengine_configuration'] = array(
-			'title'   => __( 'MailEngine Configuration', 'wp-fusion' ),
+			'title'   => __( 'MailEngine Configuration', 'wp-fusion-lite' ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -220,30 +220,30 @@ class WPF_MailEngine_Admin {
 		);
 
 		$mailengine_main_settings['mailengine_affiliate'] = array(
-			'title'   => __( 'Affiliate', 'wp-fusion' ),
-			'desc'    => __( 'Affiliate ID determines whether users\'s data can be overwritten in MailEngine. Only <strong>trusted affiliates</strong> can overwrite data. Read further details in the docs (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>).', 'wp-fusion' ),
+			'title'   => __( 'Affiliate', 'wp-fusion-lite' ),
+			'desc'    => __( 'Affiliate ID determines whether users\'s data can be overwritten in MailEngine. Only <strong>trusted affiliates</strong> can overwrite data. Read further details in the docs (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>).', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'number',
 			'section' => 'main',
 		);
 
 		$mailengine_main_settings['mailengine_hidden_subscribe'] = array(
-			'title'   => __( 'Hidden subscribe', 'wp-fusion' ),
-			'desc'    => __( 'Hidden subscription is a simple opt-in subscription (<i>recommended</i>). <br />If hidden subscribe is not checked, the subscription behaves as double opt-in. Read further details in the docs (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>).', 'wp-fusion' ),
+			'title'   => __( 'Hidden subscribe', 'wp-fusion-lite' ),
+			'desc'    => __( 'Hidden subscription is a simple opt-in subscription (<i>recommended</i>). <br />If hidden subscribe is not checked, the subscription behaves as double opt-in. Read further details in the docs (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>).', 'wp-fusion-lite' ),
 			'std'     => 1,
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);
 
 		$mailengine_main_settings['mailengine_activate_unsubscribed'] = array(
-			'title'   => __( 'Activate Unsubscribed users', 'wp-fusion' ),
-			'desc'    => __( 'Reactivate newly registered users in the MailEngine who previously unsubscribed. Read further details in the docs (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>)', 'wp-fusion' ),
+			'title'   => __( 'Activate Unsubscribed users', 'wp-fusion-lite' ),
+			'desc'    => __( 'Reactivate newly registered users in the MailEngine who previously unsubscribed. Read further details in the docs (<a href="' . static::$docs['hu'] . '" target="_blank">hu</a> / <a href="' . static::$docs['en'] . '" target="_blank">en</a>)', 'wp-fusion-lite' ),
 			'std'     => 1,
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'profile_update_tags', $settings, $mailengine_main_settings );
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $mailengine_main_settings );
 
 		return $settings;
 

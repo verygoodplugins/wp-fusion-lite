@@ -58,31 +58,31 @@ class WPF_Vtiger_Admin {
 		$new_settings = array();
 
 		$new_settings['vtiger_header'] = array(
-			'title'   => __( 'Vtiger Configuration', 'wp-fusion' ),
+			'title'   => __( 'Vtiger Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['vtiger_domain'] = array(
-			'title'   => __( 'Domain', 'wp-fusion' ),
-			'desc'    => __( 'Enter the URL to your Vtiger instance.', 'wp-fusion' ),
+			'title'   => __( 'Domain', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the URL to your Vtiger instance.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['vtiger_username'] = array(
-			'title'   => __( 'Username', 'wp-fusion' ),
-			'desc'    => __( 'Enter your Vtiger username.', 'wp-fusion' ),
+			'title'   => __( 'Username', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter your Vtiger username.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['vtiger_key'] = array(
-			'title'       => __( 'Access Key', 'wp-fusion' ),
-			'desc'        => __( 'The API key will appear at the bottom of the My Preferences screem.', 'wp-fusion' ),
+			'title'       => __( 'Access Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'The API key will appear at the bottom of the My Preferences screem.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

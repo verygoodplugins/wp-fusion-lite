@@ -262,7 +262,7 @@ class WPF_Infusionsoft_iSDK {
 
 		if( is_wp_error( $result ) ) {
 			$this->error = $result;
-			return new WP_Error( 'error', __( $result->get_error_message() . '. Please verify your connection details are correct.', 'wp-fusion' ) );
+			return new WP_Error( 'error', __( $result->get_error_message() . '. Please verify your connection details are correct.', 'wp-fusion-lite' ) );
 		}
 
 		$this->app = $app;
@@ -329,6 +329,7 @@ class WPF_Infusionsoft_iSDK {
 			$result = $this->app->dsQuery( 'ContactGroup', 1000, 0, $query, $fields );
 
 			if ( is_wp_error( $result ) ) {
+				wpf_log( 'error', wpf_get_current_user_id(), $result->get_error_message() . '.<br /><br />The tags from the <strong>' . $category['CategoryName'] . '</strong> category have not been loaded.', array( 'source' => 'infusionsoft' ) );
 				continue;
 			}
 
@@ -344,12 +345,16 @@ class WPF_Infusionsoft_iSDK {
 		$result = $this->app->dsQuery( 'ContactGroup', 1000, 0, $query, $fields );
 
 		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
 
-		foreach ( $result as $tag ) {
-			$tags[ $tag['Id'] ]['label']    = sanitize_text_field( $tag['GroupName'] );
-			$tags[ $tag['Id'] ]['category'] = 'No Category';
+			wpf_log( 'error', wpf_get_current_user_id(), $result->get_error_message() . '.<br /><br />Tags with <strong>no category</strong> have not been loaded.', array( 'source' => 'infusionsoft' ) );
+
+		} else {
+
+			foreach ( $result as $tag ) {
+				$tags[ $tag['Id'] ]['label']    = sanitize_text_field( $tag['GroupName'] );
+				$tags[ $tag['Id'] ]['category'] = 'No Category';
+			}
+
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $tags );

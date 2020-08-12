@@ -58,23 +58,23 @@ class WPF_Flexie_Admin {
 		$new_settings = array();
 
 		$new_settings['flexie_header'] = array(
-			'title'   => __( 'Flexie Configuration', 'wp-fusion' ),
+			'title'   => __( 'Flexie Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'	  => __( 'Before attempting to connect to Flexie, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion' )
+			'desc'	  => __( 'Before attempting to connect to Flexie, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' )
 		);
 
 		$new_settings['flexie_url'] = array(
-			'title'   => __( 'URL', 'wp-fusion' ),
-			'desc'    => __( 'Enter the URL for your Flexie account (like http://website.flexie.io/).', 'wp-fusion' ),
+			'title'   => __( 'URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the URL for your Flexie account (like http://website.flexie.io/).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
 
 		$new_settings['flexie_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
 			'desc'        => __( 'You can find your API key in the account settings sidebar under API settings in your Flexie account.' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',

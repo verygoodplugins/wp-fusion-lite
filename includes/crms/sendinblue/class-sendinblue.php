@@ -140,6 +140,50 @@ class WPF_SendinBlue {
 			// Sendinblue only treats true as a Yes for checkboxes
 			return true;
 
+		} elseif ( $field_type == 'tel' ) {
+
+			// Format phone. Sendinblue requires a country code and + for phone numbers. With or without dashes is fine
+
+			if ( strpos( $value, '+' ) !== 0 ) {
+
+				// Default to US if no country code is provided
+
+				if ( strpos( $value, '1' ) === 0 ) {
+
+					$value = '+' . $value;
+
+				} else {
+
+					$value = '+1' . $value;
+
+				}
+
+			}
+
+			return $value;
+
+		} elseif ( is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
+
+			$length = strlen( trim( str_replace( array( '-', ' ' ), '', $value ) ) );
+
+			// Maybe another phone number
+
+			if ( $length == 10 ) {
+
+				// Let's assume this is a US phone number and needs a +1
+
+				$value = '+1' . $value;
+
+			} elseif ( $length >= 11 && $length <= 13 && strpos( $value, '+' ) === false ) {
+
+				// Let's assume this is a phone number and needs a plus??
+
+				$value = '+' . $value;
+
+			}
+
+			return $value;
+
 		} else {
 
 			return $value;

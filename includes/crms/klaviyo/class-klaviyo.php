@@ -73,7 +73,15 @@ class WPF_Klaviyo {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if ( isset( $body_json->message ) ) {
+			$code = wp_remote_retrieve_response_code( $response );
+
+			if ( 404 == $code && strpos( $url, 'https://a.klaviyo.com/api/v2/people/search' ) !== false ) {
+
+				// A 404 when searching for a contact is normal, we don't need to treat it as a serious error
+
+				return $response;
+
+			} elseif ( isset( $body_json->message ) ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
@@ -500,6 +508,8 @@ class WPF_Klaviyo {
 		if ( empty( $data ) ) {
 			return false;
 		}
+
+		return new WP_Error( 'error', 'Klaviyo does not currently support updating Person records over the API.' );
 
 		$data['api_key'] = $this->key;
 

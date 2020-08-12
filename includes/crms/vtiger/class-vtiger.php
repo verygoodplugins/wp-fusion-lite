@@ -264,8 +264,9 @@ class WPF_Vtiger {
 		$this->assigned_user_id = '19x22';
 
 		$this->params = array(
-			'timeout'     => 30,
-			'headers'     => array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
 				'Content-Type' 	=> 'application/x-www-form-urlencoded',
 				'Accept' 		=> 'application/json',
 			)

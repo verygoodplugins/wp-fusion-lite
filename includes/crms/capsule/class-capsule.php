@@ -134,6 +134,7 @@ class WPF_Capsule {
 		}
 
 		$this->params = array(
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 30,
 			'headers'     => array( 
 				'Authorization' => 'Bearer ' . $api_key,

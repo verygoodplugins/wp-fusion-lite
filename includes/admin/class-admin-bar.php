@@ -60,7 +60,7 @@ class WPF_Admin_Bar {
 	public function user_tags( $user_tags, $user_id ) {
 
 		if ( ! empty( $_GET['wpf_tag'] ) ) {
-			$user_tags[] = $_GET['wpf_tag'];
+			$user_tags[] = urldecode( $_GET['wpf_tag'] );
 		}
 
 		return $user_tags;

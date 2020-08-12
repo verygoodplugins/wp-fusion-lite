@@ -307,6 +307,12 @@ $nationbuilder_fields[] = array(
 	'crm_label' => 'Signup Type',
 );
 
+$nationbuilder_fields[] = array(
+	'crm_field' => 'email_opt_in',
+	'crm_label' => 'Email Opt-in (boolean)',
+);
+
+
 // Fields to ignore (for now)
 
 $nationbuilder_ignore_fields = array(
@@ -319,7 +325,6 @@ $nationbuilder_ignore_fields = array(
 	'do_not_call',
 	'do_not_contact',
 	'dw_id',
-	'email_opt_in',
 	'external_id',
 	'federal_district',
 	'fire_district',

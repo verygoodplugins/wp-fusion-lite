@@ -101,7 +101,7 @@ class WPF_Zoho {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
 
 			if ( ! is_numeric( $value ) ) {
 				$value = strtotime( $value );
@@ -112,7 +112,7 @@ class WPF_Zoho {
 
 			return $date;
 
-		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
+		} elseif ( 'checkbox' == $field_type || 'checkbox-full' == $field_type ) {
 
 			if ( ! empty( $value ) ) {
 
@@ -120,10 +120,17 @@ class WPF_Zoho {
 				return true;
 
 			}
+		} elseif ( 'text' == $field_type || 'textarea' == $field_type ) {
 
-		} elseif ( $field_type == 'text' || $field_type == 'textarea' ) {
+			if ( is_array( $value ) ) {
+				$value = implode( ', ', $value );
+			}
 
 			return strval( $value );
+
+		} elseif ( ( 'multiselect' == $field_type || 'checkboxes' == $field_type ) && ! is_array( $value ) ) {
+
+			return array_map( 'trim', explode( ',', $value ) );
 
 		} else {
 
@@ -156,6 +163,7 @@ class WPF_Zoho {
 			'headers'     => array(
 				'Authorization' => 'Zoho-oauthtoken ' . $access_token,
 			),
+			'sslverify'   => false,
 		);
 
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
@@ -243,11 +251,11 @@ class WPF_Zoho {
 
 				if ( $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) {
 
-					$message = 'Mandatory field not found: <pre>' . print_r( $body_json->data[0]->details, true ) . '</pre>';
+					$message = 'Mandatory field not found: <pre>' . print_r( $body_json, true ) . '</pre>';
 
 				} elseif ( $body_json->data[0]->code == 'INVALID_DATA' ) {
 
-					$message = 'Invalid data passed for field. <pre>' . print_r( $body_json->data[0]->details, true ) . '</pre>';
+					$message = 'Invalid data passed for field. <pre>' . print_r( $body_json, true ) . '</pre>';
 
 				}
 
@@ -317,6 +325,7 @@ class WPF_Zoho {
 		$this->sync_tags();
 		$this->sync_crm_fields();
 		$this->sync_layouts();
+		$this->sync_users();
 
 		do_action( 'wpf_sync' );
 
@@ -338,7 +347,7 @@ class WPF_Zoho {
 			$this->get_params();
 		}
 
-		$request  = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.all';
+		$request  = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.ALL';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -357,6 +366,8 @@ class WPF_Zoho {
 
 			}
 		}
+
+		asort( $available_tags );
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
@@ -452,6 +463,41 @@ class WPF_Zoho {
 
 	}
 
+	/**
+	 * Syncs available contact owners
+	 *
+	 * @access public
+	 * @return array Owners
+	 */
+
+	public function sync_users() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request  = $this->api_domain . '/crm/v2/users?type=AllUsers';
+		$response = wp_remote_get( $request, $this->params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$available_users = array();
+
+		foreach ( $body_json->users as $user ) {
+
+			$available_users[ $user->id ] = $user->first_name . ' ' . $user->last_name;
+
+		}
+
+		wp_fusion()->settings->set( 'zoho_users', $available_users );
+
+		return $available_users;
+
+	}
 
 	/**
 	 * Gets contact ID for a user based on email address
@@ -515,6 +561,18 @@ class WPF_Zoho {
 		foreach ( $body_json->data[0]->Tag as $tag ) {
 			$tags[] = $tag->name;
 		}
+
+		// Maybe update available tags list
+
+		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+
+		foreach ( $body_json->data[0]->Tag as $tag ) {
+			$available_tags[ $tag->name ] = $tag->name;
+		}
+
+		asort( $available_tags );
+
+		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $tags;
 	}
@@ -585,10 +643,20 @@ class WPF_Zoho {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		// Set layout
+
 		$layout = wp_fusion()->settings->get( 'zoho_layout', false );
 
 		if ( ! empty( $layout ) ) {
 			$data['Layout'] = $layout;
+		}
+
+		// Set owner
+
+		$owner = wp_fusion()->settings->get( 'zoho_owner', false );
+
+		if ( ! empty( $owner ) ) {
+			$data['Owner'] = $owner;
 		}
 
 		// Contact creation will fail if there isn't a last name

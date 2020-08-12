@@ -74,7 +74,7 @@ class WPF_AWeber_Admin {
 			$settings['crm'] = 'aweber';
 			$settings['aweber_token'] = $access_token;
 			$settings['aweber_secret'] = $access_token_secret;
-			update_option( 'wpf_options', $settings );
+			update_option( 'wpf_options', $settings, false );
 
 			// Clear cookie
 			setcookie('request_token_secret', '', time() - 3600);
@@ -99,7 +99,7 @@ class WPF_AWeber_Admin {
 		$new_settings = array();
 
 		$new_settings['aweber_header'] = array(
-			'title'   => __( 'AWeber Configuration', 'wp-fusion' ),
+			'title'   => __( 'AWeber Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -138,14 +138,14 @@ class WPF_AWeber_Admin {
 		} else {
 
 			$new_settings['aweber_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion' ),
+				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'std'     => '',
 				'type'    => 'text',
 				'section' => 'setup'
 			);
 
 			$new_settings['aweber_secret'] = array(
-				'title'       => __( 'Access Secret', 'wp-fusion' ),
+				'title'       => __( 'Access Secret', 'wp-fusion-lite' ),
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
@@ -172,8 +172,8 @@ class WPF_AWeber_Admin {
 		if( ! empty( $options['available_lists'] ) ) {
 
 			$new_settings['aweber_list'] = array(
-				'title'       => __( 'List', 'wp-fusion' ),
-				'desc'        => __( 'Select an AWeber list to use with WP Fusion.', 'wp-fusion' ),
+				'title'       => __( 'List', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select an AWeber list to use with WP Fusion.', 'wp-fusion-lite' ),
 				'type'        => 'select',
 				'placeholder' => 'Select list',
 				'section'     => 'main',

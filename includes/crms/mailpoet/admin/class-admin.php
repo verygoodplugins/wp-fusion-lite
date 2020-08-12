@@ -42,6 +42,7 @@ class WPF_MailPoet_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -57,21 +58,52 @@ class WPF_MailPoet_Admin {
 		$new_settings = array();
 
 		$new_settings['mailpoet_header'] = array(
-			'title'   => __( 'MailPoet Configuration', 'wp-fusion' ),
+			'title'   => __( 'MailPoet Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['mailpoet_connect'] = array(
-			'title'       => __( 'Connect', 'wp-fusion' ),
+			'title'       => __( 'Connect', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'mailpoet_connect' )
+			'post_fields' => array( 'mailpoet_connect' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
+
+		return $settings;
+
+	}
+
+
+	/**
+	 * Loads MailPoet specific settings fields
+	 *
+	 * @access  public
+	 * @since   3.31.1
+	 */
+
+	public function register_settings( $settings, $options ) {
+
+		$new_settings['mailpoet_header_2'] = array(
+			'title'   => __( 'MailPoet Configuration', 'wp-fusion-lite' ),
+			'std'     => 0,
+			'type'    => 'heading',
+			'section' => 'main',
+		);
+
+		$new_settings['mailpoet_send_confirmation'] = array(
+			'title'   => __( 'Confirmation Emails', 'wp-fusion-lite' ),
+			'desc'    => __( 'Send confirmation emails via MailPoet when a subscriber is added to any list.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'std'     => 0,
+			'section' => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
 
@@ -95,9 +127,7 @@ class WPF_MailPoet_Admin {
 				if ( isset( $mailpoet_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $mailpoet_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;

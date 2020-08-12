@@ -74,6 +74,31 @@ jQuery(document).ready(function($){
 		// Batch process status checker
 		//
 
+		var completed = 0;
+		var attempts = 0;
+
+		// Handle alternate method for servers that are blocking it the normal way
+
+		var doAltBatch = function() {
+
+			if ( attempts == 0 ) {
+				return;
+			}
+
+			console.log( 'Doing alternate batch request with completed ' + completed );
+
+			var data = {
+				'action' : 'wpf_background_process',
+			};
+
+			$.post(ajaxurl, data, function() {
+
+				doAltBatch();
+
+			});
+
+		}
+
 		// Get status of batch process
 
 		var getBatchStatus = function( total, title ) {
@@ -112,11 +137,14 @@ jQuery(document).ready(function($){
 
 				response = $.parseJSON( response );
 
+				attempts++;
+
 				console.log( 'BATCH step:' );
 				console.dir( response );
 
 				if ( response == null ) {
 
+					attempts = 0; // stop the alt method
 					console.log('IS NULL');
 					return;
 				}
@@ -132,6 +160,8 @@ jQuery(document).ready(function($){
 
 				if( remaining == 0 || isNaN(remaining) ) {
 
+					attempts = 0; // stop the alt method
+
 					$('#wpf-batch-status span.title').html('');
 					$('#wpf-batch-status #cancel-batch').remove();
 					$('#wpf-batch-status span.status').html('<strong>Operation complete.</strong> Terminating...');
@@ -143,9 +173,21 @@ jQuery(document).ready(function($){
 
 				}
 
+				// If it's not working start the alternate worker
+
+				if ( attempts == 3 && completed == 0 ) {
+
+					console.log( 'Background worker failing to start. Starting alternate method.' );
+
+					misc = '- The background worker is being blocked by your server. Starting alternate (slower) method. Please do not refresh the page until the process completes.';
+
+					doAltBatch();
+
+				}
+
 				setTimeout(function() {
 
-					var completed = total - remaining;
+					completed = total - remaining;
 
 					if(completed > 0) {
 						$('#wpf-batch-status span.status').html('Processing ' + completed + ' of ' + total + ' ' + title + ' ' + misc);
@@ -181,6 +223,8 @@ jQuery(document).ready(function($){
 				'action'	: 'wpf_batch_cancel',
 			};
 
+			attempts = 0; // stop the alt method
+
 			$.post(ajaxurl, data, function() {
 
 				$('#wpf-batch-status').slideUp('slow', function() {
@@ -200,7 +244,7 @@ jQuery(document).ready(function($){
 		var startBatch = function( button, action, args = false ) {
 
 			button.attr('disabled', 'disabled');
-			button.html('<img class="rotating" src="' + spinnerIcon + '"/><div style="margin-left:20px;">Beginning ' + action.title + ' Processing</div>');
+			button.html('<img class="rotating oldspinner" src="' + spinnerIcon + '"/><div style="margin-left:20px;">Beginning ' + action.title + ' Processing</div>');
 			 
 			var data = {
 				'action'	: 'wpf_batch_init',
@@ -298,20 +342,24 @@ jQuery(document).ready(function($){
 
 				if( result.status == 'success' ) {
 
-					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-success">Success! Your site is able to receive incoming webhooks.</span>');
+					$( "#test-webhooks-btn" ).parent().append('<span id="webhook-test-result" style="display: inline-block; margin-top: 10px;" class="label label-success">Success! Your site is able to receive incoming webhooks.</span>');
 
 				} else if( result.status == 'unauthorized' ) {
 
-					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Unauthorized. Your site is currently blocking incoming webhooks. Try changing your security settings, or contact our support.</span>');
+					$( "#test-webhooks-btn" ).parent().append('<span id="webhook-test-result" style="display: inline-block; margin-top: 10px;" class="label label-danger">Unauthorized. Your site is currently blocking incoming webhooks. Try changing your security settings, or contact our support.</span>');
 
 				} else if( result.status == 'error' ) {
 
-					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Error: ' + result.message + '</span>');
+					$( "#test-webhooks-btn" ).parent().append('<span id="webhook-test-result" style="display: inline-block; margin-top: 10px;" class="label label-danger">Error: ' + result.message + '</span>');
 
 				} else {
 
-					$( "#test-webhooks-btn" ).parent().append('<span style="display: inline-block; margin-top: 10px;" class="label label-danger">Unexpected error. Try again or contact support.</span>');
+					$( "#test-webhooks-btn" ).parent().append('<span id="webhook-test-result" style="display: inline-block; margin-top: 10px;" class="label label-danger">Unexpected error. Try again or contact support.</span>');
 
+				}
+
+				if ( typeof( result.cloudflare ) !== "undefined" ) {
+					$( "#test-webhooks-btn" ).parent().find( 'span#webhook-test-result' ).append( ' <strong>Note:</strong> Your site appears to be using CloudFlare CDN services. If you encounter issues with webhooks check your CloudFlare firewall.' );
 				}
 
 			});
@@ -327,7 +375,7 @@ jQuery(document).ready(function($){
 
 		var syncTags = function(button, total, crmContainer) {
 
-			button.html('<img class="rotating" style="filter: invert(100%); " src="' + spinnerIcon + '"><div style="margin-left:20px;">Syncing Tags &amp; Fields</div>').addClass('btn-success');
+			button.html('<img class="rotating oldspinner" style="filter: invert(100%); " src="' + spinnerIcon + '"><div style="margin-left:20px;">Syncing Tags &amp; Fields</div>').addClass('btn-success');
 
 			var data = {
 				'action'	: 'wpf_sync'
@@ -345,7 +393,7 @@ jQuery(document).ready(function($){
 					} else {
 
 						// Begin syncing users and tags
-						button.html('<img class="rotating" style="filter: invert(100%);" src="' + spinnerIcon + '"/> <div style="margin-left:20px;">Loading Contact IDs and Tags</div>');
+						button.html('<img class="rotating oldspinner" style="filter: invert(100%);" src="' + spinnerIcon + '"/> <div style="margin-left:20px;">Loading Contact IDs and Tags</div>');
 
 						var data = {
 							'action'	: 'wpf_batch_init',
@@ -380,9 +428,9 @@ jQuery(document).ready(function($){
 		$( "a#test-connection" ).on( "click", function() {
 
 			if( $(this).hasClass('btn-danger') || $(this).hasClass('btn-success') ) {
-				$(this).html('<img class="rotating" style="filter: invert(100%);" src="' + spinnerIcon + '"/> Connecting');
+				$(this).html('<img class="rotating oldspinner" style="filter: invert(100%);" src="' + spinnerIcon + '"/> Connecting');
 			} else {
-				$(this).html('<img class="rotating" src="' + spinnerIcon + '"/> Connecting');
+				$(this).html('<img class="rotating oldspinner" src="' + spinnerIcon + '"/> Connecting');
 			}
 
 	        var button = $(this);
@@ -416,6 +464,58 @@ jQuery(document).ready(function($){
 					syncTags(button, total, crmContainer);
 
 				}
+
+			});
+
+		});
+
+
+		$( "a#header-resync" ).on( "click", function() {
+
+			var button = $(this);
+
+			button.find( 'span.dashicons' ).addClass('rotating');
+			button.find( 'span.detail' ).remove();
+			button.append('<span class="detail" style="padding-left: 5px;">Refreshing ' + wpf_ajax.tag_type + 's</span>' );
+
+			$( '#tiptip_holder' ).remove();
+
+			var data = {
+				'action'	: 'sync_tags'
+			}
+
+			// Tags
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				$( 'select.select4-wpf-tags' ).each(function(index, el) {
+					
+					$(el).append(response);
+					$(el).trigger('change');
+
+				});
+
+				// Fields
+
+				button.find( 'span.detail' ).html( 'Refreshing Fields' );
+
+				var data = {
+					'action'	: 'sync_custom_fields'
+				}
+
+				jQuery.post(ajaxurl, data, function(response) {
+
+					$( 'select.select4-crm-field' ).each(function(index, el) {
+						
+						$(el).append(response);
+						$(el).trigger('change');
+
+					});
+
+					button.find( 'span.detail' ).html( 'Complete' );
+					button.find( 'span.dashicons' ).removeClass('rotating');
+
+				});
 
 			});
 
@@ -503,7 +603,7 @@ jQuery(document).ready(function($){
 		//
 
 		$( "#edd-license" ).on( "click", function() {
-			$(this).html('<img class="rotating" src="' + spinnerIcon + '"/> Connecting'); 
+			$(this).html('<img class="rotating oldspinner" src="' + spinnerIcon + '"/> Connecting'); 
 	        $(this).attr('disabled', 'disabled');
 
 	        var button = $(this);
@@ -539,8 +639,36 @@ jQuery(document).ready(function($){
 
 		});
 
+		// Dismiss notice
 
-		$('table#contact-fields select.select4-crm-field').change(function(event) {
+		$( '.wpf-notice button' ).click(function(event) {
+	
+	        var data = {
+				'action' : 'dismiss_wpf_notice',
+				'id'     : $(this).closest('div').attr('data-notice')
+			};
+
+			$.post(ajaxurl, data);
+
+
+		});
+
+		// Add new field
+
+		$('#wpf-add-new-field').blur(function(event) {
+
+			var val = $(this).val();
+
+			if ( val != val.toLowerCase() || val.indexOf(' ') >= 0 ) {
+
+				alert( 'This doesn\'t look like a valid field key from the wp_usermeta database table.\n\nIf you\'re not sure what your field keys are please check your database.\n\nRegistering invalid keys for sync may result in unexpected behavior. Most likely it just won\'t do anything.' );
+
+			}
+
+		});
+
+
+		$('table#contact-fields-table select.select4-crm-field').change(function(event) {
 			
 			if(!$(this).val()) {
 

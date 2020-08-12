@@ -509,7 +509,9 @@ class WPF_NationBuilder {
 					$data[ $exploded_address[0] ] = array();
 				}
 
-				$data[ $exploded_address[0] ][ $exploded_address[1] ] = $value;
+				if ( ! empty( $value ) ) {
+					$data[ $exploded_address[0] ][ $exploded_address[1] ] = $value;
+				}
 
 				unset( $data[ $key ] );
 
@@ -566,7 +568,9 @@ class WPF_NationBuilder {
 					$data[ $exploded_address[0] ] = array();
 				}
 
-				$data[ $exploded_address[0] ][ $exploded_address[1] ] = $value;
+				if ( ! empty( $value ) ) {
+					$data[ $exploded_address[0] ][ $exploded_address[1] ] = $value;
+				}
 
 				unset( $data[ $key ] );
 
@@ -605,13 +609,13 @@ class WPF_NationBuilder {
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/' . $contact_id . '?access_token=' . $this->token;
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-		$response      	= json_decode( wp_remote_retrieve_body( $response ) );
+		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
 		$loaded_data = array();
 

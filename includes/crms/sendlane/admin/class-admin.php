@@ -59,29 +59,29 @@ class WPF_Sendlane_Admin {
 		$new_settings = array();
 
 		$new_settings['sendlane_header'] = array(
-			'title'   => __( 'Sendlane Configuration', 'wp-fusion' ),
+			'title'   => __( 'Sendlane Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
 
 		$new_settings['sendlane_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.sendlane.com/developer" target="_blank">developer settings</a> of your Sendlane account.', 'wp-fusion' ),
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API key in the <a href="https://app.sendlane.com/developer" target="_blank">developer settings</a> of your Sendlane account.', 'wp-fusion-lite' ),
 			'type'        => 'text',
 			'section'     => 'setup',
 		);
 
 		$new_settings['sendlane_hash'] = array(
-			'title'       => __( 'API Hash Key', 'wp-fusion' ),
+			'title'       => __( 'API Hash Key', 'wp-fusion-lite' ),
 			'type'        => 'text',
 			'section'     => 'setup',
 		);
 
 		$new_settings['sendlane_domain'] = array(
-			'title'       => __( 'Subdomain', 'wp-fusion' ),
+			'title'       => __( 'Subdomain', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
-			'desc'        => __( 'For example domain.sendlane.com', 'wp-fusion' ),
+			'desc'        => __( 'For example domain.sendlane.com', 'wp-fusion-lite' ),
 			'section'     => 'setup',
 			'class'       => 'api_key',
 			'post_fields' => array( 'sendlane_key', 'sendlane_hash', 'sendlane_domain' )
@@ -108,8 +108,8 @@ class WPF_Sendlane_Admin {
 		}
 
 		$new_settings['default_list'] = array(
-			'title'       => __( 'Sendlane List', 'wp-fusion' ),
-			'desc'        => __( 'Select a default list to use for WP Fusion.', 'wp-fusion' ),
+			'title'       => __( 'Sendlane List', 'wp-fusion-lite' ),
+			'desc'        => __( 'Select a default list to use for WP Fusion.', 'wp-fusion-lite' ),
 			'type'        => 'select',
 			'placeholder' => 'Select list',
 			'section'     => 'main',

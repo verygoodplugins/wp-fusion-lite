@@ -58,15 +58,15 @@ class WPF_SendFox_Admin {
 		$new_settings = array();
 
 		$new_settings['sendfox_header'] = array(
-			'title'   => __( 'SendFox Configuration', 'wp-fusion' ),
+			'title'   => __( 'SendFox Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['sendfox_key'] = array(
-			'title'       => __( 'Access Token', 'wp-fusion' ),
-			'desc'        => __( 'You can create a new access token in the <a href="https://sendfox.com/account/oauth" target="_blank">API settings</a> of your SendFox account.', 'wp-fusion' ),
+			'title'       => __( 'Access Token', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can create a new access token in the <a href="https://sendfox.com/account/oauth" target="_blank">API settings</a> of your SendFox account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

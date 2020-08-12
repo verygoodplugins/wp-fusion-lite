@@ -106,3 +106,8 @@ $kartra_fields[] = array(
 	'crm_label' => 'Linkedin',
 	'crm_field' => 'linkedin'
 );
+
+$kartra_fields[] = array(
+	'crm_label' => 'Username (Read Only)',
+	'crm_field' => 'username',
+);

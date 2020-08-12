@@ -48,6 +48,47 @@ abstract class WPF_Integrations_Base {
 	}
 
 	/**
+	 * Gets dynamic tags to be applied from update data
+	 *
+	 * @access  public
+	 * @since   3.32.2
+	 * @return  array Tags
+	 */
+
+	public function get_dynamic_tags( $update_data ) {
+
+		$apply_tags = array();
+
+		if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+
+			foreach ( $update_data as $key => $value ) {
+
+				$crm_field = wp_fusion()->crm_base->get_crm_field( $key );
+
+				if ( false === $crm_field ) {
+					continue;
+				}
+
+				if ( false !== strpos( $crm_field, 'add_tag_' ) ) {
+
+					if ( is_array( $value ) ) {
+
+						$apply_tags = array_merge( $apply_tags, $value );
+
+					} elseif ( ! empty( $value ) ) {
+
+						$apply_tags[] = $value;
+
+					}
+				}
+			}
+		}
+
+		return $apply_tags;
+
+	}
+
+	/**
 	 * Handles signups from plugins which support guest registrations
 	 *
 	 * @access  public

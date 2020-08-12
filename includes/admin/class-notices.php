@@ -28,7 +28,7 @@ class WPF_Admin_Notices {
 
 			$out = '<div id="wpf-needs-setup" class="updated">';
 			$out .= '<p>';
-			$out .= 'To finish setting up WP Fusion, please go to the <a href="' . get_admin_url() . '/options-general.php?page=wpf-settings#setup">WP Fusion settings page</a>.';
+			$out .=  sprintf( __( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s</a>.', 'wp-fusion-lite' ), '<a href="' . get_admin_url() . '/options-general.php?page=wpf-settings#setup">', '</a>' );
 			$out .= '</p>';
 			$out .= '</div>';
 

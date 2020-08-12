@@ -19,7 +19,7 @@ function wpf_render_tag_multiselect( $args ) {
 		'field_id'		=> null,
 		'field_sub_id' 	=> null,
 		'disabled'		=> false,
-		'placeholder'	=> __( 'Select tags', 'wp-fusion' ),
+		'placeholder'	=> __( 'Select tags', 'wp-fusion-lite' ),
 		'limit'			=> null,
 		'no_dupes'		=> array(),
 		'prepend'		=> array(),
@@ -28,11 +28,67 @@ function wpf_render_tag_multiselect( $args ) {
 
 	$args = wp_parse_args( $args, $defaults );
 
+	// Allow disabling the output if it causes performance problems
+
+	$bypass = apply_filters( 'wpf_disable_tag_multiselect', false, $args );
+
+	if ( true == $bypass ) {
+		return;
+	}
+
 	$available_tags = wp_fusion()->settings->get( 'available_tags' );
 
 	// If no tags, set a blank array
 	if ( ! is_array( $available_tags ) ) {
 		$available_tags = array();
+	}
+
+	// Maybe convert setting from tag names to IDs if CRM has been switched
+
+	if ( ! empty( $args['settings'] ) && is_array( $args['settings'] ) && is_array( wp_fusion()->crm->supports ) && ! in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+
+		if ( is_null( $args['field_sub_id'] ) ) {
+
+			// Standard setting, no sub-value
+
+			foreach ( $args['setting'] as $i => $value ) {
+
+				if ( ! is_numeric( $value ) ) {
+
+					$search = wp_fusion()->user->get_tag_id( $value );
+
+					if ( false !== $search ) {
+
+						$args['setting'][ $i ] = $search;
+
+					}
+
+				}
+
+			}
+
+		} elseif ( ! empty( $args['setting'][ $args['field_sub_id'] ] ) ) {
+
+			// Setting with sub-value
+
+			foreach ( $args['setting'][ $args['field_sub_id'] ] as $i => $value ) {
+
+				if ( ! is_numeric( $value ) ) {
+
+					$search = wp_fusion()->user->get_tag_id( $value );
+
+					if ( false !== $search ) {
+
+						$args['setting'][ $args['field_sub_id'] ][ $i ] = $search;
+
+					}
+
+				}
+
+			}
+
+		}
+
 	}
 
 	if ( is_array( reset( $available_tags ) ) ) {

@@ -39,7 +39,7 @@ class WPF_Staging_Admin {
 		$new_settings = array();
 
 		$new_settings['staging_header'] = array(
-			'title'   => __( 'Staging', 'wp-fusion' ),
+			'title'   => __( 'Staging', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',

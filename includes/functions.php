@@ -46,6 +46,27 @@ if ( ! function_exists( 'wpf_has_tag' ) ) {
 	}
 }
 
+
+/**
+ * Checks to see if a user can access a given post
+ *
+ * @return bool
+ */
+
+if ( ! function_exists( 'wpf_user_can_access' ) ) {
+
+	function wpf_user_can_access( $post_id = false, $user_id = false ) {
+
+		if ( false === $post_id ) {
+			global $post;
+			$post_id = $post->ID;
+		}
+
+		return wp_fusion()->access->user_can_access( $post_id, $user_id );
+
+	}
+}
+
 /**
  * Gets the current user ID, with support for auto-logged-in users
  *
@@ -75,3 +96,34 @@ if ( ! function_exists( 'wpf_is_user_logged_in' ) ) {
 
 	}
 }
+
+/**
+ * Get tag ID from name
+ *
+ * @return bool / int Tag ID or false if not found
+ */
+
+if ( ! function_exists( 'wpf_get_tag_id' ) ) {
+
+	function wpf_get_tag_id( $tag_name ) {
+
+		return wp_fusion()->user->get_tag_id( $tag_name );
+
+	}
+}
+
+/**
+ * Get tag name from ID
+ *
+ * @return bool / string Tag label or false if not found
+ */
+
+if ( ! function_exists( 'wpf_get_tag_label' ) ) {
+
+	function wpf_get_tag_label( $tag_id ) {
+
+		return wp_fusion()->user->get_tag_label( $tag_id );
+
+	}
+}
+

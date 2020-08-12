@@ -32,6 +32,37 @@ class WPF_Auto_Login {
 		// Session cleanup cron
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
 
+		add_action( 'wp_loaded', array( $this, 'maybe_doing_it_wrong' ) );
+
+	}
+
+	/**
+	 * Gets contact ID from URL
+	 *
+	 * @access public
+	 * @return string Contact ID
+	 */
+
+	public function get_contact_id_from_url() {
+
+		$contact_id = false;
+
+		$alt_query_var = apply_filters( 'wpf_auto_login_query_var', false );
+
+		if ( isset( $_GET['cid'] ) ) {
+
+			$contact_id = sanitize_text_field( $_GET['cid'] );
+
+		} elseif ( $contact_id == false && $alt_query_var != false && isset( $_GET[ $alt_query_var ] ) ) {
+
+			$contact_id = sanitize_text_field( $_GET[ $alt_query_var ] );
+
+		}
+
+		$contact_id = apply_filters( 'wpf_auto_login_contact_id', $contact_id );
+
+		return $contact_id;
+
 	}
 
 
@@ -48,28 +79,18 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		$contact_data = false;
-
-		$alt_query_var = apply_filters( 'wpf_auto_login_query_var', false );
-
-		if ( $contact_id == false && isset( $_GET['cid'] ) ) {
-
-			$contact_id = sanitize_text_field( $_GET['cid'] );
-
-		} elseif ( $contact_id == false && $alt_query_var != false && isset( $_GET[ $alt_query_var ] ) ) {
-
-			$contact_id = sanitize_text_field( $_GET[ $alt_query_var ] );
-
-		}
-
-		$contact_id = apply_filters( 'wpf_auto_login_contact_id', $contact_id );
-
-		if ( empty( $contact_id ) && empty( $_COOKIE['wpf_contact'] ) ) {
+		if ( false == $contact_id && false == wp_fusion()->settings->get( 'auto_login' ) && false == wp_fusion()->settings->get( 'auto_login_forms' ) ) {
 			return;
 		}
 
-		// If regular auto login is disabled and a contact ID is present in the URL, then quit
-		if ( isset( $_GET['cid'] ) && wp_fusion()->settings->get( 'auto_login' ) == false ) {
+		$contact_data = false;
+
+		// Try finding a contact ID in the URL
+		if ( false == $contact_id ) {
+			$contact_id = $this->get_contact_id_from_url();
+		}
+
+		if ( empty( $contact_id ) && empty( $_COOKIE['wpf_contact'] ) ) {
 			return;
 		}
 
@@ -147,6 +168,11 @@ class WPF_Auto_Login {
 		$user->first_name  = get_user_meta( $contact_data['user_id'], 'first_name', true );
 		$user->last_name   = get_user_meta( $contact_data['user_id'], 'last_name', true );
 		$user->user_status = 0;
+
+		if ( wp_fusion()->settings->get( 'auto_login_current_user' ) == true ) {
+			global $current_user;
+			$current_user = $user;
+		}
 
 		wp_cache_set( $contact_data['user_id'], $user, 'users' );
 
@@ -314,6 +340,37 @@ class WPF_Auto_Login {
 
 		foreach ( $meta as $mid ) {
 			delete_metadata_by_mid( 'user', $mid );
+		}
+
+	}
+
+	/**
+	 * Display a warning if auto login links are used by a logged in admin
+	 *
+	 * @access public
+	 * @return mixed HTML message
+	 */
+
+	public function maybe_doing_it_wrong() {
+
+		if ( is_admin() ) {
+			return;
+		}
+
+		if ( false == wp_fusion()->settings->get( 'auto_login' ) && false == wp_fusion()->settings->get( 'auto_login_forms' ) ) {
+			return;
+		}
+
+		if ( ! empty( $this->get_contact_id_from_url() ) && current_user_can( 'manage_options' ) ) {
+
+			echo '<div style="padding: 20px; border: 4px solid #ff0000; text-align: center;">';
+
+			echo '<strong>' . __( 'Heads up: It looks like you\'re using a WP Fusion auto-login link, but you\'re already logged into the site, so nothing will happen. Always test auto-login links in a private browser tab.', 'wp-fusion-lite' ) . '</strong><br /><br />';
+
+			echo '<em>(' . __( 'This message is only shown to admins and won\'t be visible to regular users.', 'wp-fusion-lite' ) . ')</em>';
+
+			echo '</div>';
+
 		}
 
 	}

@@ -90,57 +90,72 @@ class WPF_Salesforce {
 			return $post_data;
 		}
 
-		$defaults = array(
-			'notify' => false,
-			'role'   => false,
-		);
-
-		$post_data = array_merge( $defaults, $post_data );
-
 		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
 
 		$data = $xml->children( 'http://schemas.xmlsoap.org/soap/envelope/' )->Body->children( 'http://soap.sforce.com/2005/09/outbound' )->notifications;
 
 		$notifications_count = count( $data->Notification );
 
-		if ( $notifications_count > 1 ) {
+		if ( $notifications_count == 1 ) {
+
+			$post_data['contact_id'] = (string) $data->Notification[0]->sObject->children( 'urn:sobject.enterprise.soap.sforce.com' )->Id;
+
+			return $post_data;
+
+		} else {
+
+			$debug = '?wpf_action=' . $post_data['wpf_action'];
+
+			if ( isset( $post_data['send_notification'] ) ) {
+				$debug .= '&send_notification=' . $post_data['send_notification'];
+			}
+
+			wpf_log( 'info', 0, 'Webhook received with <code>' . $debug . '</code>. ' . $notifications_count . ' contact records detected in payload.', array( 'source' => 'api' ) );
 
 			wp_fusion()->batch->includes();
 			wp_fusion()->batch->init();
 
-		}
+			$contacts_added = array();
 
-		$key = 0;
+			$key = 0;
 
-		while ( $key !== $notifications_count ) {
+			$args = array();
 
-			$contact_id = (string) $data->Notification[ $key ]->sObject->children( 'urn:sobject.enterprise.soap.sforce.com' )->Id;
+			if ( isset( $post_data['role'] ) ) {
+				$args['role'] = $post_data['role'];
+			}
 
-			if ( $key == 0 ) {
+			if ( isset( $post_data['send_notification'] ) && 'true' == $post_data['send_notification'] ) {
+				$args['notify'] = true;
+			}
 
-				$post_data['contact_id'] = $contact_id;
+			while ( $key !== $notifications_count ) {
+
+				$contact_id = (string) $data->Notification[ $key ]->sObject->children( 'urn:sobject.enterprise.soap.sforce.com' )->Id;
+
 				$key++;
 
-				continue;
+				// Don't import the same one twice
+				if ( in_array( $contact_id, $contacts_added ) ) {
+					continue;
+				}
 
-			} else {
+				$contacts_added[] = $contact_id;
+
+				wpf_log( 'info', 0, 'Adding contact ID <strong>' . $contact_id . '</strong> to import queue (' . $key . ' of ' . $notifications_count . ').', array( 'source' => 'api' ) );
 
 				wp_fusion()->batch->process->push_to_queue(
 					array(
 						'action' => 'wpf_batch_import_users',
-						'args'   => array( $contact_id, $post_data ),
+						'args'   => array( $contact_id, $args ),
 					)
 				);
 
 			}
 
-			$key++;
-
-		}
-
-		if ( $notifications_count > 1 ) {
-
 			wp_fusion()->batch->process->save()->dispatch();
+
+			wp_die( '<h3>Success</h3>Multiple contacts detected. Added to import queue.', 'Success', 200 );
 
 		}
 
@@ -182,7 +197,7 @@ class WPF_Salesforce {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( $field_type == 'datepicker' || $field_type == 'date' && is_numeric( $value ) ) {
 
 			// Adjust formatting for date fields
 			$date = date( 'Y-m-d', $value );
@@ -218,10 +233,18 @@ class WPF_Salesforce {
 
 			if ( $response_code == 401 && $body[0]->errorCode == 'INVALID_SESSION_ID' ) {
 
-				// Reauthorize and prevent looping
+				// Prevent looping when the connection process runs
 				remove_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-				$this->connect( null, null, true );
+				// Try to refresh the access token
+				$result = $this->connect( null, null, true );
+
+				// Add the filter back to that subsequent calls get error handling
+				add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
 
 				$params          = $this->get_params();
 				$args['headers'] = $params['headers'];
@@ -263,13 +286,17 @@ class WPF_Salesforce {
 		$access_token = wp_fusion()->settings->get( 'sf_access_token' );
 
 		$this->params = array(
-			'timeout' => 20,
-			'headers' => array( 'Authorization' => 'Bearer ' . $access_token ),
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 20,
+			'headers'    => array(
+				'Authorization' => 'Bearer ' . $access_token,
+				'Content-Type'  => 'application/json',
+				'Accept'        => 'application/json',
+			),
 		);
 
-		$this->instance_url = wp_fusion()->settings->get( 'sf_instance_url' );
-
-		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
+		$this->instance_url = apply_filters( 'wpf_salesforce_instance_url', wp_fusion()->settings->get( 'sf_instance_url' ) );
+		$this->object_type  = apply_filters( 'wpf_crm_object_type', $this->object_type );
 
 		return $this->params;
 
@@ -307,13 +334,29 @@ class WPF_Salesforce {
 		$auth_url = add_query_arg( $auth_args, $url );
 		$response = wp_remote_post( $auth_url );
 
+		$response_code = wp_remote_retrieve_response_code( $response );
+
 		if ( is_wp_error( $response ) ) {
 
 			return $response;
 
-		} elseif ( wp_remote_retrieve_response_code( $response ) == 404 ) {
+		} elseif ( 404 == $response_code ) {
 
 			return new WP_Error( 'error', 'Unable to resolve URL ' . $url );
+
+		} elseif ( 400 == $response_code ) {
+
+			if ( true == wp_fusion()->settings->get( 'connection_configured' ) ) {
+
+				// This is to handle cases where a refresh of a valid token failed
+
+				return new WP_Error( 'error', 'Authentication failure. Your security token may need to be updated.' );
+
+			} else {
+
+				return new WP_Error( 'error', 'Authentication failure. Double check your credentials. If you\'re trying to connect to a Salesforce sandbox account, <a href="https://wpfusion.com/documentation/crm-specific-docs/salesforce-sandboxes/" target="_blank">see this doc</a>.' );
+
+			}
 
 		}
 
@@ -466,7 +509,13 @@ class WPF_Salesforce {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $response->fields as $field ) {
+
+			if ( 'Full Name' == $field->label ) {
+				$field->label .= ' (read only)';
+			}
+
 			$crm_fields[ $field->name ] = $field->label;
+
 		}
 
 		// Clean up system fields
@@ -495,7 +544,15 @@ class WPF_Salesforce {
 			$this->get_params();
 		}
 
-		$query_args = array( 'q' => 'SELECT Id from ' . $this->object_type . " WHERE Email = '" . $email_address . "'" );
+		// Allow using a different field than email address for lookups
+
+		$lookup_field = wp_fusion()->crm_base->get_crm_field( 'user_email', 'Email' );
+
+		$lookup_field = apply_filters( 'wpf_salesforce_lookup_field', $lookup_field );
+
+		$email_address = urlencode( $email_address );
+
+		$query_args = array( "q" => "SELECT Id from {$this->object_type} WHERE {$lookup_field} = '{$email_address}'" );
 
 		$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_contact_id' );
 
@@ -610,8 +667,7 @@ class WPF_Salesforce {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$params                            = $this->get_params();
-		$params['headers']['Content-Type'] = 'application/json';
+		$params = $this->get_params();
 
 		$tag_type = wp_fusion()->settings->get( 'sf_tag_type', 'Topics' );
 
@@ -762,8 +818,7 @@ class WPF_Salesforce {
 
 	public function add_contact( $data, $map_meta_fields = true ) {
 
-		$params                            = $this->get_params();
-		$params['headers']['Content-Type'] = 'application/json';
+		$params = $this->get_params();
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -796,8 +851,7 @@ class WPF_Salesforce {
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
 
-		$params                            = $this->get_params();
-		$params['headers']['Content-Type'] = 'application/json';
+		$params = $this->get_params();
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
