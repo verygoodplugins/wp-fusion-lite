@@ -20,6 +20,7 @@ WP Fusion Lite synchronizes your WordPress users with leading CRMs and marketing
 * Apply tags when users register
 * Import contacts from your CRM as new WordPress users and generate passwords for them
 * Export site users to your CRM as contact records
+* Track visitor activity using your CRM's tracking scripts (with supported CRMs)
 
 = Lite Version =
 
