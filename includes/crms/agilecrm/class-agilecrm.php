@@ -658,7 +658,7 @@ class WPF_AgileCRM {
 
 		$contact_json = array(
 			'id'   => $contact_id,
-			'tags' => $tags,
+			'tags' => array_values( $tags ), // make sure this isn't associative
 		);
 
 		$nparams           = $this->params;
@@ -706,7 +706,7 @@ class WPF_AgileCRM {
 
 		$contact_json = array(
 			'id'   => $contact_id,
-			'tags' => $tags,
+			'tags' => array_values( $tags ),
 		);
 
 		$nparams           = $this->params;

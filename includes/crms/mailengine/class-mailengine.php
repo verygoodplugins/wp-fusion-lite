@@ -109,6 +109,10 @@ class WPF_MailEngine {
 			return true;
 		}
 
+		if ( ! class_exists( 'SoapClient' ) ) {
+			return new WP_Error( 'error', 'MailEngine CRM for WP Fusion requires SoapClient for PHP in order to function properly. This instance does not have SoapClient for PHP installed.' );
+		}
+
 		if ( ! $this->params ) {
 			$this->get_params( $wsdl_url, $client_id, $subscribe_id );
 		}

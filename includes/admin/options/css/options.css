@@ -566,6 +566,11 @@ tr.disabled {
     }
 }
 
+.settings_page_wpf-settings-tab-content > .tab-pane > p {
+    font-size: 14px;
+    margin-top: 4px;
+}
+
 .settings_page_wpf-settings-tab-content > .tab-pane {
     margin-top: 20px;
     display: none;

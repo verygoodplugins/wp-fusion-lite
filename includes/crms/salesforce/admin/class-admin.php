@@ -42,6 +42,7 @@ class WPF_Salesforce_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -111,6 +112,28 @@ class WPF_Salesforce_Admin {
 
 	}
 
+	/**
+	 * Adds Salesforce specific setting fields
+	 *
+	 * @access  public
+	 * @since   3.34.3
+	 */
+
+	public function register_settings( $settings, $options ) {
+
+		$new_settings['salesforce_account'] = array(
+			'title'       => __( 'Default Account', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can optionally enter a default account ID here to be used for new contact records. You can see the account ID in the URL when editing any Account record in Salesforce.', 'wp-fusion-lite' ),
+			'type'        => 'text',
+			'placeholder' => __( 'Account ID', 'wp-fusion-lite' ),
+			'section'     => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+
+		return $settings;
+
+	}
 
 	/**
 	 * Loads standard Salesforce field names and attempts to match them up with standard local ones
@@ -187,7 +210,7 @@ class WPF_Salesforce_Admin {
 
 		$username 		= sanitize_text_field( $_POST['sf_username'] );
 		$token 			= sanitize_text_field( $_POST['sf_token'] );
-		$combined_token = $_POST['sf_pass'] . $token;
+		$combined_token = stripslashes( $_POST['sf_pass'] ) . $token;
 
 		$connection = $this->crm->connect( $username, $combined_token, true );
 

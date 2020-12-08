@@ -126,22 +126,33 @@ class WPF_MailerLite {
 
 		if ( empty( $contact_ids ) ) {
 
-			if ( $post_data['wpf_action'] == 'add' ) {
-				$post_data['message'] = 'Import webhook received but subscriber does not have import group <strong>' . wp_fusion()->user->get_tag_label( $tag[0] ) . '</strong>. This error is not serious and can be ignored.';
+			// Nothing found
+
+			if ( 'add' == $post_data['wpf_action'] ) {
+
+				$received_name = wpf_get_tag_label( $event->data->group->id );
+
+				wpf_log( 'info', 0, 'Subscriber was added to group <strong>' . $received_name . '</strong> which triggered an import webhook. <strong>' . $received_name . '</strong> is not the selected import group, so no data will be imported.' );
+
+				wp_die( '', 'Success', 200 );
 			}
+
+			// Debug stuff
+			$post_data['payload'] = $payload;
 
 			// No one found
 			$post_data['contact_id'] = false;
+
 			return $post_data;
 
-		} if ( count( $contact_ids ) == 1 ) {
+		} elseif ( count( $contact_ids ) == 1 ) {
 
 			// Simple, one subscriber in payload
 			$post_data['contact_id'] = $contact_ids[0];
 
 			return $post_data;
 
-		} else {
+		} elseif ( $post_data['wpf_action'] == 'add' ) {
 
 			// Multiple subscribers. Push to queue
 			wp_fusion()->batch->includes();
@@ -160,7 +171,30 @@ class WPF_MailerLite {
 
 			wp_fusion()->batch->process->save()->dispatch();
 
-			$post_data['message'] = 'Webhook received for multiple subscribers. Beginning background process to load ' . count( $contact_ids ) . ' subscribers.';
+			$post_data['message'] = 'Webhook received for multiple subscribers. Beginning background process to import ' . count( $contact_ids ) . ' subscribers.';
+
+			return $post_data;
+
+		} elseif ( $post_data['wpf_action'] == 'update_tags' ) {
+
+			// Multiple subscribers. Push to queue
+			wp_fusion()->batch->includes();
+			wp_fusion()->batch->init();
+
+			foreach ( $contact_ids as $contact_id ) {
+
+				wp_fusion()->batch->process->push_to_queue(
+					array(
+						'action' => 'wpf_batch_users_tags_sync',
+						'args'   => array( $contact_id ),
+					)
+				);
+
+			}
+
+			wp_fusion()->batch->process->save()->dispatch();
+
+			$post_data['message'] = 'Webhook received for multiple subscribers. Beginning background process to resync groups for ' . count( $contact_ids ) . ' subscribers.';
 
 			return $post_data;
 
@@ -680,7 +714,7 @@ class WPF_MailerLite {
 
 			$contact_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			if ( $contact_data['email'] != $send_data['email'] ) {
+			if ( strtolower( $contact_data['email'] ) != strtolower( $send_data['email'] ) ) {
 
 				// Add new contact with updated email
 				$original_email = $contact_data['email'];
@@ -781,7 +815,7 @@ class WPF_MailerLite {
 
 		$contact_ids = array();
 
-		$url     = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers/?limit=1000';
+		$url     = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers?limit=1000';
 		$results = wp_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $results ) ) {
@@ -851,6 +885,11 @@ class WPF_MailerLite {
 
 		$access_key = wp_fusion()->settings->get( 'access_key' );
 
+		// Don't do this when the settings are being reset
+		if ( empty( $access_key ) ) {
+			return false;
+		}
+
 		$ids = array();
 
 		foreach ( $event_types as $event_type ) {
@@ -863,6 +902,10 @@ class WPF_MailerLite {
 				'url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
 				'event' => 'subscriber.' . $event_type,
 			);
+
+			// Testing
+
+			//$data['url'] = 'https://webhook.site/1b0baac5-78af-4ee2-875d-59165a079250';
 
 			$request          = 'https://api.mailerlite.com/api/v2/webhooks';
 			$params           = $this->params;

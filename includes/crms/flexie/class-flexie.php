@@ -28,6 +28,14 @@ class WPF_Flexie {
 	public $supports;
 
 	/**
+	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
+	 *
+	 * @var tag_type
+	 */
+
+	public $tag_type = 'List';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public

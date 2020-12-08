@@ -105,33 +105,39 @@ class WPF_AWeber_Admin {
 			'section' => 'setup',
 		);
 
-		if( empty( $options['aweber_token'] ) && ! isset( $_GET['oauth_token'] ) ) {
+		if ( empty( $options['aweber_token'] ) && ! isset( $_GET['oauth_token'] ) ) {
 
-			try {
-			
-				$this->crm->connect();
+			if ( ! function_exists( 'curl_init' ) ) {
+				$new_settings['aweber_header']['desc'] = 'cURL not found. AWeber is disabled.';
+			} else {
 
-				$redirect_uri = get_admin_url() . 'options-general.php?page=wpf-settings#setup';
-				$redirect_uri = apply_filters( 'wpf_aweber_redirect_uri', $redirect_uri );
+				try {
 
-				list($request_token, $request_token_secret) = $this->crm->app->getRequestToken( $redirect_uri );
+					$this->crm->connect();
 
-				setcookie('request_token_secret', $request_token_secret );
+					$redirect_uri = get_admin_url() . 'options-general.php?page=wpf-settings#setup';
+					$redirect_uri = apply_filters( 'wpf_aweber_redirect_uri', $redirect_uri );
 
-				$new_settings['aweber_header']['desc'] = '<table class="form-table"><tr>';
-				$new_settings['aweber_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-				$new_settings['aweber_header']['desc'] .= '<td><a class="button button-primary" href="' . $this->crm->app->getAuthorizeUrl() . '">Authorize with AWeber</a><br /><span class="description">You\'ll be taken to AWeber to authorize WP Fusion and generate access keys for this site.</td>';
-				$new_settings['aweber_header']['desc'] .= '</tr></table></div><table class="form-table">';
-				
-			} catch (Exception $e) {
+					list($request_token, $request_token_secret) = $this->crm->app->getRequestToken( $redirect_uri );
 
-				$new_settings['aweber_header']['desc'] = '<div class="alert alert-danger">Error getting AWeber authorization URL. Please contact support. <em>' . $e->getMessage() . '<em></div>';
+					setcookie('request_token_secret', $request_token_secret );
 
-				// Prevent failed connection from breaking layout
-				$new_settings['aweber_secret'] = array(
-					'type'        => 'hidden',
-					'section' 	  => 'setup'
-				);
+					$new_settings['aweber_header']['desc'] = '<table class="form-table"><tr>';
+					$new_settings['aweber_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
+					$new_settings['aweber_header']['desc'] .= '<td><a class="button button-primary" href="' . $this->crm->app->getAuthorizeUrl() . '">Authorize with AWeber</a><br /><span class="description">You\'ll be taken to AWeber to authorize WP Fusion and generate access keys for this site.</td>';
+					$new_settings['aweber_header']['desc'] .= '</tr></table></div><table class="form-table">';
+
+				} catch (Exception $e) {
+
+					$new_settings['aweber_header']['desc'] = '<div class="alert alert-danger">Error getting AWeber authorization URL. Please contact support. <em>' . $e->getMessage() . '<em></div>';
+
+					// Prevent failed connection from breaking layout
+					$new_settings['aweber_secret'] = array(
+						'type'        => 'hidden',
+						'section' 	  => 'setup'
+					);
+
+				}
 
 			}
 

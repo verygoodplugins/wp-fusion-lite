@@ -93,20 +93,14 @@ class WPF_ConvertKit {
 				$post_data['send_notification'] = true;
 			}
 
-			// Remove tags
+			// Remove the update tag so it can be applied again
 
-			if( $_REQUEST['wpf_action'] == 'add' ) {
+			if ( 'update' == $_REQUEST['wpf_action'] ) {
 
-				$tag = wp_fusion()->settings->get('ck_add_tag');
-				$this->remove_tags( array( $tag ), $post_data['contact_id'] );
-
-			} elseif( $_REQUEST['wpf_action'] == 'update' ) {
-
-				$tag = wp_fusion()->settings->get('ck_update_tag');
+				$tag = wp_fusion()->settings->get( 'ck_update_tag' );
 				$this->remove_tags( array( $tag ), $post_data['contact_id'] );
 
 			}
-
 		}
 
 		return $post_data;

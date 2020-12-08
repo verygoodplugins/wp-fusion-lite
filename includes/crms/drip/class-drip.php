@@ -105,9 +105,9 @@ class WPF_Drip {
 
 			return $date;
 
-		} elseif ( ! empty( $value ) ) {
+		} elseif ( ! empty( $value ) && is_string( $value ) ) {
 
-			return stripslashes($value);
+			return stripslashes( $value );
 
 		} else {
 			return $value;
@@ -728,10 +728,16 @@ class WPF_Drip {
 				$data['status'] = 'unsubscribed';
 			}
 
-			$params['status'] = $data['status'];
+			if ( 'active' == $data['status'] || 'unsubscribed' == $data['status'] ) {
 
-			unset( $params['custom_fields']['status'] );
+				$params['status'] = $data['status'];
+				unset( $params['custom_fields']['status'] );
 
+			} else {
+
+				wpf_log( 'notice', 0, $data['status'] . ' is not a valid status. Status must be either <strong>active</strong> or <strong>unsubscribed</strong>.', array( 'source' => 'drip' ) );
+
+			}
 		}
 
 		// Maybe update optin status

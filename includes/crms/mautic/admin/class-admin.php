@@ -66,6 +66,8 @@ class WPF_Mautic_Admin {
 			'desc'	  => __( 'Before attempting to connect to Mautic, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' )
 		);
 
+		$new_settings['mautic_header']['desc'] .= '<br /><br />' . __( '<strong>Note</strong> that if you\'ve just enabled the API for the first time you\'ll probably need to <a href="https://docs.mautic.org/en/troubleshooting#1-clear-the-cache" target="_blank">clear your Mautic caches</a>.', 'wp-fusion-lite' );
+
 		$new_settings['mautic_url'] = array(
 			'title'   => __( 'URL', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter the URL for your Mautic account (like http://app.mautic.net/).', 'wp-fusion-lite' ),

@@ -120,55 +120,14 @@ class WPF_Lead_Source_Tracking {
 			return $args;
 		}
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-
 		$merged_data = array();
 
-		// Possibly set lead sources from cookie
 		if ( isset( $_COOKIE['wpf_leadsource'] ) && is_array( $_COOKIE['wpf_leadsource'] ) ) {
-
-			foreach ( $_COOKIE['wpf_leadsource'] as $key => $value ) {
-
-				if ( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
-
-					$merged_data[ $key ] = $value;
-
-					if ( is_array( $args[0] ) ) {
-
-						// Add contact
-						$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-					} elseif ( is_array( $args[1] ) ) {
-
-						// Update contact
-						$args[1][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-					}
-				}
-			}
+			$merged_data = array_merge( $merged_data, $_COOKIE['wpf_leadsource'] );
 		}
 
 		if ( isset( $_COOKIE['wpf_ref'] ) && is_array( $_COOKIE['wpf_ref'] ) ) {
-
-			foreach ( $_COOKIE['wpf_ref'] as $key => $value ) {
-
-				if ( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
-
-					$merged_data[ $key ] = $value;
-
-					if ( is_array( $args[0] ) ) {
-
-						// Add contact
-						$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-					} elseif ( is_array( $args[1] ) ) {
-
-						// Update contact
-						$args[1][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-					}
-				}
-			}
+			$merged_data = array_merge( $merged_data, $_COOKIE['wpf_ref'] );
 		}
 
 		if ( ! empty( $merged_data ) ) {
@@ -180,6 +139,51 @@ class WPF_Lead_Source_Tracking {
 				)
 			);
 
+			$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+
+			foreach ( $merged_data as $key => $value ) {
+
+				if ( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
+
+					$merged_data[ $key ] = $value;
+
+					if ( is_array( $args[0] ) ) {
+
+						// Add contact
+
+						if ( isset( $args[1] ) && false == $args[1] ) {
+
+							// Map meta fields off
+							$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
+
+						} else {
+
+							// Map meta fields on
+
+							$args[0][ $key ] = $value;
+
+						}
+					} elseif ( is_array( $args[1] ) ) {
+
+						// Update contact (not currently in use)
+
+						$args[1][ $contact_fields[ $key ]['crm_field'] ] = $value;
+
+						if ( isset( $args[2] ) && false == $args[2] ) {
+
+							// Map meta fields off
+							$args[1][ $contact_fields[ $key ]['crm_field'] ] = $value;
+
+						} else {
+
+							// Map meta fields on
+
+							$args[1][ $key ] = $value;
+
+						}
+					}
+				}
+			}
 		}
 
 		return $args;

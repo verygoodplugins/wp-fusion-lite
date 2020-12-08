@@ -117,7 +117,7 @@ class WPF_HubSpot {
 
 			return $date;
 
-		} elseif ( $field_type == 'multiselect' && ! empty( $value ) ) {
+		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! empty( $value ) ) {
 
 			return str_replace( ',', ';', $value );
 
@@ -264,8 +264,6 @@ class WPF_HubSpot {
 				}
 
 			} elseif( isset( $body_json->status ) && $body_json->status == 'error' ) {
-
-				error_log(print_r($body_json, true));
 
 				$message = $body_json->message;
 
@@ -453,7 +451,7 @@ class WPF_HubSpot {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-		
+
 	}
 
 
@@ -470,8 +468,10 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request      = 'https://api.hubapi.com/contacts/v1/contact/email/' . urlencode($email_address) . '/profile';
-		$response     = wp_remote_get( $request, $this->params );
+		// One contact can have multiple emails in HubSpot, so in theory one user can be linked to multiple contacts
+
+		$request  = 'https://api.hubapi.com/contacts/v1/contact/email/' . urlencode( $email_address ) . '/profile';
+		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) && $response->get_error_message() == 'contact does not exist' ) {
 
@@ -521,6 +521,8 @@ class WPF_HubSpot {
 		if( empty( $body_json ) || empty( $body_json->{'list-memberships'} ) ) {
 			return $tags;
 		}
+
+		// This can return the IDs of lists that have been deleted, for some reason
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
 
@@ -732,21 +734,21 @@ class WPF_HubSpot {
 		}
 
 		$contact_ids = array();
-		$offset = 0;
-		$proceed = true;
+		$offset      = 0;
+		$proceed     = true;
 
-		while( $proceed == true ) {
+		while ( $proceed ) {
 
-			$request    = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/contacts/all?count=100&offset=' . $offset;
-			$response 	= wp_remote_get( $request, $this->params );
+			$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/contacts/all?count=100&vidOffset=' . $offset;
+			$response = wp_remote_get( $request, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( empty( $body_json->contacts ) ) {
+			if ( empty( $body_json->contacts ) ) {
 				return $contact_ids;
 			}
 
@@ -754,12 +756,11 @@ class WPF_HubSpot {
 				$contact_ids[] = $contact->vid;
 			}
 
-			if( $body_json->{'has-more'} == false ) {
+			if ( false == $body_json->{'has-more'} ) {
 				$proceed = false;
 			} else {
-				$offset = $offset + 100;
+				$offset = $body_json->{'vid-offset'};
 			}
-
 		}
 
 		return $contact_ids;
@@ -855,35 +856,5 @@ class WPF_HubSpot {
 		return $body_json->portalId;
 
 	}
-
-	//
-	//
-	// WORKFLOW ACTIONS
-	//
-	//
-
-
-	/**
-	 * Get all workflow actions
-	 *
-	 * @access public
-	 * @return array Workflow actions
-	 */
-
-	public function get_actions() {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$request  = 'https://api.hubapi.com/automation/v4/actions/180159';
-		error_log('request to ' . $request);
-		$response = wp_remote_get( $request, $this->params );
-
-		error_log(print_r($response, true));
-
-	}
-
-
 
 }

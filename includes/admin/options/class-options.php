@@ -36,7 +36,7 @@
  *
  * Damian and Bryce were here.
  */
-class WPF_Options {
+class WP_Fusion_Options {
 
 	/**
 	 * The MOF version number.
@@ -118,6 +118,7 @@ class WPF_Options {
 		'class'    => null,
 		'disabled' => false,
 		'unlock'   => null,
+		'lock'     => null,
 	);
 
 	/**
@@ -261,6 +262,8 @@ class WPF_Options {
 		}
 
 		if ( $this->reset_options ) {
+
+			do_action( 'wpf_resetting_options', $this->options );
 
 			delete_option( $this->option_group );
 			$this->options = null;
@@ -601,30 +604,15 @@ class WPF_Options {
 	public function scripts() {
 
 		wp_enqueue_script( 'bootstrap', $this->selfpath . 'js/bootstrap.min.js', array( 'jquery' ) );
-		wp_enqueue_script( 'bootstrap-formhelpers', $this->selfpath . 'lib/bootstrap-formhelpers/bootstrap-formhelpers.min.js', array( 'jquery', 'bootstrap' ) );
-		wp_enqueue_script( 'options-js', $this->selfpath . 'js/options.min.js', array( 'jquery', 'select4' ) );
 
 		wp_enqueue_script( 'jquery-ui-sortable' );
 
-		// wp_enqueue_style('bootstrap', $this->selfpath.'css/bootstrap.min.css');
 		wp_enqueue_style( 'fontawesome', $this->selfpath . 'css/font-awesome.min.css' );
 		wp_enqueue_style( 'options-css', $this->selfpath . 'css/options.css' );
 
 		// Enqueue TinyMCE editor
 		if ( isset( $this->fields['editor'] ) ) {
 			wp_print_scripts( 'editor' );
-		}
-
-		// Enqueue codemirror js and css
-		if ( isset( $this->fields['code'] ) ) {
-			wp_enqueue_style( 'at-code-css', $this->selfpath . 'lib/codemirror/codemirror.css', array(), null );
-			wp_enqueue_style( 'at-code-css-dark', $this->selfpath . 'lib/codemirror/twilight.css', array(), null );
-			wp_enqueue_script( 'at-code-lib', $this->selfpath . 'lib/codemirror/codemirror.js', array( 'jquery' ), false, true );
-			wp_enqueue_script( 'at-code-lib-xml', $this->selfpath . 'lib/codemirror/xml.js', array( 'jquery' ), false, true );
-			wp_enqueue_script( 'at-code-lib-javascript', $this->selfpath . 'lib/codemirror/javascript.js', array( 'jquery' ), false, true );
-			wp_enqueue_script( 'at-code-lib-css', $this->selfpath . 'lib/codemirror/css.js', array( 'jquery' ), false, true );
-			wp_enqueue_script( 'at-code-lib-clike', $this->selfpath . 'lib/codemirror/clike.js', array( 'jquery' ), false, true );
-			wp_enqueue_script( 'at-code-lib-php', $this->selfpath . 'lib/codemirror/php.js', array( 'jquery' ), false, true );
 		}
 
 		if ( isset( $this->fields['select'] ) || isset( $this->fields['multi_select'] ) ) {
@@ -762,13 +750,13 @@ class WPF_Options {
 
 						<?php if ( ! is_array( $section ) ) : ?>
 
-							<li id="tab-<?php echo $section_slug; ?>" 
+							<li id="tab-<?php echo $section_slug; ?>"
 													<?php
 													if ( $isfirst ) {
 														echo "class='active'"; }
 ?>
 >
-								<a href="#<?php echo $section_slug; ?>" data-toggle="tab"><?php echo $section; ?></a>
+								<a href="#<?php echo $section_slug; ?>" data-toggle="tab" data-taget="<?php echo $section_slug; ?>"><?php echo $section; ?></a>
 							</li>
 
 						<?php else : ?>
@@ -1096,7 +1084,6 @@ class WPF_Options {
 		}
 
 		if ( ! empty( $field['desc'] ) ) {
-
 			echo $field['desc'];
 		}
 	}
@@ -1185,6 +1172,10 @@ class WPF_Options {
 
 		if ( ! isset( $field['disabled'] ) ) {
 			$field['disabled'] = false;
+		}
+
+		if ( empty( $field['std'] ) && ! empty( $field['placeholder'] ) ) {
+			$field['std'] = $field['placeholder'];
 		}
 
 		if ( isset( $field['format'] ) && $field['format'] == 'phone' ) {
@@ -1297,10 +1288,18 @@ class WPF_Options {
 	 */
 	private function show_field_checkbox( $id, $field ) {
 
+		$unlock = '';
+
 		if ( isset( $field['unlock'] ) ) {
-			$unlock = '';
 
 			foreach ( $field['unlock'] as $target ) {
+				$unlock .= $target . ' ';
+			}
+		}
+
+		if ( isset( $field['lock'] ) ) {
+
+			foreach ( $field['lock'] as $target ) {
 				$unlock .= $target . ' ';
 			}
 		}
@@ -1309,7 +1308,7 @@ class WPF_Options {
 			$field['class'] = '';
 		}
 
-		echo '<input class="checkbox ' . $field['class'] . '" type="checkbox" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' ' . ( isset( $unlock ) ? 'data-unlock="' . trim( $unlock ) . '"' : '' ) . ' />';
+		echo '<input class="checkbox ' . $field['class'] . '" type="checkbox" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . trim( $unlock ) . '"' : '' ) . ' />';
 
 		if ( $field['desc'] != '' ) {
 			echo '<label for="' . $id . '">' . $field['desc'] . '</label>';
@@ -1697,6 +1696,10 @@ class WPF_Options {
 		if ( ! isset( $field['disabled'] ) ) {
 			$field['disabled'] = false;
 		}
+
+		// Passwords with slashes in them get escaped on save so we'll un-slash them here
+
+		$this->options[ $id ] = stripslashes( $this->options[ $id ] );
 
 		echo '<input id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="form-control ' . $field['class'] . '" type="password" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" placeholder="' . $field['std'] . '" value="' . esc_attr( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 

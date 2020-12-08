@@ -58,8 +58,14 @@ function initializeTagsSelect(target) {
 					tags : true,
 					maximumSelectionLength: limit,
 					insertTag: function(data, tag){
-					    tag.text = tag.text + " (add new)"
-					    data.push(tag);
+						tag.text = tag.text + " (" + wpf_admin.strings.addNew + ")"
+						data.push(tag);
+					},
+					language: {
+						maximumSelected: function (a) {
+							var b = wpf_admin.strings.maxSelected.replace( 'MAX', a.maximum );
+							return 1 != a.maximum && (b += "s"), b;
+						},
 					}
 				});
 
@@ -80,12 +86,12 @@ function initializeTagsSelect(target) {
 					maximumSelectionLength: limit,
 					language: {
 						noResults: function() {
-							var jQueryresync = jQuery("<a id='wpf-select4-tags-resync'>No results found: click to resynchronize</a>");
+							var jQueryresync = jQuery("<a id='wpf-select4-tags-resync'>" + wpf_admin.strings.noResults + "</a>");
 
 							jQueryresync.on('mouseup', function (evt) {
 								evt.stopPropagation();
 								jQuery(this).hide();
-								jQuery(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> Loading tags, please wait...</span>');
+								jQuery(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> ' + wpf_admin.strings.loadingTags + '</span>');
 
 								var data = {
 									'action'	: 'sync_tags'
@@ -94,7 +100,7 @@ function initializeTagsSelect(target) {
 								jQuery.post(ajaxurl, data, function(response) {
 
 									jQuery('#wpf-select4-tags-loading').remove();
-									jQueryresync.after('<span>Resync complete. Please try searching again.</span>');
+									jQueryresync.after('<span>' + wpf_admin.strings.resyncComplete + '</span>');
 
 									jQuery(el).append(response);
 									jQuery(el).trigger('change');
@@ -104,7 +110,11 @@ function initializeTagsSelect(target) {
 							});
 
 							return jQueryresync;
-						}
+						},
+						maximumSelected: function (a) {
+							var b = wpf_admin.strings.maxSelected.replace( 'MAX', a.maximum );
+							return 1 != a.maximum && (b += "s"), b;
+						},
 					},
 					escapeMarkup: function (markup) {
 						return markup;
@@ -290,12 +300,12 @@ jQuery(document).ready(function($){
 					multiple: false,
 					language: {
 						noResults: function() {
-							var $resync = $("<a id='wpf-select4-tags-resync'>No results found: click to resynchronize</a>");
+							var $resync = $("<a id='wpf-select4-tags-resync'>" + wpf_admin.strings.noResults + "</a>");
 
 							$resync.on('mouseup', function (evt) {
 								evt.stopPropagation();
 								$(this).hide();
-								$(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> Loading fields, please wait...</span>');
+								$(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> ' + wpf_admin.strings.loadingFields + '</span>');
 
 								var data = {
 									'action'	: 'sync_custom_fields'
@@ -304,7 +314,7 @@ jQuery(document).ready(function($){
 								$.post(ajaxurl, data, function(response) {
 
 									$('#wpf-select4-tags-loading').remove();
-									$resync.after('<span>Resync complete. Please try searching again.</span>');
+									$resync.after('<span>' + wpf_admin.strings.resyncComplete + '</span>');
 
 									$element.append(response);
 									$element.trigger('change');
@@ -335,7 +345,7 @@ jQuery(document).ready(function($){
 	// Admin notices
 	//
 
-	$('#wpf-woo-warning .notice-dismiss').click(function(event) {
+	$('#wpf-woo-warning .notice-dismiss').on( "click", function(event) {
 		
 		var data = {
 			'action'	: 'wpf_dismiss_notice',
@@ -350,7 +360,7 @@ jQuery(document).ready(function($){
 	// Meta boxes
 	//
 
-	$('#wpf-meta [data-unlock], .wpf-meta [data-unlock]').click(function() {
+	$('#wpf-meta [data-unlock], .wpf-meta [data-unlock]').on( "click", function() {
 
 		var targets = $(this).data('unlock').split(" ");
 		var ischecked = $(this).prop('checked');
@@ -364,7 +374,7 @@ jQuery(document).ready(function($){
 
 	// Warn on linked tag change
 
-	$('select[name*="tag_link"], select[name*="link_tag"]').change(function(event) {
+	$('select[name*="tag_link"], select[name*="link_tag"]').on( 'change', function(event) {
 
 		var selected = $('option:selected', this ).text();
 
@@ -372,14 +382,14 @@ jQuery(document).ready(function($){
 			return;
 		}
 
-		var content = '<div class="notice notice-warning wpf-tags-notice"><p>It looks like you\'ve just changed a linked tag. To manually trigger automated enrollments, run a <em>Resync Tags</em> operation from the <a target="_blank" href="' + wpf_admin.settings_page + '#advanced">WP Fusion settings page</a>. Any user with the <strong>' + selected + '</strong> tag will be enrolled. Any user without the <strong>' + selected + '</strong> tag will be unenrolled.</p></div>';
+		var content = '<div class="notice notice-warning wpf-tags-notice"><p>' + wpf_admin.strings.linkedTagChanged.replaceAll( 'TAGNAME', selected ) + '</p></div>';
 
 		$(this).next( 'span.select4' ).after( content );
 
 	});
 
 	// Remove "disabled" on select so the data still gets posted
-	$('form').bind('submit', function() {
+	$('form').on('submit', function() {
 		$(this).find('#wpf-meta :input').removeAttr('disabled');
 	});
 
@@ -399,9 +409,9 @@ jQuery(document).ready(function($){
 	$('.widget-filter-by-tag').on('click', function(event) {
 
 		if($(this).prop('checked') === true) {
-            $(this).parent().next('.tags-container').show();
+			$(this).parent().next('.tags-container').show();
 		} else{
-            $(this).parent().next('.tags-container').hide();
+			$(this).parent().next('.tags-container').hide();
 		}
 	});
 
@@ -541,12 +551,12 @@ jQuery(document).ready(function($){
 
 			event.preventDefault();
 
-			$(this).html('Syncing'); 
-	        $(this).attr('disabled', 'disabled');
+			$(this).html( wpf_admin.strings.syncing ); 
+			$(this).attr('disabled', 'disabled');
 
-	        var button = $(this);
+			var button = $(this);
 
-	        var data = {
+			var data = {
 				'action'	: 'resync_contact',
 				'user_id' 	: $(this).data('user_id')
 			};
@@ -555,26 +565,26 @@ jQuery(document).ready(function($){
 
 				if(response.success == false) {
 
-					$('td#contact-id').html('No contact record found.');
+					$('td#contact-id').html( wpf_admin.strings.noContact );
 					$('#wpf-tags-row').remove();
 
 				} else {
 
-					response = $.parseJSON(response);
+					response = JSON.parse(response);
 
 					// Set contact ID
 					$('td#contact-id').html(response.contact_id);
 
 					// If no tags
 					if(response.user_tags == false) {
-						$('td#wpf-tags-td').html('No tags applied.');
+						$('td#wpf-tags-td').html( wpf_admin.strings.noTags );
 					} else {
-						$('td#wpf-tags-td').html('Reload page to see tags.');
+						$('td#wpf-tags-td').html( wpf_admin.strings.foundTags );
 					}
 
 				}
 
-				button.html('Resync Contact');
+				button.html( wpf_admin.strings.resyncContact );
 				button.removeAttr('disabled');
 
 			});
@@ -601,21 +611,21 @@ jQuery(document).ready(function($){
 
 	// Tribe Events
 
-	$('.ticket_edit').click(function(event) {
+	$('.ticket_edit').on( "click", function(event) {
 
 		var ticketID = $(this).attr('attr-ticket-id');
 
 		$.each($('#ticket_form_table tr.wpf-ticket-wrapper'), function(index, val) {
 
 			if($(this).attr('data-id') != ticketID || $(this).hasClass('no-id')) {
-			 	$(this).remove();
+				$(this).remove();
 			}
 
 		});
 
 	});
 
-	$('#ticket_form_toggle').click(function(event) {
+	$('#ticket_form_toggle').on( "click", function(event) {
 		
 		$(this).parentsUntil('table').find('tr.wpf-ticket-wrapper.has-id').remove();
 
@@ -653,7 +663,7 @@ jQuery(document).ready(function($){
 
 		if($( ".edd-recurring-enabled" ).length) {
 
-			$('.edd-recurring-enabled select, select#edd_recurring').change(function(event) {
+			$('.edd-recurring-enabled select, select#edd_recurring').on( 'change', function(event) {
 				
 				var recurring = false;
 
@@ -746,7 +756,7 @@ jQuery(document).ready(function($){
 
 	if( $('body').hasClass('post-type-course') ) {
 
-		$('a#wpf-coursepress-update').click(function(event) {
+		$('a#wpf-coursepress-update').on( "click", function(event) {
 			
 			event.preventDefault();
 
@@ -800,6 +810,52 @@ jQuery(document).ready(function($){
 
 	}
 
+	// Gamipress
+
+	if ( $('body').hasClass('gamipress-post-type') ) {
+
+		// Listen for our change to our trigger type selectors
+		$('.requirements-list').on( 'change', '.select-trigger-type', function() {
+
+			// Grab our selected trigger type and achievement selector
+			var trigger_type = $(this).val();
+			var form_selector = $(this).siblings('.select-wp-fusion-tag');
+
+			if( trigger_type === 'wp_fusion_specific_tag_applied' || trigger_type === 'wp_fusion_specific_tag_removed' ) {
+				form_selector.show();
+			} else {
+				form_selector.hide();
+			}
+
+		});
+
+		// Loop requirement list items to show/hide form select on initial load
+		$('.requirements-list li').each(function() {
+
+			// Grab our selected trigger type and achievement selector
+			var trigger_type = $(this).find('.select-trigger-type').val();
+			var form_selector = $(this).find('.select-wp-fusion-tag');
+
+			if( trigger_type === 'wp_fusion_specific_tag_applied'
+				|| trigger_type === 'wp_fusion_specific_tag_removed') {
+				form_selector.show();
+			} else {
+				form_selector.hide();
+			}
+
+		});
+
+		$('.requirements-list').on( 'update_requirement_data', '.requirement-row', function(e, requirement_details, requirement) {
+
+			if( requirement_details.trigger_type === 'wp_fusion_specific_tag_applied'
+				|| requirement_details.trigger_type === 'wp_fusion_specific_tag_removed') {
+				requirement_details.wp_fusion_tag = requirement.find( '.select-wp-fusion-tag' ).val();
+			}
+
+		});
+
+	}
+
 });
 
 // Tribe Tickets
@@ -808,7 +864,7 @@ function initializeTicketTable( ticketID ) {
 
 	initializeTagsSelect( '#ticket_form_table' );
 
-	jQuery('#ticket_form_table #ticket_wpf_settings-apply_tags').change(function(event) {
+	jQuery('#ticket_form_table #ticket_wpf_settings-apply_tags').on( 'change', function(event) {
 		
 		var items = [];
 		jQuery(this).find('option:selected').each(function(){ items.push(jQuery(this).val()); });

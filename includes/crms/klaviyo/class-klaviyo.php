@@ -509,8 +509,6 @@ class WPF_Klaviyo {
 			return false;
 		}
 
-		return new WP_Error( 'error', 'Klaviyo does not currently support updating Person records over the API.' );
-
 		$data['api_key'] = $this->key;
 
 		// This doesn't currently work
@@ -521,6 +519,8 @@ class WPF_Klaviyo {
 		$request          = 'https://a.klaviyo.com/api/v1/person/' . $contact_id . '?api-key=' . $this->key;
 
 		$response = wp_remote_request( $request, $params );
+
+		return new WP_Error( 'error', 'Klaviyo does not currently support updating Person records over the API.' );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

@@ -159,7 +159,7 @@ class WPF_Shortcodes {
 			$can_access = true;
 		}
 
-		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $post->ID, $tags_split );
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $post->ID );
 
 		if ( $can_access == true ) {
 
@@ -247,10 +247,13 @@ class WPF_Shortcodes {
 
 			if ( ! metadata_exists( 'user', $user_id, $atts['field'] ) ) {
 
-				$user_meta = wp_fusion()->user->pull_user_meta();
+				if ( ! empty( wp_fusion()->user->get_contact_id() ) ) {
 
-				if ( isset( $user_meta[ $atts['field'] ] ) ) {
-					$value = $user_meta[ $atts['field'] ];
+					$user_meta = wp_fusion()->user->pull_user_meta();
+
+					if ( isset( $user_meta[ $atts['field'] ] ) ) {
+						$value = $user_meta[ $atts['field'] ];
+					}
 				}
 			}
 		}
@@ -275,7 +278,7 @@ class WPF_Shortcodes {
 			$value = ucwords( $value );
 		}
 
-		if( empty( $value ) ) {
+		if( empty( $value ) && ! is_numeric( $value ) ) {
 			return do_shortcode($content);
 		} else {
 			return $value;

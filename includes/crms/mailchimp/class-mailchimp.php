@@ -155,7 +155,7 @@ class WPF_MailChimp {
 				$message = '<strong>' . $body->title . ':</strong> ' . $body->detail;
 
 				if ( 'Resource Not Found' == $body->title ) {
-					$message .= '. This usually indicates either the contact record was deleted, or the selected list is no longer valid.';
+					$message .= ' This usually indicates either the contact record was deleted, or the selected list or tag ID is no longer valid.';
 				}
 
 				if ( isset( $body->errors ) ) {
@@ -437,12 +437,33 @@ class WPF_MailChimp {
 
 			foreach ( $body->merge_fields as $field ) {
 
-				if ( $field->type == 'address' ) {
-					continue;
+				if ( 'address' !== $field->type ) {
+
+					// Regular fields
+
+					$crm_fields[ $field->tag ] = preg_replace( '/[\x00-\x1F\x80-\xFF]/', '', $field->name );
+
+				} else {
+
+					// Multipart address fields
+
+					if ( 'Address' !== $field->name ) {
+
+						// If it's a custom address field, add the name as a prefix
+						$prefix = preg_replace( '/[\x00-\x1F\x80-\xFF]/', '', $field->name ) . ' - ';
+
+					} else {
+						$prefix = '';
+					}
+
+					$crm_fields[ $field->tag . '+addr1' ]   = $prefix . 'Address 1';
+					$crm_fields[ $field->tag . '+addr2' ]   = $prefix . 'Address 2';
+					$crm_fields[ $field->tag . '+city' ]    = $prefix . 'City';
+					$crm_fields[ $field->tag . '+state' ]   = $prefix . 'State';
+					$crm_fields[ $field->tag . '+zip' ]     = $prefix . 'Zip';
+					$crm_fields[ $field->tag . '+country' ] = $prefix . 'Country';
+
 				}
-
-				$crm_fields[ $field->tag ] = preg_replace( '/[\x00-\x1F\x80-\xFF]/', '', $field->name );
-
 			}
 		}
 
@@ -630,7 +651,17 @@ class WPF_MailChimp {
 				$keyparts = explode( '+', $key );
 
 				if ( ! isset( $data[ $keyparts[0] ] ) ) {
-					$data[ $keyparts[0] ] = array();
+
+					// Address can't be sent unless it's complete so we'll set "unknown" for now
+
+					$data[ $keyparts[0] ] = array(
+						'addr1'   => 'unknown',
+						'addr2'   => 'unknown',
+						'city'    => 'unknown',
+						'zip'     => 'unknown',
+						'country' => 'unknown',
+						'state'   => 'unknown',
+					);
 				}
 
 				$data[ $keyparts[0] ][ $keyparts[1] ] = $value;
@@ -703,7 +734,17 @@ class WPF_MailChimp {
 				$keyparts = explode( '+', $key );
 
 				if ( ! isset( $data[ $keyparts[0] ] ) ) {
-					$data[ $keyparts[0] ] = array();
+
+					// Address can't be sent unless it's complete so we'll set "unknown" for now
+
+					$data[ $keyparts[0] ] = array(
+						'addr1'   => 'unknown',
+						'addr2'   => 'unknown',
+						'city'    => 'unknown',
+						'zip'     => 'unknown',
+						'country' => 'unknown',
+						'state'   => 'unknown',
+					);
 				}
 
 				$data[ $keyparts[0] ][ $keyparts[1] ] = $value;
@@ -711,22 +752,6 @@ class WPF_MailChimp {
 				unset( $data[ $key ] );
 
 			}
-		}
-
-		// Address can't be sent unless it's complete
-		if ( isset( $data['ADDRESS'] ) ) {
-
-			$defaults = array(
-				'addr1'   => 'unknown',
-				'addr2'   => 'unknown',
-				'city'    => 'unknown',
-				'zip'     => 'unknown',
-				'country' => 'unknown',
-				'state'   => 'unknown',
-			);
-
-			$data['ADDRESS'] = array_merge( $defaults, $data['ADDRESS'] );
-
 		}
 
 		if ( empty( $data['email_address'] ) ) {

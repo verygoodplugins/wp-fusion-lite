@@ -4,199 +4,225 @@ $nationbuilder_fields = array();
 
 $nationbuilder_fields['first_name'] = array(
 	'crm_field' => 'first_name',
-	'crm_label'	=> 'First Name'
+	'crm_label' => 'First Name',
 );
 
 $nationbuilder_fields['last_name'] = array(
 	'crm_field' => 'last_name',
-	'crm_label'	=> 'Last Name'
+	'crm_label' => 'Last Name',
 );
 
 $nationbuilder_fields['user_email'] = array(
 	'crm_field' => 'email',
-	'crm_label'	=> 'Email'
+	'crm_label' => 'Email',
 );
 
 $nationbuilder_fields['display_name'] = array(
 	'crm_field' => 'full_name',
-	'crm_label'	=> 'Full Name'
+	'crm_label' => 'Full Name',
 );
 
 $nationbuilder_fields['user_login'] = array(
 	'crm_field' => 'username',
-	'crm_label'	=> 'Username'
+	'crm_label' => 'Username',
 );
 
 $nationbuilder_fields['user_url'] = array(
 	'crm_field' => 'website',
-	'crm_label'	=> 'Website'
+	'crm_label' => 'Website',
 );
 
 $nationbuilder_fields['phone_number'] = array(
 	'crm_field' => 'phone',
-	'crm_label'	=> 'Phone'
+	'crm_label' => 'Phone',
 );
 
 $nationbuilder_fields['billing_phone'] = array(
 	'crm_field' => 'work_phone_number',
-	'crm_label'	=> 'Phone (Work)'
+	'crm_label' => 'Phone (Work)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'fax_number',
-	'crm_label'	=> 'Phone (Fax)'
+	'crm_label' => 'Phone (Fax)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'mobile',
-	'crm_label'	=> 'Phone (Mobile)'
+	'crm_label' => 'Phone (Mobile)',
 );
 
 // Billing
-
 $nationbuilder_fields['billing_address_1'] = array(
 	'crm_field' => 'billing_address+address1',
-	'crm_label'	=> 'Address 1 (Billing)'
+	'crm_label' => 'Address 1 (Billing)',
 );
 
 $nationbuilder_fields['billing_address_2'] = array(
 	'crm_field' => 'billing_address+address2',
-	'crm_label'	=> 'Address 2 (Billing)'
+	'crm_label' => 'Address 2 (Billing)',
 );
 
 $nationbuilder_fields['billing_city'] = array(
 	'crm_field' => 'billing_address+city',
-	'crm_label'	=> 'City (Billing)'
+	'crm_label' => 'City (Billing)',
 );
 
 $nationbuilder_fields['billing_state'] = array(
 	'crm_field' => 'billing_address+state',
-	'crm_label'	=> 'State (Billing)'
+	'crm_label' => 'State (Billing)',
 );
 
 $nationbuilder_fields['billing_postcode'] = array(
 	'crm_field' => 'billing_address+zip',
-	'crm_label'	=> 'Postcode (Billing)'
+	'crm_label' => 'Postcode (Billing)',
 );
 
 $nationbuilder_fields['billing_country'] = array(
 	'crm_field' => 'billing_address+country_code',
-	'crm_label'	=> 'Country (Billing)'
+	'crm_label' => 'Country (Billing)',
 );
 
 // Registered Address
-
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+address1',
-	'crm_label'	=> 'Address 1 (Registered)'
+	'crm_label' => 'Address 1 (Registered)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+address2',
-	'crm_label'	=> 'Address 2 (Registered)'
+	'crm_label' => 'Address 2 (Registered)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+city',
-	'crm_label'	=> 'City (Registered)'
+	'crm_label' => 'City (Registered)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+state',
-	'crm_label'	=> 'State (Registered)'
+	'crm_label' => 'State (Registered)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+zip',
-	'crm_label'	=> 'Postcode (Registered)'
+	'crm_label' => 'Postcode (Registered)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+country_code',
-	'crm_label'	=> 'Country (Registered)'
+	'crm_label' => 'Country (Registered)',
 );
 
 // Home Address
-
 $nationbuilder_fields['shipping_address_1'] = array(
 	'crm_field' => 'home_address+address1',
-	'crm_label'	=> 'Address 1 (Home / Primary)'
+	'crm_label' => 'Address 1 (Home / Primary)',
 );
 
 $nationbuilder_fields['shipping_address_2'] = array(
 	'crm_field' => 'home_address+address2',
-	'crm_label'	=> 'Address 2 (Home / Primary)'
+	'crm_label' => 'Address 2 (Home / Primary)',
 );
 
 $nationbuilder_fields['shipping_city'] = array(
 	'crm_field' => 'home_address+city',
-	'crm_label'	=> 'City (Home / Primary)'
+	'crm_label' => 'City (Home / Primary)',
 );
 
 $nationbuilder_fields['shipping_state'] = array(
 	'crm_field' => 'home_address+state',
-	'crm_label'	=> 'State (Home / Primary)'
+	'crm_label' => 'State (Home / Primary)',
 );
 
 $nationbuilder_fields['shipping_postcode'] = array(
 	'crm_field' => 'home_address+zip',
-	'crm_label'	=> 'Postcode (Home / Primary)'
+	'crm_label' => 'Postcode (Home / Primary)',
 );
 
 $nationbuilder_fields['shipping_country'] = array(
 	'crm_field' => 'home_address+country_code',
-	'crm_label'	=> 'Country (Home / Primary)'
+	'crm_label' => 'Country (Home / Primary)',
+);
+
+// Work Address
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+address1',
+	'crm_label' => 'Address 1 (Home / Primary)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+address2',
+	'crm_label' => 'Address 2 (Home / Primary)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+city',
+	'crm_label' => 'City (Home / Primary)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+state',
+	'crm_label' => 'State (Home / Primary)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+zip',
+	'crm_label' => 'Postcode (Home / Primary)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+country_code',
+	'crm_label' => 'Country (Home / Primary)',
 );
 
 // Other stuff
-
 $nationbuilder_fields[] = array(
 	'crm_field' => 'birthdate',
-	'crm_label'	=> 'Birthdate'
+	'crm_label' => 'Birthdate',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'sex',
-	'crm_label'	=> 'Sex'
+	'crm_label' => 'Sex',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'twitter_name',
-	'crm_label'	=> 'Twitter Name'
+	'crm_label' => 'Twitter Name',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'bio',
-	'crm_label'	=> 'Bio'
+	'crm_label' => 'Bio',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'children_count',
-	'crm_label'	=> 'Children Count'
+	'crm_label' => 'Children Count',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'church',
-	'crm_label'	=> 'Church'
+	'crm_label' => 'Church',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'language',
-	'crm_label'	=> 'Language'
+	'crm_label' => 'Language',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'facebook_username',
-	'crm_label'	=> 'Facebook Username'
+	'crm_label' => 'Facebook Username',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'facebook_profile_url',
-	'crm_label'	=> 'Facebook Profile URL'
+	'crm_label' => 'Facebook Profile URL',
 );
 
 // Booleans
-
 $nationbuilder_fields[] = array(
 	'crm_field' => 'is_absentee_voter',
 	'crm_label' => 'Is Absentee Voter?',
@@ -314,7 +340,6 @@ $nationbuilder_fields[] = array(
 
 
 // Fields to ignore (for now)
-
 $nationbuilder_ignore_fields = array(
 	'city_district',
 	'civicrm_id',
@@ -483,6 +508,5 @@ $nationbuilder_ignore_fields = array(
 	'user_submitted_address',
 	'voter_updated_at',
 	'warnings_count',
-	'work_address'
 );
 

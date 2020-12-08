@@ -92,3 +92,8 @@ $zerobscrm_fields['shipping_country'] = array(
 	'crm_label' => 'Secondary Country',
 	'crm_field' => 'seccountry'
 );
+
+$zerobscrm_fields[] = array(
+	'crm_label' => 'Avatar',
+	'crm_field' => 'avatar'
+);

@@ -37,7 +37,7 @@ class WPF_Kartra {
 
 		$this->slug     = 'kartra';
 		$this->name     = 'Kartra';
-		$this->supports = array( 'add_fields' );
+		$this->supports = array();
 
 		// WP Fusion app ID
 		$this->app_id 	= 'EoPIrcjdRhQl';
@@ -99,6 +99,8 @@ class WPF_Kartra {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
+		$options = wp_fusion()->settings->get( 'kartra_dropdown_options', array() );
+
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
@@ -106,6 +108,20 @@ class WPF_Kartra {
 
 			return $date;
 
+		} elseif ( isset( $options[ $field ] ) && ! empty( $value ) ) {
+
+			$option_id = array_search( $value, $options[ $field ] );
+
+			if ( $option_id ) {
+
+				return $option_id;
+
+			} else {
+
+				wpf_log( 'notice', 0, 'The value <strong>' . $value . '</strong> is not a valid option for the field <strong>' . $field . '</strong>. Valid options are: ' . implode( ', ', $options[ $field ] ) );
+				return false;
+
+			}
 		} else {
 
 			return $value;
@@ -292,7 +308,7 @@ class WPF_Kartra {
 		$params['body']['actions'] = array(
 			array( 'cmd' => 'retrieve_account_lists' )
 		);
-		
+
 		$response = wp_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
@@ -334,41 +350,57 @@ class WPF_Kartra {
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/kartra-fields.php';
 
-		$crm_fields = array();
+		$built_in_fields = array();
 
 		foreach ( $kartra_fields as $index => $data ) {
-			$crm_fields[ $data['crm_field'] ] = $data['crm_label'];
+			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
 		$params = $this->params;
 
-		// Try and get any custom fields by querying the first lead
+		$params['body']['actions'][] = array( 'cmd' => 'retrieve_custom_fields' );
 
-		$params['body']['get_lead']['id'] = '1';
-		
 		$response = wp_remote_post( $this->api_url, $params );
 
-		if( ! is_wp_error( $response ) ) {
+		$dropdown_options = array();
+		$custom_fields    = array();
+
+		if ( ! is_wp_error( $response ) ) {
+
+			// This API call often times out / throws an error so lets assume that will happen sometimes
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( ! empty( $response ) ) {
+			if ( ! empty( $response ) ) {
 
-				foreach( $response->lead_details as $field => $value ) {
+				foreach ( $response->custom_fields as $field ) {
 
-					if( strpos($field, ' ') !== false || strtolower( $field ) != $field ) {
-						$crm_fields[ $field ] = $field;
+					$custom_fields[ $field->field_identifier ] = $field->field_identifier;
+
+					// Let's save a cache of dropdown field values
+
+					if ( ! empty( $field->field_value ) ) {
+
+						$dropdown_options[ $field->field_identifier ] = array();
+
+						foreach ( $field->field_value as $option ) {
+							$dropdown_options[ $field->field_identifier ][ $option->option_id ] = $option->option_value;
+						}
 					}
-
 				}
-
 			}
-
 		}
 
-		asort( $crm_fields );
+		asort( $custom_fields );
+
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+
+		wp_fusion()->settings->set( 'kartra_dropdown_options', $dropdown_options );
 
 		return $crm_fields;
 	}
@@ -547,8 +579,36 @@ class WPF_Kartra {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$params = $this->params;
-		$params['body']['lead'] = $data;
+		// Figure out the custom fields....
+
+		require dirname( __FILE__ ) . '/admin/kartra-fields.php';
+
+		$standard_fields = array();
+
+		foreach ( $kartra_fields as $field ) {
+			$standard_fields[] = $field['crm_field'];
+		}
+
+		foreach ( $data as $key => $value ) {
+
+			if ( ! in_array( $key, $standard_fields ) ) {
+
+				if ( ! isset( $data['custom_fields'] ) ) {
+					$data['custom_fields'] = array();
+				}
+
+				$data['custom_fields'][] = array(
+					'field_identifier' => $key,
+					'field_value'      => $value,
+				);
+
+				unset( $data[ $key ] );
+
+			}
+		}
+
+		$params                    = $this->params;
+		$params['body']['lead']    = $data;
 		$params['body']['actions'] = array(
 			array( 'cmd' => 'create_lead' )
 		);
@@ -603,16 +663,44 @@ class WPF_Kartra {
 			return false;
 		}
 
-		$data['cmd'] = 'edit_lead';
-		$data['id'] = $contact_id;
+		// Figure out the custom fields....
 
-		if( isset( $data['email'] ) ) {
+		require dirname( __FILE__ ) . '/admin/kartra-fields.php';
+
+		$standard_fields = array();
+
+		foreach ( $kartra_fields as $field ) {
+			$standard_fields[] = $field['crm_field'];
+		}
+
+		foreach ( $data as $key => $value ) {
+
+			if ( ! in_array( $key, $standard_fields ) ) {
+
+				if ( ! isset( $data['custom_fields'] ) ) {
+					$data['custom_fields'] = array();
+				}
+
+				$data['custom_fields'][] = array(
+					'field_identifier' => $key,
+					'field_value'      => $value,
+				);
+
+				unset( $data[ $key ] );
+
+			}
+		}
+
+		$data['cmd'] = 'edit_lead';
+		$data['id']  = $contact_id;
+
+		if ( isset( $data['email'] ) ) {
 			$data['new_email'] = $data['email'];
 			unset( $data['email'] );
 		}
 
-		$params = $this->params;
-		$params['body']['lead'] = $data;
+		$params                    = $this->params;
+		$params['body']['lead']    = $data;
 		$params['body']['actions'] = array(
 			array( 'cmd' => 'edit_lead' )
 		);
@@ -641,10 +729,10 @@ class WPF_Kartra {
 
 		$params = $this->params;
 		$params['body']['get_lead']['id'] = $contact_id;
-		
+
 		$response = wp_remote_post( $this->api_url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -654,10 +742,48 @@ class WPF_Kartra {
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if ( $field_data['active'] == true && isset( $body_json->lead_details->{ $field_data['crm_field'] } ) ) {
-				$user_meta[ $field_id ] = $body_json->lead_details->{ $field_data['crm_field'] };
-			}
+			if ( $field_data['active'] == true ) {
 
+				if ( isset( $body_json->lead_details->{ $field_data['crm_field'] } ) ) {
+
+					$user_meta[ $field_id ] = $body_json->lead_details->{ $field_data['crm_field'] };
+
+				} elseif ( ! empty( $body_json->lead_details->custom_fields ) ) {
+
+					foreach ( $body_json->lead_details->custom_fields as $field ) {
+
+						if ( $field->field_identifier == $field_data['crm_field'] ) {
+
+							// Checkboxes, dropdowns
+							if ( is_array( $field->field_value ) ) {
+
+								if ( 1 == count( $field->field_value ) ) {
+
+									// Dropdowns
+									$user_meta[ $field_id ] = $field->field_value[0]->option_value;
+
+								} else {
+
+									// Multi checkboxes
+									$user_meta[ $field_id ] = array();
+
+									foreach ( $field->field_value as $option ) {
+
+										$user_meta[ $field_id ][] = $option->option_value;
+
+									}
+
+								}
+							} else {
+
+								// Regular fields
+								$user_meta[ $field_id ] = $field->field_value;
+
+							}
+						}
+					}
+				}
+			}
 		}
 
 		return $user_meta;

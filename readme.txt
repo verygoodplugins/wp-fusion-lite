@@ -1,10 +1,10 @@
 === WP Fusion Lite ===
 Contributors: verygoodplugins
-Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, user meta, sync, wpfusion, wp-fusion
-Requires at least: 4.0
+Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, wpfusion, wp-fusion
+Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 5.5
-Stable tag: 3.34
+Tested up to: 5.6
+Stable tag: 3.35
 
 WP Fusion integrates your website with your CRM or marketing automation system.
 
@@ -44,6 +44,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Drip
 * EngageBay
 * Flexie
+* FluentCRM
 * GetResponse
 * Gist
 * Groundhogg
@@ -92,6 +93,107 @@ Upload and activate the plugin, then go to Settings >> WP Fusion. Select your de
 See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.35 - 12/8/2020 =
+
+##### New CRMs
+
+* FluentCRM
+
+
+##### New Features
+
+* Added additional logging to show when meta values have been modified by wpf_format_field_value before being sent to the CRM
+* Added "Additional Actions" to admin user profile (Push User Meta, Pull User Meta, and Show User Meta) for debugging purposes
+* Added Re-Authorize With Hubspot button to re-connect via OAuth
+* Added option to disable admin menu editor interfaces
+* Added support for Mautic v3
+* Added support for new background_request flag with the Ontraport API
+* Added a Default Account setting for Salesforce
+
+* Added datetime field support to Zoho integration
+* Added support for dropdown and checkbox fields with Kartra
+* Added Work Address fields for sync with NationBuilder
+* Added Owner ID field for sync with Groundhogg
+* Added Profile Picture field for sync with Groundhogg
+* Added support for custom address fields with Mailchimp
+* Added Avatar field for sync with Jetpack CRM
+* Added Phone 3 through Phone 5 fields for syncing with Infusionsoft
+
+
+#### Improvements
+
+* Tested and updated for WordPress 5.6
+
+* Added warning when user_pass field is enabled for sync
+* Added logging for WP Fusion plugin updates
+* Added logging for when an invalid role slug was loaded from the CRM
+
+* Improved Hide From Menus setting - will now attempt to get a post ID out of a custom link
+* Improved (No Tags) and (No Contact ID) filters in the All Users list
+* Improved - Multiselect values loaded from ActiveCampaign will now be loaded as arrays instead of strings
+* Improved support for syncing First Name and Last Name with Gist
+* Improved - Post type archives will now respect wpf_post_type_rules access rules
+* Improved handling for merged / changed contact IDs to Ontraport
+* Improved - Moved ActiveCampaign tracking scripts to the footer
+
+* Improved error handling for MailPoet
+* Improved error handling with Drip
+* Improved error handling with MailJet
+* Improved error handling for NationBuilder
+
+* Updated ZeroBS CRM to Jetpack CRM
+
+* Removed Groundhogg < 2.x compatibility code
+* Removed dynamic tagging support from Groundhogg
+* Removed AWeber integration
+
+
+#### Bug Fixes
+
+* Fixed custom fields not updating with Kartra
+* Fixed importer getting hung up on more than 100 contacts with HubSpot
+* Fixed importer with EngageBay
+* Fixed import tool with MailerLite
+* Fixed MailerLite integration using a case-sensitive comparison for email address changes
+* Fixed user_registered getting loaded from the CRM when a user was imported
+* Fixed Mailjet integration not loading more than 10 custom fields
+* Fixed ActiveCampaign not loading more than 100 custom fields
+* Fixed dates not formatted correctly with Mailjet
+* Fixed PHP warning loading contact data with ActiveCampaign
+* Fixed some issues with Sendinblue and email addresses that had capital letters
+* Fixed syncing empty multiselects to EngageBay not erasing the selected values in the CRM
+* Fixed multiselect fields not loading from EngageBay
+* Fixed PHP warning in EngageBay integration when loading a contact with no custom properties
+* Fixed users having to log in twice if they tried to log in during an auto-login session
+* Fixed taxonomy term settings not saving when trying to remove protection from a term
+* Fixed error adding new Zoho Leads without a last name
+* Fixed JS bug when editing taxonomy terms
+* Fixed settings page requiring an extra refresh after resetting before changing to a new CRM
+* Fixed "Wrong custom field format" error adding contacts to Kartra
+* Fixed loading dropdown and multi-checkbox type fields from Kartra
+* Fixed Salesforce not connecting when the password has a slash character in it
+* Fixed date fields not syncing properly with Groundhogg
+* Fixed applying tags on pageview in AJAX request during an auto login session not working on WP Engine
+* Fixed JSON formatting error applying tags with AgileCRM
+* Fixed - user_id will no longer be loaded during user imports
+* Fixed - Renamed class WPF_Options to WP_Fusion_Options to prevent conflict with WooCommerce Product Filter
+* Fixed MailEngine SOAP warning when MailEngine wasn't the active CRM
+* Fixed user_meta shortcode not displaying field if value was 0
+* Fixed Lead Source Tracking not working for guests
+
+
+#### Developer
+
+* Added "raw" field type
+* Added functions wpf_get_crm_field(), wpf_is_field_active(), and wpf_get_field_type()
+* Added wpf_set_user_meta filter
+* Added wpf_render_tag_multiselect_args filter
+* Added gettext support to wpf-admin.js and wpf-options.js strings
+* Added doing_wpf_webhook() function
+* Added pre_user_{$field} filter on user data being synced to the CRM
+
+
 
 = 3.34 - 8/12/2020 =
 

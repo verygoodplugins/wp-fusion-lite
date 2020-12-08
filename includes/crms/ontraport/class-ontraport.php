@@ -291,17 +291,54 @@ class WPF_Ontraport {
 	public function handle_http_response( $response, $args, $url ) {
 
 		// Ignore on find by email requests since they'll return a 400 error if no matching email is found
-		if( strpos( $url, 'ontraport' ) !== false && strpos( $url, 'getByEmail' ) === false ) {
+		if ( strpos( $url, 'ontraport' ) !== false && strpos( $url, 'getByEmail' ) === false ) {
 
-			$body = wp_remote_retrieve_body( $response );
+			$body          = wp_remote_retrieve_body( $response );
 			$response_code = wp_remote_retrieve_response_code( $response );
 
 			if ( 200 != $response_code ) {
 
+				if ( 'Object not found' == $body ) {
+
+					$data = json_decode( $args['body'], true );
+
+					$user_id = wp_fusion()->user->get_user_id( $data['id'] );
+
+					if ( $user_id ) {
+
+						$data['id'] = wp_fusion()->user->get_contact_id( $user_id, true );
+
+						if ( $data['id'] ) {
+
+							$args['body'] = json_encode( $data );
+
+							return wp_remote_request( $url, $args );
+						}
+					}
+				} elseif ( 'Invalid Contact ID' == $body ) {
+
+					// Ecom addon
+
+					$data = json_decode( $args['body'], true );
+
+					$user_id = wp_fusion()->user->get_user_id( $data['contact_id'] );
+
+					if ( $user_id ) {
+
+						$data['contact_id'] = wp_fusion()->user->get_contact_id( $user_id, true );
+
+						if ( $data['contact_id'] ) {
+
+							$args['body'] = json_encode( $data );
+
+							return wp_remote_request( $url, $args );
+						}
+					}
+				}
+
 				$response = new WP_Error( 'error', $body );
 
 			}
-
 		}
 
 		return $response;
@@ -568,9 +605,10 @@ class WPF_Ontraport {
 		}
 
 		$post_data = array(
-			'objectID' => $this->object_type,
-			'add_list' => implode( ',', $tags ),
-			'ids'      => $contact_id,
+			'objectID'           => $this->object_type,
+			'add_list'           => implode( ',', $tags ),
+			'ids'                => $contact_id,
+			'background_request' => true, // see update_contact()
 		);
 
 		$params           = $this->params;
@@ -600,9 +638,10 @@ class WPF_Ontraport {
 		}
 
 		$post_data = array(
-			'objectID'    => $this->object_type,
-			'remove_list' => implode( ',', $tags ),
-			'ids'         => $contact_id,
+			'objectID'           => $this->object_type,
+			'remove_list'        => implode( ',', $tags ),
+			'ids'                => $contact_id,
+			'background_request' => true, // see update_contact()
 		);
 
 		$params           = $this->params;
@@ -709,12 +748,13 @@ class WPF_Ontraport {
 
 		// $data['bulk_mail'] = 1; // Contacts can only be set to 0 (transactional) over the API
 
+		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request
+
 		$params           = $this->params;
 		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $data );
 
-		$request = 'https://api.ontraport.com/1/objects';
-
+		$request  = 'https://api.ontraport.com/1/objects';
 		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {

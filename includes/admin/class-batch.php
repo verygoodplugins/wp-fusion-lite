@@ -117,6 +117,25 @@ class WPF_Batch {
 	}
 
 	/**
+	 * Initialize batch processing library
+	 *
+	 * @since 3.35.7
+	 * @return string Name of the batch operation
+	 */
+
+	public function get_operation_title( $id ) {
+
+		$operations = apply_filters( 'wpf_export_options', array() );
+
+		if ( isset( $operations[ $id ] ) ) {
+			return $operations[ $id ]['title'];
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
 	 * Include required files
 	 *
 	 * @since 3.0
@@ -160,40 +179,37 @@ class WPF_Batch {
 			'remaining' => 0,
 		);
 
-		// Get process status / try and restart stalled processes
-		if ( $this->process->is_process_running() == true ) {
+		$keys = $this->process->get_keys();
 
-			$status = $this->process->get_status();
+		if ( ! empty( $keys ) ) {
+			$status = $this->process->get_status( $keys[0] );
+			$active = true;
+		}
 
-			if( ! empty( $status ) ) {
-				$active = true;
-			}
-
-		} elseif ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
-
-			$status = $this->process->get_status();
-
-			if( ! empty( $status ) ) {
-
-				$this->process->dispatch();
-				$active = true;
-
-			}
-
+		// Try and restart it if it's stalled
+		if ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
+			$this->process->dispatch();
 		}
 
 		$total     = intval( $status['total'] );
 		$remaining = intval( $status['remaining'] );
-		$done = $total - $remaining;
+		$done      = $total - $remaining;
 
-		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . $remaining . '"' : '' ) . '>';
-		echo '<i class="fa fa-li fa-spin fa-spinner"></i><p><span class="title"><strong>Background operation running:</strong></span> <span class="status">';
+		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . $remaining . '"' : '' ) . ' ' . ( $active ? 'data-key="' . $status['key'] . '"' : '' ) . '>';
+		echo '<i class="fa fa-li fa-spin fa-spinner"></i><p><span class="title"><strong>' . __( 'Background operation running:', 'wp-fusion-lite' ) . '</strong></span> <span class="status">';
 
-		if ( $active ) {
-			echo 'Processing ' . $done . ' of ' . $total . ' records ';
+		$title = 'records';
+
+		// Get the title from the status
+		if ( ! empty( $status['next_step'] ) ) {
+			$title = $this->get_operation_title( $status['next_step'][0] );
 		}
 
-		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">Cancel</a></p>';
+		if ( $active ) {
+			echo __( 'Processing', 'wp-fusion-lite' ) . ' ' . $done . ' / ' . $total . ' ' . $title . ' ';
+		}
+
+		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">' . __( 'Cancel', 'wp-fusion-lite' ) . '</a></p>';
 		echo '</div>';
 
 	}
@@ -260,7 +276,26 @@ class WPF_Batch {
 
 	public function batch_status() {
 
-		echo json_encode( $this->process->get_status() );
+		if ( isset( $_POST['key'] ) ) {
+			$key = sanitize_key( $_POST['key'] );
+		} else {
+
+			$keys = $this->process->get_keys();
+
+			if ( ! empty( $keys ) ) {
+				$key = $keys[0];
+			}
+		}
+
+		$status = $this->process->get_status( $key );
+
+		if ( ! empty( $status['next_step'] ) ) {
+			$status['title'] = $this->get_operation_title( $status['next_step'][0] );
+		} else {
+			$status['title'] = false;
+		}
+
+		echo json_encode( $status );
 
 		die();
 
@@ -275,8 +310,10 @@ class WPF_Batch {
 
 	public function batch_cancel() {
 
-		$this->process->cancel_process();
-		delete_site_option( 'wpfb_status' );
+		$key = sanitize_key( $_POST['key'] );
+
+		// We'll set this in the DB and then the background worker will pick up on it when it's a good time
+		set_site_transient( 'wpfb_cancel_' . $key, true, MINUTE_IN_SECONDS );
 
 		die();
 
@@ -312,7 +349,13 @@ class WPF_Batch {
 
 		if ( 'error' == $level ) {
 
-			$status = get_site_option( 'wpfb_status' );
+			$keys = $this->process->get_keys();
+
+			if ( empty( $keys ) ) {
+				return;
+			}
+
+			$status = get_site_option( 'wpfb_status_' . $keys[0] );
 
 			if ( ! is_array( $status ) ) {
 				return;
@@ -324,7 +367,7 @@ class WPF_Batch {
 
 			$status['errors']++;
 
-			update_site_option( 'wpfb_status', $status );
+			update_site_option( 'wpfb_status_' . $keys[0], $status );
 
 
 		}
@@ -368,7 +411,15 @@ class WPF_Batch {
 
 		}
 
-		wpf_log( 'info', 0, 'Beginning <strong>Import Contacts</strong> batch operation on ' . count($contact_ids) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>. ' . $removed . ' contacts were excluded from the import because they already have user accounts.', array( 'source' => 'batch-process' ) );
+		// Logging
+
+		$message = 'Beginning <strong>Import Contacts</strong> batch operation on ' . count( $contact_ids ) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>.';
+
+		if ( $removed ) {
+			$message .= $removed . ' contacts were excluded from the import because they already have user accounts.';
+		}
+
+		wpf_log( 'info', 0, $message, array( 'source' => 'batch-process' ) );
 
 		// Keep track of import groups so they can be removed later
 		$import_groups = get_option( 'wpf_import_groups', array() );
@@ -397,7 +448,7 @@ class WPF_Batch {
 
 	public function import_users_step( $contact_id, $args ) {
 
-		if( ! isset( $args['notify'] ) || $args['notify'] === 'false' ) {
+		if ( ! isset( $args['notify'] ) || $args['notify'] === 'false' ) {
 			$args['notify'] = false;
 		}
 
@@ -405,31 +456,26 @@ class WPF_Batch {
 			$args['role'] = false;
 		}
 
-		add_action( 'wpf_user_imported', array( $this, 'count_imported_user' ), 10, 2 );
-		wp_fusion()->user->import_user( $contact_id, $args['notify'], $args['role'] );
+		$user_id = wp_fusion()->user->import_user( $contact_id, $args['notify'], $args['role'] );
+
+		if ( $user_id ) {
+
+			// Track the imported users
+
+			$import_groups = get_option( 'wpf_import_groups', array() );
+
+			end( $import_groups );
+			$key = key( $import_groups );
+			reset( $import_groups );
+
+			$import_groups[ $key ]['user_ids'][] = $user_id;
+
+			update_option( 'wpf_import_groups', $import_groups, false );
+
+		}
 
 	}
 
-	/**
-	 * Counts an imported user and adds them to the import group
-	 *
-	 * @since 3.0
-	 * @return void
-	 */
-
-	public function count_imported_user($user_id, $user_meta) {
-
-		$import_groups = get_option( 'wpf_import_groups', array() );
-
-		end($import_groups);
-		$key = key($import_groups);
-		reset($import_groups);
-
-		$import_groups[$key]['user_ids'][] = $user_id;
-
-		update_option( 'wpf_import_groups', $import_groups, false );
-
-	}
 
 	/**
 	 * Users (just contact IDs) sync batch process init

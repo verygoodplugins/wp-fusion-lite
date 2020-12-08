@@ -48,8 +48,8 @@ class WPF_AWeber {
 		$this->supports = array( 'add_tags', 'add_lists' );
 
 		// OAuth
-		$this->consumer_key 	= 'AkBvf5qeaNiprca16o4FVeX1';
-		$this->consumer_secret 	= 'lkPZtfd6tvblkTxFD5eWlYpiufHLDAWYc9txyfOV';
+		$this->consumer_key    = 'AkBvf5qeaNiprca16o4FVeX1';
+		$this->consumer_secret = 'lkPZtfd6tvblkTxFD5eWlYpiufHLDAWYc9txyfOV';
 
 		// Set up admin options
 		if ( is_admin() ) {

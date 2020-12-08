@@ -23,8 +23,8 @@ $salesforce_fields['phone_number'] = array(
 );
 
 $salesforce_fields['billing_address_1'] = array(
-	'crm_label' => 'Address 1',
-	'crm_field' => 'MailingAddress'
+	'crm_label' => 'Street Address',
+	'crm_field' => 'MailingStreet'
 );
 
 $salesforce_fields['billing_city'] = array(

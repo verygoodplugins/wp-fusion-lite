@@ -29,13 +29,11 @@ class WPF_MailEngine_Admin {
 		add_action( 'show_field_mailengine_header_begin', array( $this, 'show_field_mailengine_header_begin' ), 10, 2 );
 		add_action( 'show_field_mailengine_client_id_end', array( $this, 'show_field_mailengine_client_id_end' ), 10, 2 );
 
-		if ( $this->check_requirements() ) {
-			// AJAX
-			add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
+		// AJAX
+		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-			if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
-				$this->init();
-			}
+		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+			$this->init();
 		}
 
 	}
@@ -50,38 +48,6 @@ class WPF_MailEngine_Admin {
 	public function init() {
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 30 );
-	}
-
-	/**
-	 * Hooks to run when this CRM is selected as active
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-	public function check_requirements() {
-		$eligible = true;
-		// Check requirements - SoapClient
-		if ( ! class_exists( 'SoapClient' ) ) {
-			$eligible = false;
-			add_action( 'admin_notices', array( $this, 'soapclient_missing_notice' ) );
-		}
-
-		return $eligible;
-	}
-
-
-	/**
-	 * Returns error message and deactivates plugin when error returned.
-	 *
-	 * @access public
-	 * @return mixed error message.
-	 */
-
-	public function soapclient_missing_notice() {
-		echo '<div class="notice notice-error">';
-		echo '<p><strong>Warning:</strong> MailEngine CRM for WP Fusion requires SoapClient for PHP in order to function properly. This instance does not have SoapClient for PHP installed.</p>';
-		echo '</div>';
 	}
 
 

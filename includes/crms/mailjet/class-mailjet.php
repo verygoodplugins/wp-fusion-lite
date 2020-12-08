@@ -68,12 +68,27 @@ class WPF_Mailjet {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			$offset = get_option( 'gmt_offset' );
+			$value -= $offset * 60 * 60;
 
-			return $date;
+			try {
+				$value = new DateTime( date( 'c', $value ) );
+			} catch ( Exception $e ) {
+
+				// do it the simple way
+				return date( 'c', $value );
+			}
+
+			// DateTimeZone throws an error with 0 as the timezone
+			if ( $offset >= 0 ) {
+				$offset = '+' . $offset;
+			}
+
+			$value->setTimezone( new DateTimeZone( $offset ) );
+
+			return $value->format( 'c' );
 
 		} else {
 
@@ -92,21 +107,27 @@ class WPF_Mailjet {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'mailjet') !== false && $args['User-Agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'mailjet' ) !== false && $args['User-Agent'] == 'WP Fusion; ' . home_url() ) {
 
-			$response_code = wp_remote_retrieve_response_code( $response ) ;
+			$response_code = wp_remote_retrieve_response_code( $response );
 
 			if ( $response_code == 401 ) {
 
 				$response = new WP_Error( 'error', 'Unauthorized. Please confirm your API Key and Secret Key are correct and try again.' );
 
-			} elseif ($response_code > 201) {
+			} elseif ( $response_code > 201 ) {
 
-				$response_message = wp_remote_retrieve_response_message( $response ) ;
+				$response_message = wp_remote_retrieve_response_message( $response );
+
+				$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+				if ( ! empty( $body ) && isset( $body['ErrorMessage'] ) ) {
+					$response_message .= ' - ' . $body['ErrorMessage'];
+				}
+
 				$response = new WP_Error( 'error', $response_message );
 
 			}
-
 		}
 
 		return $response;
@@ -123,12 +144,12 @@ class WPF_Mailjet {
 	public function get_params( $mailjet_username = null, $mailjet_password = null ) {
 
 		// Get saved data from DB
-		if ( empty( $mailjet_username ) || empty($mailjet_password) ) {
+		if ( empty( $mailjet_username ) || empty( $mailjet_password ) ) {
 			$mailjet_username = wp_fusion()->settings->get( 'mailjet_username' );
 			$mailjet_password = wp_fusion()->settings->get( 'mailjet_password' );
 		}
 
-		$auth_key = base64_encode($mailjet_username . ':' . $mailjet_password);
+		$auth_key = base64_encode( $mailjet_username . ':' . $mailjet_password );
 
 		$this->params = array(
 			'timeout'     => 30,
@@ -136,8 +157,8 @@ class WPF_Mailjet {
 			'User-Agent'  => 'WP Fusion; ' . home_url(),
 			'headers'     => array(
 				'Authorization' => 'Basic ' . $auth_key,
-				'Content-Type'  => 'application/json'
-			)
+				'Content-Type'  => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -164,7 +185,7 @@ class WPF_Mailjet {
 		$request  = 'https://api.mailjet.com/v3/REST/contactslist';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -209,10 +230,10 @@ class WPF_Mailjet {
 
 		$available_tags = array();
 
-		$request  = 'https://api.mailjet.com/v3/REST/contactslist';
+		$request  = 'https://api.mailjet.com/v3/REST/contactslist?Limit=10000';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -241,23 +262,28 @@ class WPF_Mailjet {
 			$this->get_params();
 		}
 
-		$crm_contact_fields = array( 'Email' => 'Email Address', 'Name' => 'Name' );
+		$crm_contact_fields = array(
+			'Email' => 'Email Address',
+			'Name'  => 'Name',
+		);
 
-		$request    = "https://api.mailjet.com/v3/REST/contactmetadata";
-		$response   = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.mailjet.com/v3/REST/contactmetadata?Limit=10000';
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
 		foreach ( $body_json['Data'] as $field_data ) {
-			$crm_meta_fields[$field_data['Name']] =  ucwords( str_replace( '_', ' ', $field_data[ 'Name' ] ) );
+			$crm_meta_fields[ $field_data['Name'] ] = ucwords( str_replace( '_', ' ', $field_data['Name'] ) );
 		}
 
-		$crm_fields = array( 'Standard Fields' => $crm_contact_fields, 'Custom Fields' => $crm_meta_fields );
-
+		$crm_fields = array(
+			'Standard Fields' => $crm_contact_fields,
+			'Custom Fields'   => $crm_meta_fields,
+		);
 
 		asort( $crm_fields );
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
@@ -275,7 +301,6 @@ class WPF_Mailjet {
 
 	public function get_contact_id( $email_address ) {
 
-
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
@@ -284,24 +309,24 @@ class WPF_Mailjet {
 		$request      = 'https://api.mailjet.com/v3/REST/contact/' . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) && $response->get_error_message() == 'Not Found' ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'Not Found' ) {
 
 			return false;
 
-		} elseif( is_wp_error( $response ) ) {
+		} elseif ( is_wp_error( $response ) ) {
 
 			return $response;
 
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['Data'][0]['Email'] ) ) {
 			return false;
 		}
 
 		return $body_json['Data'][0]['ID'];
-		
+
 	}
 
 	/**
@@ -317,10 +342,10 @@ class WPF_Mailjet {
 			$this->get_params();
 		}
 
-		$request    = 'https://api.mailjet.com/v3/REST/contact/' . urlencode( $contact_id ) . '/getcontactslists';
-		$response   = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.mailjet.com/v3/REST/contact/' . urlencode( $contact_id ) . '/getcontactslists?Limit=10000';
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -332,7 +357,7 @@ class WPF_Mailjet {
 
 		$tags = array();
 
-		foreach ($body_json['Data'] as $tag_data) {
+		foreach ( $body_json['Data'] as $tag_data ) {
 			$tags[] = $tag_data['ListID'];
 		}
 
@@ -355,18 +380,21 @@ class WPF_Mailjet {
 
 		$object_tags = array();
 
-		foreach ($tags as $tag) {
-			$object_tags[] = (object) ['ListID' => $tag, 'Action' => 'addnoforce' ];
+		foreach ( $tags as $tag ) {
+			$object_tags[] = (object) [
+				'ListID' => $tag,
+				'Action' => 'addnoforce',
+			];
 		}
 
-		$request      		= 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
-		$params           	= $this->params;
-		$params['method'] 	= 'POST';
-		$params['body']  	= json_encode( array ( 'ContactsLists' =>  $object_tags ) ) ;
+		$request          = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
+		$params           = $this->params;
+		$params['method'] = 'POST';
+		$params['body']   = json_encode( array( 'ContactsLists' => $object_tags ) );
 
 		$response = wp_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -390,18 +418,21 @@ class WPF_Mailjet {
 
 		$object_tags = array();
 
-		foreach ($tags as $tag) {
-			$object_tags[] = (object) ['ListID' => $tag, 'Action' => 'remove' ];
+		foreach ( $tags as $tag ) {
+			$object_tags[] = (object) [
+				'ListID' => $tag,
+				'Action' => 'remove',
+			];
 		}
 
-		$request      		= 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
-		$params           	= $this->params;
-		$params['method'] 	= 'POST';
-		$params['body']  	= json_encode( array ( 'ContactsLists' =>  $object_tags ) ) ; 
+		$request          = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
+		$params           = $this->params;
+		$params['method'] = 'POST';
+		$params['body']   = json_encode( array( 'ContactsLists' => $object_tags ) );
 
 		$response = wp_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -434,44 +465,46 @@ class WPF_Mailjet {
 		$post_data = array();
 
 		$post_data['IsExcludedFromCampaigns'] = false;
-		$post_data['Name']				  	  = $data['Name'];
-		$post_data['Email'] 				  = $data['Email'];
+		$post_data['Name']                    = $data['Name'];
+		$post_data['Email']                   = $data['Email'];
 
-		$url              = 'https://api.mailjet.com/v3/REST/contact';
-		$params           = $this->params;
-		$params['body']   = json_encode( $post_data );
+		$url            = 'https://api.mailjet.com/v3/REST/contact';
+		$params         = $this->params;
+		$params['body'] = json_encode( $post_data );
 
 		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		unset($data['Name']);
-		unset($data['Email']);
+		unset( $data['Name'] );
+		unset( $data['Email'] );
 
-		if( ! empty( $data ) ) {
+		if ( ! empty( $data ) ) {
 
-			foreach ($data as $key => $value) {
-				$meta[] = array (  'Name' => $key, 'Value' => $value );
+			foreach ( $data as $key => $value ) {
+				$meta[] = array(
+					'Name'  => $key,
+					'Value' => $value,
+				);
 			}
 
 			$meta_data['ContactID'] = $body->Data[0]->ID;
-			$meta_data['Data'] = $meta; 
+			$meta_data['Data']      = $meta;
 
-			$url               = 'https://api.mailjet.com/v3/REST/contactdata/' . $body->Data[0]->ID;
-			$params            = $this->params;
-			$params['method']  = 'PUT';
-			$params['body']    = json_encode($meta_data);
+			$url              = 'https://api.mailjet.com/v3/REST/contactdata/' . $body->Data[0]->ID;
+			$params           = $this->params;
+			$params['method'] = 'PUT';
+			$params['body']   = json_encode( $meta_data );
 
 			$response = wp_remote_post( $url, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return $body->Data[0]->ID;
@@ -495,52 +528,53 @@ class WPF_Mailjet {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
-		$post_data = array();
+		$post_data                            = array();
 		$post_data['IsExcludedFromCampaigns'] = false;
-		$post_data['Name']				  	  = $data['Name'];
-		$post_data['Email'] 				  = $data['Email'];
+		$post_data['Name']                    = $data['Name'];
+		$post_data['Email']                   = $data['Email'];
 
-		$url               = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id;
-		$params            = $this->params;
-		$params['method']  = 'PUT';
-		$params['body']    = json_encode($post_data);
+		$url              = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id;
+		$params           = $this->params;
+		$params['method'] = 'PUT';
+		$params['body']   = json_encode( $post_data );
 
 		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() !== 'Not Modified' ) {
 			return $response;
 		}
 
 		// Update metadata below (everything other the Email and Name fields that are dealt with above)
+		unset( $data['Name'] );
+		unset( $data['Email'] );
 
-		unset($data['Name']);
-		unset($data['Email']);
+		if ( ! empty( $data ) ) {
 
-		if( ! empty( $data ) ) {
-
-			foreach ($data as $key => $value) {
-				$meta[] = array (  'Name' => $key, 'Value' => $value );
+			foreach ( $data as $key => $value ) {
+				$meta[] = array(
+					'Name'  => $key,
+					'Value' => $value,
+				);
 			}
 
 			$meta_data['ContactID'] = $contact_id;
-			$meta_data['Data'] = $meta; 
+			$meta_data['Data']      = $meta;
 
-			$url               = 'https://api.mailjet.com/v3/REST/contactdata/' . $contact_id;
-			$params            = $this->params;
-			$params['method']  = 'PUT';
-			$params['body']    = json_encode($meta_data);
+			$url              = 'https://api.mailjet.com/v3/REST/contactdata/' . $contact_id;
+			$params           = $this->params;
+			$params['method'] = 'PUT';
+			$params['body']   = json_encode( $meta_data );
 
 			$response = wp_remote_post( $url, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) && $response->get_error_message() !== 'Not Modified' ) {
 				return $response;
 
 			}
-
 		}
 
 		return true;
@@ -561,54 +595,48 @@ class WPF_Mailjet {
 		}
 
 		// Two separate calls needed to get email (body) and all other fields (meta)
+		$url           = 'https://api.mailjet.com/v3/REST/contactdata/' . urlencode( $contact_id );
+		$response_meta = wp_remote_get( $url, $this->params );
 
-		$url     		 = 'https://api.mailjet.com/v3/REST/contactdata/' . urlencode( $contact_id );
-		$response_meta   = wp_remote_get( $url, $this->params );
-
-		if( is_wp_error( $response_meta ) ) {
+		if ( is_wp_error( $response_meta ) ) {
 			return $response_meta;
 		}
 
-		$user_meta       = array();
-		$contact_fields  = wp_fusion()->settings->get( 'contact_fields' );
+		$user_meta      = array();
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
-		$body_json_meta  = json_decode( $response_meta['body'], true );
+		$body_json_meta = json_decode( $response_meta['body'], true );
 
-		if (!empty($body_json_meta['Data'][0]['Data'])) {
+		if ( ! empty( $body_json_meta['Data'][0]['Data'] ) ) {
 
 			foreach ( $body_json_meta['Data'][0]['Data'] as $field => $value ) {
-					
+
 				foreach ( $contact_fields as $field_id => $field_data ) {
 
 					if ( $value['Name'] == $field_data['crm_field'] ) {
 						$user_meta[ $field_id ] = $value['Value'];
-					}	
-
+					}
 				}
-
 			}
-
 		}
 
-		$url      		 = 'https://api.mailjet.com/v3/REST/contact/' . urlencode( $contact_id );
-		$response_body   = wp_remote_get( $url, $this->params );
+		$url           = 'https://api.mailjet.com/v3/REST/contact/' . urlencode( $contact_id );
+		$response_body = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response_body ) ) {
+		if ( is_wp_error( $response_body ) ) {
 			return $response_body;
 		}
 
-		$body_json_body  = json_decode( $response_body['body'], true );
+		$body_json_body = json_decode( $response_body['body'], true );
 
 		foreach ( $body_json_body['Data'] as $field_body => $value_body ) {
 
 			foreach ( $contact_fields as $field_id => $field_data ) {
 
-				if ( $field_data['active'] == true && $value_body == $field_data['crm_field']) {
-					$user_meta[ $field_id ] = $value_body[$field_data['crm_field']];
-				} 
-
+				if ( $field_data['active'] == true && $value_body == $field_data['crm_field'] ) {
+					$user_meta[ $field_id ] = $value_body[ $field_data['crm_field'] ];
+				}
 			}
-
 		}
 
 		return $user_meta;
@@ -633,14 +661,14 @@ class WPF_Mailjet {
 		$url     = 'https://api.mailjet.com/v3/REST/listrecipient';
 		$results = wp_remote_get( $url, $this->params );
 
-		if( is_wp_error( $results ) ) {
+		if ( is_wp_error( $results ) ) {
 			return $results;
 		}
 
 		$body_json = json_decode( $results['body'], true );
 
 		foreach ( $body_json['Data'] as $row => $contact ) {
-			if ($contact["ListID"] == $tag) {
+			if ( $contact['ListID'] == $tag ) {
 				$contact_ids[] = $contact['ContactID'];
 			}
 		}

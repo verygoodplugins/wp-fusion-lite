@@ -142,6 +142,25 @@ class WPF_Salesforce {
 
 				$contacts_added[] = $contact_id;
 
+				// Exclude contacts from update if they don't already have an account
+
+				if ( 'update' == $post_data['wpf_action'] ) {
+
+					$args = array(
+						'meta_key'   => wp_fusion()->crm->slug . '_contact_id',
+						'meta_value' => $contact_id,
+						'fields'     => array( 'ID' ),
+					);
+
+					$users = get_users( $args );
+
+					if ( empty( $users ) ) {
+						wpf_log( 'notice', 0, 'Update webhook received but no matching user found for contact ID <strong>' . $contact_id . '</strong>', array( 'source' => 'api' ) );
+						continue;
+					}
+
+				}
+
 				wpf_log( 'info', 0, 'Adding contact ID <strong>' . $contact_id . '</strong> to import queue (' . $key . ' of ' . $notifications_count . ').', array( 'source' => 'api' ) );
 
 				wp_fusion()->batch->process->push_to_queue(
@@ -514,8 +533,11 @@ class WPF_Salesforce {
 				$field->label .= ' (read only)';
 			}
 
-			$crm_fields[ $field->name ] = $field->label;
+			if ( 'addess' == $field->type ) {
+				$field->label .= ' (compound field)';
+			}
 
+			$crm_fields[ $field->name ] = $field->label;
 		}
 
 		// Clean up system fields
@@ -827,6 +849,12 @@ class WPF_Salesforce {
 		// LastName is required to create a new contact
 		if ( $this->object_type == 'Contact' && ! isset( $data['LastName'] ) ) {
 			$data['LastName'] = 'unknown';
+		}
+
+		$default_account = wp_fusion()->settings->get( 'salesforce_account' );
+
+		if ( ! empty( $default_account ) ) {
+			$data['accountId'] = $default_account;
 		}
 
 		$params['body'] = json_encode( $data );

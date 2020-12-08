@@ -101,3 +101,13 @@ $groundhogg_fields[] = array(
 	'crm_label' => 'Optin Status',
 	'crm_field' => 'optin_status'
 );
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'Profile Picture',
+	'crm_field' => 'profile_picture'
+);
+
+$groundhogg_fields[] = array(
+	'crm_label' => 'Owner ID',
+	'crm_field' => 'owner_id'
+);

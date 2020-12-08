@@ -20,7 +20,7 @@ class WPF_ZeroBSCRM {
 	public function __construct() {
 
 		$this->slug     = 'zerobscrm';
-		$this->name     = 'Zero BS CRM';
+		$this->name     = 'Jetpack CRM';
 		$this->supports = array( 'add_tags' );
 
 		// Set up admin options

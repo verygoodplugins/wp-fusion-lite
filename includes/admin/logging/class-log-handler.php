@@ -398,8 +398,8 @@ class WPF_Log_Handler {
 
 		$message = wp_fusion()->settings->set_tag_labels( $message, false, 'wp-fusion-lite' );
 
-		// Filter out irrelevant meta fields
-		if ( isset( $context['meta_array'] ) && $context['meta_array'] ) {
+		// Filter out irrelevant meta fields and show any field format changes
+		if ( ! empty( $context['meta_array'] ) ) {
 
 			$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
@@ -407,6 +407,20 @@ class WPF_Log_Handler {
 
 				if ( ! isset( $contact_fields[ $key ] ) || $contact_fields[ $key ]['active'] == false ) {
 					unset( $context['meta_array'][ $key ] );
+					continue;
+				}
+
+				$filtered_value = apply_filters( 'wpf_format_field_value', $data, $contact_fields[ $key ]['type'], $contact_fields[ $key ]['crm_field'] );
+
+				if ( $data !== $filtered_value ) {
+
+					// Store what happened to the data so we can show a little more context in the logs
+
+					$context['meta_array'][ $key ] = array(
+						'original' => $data,
+						'new'      => $filtered_value,
+						'type'     => $contact_fields[ $key ]['type'],
+					);
 				}
 			}
 		}
@@ -662,7 +676,7 @@ class WPF_Log_Handler {
 					$level = 'warning';
 				}
 
-				$this->handle( $level, wpf_get_current_user_id(), '<strong>PHP error:</strong> ' . nl2br( $error['message'] ) . '<br /><br />' . $error['file'] . ':' . $error['line'], array( 'source' => $source ) );
+				$this->handle( $level, wpf_get_current_user_id(), '<strong>PHP ' . $level . ':</strong> ' . nl2br( $error['message'] ) . '<br /><br />' . $error['file'] . ':' . $error['line'], array( 'source' => $source ) );
 
 			}
 

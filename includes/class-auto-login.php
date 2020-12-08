@@ -25,14 +25,19 @@ class WPF_Auto_Login {
 		add_action( 'init', array( $this, 'start_auto_login' ), 1 );
 		add_filter( 'wpf_end_auto_login', array( $this, 'maybe_end' ), 10, 2 );
 		add_filter( 'wpf_skip_auto_login', array( $this, 'maybe_skip' ), 10, 2 );
-		add_action( 'wp_logout', array( $this, 'end_auto_login' ) );
-		add_action( 'wp_login', array( $this, 'end_auto_login' ) );
-		add_action( 'set_logged_in_cookie', array( $this, 'end_auto_login' ) );
 
 		// Session cleanup cron
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
 
-		add_action( 'wp_loaded', array( $this, 'maybe_doing_it_wrong' ) );
+		// End the session when someone logs in
+
+		add_action( 'wp_logout', array( $this, 'end_auto_login' ), 1 );
+		//add_action( 'wp_login', array( $this, 'end_auto_login' ), 1 ); // We don't want to run on wp_login because if someone has just logged in this will end the session
+		add_action( 'wp_authenticate', array( $this, 'end_auto_login' ), 1 );
+
+		add_action( 'wpf_get_tags_start', array( $this, 'unhook_tags_modified' ), 1 );
+
+		add_action( 'wp_head', array( $this, 'maybe_doing_it_wrong' ), 100 );
 
 	}
 
@@ -75,7 +80,7 @@ class WPF_Auto_Login {
 
 	public function start_auto_login( $contact_id = false ) {
 
-		if ( wpf_is_user_logged_in() ) {
+		if ( wpf_is_user_logged_in() || ( is_admin() && ! wp_doing_ajax() ) ) {
 			return;
 		}
 
@@ -162,12 +167,15 @@ class WPF_Auto_Login {
 		}
 
 		// Set the user in the cache
-		$user              = new stdClass();
-		$user->ID          = $contact_data['user_id'];
-		$user->user_email  = get_user_meta( $contact_data['user_id'], 'user_email', true );
-		$user->first_name  = get_user_meta( $contact_data['user_id'], 'first_name', true );
-		$user->last_name   = get_user_meta( $contact_data['user_id'], 'last_name', true );
-		$user->user_status = 0;
+		$user               = new stdClass();
+		$user->ID           = $contact_data['user_id'];
+		$user->user_email   = get_user_meta( $contact_data['user_id'], 'user_email', true );
+		$user->first_name   = get_user_meta( $contact_data['user_id'], 'first_name', true );
+		$user->last_name    = get_user_meta( $contact_data['user_id'], 'last_name', true );
+		$user->user_login   = $user->user_email;
+		$user->display_name = $user->first_name . ' ' . $user->last_name;
+		$user->nickname     = $user->user_login;
+		$user->user_status  = 0;
 
 		if ( wp_fusion()->settings->get( 'auto_login_current_user' ) == true ) {
 			global $current_user;
@@ -327,6 +335,23 @@ class WPF_Auto_Login {
 	}
 
 	/**
+	 * If we're in an auto-login session, let's un-hook any automated enrollments that might be tied to tags being modified
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function unhook_tags_modified( $user_id ) {
+
+		if ( doing_wpf_auto_login() ) {
+			remove_all_actions( 'wpf_tags_modified' );
+			remove_all_actions( 'wpf_tags_applied' );
+			remove_all_actions( 'wpf_tags_removed' );
+		}
+
+	}
+
+	/**
 	 * Clear orphaned metadata for auto-login users
 	 *
 	 * @access public
@@ -341,6 +366,8 @@ class WPF_Auto_Login {
 		foreach ( $meta as $mid ) {
 			delete_metadata_by_mid( 'user', $mid );
 		}
+
+		wp_cache_delete( $user_id, 'users' );
 
 	}
 

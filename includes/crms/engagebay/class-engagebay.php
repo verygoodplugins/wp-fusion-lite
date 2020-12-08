@@ -73,6 +73,9 @@ class WPF_EngageBay {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 
 		// Add tracking code to header
@@ -146,6 +149,27 @@ class WPF_EngageBay {
 
 	}
 
+	/**
+	 * Formats POST data received from webhooks into standard format
+	 *
+	 * @access public
+	 * @return array
+	 */
+
+	public function format_post_data( $post_data ) {
+
+		$payload = json_decode( file_get_contents( 'php://input' ) );
+
+		if ( ! is_object( $payload ) ) {
+			return $post_data;
+		}
+
+		$post_data['contact_id'] = $payload->entity->id;
+
+		return $post_data;
+
+	}
+
 
 	/**
 	 * Sends a JSON success after Agile API actions so they show as success in the app
@@ -157,6 +181,27 @@ class WPF_EngageBay {
 	public function api_success( $user_id, $method ) {
 
 		wp_send_json_success();
+
+	}
+
+	/**
+	 * Formats user entered data to match EngageBay field formats
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( ( 'checkbox' == $field_type || 'multiselect' == $field_type ) && empty( $value ) ) {
+
+			$value = null;
+
+		}
+
+		// Dates are already timestamps at this point
+
+		return $value;
 
 	}
 
@@ -594,30 +639,40 @@ class WPF_EngageBay {
 
 		$loaded_meta = array();
 
-		foreach ( $body_json->properties as $field_object ) {
+		if ( ! empty( $body_json->properties ) ) {
 
-			if ( ! empty( $field_object->subtype ) ) {
+			foreach ( $body_json->properties as $field_object ) {
 
-				$loaded_meta[ $field_object->name . '+' . $field_object->subtype ] = $field_object->value;
+				if ( ! empty( $field_object->subtype ) ) {
 
-			} else {
+					$loaded_meta[ $field_object->name . '+' . $field_object->subtype ] = $field_object->value;
 
-				$fldval = '';
-				if ( isset( $field_object->value ) ) {
-					$fldval = $field_object->value;
-				}
-
-				$maybe_json = json_decode( $fldval );
-
-				if ( json_last_error() === JSON_ERROR_NONE && is_object( $maybe_json ) ) {
-
-					foreach ( (array) $maybe_json as $key => $value ) {
-						$loaded_meta[ $field_object->name . '+' . $key ] = $value;
-					}
 				} else {
 
-					$loaded_meta[ $field_object->name ] = $fldval;
+					$value = '';
 
+					if ( isset( $field_object->value ) ) {
+						$value = $field_object->value;
+					}
+
+					$maybe_json = json_decode( $value );
+
+					if ( json_last_error() === JSON_ERROR_NONE && is_object( $maybe_json ) ) {
+
+						foreach ( (array) $maybe_json as $key => $value ) {
+							$loaded_meta[ $field_object->name . '+' . $key ] = $value;
+						}
+					} else {
+
+						// Multi-checkbox
+
+						if ( 'MULTICHECKBOX' == $field_object->field_type && ! empty( $value ) ) {
+							$value = explode( ',', $value );
+						}
+
+						$loaded_meta[ $field_object->name ] = $value;
+
+					}
 				}
 			}
 		}
@@ -647,8 +702,7 @@ class WPF_EngageBay {
 
 		foreach ( $loaded_meta as $name => $value ) {
 
-			if ( ! isset( $crm_fields['Standard Fields'][ $name ] ) &&
-				 ! isset( $crm_fields['Custom Fields'][ $name ] ) ) {
+			if ( ! isset( $crm_fields['Standard Fields'][ $name ] ) && ! isset( $crm_fields['Custom Fields'][ $name ] ) ) {
 				$crm_fields['Custom Fields'][ $name ] = $name;
 				wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 			}
@@ -659,10 +713,6 @@ class WPF_EngageBay {
 
 	/**
 	 * Gets a list of contact IDs based on tag
-	 *
-	 * AS OF JULY 30 2020 - Waiting for EngageBay to FIX
-	 * the search by tag.  The query returns status 200
-	 * but does not yet return results.
 	 *
 	 * for ANY tags
 	 * filter_json : {"or_rules":[{"LHS":"tags","CONDITION":"EQUALS","RHS":"tag1"}, [{"LHS":"tags","CONDITION":"EQUALS","RHS":"tag2"}]}
@@ -680,51 +730,34 @@ class WPF_EngageBay {
 			$this->get_params();
 		}
 
-		if ( 1 == 0 ) {
-			// USE SEARCH API - which doesnt work yet
-			$request = $this->api_url . $this->search_str;
+		$request = $this->api_url . $this->get_contact_str;
 
-			$params = $this->params;
+		$params = $this->params;
 
-			$filter = array(
-				'or_rules' => array(
-					array(
-						'LHS'       => 'tags',
-						'CONDITION' => 'EQUALS',
-						'RHS'       => $tag,
-					),
+		// AS OF: August 16 2020
+		// A BUG IN ENGAGEBAY - IF CONTENT-TYPE IS PASSED IN
+		// THE API RETURNS A COMPLETE LIST OF CONTACTS
+		// AND IGNORES THE FILTER RESTRICTION
+		// forcing us to UNSET the content type
+		unset( $params['headers']['Content-Type'] );
+
+		$filter = array(
+			'rules' => array(
+				array(
+					'LHS'       => 'tags',
+					'CONDITION' => 'EQUALS',
+					'RHS'       => $tag,
 				),
-			);
+			),
+		);
 
-			$params['body'] = array(
-				'page_size'   => 10000,
-				'q'           => '%',
-				'filter_json' => $filter,
-				'type'        => 'Subscriber',
-			);
-		} else {
-			// try the LIST SUBSCRIBERS
-			$request = $this->api_url . $this->get_contact_str;
-			$params  = $this->params;
+		$params['body'] = array(
+			'page_size'   => 10000,
+			'sort_key'    => '-created_time',
+			'filter_json' => json_encode( $filter ),
+		);
 
-			$filter = array(
-				'rules' => array(
-					array(
-						'LHS'       => 'tags',
-						'CONDITION' => 'EQUALS',
-						'RHS'       => $tag,
-					),
-				),
-			);
-
-			$params['body'] = array(
-				'filter_json' => $filter,
-			);
-
-			$params['method'] = 'POST';
-		}
-
-		$response = wp_remote_request( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -748,10 +781,12 @@ class WPF_EngageBay {
 					$contact_ids[] = $contact_object->id;
 				}
 			}
+
+			$contact_ids[] = $contact_object->id;
+
 		}
 
 		return $contact_ids;
-
 	}
 
 	private function convertTagsToArray( $tags ) {
@@ -767,7 +802,7 @@ class WPF_EngageBay {
 	}
 
 	/**
-	 * Formats contact data for AgileCRM preferred update / create structure
+	 * Formats contact data for EngageBay preferred update / create structure
 	 *
 	 * @access public
 	 * @return array

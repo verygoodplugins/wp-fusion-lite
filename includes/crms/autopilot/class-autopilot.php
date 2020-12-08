@@ -451,8 +451,6 @@ class WPF_Autopilot {
 
 		foreach( $tags as $tag ) {
 
-			$tag = $tag;
-
 			$params = $this->params;;
 
 			$request  = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contact/' . $contact_id;
@@ -482,11 +480,9 @@ class WPF_Autopilot {
 		}
 
 		foreach( $tags as $tag ) {
-			$tag = $tag;
 
 			$params = $this->params;
 			$params['method'] = 'DELETE';
-
 
 			$request  = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contact/' . $contact_id;
 			$response = wp_remote_request( $request, $params );

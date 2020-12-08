@@ -112,6 +112,17 @@ class WPF_Zoho {
 
 			return $date;
 
+		} elseif ( 'datetime' == $field_type ) {
+
+			if ( ! is_numeric( $value ) ) {
+				$value = strtotime( $value );
+			}
+
+			// Works for Date/Time field
+			$date = date( 'c', $value );
+
+			return $date;
+
 		} elseif ( 'checkbox' == $field_type || 'checkbox-full' == $field_type ) {
 
 			if ( ! empty( $value ) ) {
@@ -660,7 +671,7 @@ class WPF_Zoho {
 		}
 
 		// Contact creation will fail if there isn't a last name
-		if ( ! isset( $data['Last_Name'] ) && $this->object_type == 'Contacts' ) {
+		if ( empty( $data['Last_Name'] ) && ( 'Contacts' == $this->object_type || 'Leads' == $this->object_type ) ) {
 			$data['Last_Name'] = 'unknown';
 		}
 

@@ -2,25 +2,26 @@
 
 /**
  * Drip API
+ *
  * @author Svetoslav Marinov (SLAVI)
  */
-Class WPF_Drip_Api {
-	private $version = "2";
-	private $api_token = '';
-	private $error_code = '';
+class WPF_Drip_Api {
+	private $version       = '2';
+	private $api_token     = '';
+	private $error_code    = '';
 	private $error_message = '';
-	private $user_agent = "Drip API PHP Wrapper (getdrip.com)";
+	private $user_agent    = 'Drip API PHP Wrapper (getdrip.com)';
 	private $api_end_point = 'https://api.getdrip.com/v2/';
-	//private $api_end_point = 'http://localhost/echo/'; // dbg only
+	// private $api_end_point = 'http://localhost/echo/'; // dbg only
 	private $recent_req_info = array(); // holds dbg info from a recent request
-	private $timeout = 30;
+	private $timeout         = 30;
 	private $connect_timeout = 30;
-	private $debug = false; // Requests headers and other info to be fetched from the request. Command-line windows will show info in STDERR
+	private $debug           = false; // Requests headers and other info to be fetched from the request. Command-line windows will show info in STDERR
 
-	const GET = 1;
-	const POST = 2;
+	const GET    = 1;
+	const POST   = 2;
 	const DELETE = 3;
-	const PUT = 4;
+	const PUT    = 4;
 
 	/**
 	 * Accepts the token and saves it internally.
@@ -33,7 +34,7 @@ Class WPF_Drip_Api {
 		$api_token = trim( $api_token );
 
 		if ( empty( $api_token ) || ! preg_match( '#^[\w-]+$#si', $api_token ) ) {
-			throw new Exception( "Missing or invalid Drip API token." );
+			return new WP_Error( 'error', 'Missing or invalid Drip API token.' );
 		}
 
 		$this->api_token = $api_token;
@@ -48,7 +49,7 @@ Class WPF_Drip_Api {
 	 */
 	public function get_campaigns( $params ) {
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
@@ -56,7 +57,7 @@ Class WPF_Drip_Api {
 
 		if ( isset( $params['status'] ) ) {
 			if ( ! in_array( $params['status'], array( 'active', 'draft', 'paused', 'all' ) ) ) {
-				throw new Exception( "Invalid campaign status." );
+				return new WP_Error( 'error', 'Invalid campaign status.' );
 			}
 		} elseif ( 0 ) {
 			$params['status'] = 'active'; // api defaults to all but we want active ones
@@ -65,7 +66,7 @@ Class WPF_Drip_Api {
 		$url = $this->api_end_point . "$account_id/campaigns";
 		$res = $this->make_request( $url, $params );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -93,7 +94,7 @@ Class WPF_Drip_Api {
 	 */
 	public function fetch_campaign( $params ) {
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
@@ -103,13 +104,13 @@ Class WPF_Drip_Api {
 			$campaign_id = $params['campaign_id'];
 			unset( $params['campaign_id'] ); // clear it from the params
 		} else {
-			throw new Exception( "Campaign ID was not specified. You must specify a Campaign ID" );
+			return new WP_Error( 'error', 'Campaign ID was not specified. You must specify a Campaign ID' );
 		}
 
 		$url = $this->api_end_point . "$account_id/campaigns/$campaign_id";
 		$res = $this->make_request( $url, $params );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -140,7 +141,7 @@ Class WPF_Drip_Api {
 		$url = $this->api_end_point . 'accounts';
 		$res = $this->make_request( $url );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -160,12 +161,12 @@ Class WPF_Drip_Api {
 	/**
 	 * Sends a request to add a subscriber and returns its record or false
 	 *
-	 * @param array $params
+	 * @param array       $params
 	 * @param array /bool $account
 	 */
 	public function create_or_update_subscriber( $params ) {
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
@@ -179,7 +180,7 @@ Class WPF_Drip_Api {
 
 		$res = $this->make_request( $url, $req_params, self::POST );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -204,7 +205,7 @@ Class WPF_Drip_Api {
 	public function fetch_subscriber( $params ) {
 
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
@@ -217,7 +218,7 @@ Class WPF_Drip_Api {
 			$subscriber_id = $params['email'];
 			unset( $params['email'] ); // clear it from the params
 		} else {
-			throw new Exception( "Subscriber ID or Email was not specified. You must specify either Subscriber ID or Email." );
+			return new WP_Error( 'error', 'Subscriber ID or Email was not specified. You must specify either Subscriber ID or Email.' );
 		}
 
 		$subscriber_id = urlencode( $subscriber_id );
@@ -227,7 +228,7 @@ Class WPF_Drip_Api {
 
 		$res = $this->make_request( $url );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -252,21 +253,21 @@ Class WPF_Drip_Api {
 	 */
 	public function subscribe_subscriber( $params ) {
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
 		unset( $params['account_id'] ); // clear it from the params
 
 		if ( empty( $params['campaign_id'] ) ) {
-			throw new Exception( "Campaign ID not specified" );
+			return new WP_Error( 'error', 'Campaign ID not specified' );
 		}
 
 		$campaign_id = $params['campaign_id'];
 		unset( $params['campaign_id'] ); // clear it from the params
 
 		if ( empty( $params['email'] ) ) {
-			throw new Exception( "Email not specified" );
+			return new WP_Error( 'error', 'Email not specified' );
 		}
 
 		if ( ! isset( $params['double_optin'] ) ) {
@@ -281,7 +282,7 @@ Class WPF_Drip_Api {
 
 		$res = $this->make_request( $url, $req_params, self::POST );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -303,7 +304,7 @@ Class WPF_Drip_Api {
 	 */
 	public function unsubscribe_subscriber( $params ) {
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
@@ -316,7 +317,7 @@ Class WPF_Drip_Api {
 			$subscriber_id = $params['email'];
 			unset( $params['email'] ); // clear it from the params
 		} else {
-			throw new Exception( "Subscriber ID or Email was not specified. You must specify either Subscriber ID or Email." );
+			return new WP_Error( 'error', 'Subscriber ID or Email was not specified. You must specify either Subscriber ID or Email.' );
 		}
 
 		$subscriber_id = urlencode( $subscriber_id );
@@ -345,24 +346,24 @@ Class WPF_Drip_Api {
 	 * This calls POST /:account_id/tags to add the tag. It just returns some status code no content
 	 *
 	 * @param array $params
-	 * @param bool $status
+	 * @param bool  $status
 	 */
 	public function tag_subscriber( $params ) {
 		$status = false;
 
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
 		unset( $params['account_id'] ); // clear it from the params
 
 		if ( empty( $params['email'] ) ) {
-			throw new Exception( "Email was not specified" );
+			return new WP_Error( 'error', 'Email was not specified' );
 		}
 
 		if ( empty( $params['tag'] ) ) {
-			throw new Exception( "Tag was not specified" );
+			return new WP_Error( 'error', 'Tag was not specified' );
 		}
 
 		$api_action = "$account_id/tags";
@@ -373,7 +374,7 @@ Class WPF_Drip_Api {
 
 		$res = $this->make_request( $url, $req_params, self::POST );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -389,24 +390,24 @@ Class WPF_Drip_Api {
 	 * This calls DELETE /:account_id/tags to remove the tags. It just returns some status code no content
 	 *
 	 * @param array $params
-	 * @param bool $status success or failure
+	 * @param bool  $status success or failure
 	 */
 	public function untag_subscriber( $params ) {
 		$status = false;
 
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		$account_id = $params['account_id'];
 		unset( $params['account_id'] ); // clear it from the params
 
 		if ( empty( $params['email'] ) ) {
-			throw new Exception( "Email was not specified" );
+			return new WP_Error( 'error', 'Email was not specified' );
 		}
 
 		if ( empty( $params['tag'] ) ) {
-			throw new Exception( "Tag was not specified" );
+			return new WP_Error( 'error', 'Tag was not specified' );
 		}
 
 		$api_action = "$account_id/tags";
@@ -417,7 +418,7 @@ Class WPF_Drip_Api {
 
 		$res = $this->make_request( $url, $req_params, self::DELETE );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -439,11 +440,11 @@ Class WPF_Drip_Api {
 		$status = false;
 
 		if ( empty( $params['account_id'] ) ) {
-			throw new Exception( "Account ID not specified" );
+			return new WP_Error( 'error', 'Account ID not specified' );
 		}
 
 		if ( empty( $params['action'] ) ) {
-			throw new Exception( "Action was not specified" );
+			return new WP_Error( 'error', 'Action was not specified' );
 		}
 
 		$account_id = $params['account_id'];
@@ -457,7 +458,7 @@ Class WPF_Drip_Api {
 
 		$res = $this->make_request( $url, $req_params, self::POST );
 
-		if( is_wp_error( $res ) ) {
+		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
 
@@ -471,21 +472,21 @@ Class WPF_Drip_Api {
 	/**
 	 *
 	 * @param string $url
-	 * @param array $params
-	 * @param int $req_method
+	 * @param array  $params
+	 * @param int    $req_method
 	 *
 	 * @return type
 	 * @throws Exception
 	 */
 	public function make_request( $url, $params = array(), $req_method = self::GET ) {
 		if ( ! function_exists( 'curl_init' ) ) {
-			throw new Exception( "Cannot find cURL php extension or it's not loaded." );
+			return new WP_Error( 'error', "Cannot find cURL php extension or it's not loaded." );
 		}
 
 		$ch = curl_init();
 
 		if ( $this->debug ) {
-			//curl_setopt($ch, CURLOPT_HEADER, true);
+			// curl_setopt($ch, CURLOPT_HEADER, true);
 			// TRUE to output verbose information. Writes output to STDERR, or the file specified using CURLOPT_STDERR.
 			curl_setopt( $ch, CURLOPT_VERBOSE, true );
 		}
@@ -499,20 +500,20 @@ Class WPF_Drip_Api {
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, false );
 		curl_setopt( $ch, CURLOPT_TIMEOUT, $this->timeout );
 		curl_setopt( $ch, CURLOPT_CONNECTTIMEOUT, $this->connect_timeout );
-		curl_setopt( $ch, CURLOPT_USERPWD, $this->api_token . ":" . '' ); // no pwd
+		curl_setopt( $ch, CURLOPT_USERPWD, $this->api_token . ':' . '' ); // no pwd
 		curl_setopt( $ch, CURLOPT_USERAGENT, empty( $params['user_agent'] ) ? $this->user_agent : $params['user_agent'] );
 
 		if ( $req_method == self::POST ) { // We want post but no params to supply. Probably we have a nice link structure which includes all the info.
-			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "POST" );
+			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, 'POST' );
 		} elseif ( $req_method == self::DELETE ) {
-			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "DELETE" );
+			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, 'DELETE' );
 		} elseif ( $req_method == self::PUT ) {
-			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "PUT" );
+			curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, 'PUT' );
 		}
 
 		if ( ! empty( $params ) ) {
 			if ( ( isset( $params['__req'] ) && strtolower( $params['__req'] ) == 'get' )
-			     || $req_method == self::GET
+				 || $req_method == self::GET
 			) {
 				unset( $params['__req'] );
 				$url .= '?' . http_build_query( $params );
@@ -523,10 +524,12 @@ Class WPF_Drip_Api {
 		}
 
 		curl_setopt( $ch, CURLOPT_URL, $url );
-		curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
-			'Accept:application/json, text/javascript, */*; q=0.01',
-			'Content-Type: application/vnd.api+json',
-		) );
+		curl_setopt(
+			$ch, CURLOPT_HTTPHEADER, array(
+				'Accept:application/json, text/javascript, */*; q=0.01',
+				'Content-Type: application/vnd.api+json',
+			)
+		);
 
 		$buffer = curl_exec( $ch );
 		$status = ! empty( $buffer );
@@ -550,7 +553,7 @@ Class WPF_Drip_Api {
 
 		$error = $this->_parse_error( $data );
 
-		if( is_wp_error( $error ) ) {
+		if ( is_wp_error( $error ) ) {
 			return $error;
 		}
 
@@ -561,6 +564,7 @@ Class WPF_Drip_Api {
 
 	/**
 	 * This returns the RAW data from the each request that has been sent (if any).
+	 *
 	 * @return arraay of arrays
 	 */
 	public function get_request_info() {
@@ -578,6 +582,7 @@ Class WPF_Drip_Api {
 
 	/**
 	 * Retruns whatever was accumultaed in error_code
+	 *
 	 * @return string
 	 */
 	public function get_error_code() {
@@ -596,10 +601,10 @@ Class WPF_Drip_Api {
 		}
 
 		if ( empty( $res['buffer'] ) ) {
-			$this->error_message = "Response from the server.";
+			$this->error_message = 'Response from the server.';
 			$this->error_code    = $res['http_code'];
 		} elseif ( $res['http_code'] == 422 ) {
-			$this->error_message = "HTTP Error 422: Unprocessable Entity.";
+			$this->error_message = 'HTTP Error 422: Unprocessable Entity.';
 			$this->error_code    = $res['http_code'];
 		} elseif ( ! empty( $res['buffer'] ) ) {
 			$json_arr = json_decode( $res['buffer'], true );
@@ -621,7 +626,7 @@ Class WPF_Drip_Api {
 					$error_codes[] = $rec['code'];
 				}
 
-				$this->error_code    = join( ", ", $error_codes );
+				$this->error_code    = join( ', ', $error_codes );
 				$this->error_message = join( "\n", $messages );
 			} else { // There's no JSON in the reply so we'll extract the message from the HTML page by removing the HTML.
 				$msg = $res['buffer'];
@@ -638,10 +643,10 @@ Class WPF_Drip_Api {
 				$this->error_message = $msg;
 			}
 		} elseif ( $res['http_code'] >= 400 || $res['http_code'] <= 499 ) {
-			$this->error_message = "Not authorized.";
+			$this->error_message = 'Not authorized.';
 			$this->error_code    = $res['http_code'];
 		} elseif ( $res['http_code'] >= 500 || $res['http_code'] <= 599 ) {
-			$this->error_message = "Internal Server Error.";
+			$this->error_message = 'Internal Server Error.';
 			$this->error_code    = $res['http_code'];
 		}
 

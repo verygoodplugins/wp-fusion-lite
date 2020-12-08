@@ -63,8 +63,8 @@ class WPF_ActiveCampaign {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-		// Add tracking code to header
-		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+		// Add tracking code to footer
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
 	}
 
@@ -97,7 +97,11 @@ class WPF_ActiveCampaign {
 
 	public function quick_update_tags( $post_data, $user_id ) {
 
-		$tags = explode( ', ', $post_data['contact']['tags'] );
+		if ( ! empty( $post_data['contact']['tags'] ) ) {
+			$tags = explode( ', ', $post_data['contact']['tags'] );
+		} else {
+			$tags = array();
+		}
 
 		wp_fusion()->user->set_tags( $tags, $user_id );
 
@@ -422,18 +426,30 @@ class WPF_ActiveCampaign {
 		asort( $built_in_fields );
 
 		// Get custom fields
+		$offset        = 0;
+		$proceed       = true;
 		$custom_fields = array();
 
-		$response = wp_remote_get( $this->api_url . '/api/3/fields?limit=100', $this->params );
+		while ( $proceed ) {
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
+			$response = wp_remote_get( $this->api_url . '/api/3/fields?limit=100&offset=' . $offset, $this->params );
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		foreach ( $response->fields as $field ) {
-			$custom_fields[ 'field[' . $field->id . ',0]' ] = $field->title;
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $response->fields as $field ) {
+				$custom_fields[ 'field[' . $field->id . ',0]' ] = $field->title;
+			}
+
+			if ( count( $response->fields ) < 100 ) {
+				$proceed = false;
+			}
+
+			$offset += 100;
+
 		}
 
 		asort( $custom_fields );
@@ -707,7 +723,7 @@ class WPF_ActiveCampaign {
 
 				foreach ( $contact_fields as $meta_key => $field_data ) {
 
-					if ( $field_data['active'] == true ) {
+					if ( isset( $field_data['active'] ) && $field_data['active'] == true ) {
 
 						// Get field ID from stored CRM field value
 						$field_array = explode( ',', str_replace( 'field[', '', str_replace( ']', '', $field_data['crm_field'] ) ) );
@@ -716,20 +732,10 @@ class WPF_ActiveCampaign {
 
 							$value = $field_object->val;
 
-							// Clean up the pipes from array type fields
-							if ( strpos( $value, '||' ) !== false ) {
+							// Convert multiselects back into an array
 
-								// Remove pipes from beginning
-								if ( substr( $value, 0, 2 ) == '||' ) {
-									$value = substr( $value, 2 );
-								}
-
-								if ( substr( $value, -2 ) == '||' ) {
-									$value = substr( $value, 0, strlen( $value ) - 2 );
-								}
-
-								$value = str_replace( '||', ',', $value );
-
+							if ( 'listbox' == $field_object->type || 'checkbox' == $field_object->type ) {
+								$value = array_values( array_filter( explode( '||', $value ) ) );
 							}
 
 							$user_meta[ $meta_key ] = $value;

@@ -136,13 +136,14 @@ class WPF_HubSpot_Admin {
 			'section' => 'setup',
 		);
 
-		if( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() );
+		$auth_url  = 'https://app.hubspot.com/oauth/authorize?redirect_uri=' . urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts%20oauth&optional_scope=automation%20e-commerce';
 
-			$admin_url = str_replace('http://', 'https://', get_admin_url());
+		if ( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
 
-			$new_settings['hubspot_header']['desc'] = '<table class="form-table"><tr>';
+			$new_settings['hubspot_header']['desc']  = '<table class="form-table"><tr>';
 			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="https://app.hubspot.com/oauth/authorize?redirect_uri=' .  urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts%20oauth&optional_scope=automation">Authorize with HubSpot</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">' . __( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['hubspot_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
@@ -151,7 +152,7 @@ class WPF_HubSpot_Admin {
 				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'std'     => '',
 				'type'    => 'text',
-				'section' => 'setup'
+				'section' => 'setup',
 			);
 
 			$new_settings['hubspot_refresh_token'] = array(
@@ -159,7 +160,8 @@ class WPF_HubSpot_Admin {
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
-				'post_fields' => array( 'hubspot_token', 'hubspot_refresh_token' )
+				'post_fields' => array( 'hubspot_token', 'hubspot_refresh_token' ),
+				'desc'        => '<a href="' . $auth_url . '">' . __( 'Re-authorize with HubSpot', 'wp-fusion-lite' ) . '</a>',
 			);
 
 		}

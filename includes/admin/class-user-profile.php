@@ -19,6 +19,8 @@ class WPF_User_Profile {
 		add_action( 'show_user_profile', array( $this, 'user_profile' ), 5 );
 		add_action( 'edit_user_profile', array( $this, 'user_profile' ), 5 );
 
+		add_action( 'admin_notices', array( $this, 'profile_notices' ) );
+
 		// AJAX
 		add_action( 'wp_ajax_resync_contact', array( $this, 'resync_contact' ) );
 
@@ -32,6 +34,56 @@ class WPF_User_Profile {
 
 	}
 
+	/**
+	 * Does manual actions on user profiles and displays the results
+	 *
+	 * @since 3.35.14
+	 *
+	 * @return mixed Notice Content
+	 */
+
+	public function profile_notices() {
+
+		if ( ! isset( $_GET['wpf_profile_action'] ) ) {
+			return;
+		}
+
+		$user_id = intval( $_GET['user_id'] );
+
+		// For debugging purposes
+		if ( 'register' == $_GET['wpf_profile_action'] ) {
+
+			$contact_id = wp_fusion()->user->user_register( $user_id, null, true );
+
+			$message = sprintf( __( '<strong>Success:</strong> User was added to %1$s with contact ID %2$s.' ), wp_fusion()->crm->name, $contact_id );
+
+		} elseif ( 'pull' == $_GET['wpf_profile_action'] ) {
+
+			$user_meta = wp_fusion()->user->pull_user_meta( $user_id );
+
+			$message = sprintf( __( '<strong>Success:</strong> Loaded metadata from %1$s:' ), wp_fusion()->crm->name, $contact_id );
+
+			$message .= '<br /><pre>' . print_r( $user_meta, true ) . '</pre>';
+
+		} elseif ( 'push' == $_GET['wpf_profile_action'] ) {
+
+			wp_fusion()->user->push_user_meta( $user_id );
+
+			$message = sprintf( __( '<strong>Success:</strong> Synced user meta to %1$s.' ), wp_fusion()->crm->name, $contact_id );
+
+		} elseif ( 'show_meta' == $_GET['wpf_profile_action'] ) {
+
+			$user_meta = wp_fusion()->user->get_user_meta( $user_id );
+
+			$message = '<pre>' . print_r( $user_meta, true ) . '</pre>';
+
+		}
+
+		echo '<div class="notice notice-success">';
+		echo '<p>' . $message . '</p>';
+		echo '</div>';
+
+	}
 
 	/**
 	 * Updates the contact record in the CRM when a profile is edited in the backend
@@ -203,29 +255,6 @@ class WPF_User_Profile {
 			return;
 		}
 
-		// For debugging purposes
-		if ( isset( $_GET['wpf_register'] ) ) {
-
-			wp_fusion()->user->user_register( $user->ID, null, true );
-
-		} elseif ( isset( $_GET['wpf_pull'] ) ) {
-
-			wp_fusion()->user->pull_user_meta( $user->ID );
-
-		} elseif ( isset( $_GET['wpf_push'] ) ) {
-
-			wp_fusion()->user->push_user_meta( $user->ID );
-
-		} elseif ( isset( $_GET['wpf_show_meta'] ) ) {
-
-			$user_meta = wp_fusion()->user->get_user_meta( $user->ID );
-
-			echo '<pre>';
-			echo print_r( $user_meta, true );
-			echo '</pre>';
-
-		}
-
 		?>
 		<h3><?php _e( 'WP Fusion', 'wp-fusion-lite' ); ?></h3>
 
@@ -254,7 +283,7 @@ class WPF_User_Profile {
 
 						<?php printf( __( 'No %s contact record found.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>
 
-						<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_register=true"><?php _e( 'Create new contact', 'wp-fusion-lite' ); ?>.</a>
+						<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=register"><?php _e( 'Create new contact', 'wp-fusion-lite' ); ?>.</a>
 
 					<?php endif; ?>
 				</td>
@@ -289,6 +318,25 @@ class WPF_User_Profile {
 
 					<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID; ?>"><?php _e( 'Resync Tags', 'wp-fusion-lite' ); ?></a>
 					<p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and load from the %s contact record.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></p>
+
+				</td>
+			</tr>
+
+			<tr>
+				<th><label for="resync_contact"><?php _e( 'Additional Actions', 'wp-fusion-lite' ); ?></label></th>
+				<td>
+
+					<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=push"><?php _e( 'Push User Meta', 'wp-fusion-lite' ); ?></a>
+
+					<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="<?php printf( __( 'Extracts any enabled meta fields from the database and syncs them to %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>"></span> | 
+
+					<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=pull"><?php _e( 'Pull User Meta', 'wp-fusion-lite' ); ?></a>
+
+					<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="<?php printf( __( 'Loads any enabled meta fields from %s and saves them to the user record.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>"></span> | 
+
+					<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=show_meta"><?php _e( 'Show User Meta', 'wp-fusion-lite' ); ?></a>
+
+					<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="<?php _e( 'Displays all metadata found in the database for this user.', 'wp-fusion-lite' ); ?>"></span> 
 
 				</td>
 			</tr>

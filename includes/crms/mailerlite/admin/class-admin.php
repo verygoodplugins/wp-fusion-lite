@@ -45,6 +45,8 @@ class WPF_MailerLite_Admin {
 		add_filter( 'validate_field_mailerlite_update_trigger', array( $this, 'validate_update_trigger' ), 10, 2 );
 		add_filter( 'validate_field_mailerlite_add_tag', array( $this, 'validate_import_trigger' ), 10, 2 );
 
+		add_action( 'wpf_resetting_options', array( $this, 'delete_webhooks' ) );
+
 	}
 
 
@@ -304,7 +306,7 @@ class WPF_MailerLite_Admin {
 		$update_rule = $rule_ids[0];
 		$group_add_rule = $rule_ids[1];
 		$group_remove_rule = $rule_ids[2];
-	
+
 		add_filter( 'validate_field_mailerlite_update_trigger_rule_id', function() use (&$update_rule) { return $update_rule; } );
 		add_filter( 'validate_field_mailerlite_update_trigger_group_add_rule_id', function() use (&$group_add_rule) { return $group_add_rule; } );
 		add_filter( 'validate_field_mailerlite_update_trigger_group_remove_rule_id', function() use (&$group_remove_rule) { return $group_remove_rule; } );
@@ -313,6 +315,33 @@ class WPF_MailerLite_Admin {
 
 	}
 
+	/**
+	 * Delete webhooks when settings are reset
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function delete_webhooks( $options ) {
+
+		if ( ! empty( $options['mailerlite_add_tag_rule_id'] ) ) {
+
+			// The add webhook
+			$this->crm->destroy_webhook( $options['mailerlite_add_tag_rule_id'] );
+
+		}
+
+		if ( ! empty( $options['mailerlite_update_trigger_rule_id'] ) ) {
+
+			// The three update webhooks
+
+			$this->crm->destroy_webhook( $options['mailerlite_update_trigger_rule_id'] );
+			$this->crm->destroy_webhook( $options['mailerlite_update_trigger_group_add_rule_id'] );
+			$this->crm->destroy_webhook( $options['mailerlite_update_trigger_group_remove_rule_id'] );
+
+		}
+
+	}
 
 	/**
 	 * Loads standard mailerlite field names and attempts to match them up with standard local ones

@@ -83,20 +83,13 @@ class WPF_MailChimp_Admin {
 			'section' => 'setup'
 		);
 
-		$new_settings['mailchimp_dc'] = array(
-			'title'       => __( 'Data Server', 'wp-fusion-lite' ),
-			'desc'        => __( 'Your data server is the first part of your MailChimp account URL (like "us1").', 'wp-fusion-lite' ),
-			'type'        => 'hidden',
-			'section'     => 'setup',
-		);
-
 		$new_settings['mailchimp_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion-lite' ),
 			'desc'        => __( 'You can create an API key by navigating to Account &raquo; Extras &raquo; API Keys.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'mailchimp_key', 'mailchimp_dc' )
+			'post_fields' => array( 'mailchimp_key' )
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -219,15 +212,9 @@ class WPF_MailChimp_Admin {
 
 	public function test_connection() {
 
-		$data_server 	= sanitize_text_field( $_POST['mailchimp_dc'] );
-		$api_key 		= sanitize_text_field( $_POST['mailchimp_key'] );
-
-		if( empty( $data_server ) ) {
-
-			$key_exploded = explode( '-', $api_key );
-			$data_server = $key_exploded[1];
-
-		}
+		$api_key      = sanitize_text_field( $_POST['mailchimp_key'] );
+		$key_exploded = explode( '-', $api_key );
+		$data_server  = $key_exploded[1];
 
 		$connection = $this->crm->connect( $data_server, $api_key, true );
 

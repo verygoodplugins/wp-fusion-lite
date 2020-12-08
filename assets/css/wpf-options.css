@@ -307,7 +307,7 @@ th.sync {
 	width: 300px;
 }
 
-#wpf-settings input[type="text"]#woo_error_message {
+#wpf-settings input[type="text"]#woo_error_message, #wpf-settings input[type="text"]#email_optin_message {
 	width: 800px;
 	max-width: 100%;
 }
@@ -359,17 +359,14 @@ th.sync {
 	display: none;
 }
 
-.wp-list-table.wpf-logs .log-level--emergency,
-.wp-list-table.wpf-logs .log-level--alert {
-	background-color: #ff4136;
+.wp-list-table.wpf-logs .log-level--error {
+	background-color: #f94f1d;
 }
 
-.wp-list-table.wpf-logs .log-level--critical,
-.wp-list-table.wpf-logs .log-level--error {
+.wp-list-table.wpf-logs .log-level--warning {
 	background-color: #ff851b;
 }
 
-.wp-list-table.wpf-logs .log-level--warning,
 .wp-list-table.wpf-logs .log-level--notice {
 	color: #222;
 	background-color: #ffdc00;
@@ -400,6 +397,10 @@ th.sync {
 	background: #eee;
     padding: 10px;
     overflow-x: scroll;
+}
+
+.wp-list-table.wpf-logs .column-message code {
+	border-bottom: 1px dashed #999;
 }
 
 

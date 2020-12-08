@@ -109,7 +109,7 @@ class WPF_CRM_Queue {
 
 			$result = call_user_func_array( array( $this->crm, $method ), $args );
 
-			$result = apply_filters( 'wpf_api_' . $method . '_result', $result, $args );
+			$result = apply_filters( "wpf_api_{$method}_result", $result, $args );
 
 			return $result;
 

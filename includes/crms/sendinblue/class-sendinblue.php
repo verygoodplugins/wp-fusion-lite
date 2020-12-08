@@ -393,6 +393,10 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
+		// Sendinblue converts email addresses to lowercase so we'll do the same for contact ID lookups
+
+		$email_address = strtolower( $email_address );
+
 		$contact_info = array();
 		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $email_address );
 		$response     = wp_remote_get( $request, $this->params );
@@ -454,6 +458,8 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
+		$contact_id = strtolower( $contact_id );
+
 		foreach ( $tags as $tag ) {
 
 			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
@@ -486,6 +492,8 @@ class WPF_SendinBlue {
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
+
+		$contact_id = strtolower( $contact_id );
 
 		foreach ( $tags as $tag ) {
 
@@ -554,7 +562,7 @@ class WPF_SendinBlue {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $post_data['email'];
+		return strtolower( $post_data['email'] );
 
 	}
 
@@ -581,7 +589,7 @@ class WPF_SendinBlue {
 
 		// Email address changes
 
-		if ( isset( $data['email'] ) && $data['email'] != $contact_id ) {
+		if ( isset( $data['email'] ) && strtolower( $data['email'] ) != strtolower( $contact_id ) ) {
 
 			$data['EMAIL'] = $data['email'];
 

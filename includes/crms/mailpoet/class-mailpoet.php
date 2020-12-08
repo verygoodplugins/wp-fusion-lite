@@ -198,7 +198,7 @@ class WPF_MailPoet {
 
 		} catch ( Exception $e ) {
 
-			return $tags;
+			return new WP_Error( 'error', $e->getMessage() );
 
 		}
 
@@ -226,16 +226,16 @@ class WPF_MailPoet {
 		try {
 
 			$options = array(
-				'send_confirmation_email'      => $send_confirmation,
+				'send_confirmation_email'      => true,
 				'schedule_welcome_email'       => true,
 				'skip_subscriber_notification' => true,
 			);
 
-			$contact = $this->app->subscribeToLists( $contact_id, $tags, $options );
+			$result = $this->app->subscribeToLists( $contact_id, $tags, $options );
 
 		} catch ( Exception $e ) {
 
-			return false;
+			return new WP_Error( 'error', $e->getMessage() );
 
 		}
 
@@ -261,7 +261,7 @@ class WPF_MailPoet {
 
 		} catch ( Exception $e ) {
 
-			return false;
+			return new WP_Error( 'error', $e->getMessage() );
 
 		}
 
@@ -291,7 +291,7 @@ class WPF_MailPoet {
 
 		} catch ( Exception $e ) {
 
-			return false;
+			return new WP_Error( 'error', $e->getMessage() );
 
 		}
 
@@ -342,7 +342,7 @@ class WPF_MailPoet {
 
 		} catch ( Exception $e ) {
 
-			return false;
+			return new WP_Error( 'error', $e->getMessage() );
 
 		}
 

@@ -22,10 +22,19 @@ class WPF_CRM_Base {
 	/**
 	 * Contains the class object for the currently active CRM (queue disabled)
 	 *
-	 * @var crm
+	 * @var crm_no_queue
 	 */
 
 	public $crm_no_queue;
+
+	/**
+	 * Contains the field mapping array between WordPress fields and their corresponding CRM fields
+	 *
+	 * @since 3.35.14
+	 * @var contact_fields
+	 */
+
+	public $contact_fields;
 
 
 	/**
@@ -96,13 +105,34 @@ class WPF_CRM_Base {
 
 		}
 
+		$this->contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
+
+	}
+
+	/**
+	 * When resetting the WPF settings page, the old CRM gets loaded before the save_options() function runs on the init hook to clear out the settings
+	 * For lack of a better solution, we'll check here to see if the settings are being reset, and if so load all CRMs so the next one can be selectec
+	 *
+	 * @access  private
+	 * @since   3.35.3
+	 * @return  bool Doing Reset
+	 */
+
+	private function doing_reset() {
+
+		if ( ! empty( $_POST ) && isset( $_POST['wpf_options'] ) && ! empty( $_POST['wpf_options']['reset_options'] ) ) {
+			return true;
+		}
+
+		return false;
+
 	}
 
 
 	/**
 	 * Load available CRMs
 	 *
-	 * @access  public
+	 * @access  private
 	 * @since   1.0
 	 * @return  void
 	 */
@@ -111,7 +141,7 @@ class WPF_CRM_Base {
 
 		$slug = wp_fusion()->settings->get( 'crm' );
 
-		if( wp_fusion()->settings->get('connection_configured') == true && ! empty( $slug ) ) {
+		if( wp_fusion()->settings->get('connection_configured') == true && ! empty( $slug ) && false == $this->doing_reset() ) {
 
 			if( file_exists( WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php' ) ) {
 				require_once WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php';
@@ -220,13 +250,13 @@ class WPF_CRM_Base {
 
 	public function map_meta_fields( $user_data ) {
 
-		if( ! is_array( $user_data ) ) {
+		if ( ! is_array( $user_data ) ) {
 			return false;
 		}
 
 		$update_data = array();
 
-		foreach ( (array) wp_fusion()->settings->get( 'contact_fields' ) as $field => $field_data ) {
+		foreach ( $this->contact_fields as $field => $field_data ) {
 
 			// If field exists in form and sync is active
 			if ( array_key_exists( $field, $user_data ) && $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
@@ -237,8 +267,15 @@ class WPF_CRM_Base {
 
 				$value = apply_filters( 'wpf_format_field_value', $user_data[ $field ], $field_data['type'], $field_data['crm_field'] );
 
-				// Allow overriding empty() check by returning null from wpf_format_field_value
-				if ( is_null( $value ) ) {
+				if ( 'raw' == $field_data['type'] ) {
+
+					// Allow overriding the empty() check by setting the field type to raw
+
+					$update_data[ $field_data['crm_field'] ] = $value;
+
+				} elseif ( is_null( $value ) ) {
+
+					// Allow overriding empty() check by returning null from wpf_format_field_value
 
 					$update_data[ $field_data['crm_field'] ] = '';
 
@@ -269,10 +306,8 @@ class WPF_CRM_Base {
 
 	public function get_crm_field( $meta_key, $default = false ) {
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-
-		if ( ! empty( $contact_fields[ $meta_key ] ) && ! empty( $contact_fields[ $meta_key ]['crm_field'] ) ) {
-			return $contact_fields[ $meta_key ]['crm_field'];
+		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['crm_field'] ) ) {
+			return $this->contact_fields[ $meta_key ]['crm_field'];
 		} else {
 			return $default;
 		}
@@ -288,12 +323,32 @@ class WPF_CRM_Base {
 
 	public function is_field_active( $meta_key ) {
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-
-		if ( ! empty( $contact_fields[ $meta_key ] ) && $contact_fields[ $meta_key ]['active'] == true ) {
+		if ( ! empty( $this->contact_fields[ $meta_key ] ) && true == $this->contact_fields[ $meta_key ]['active'] ) {
 			return true;
 		} else {
 			return false;
+		}
+
+	}
+
+	/**
+	 * Get the field type (set on the Contact Fields list) for a given field
+	 *
+	 * @since 3.35.14
+	 *
+	 * @param string $meta_key The meta key to look up
+	 * @param string $default  The default value to return if no type is found
+	 * @return string The field type
+	 */
+
+	public function get_field_type( $meta_key, $default = 'text' ) {
+
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
+
+		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['type'] ) ) {
+			return $this->contact_fields[ $meta_key ]['type'];
+		} else {
+			return $default;
 		}
 
 	}
@@ -320,7 +375,7 @@ class WPF_CRM_Base {
 			// Don't modify it if it's a dynamic tag field
 			return $value;
 
-		} elseif ( ($field_type == 'multiselect' && is_array($value)) || is_array($value) ) {
+		} elseif ( ( $field_type == 'multiselect' && is_array( $value ) ) || is_array( $value ) ) {
 
 			$value = implode( ',', $value );
 

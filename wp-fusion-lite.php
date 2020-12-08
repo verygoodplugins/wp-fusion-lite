@@ -4,13 +4,13 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.34
+ * Version: 3.35
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
  *
  * WC requires at least: 3.0
- * WC tested up to: 4.3.1
+ * WC tested up to: 4.7.1
  */
 
 /**
@@ -31,7 +31,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.34' );
+define( 'WP_FUSION_VERSION', '3.35' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -46,7 +46,7 @@ final class WP_Fusion_Lite {
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion The one true WP_Fusion
+	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -160,15 +160,15 @@ final class WP_Fusion_Lite {
 
 
 	/**
-	 * Main WP_Fusion Instance
+	 * Main WP_Fusion_Lite Instance
 	 *
-	 * Insures that only one instance of WP_Fusion exists in memory at any one
+	 * Insures that only one instance of WP_Fusion_Lite exists in memory at any one
 	 * time. Also prevents needing to define globals all over the place.
 	 *
 	 * @since 1.0
 	 * @static
 	 * @static var array $instance
-	 * @return WP_Fusion The one true WP_Fusion
+	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
 	 */
 
 	public static function instance() {
@@ -179,8 +179,9 @@ final class WP_Fusion_Lite {
 
 			self::$instance->setup_constants();
 
-			// If PHP version not met
-			self::$instance->check_install();
+			if ( is_admin() ) {
+				self::$instance->check_install();
+			}
 
 			self::$instance->init_includes();
 
@@ -209,6 +210,7 @@ final class WP_Fusion_Lite {
 
 				if ( self::$instance->is_full_version() ) {
 					add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
+					add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 				}
 			}
 
@@ -369,7 +371,7 @@ final class WP_Fusion_Lite {
 				'salesforce'     => 'WPF_Salesforce',
 				'mautic'         => 'WPF_Mautic',
 				'intercom'       => 'WPF_Intercom',
-				'aweber'         => 'WPF_AWeber',
+				//'aweber'         => 'WPF_AWeber',
 				'mailerlite'     => 'WPF_MailerLite',
 				'capsule'        => 'WPF_Capsule',
 				'zoho'           => 'WPF_Zoho',
@@ -403,9 +405,10 @@ final class WP_Fusion_Lite {
 				'klick-tipp'     => 'WPF_KlickTipp',
 				'sendfox'        => 'WPF_SendFox',
 				'quentn'         => 'WPF_Quentn',
-				'loopify'        => 'WPF_Loopify',
+				//'loopify'        => 'WPF_Loopify',
 				'wp-erp'         => 'WPF_WP_ERP',
 				'engagebay'      => 'WPF_Engagebay',
+				'fluentcrm'      => 'WPF_FluentCRM',
 			)
 		);
 
@@ -586,6 +589,7 @@ final class WP_Fusion_Lite {
 
 	}
 
+
 	/**
 	 * Display a warning when the full version of WPF is active
 	 *
@@ -600,6 +604,7 @@ final class WP_Fusion_Lite {
 		echo '</div>';
 
 	}
+
 
 
 }

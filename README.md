@@ -45,7 +45,9 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Customerly
 * Drift
 * Drip
+* EngageBay
 * Flexie
+* FluentCRM
 * GetResponse
 * Gist
 * Groundhogg
@@ -55,6 +57,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Kartra
 * Klaviyo
 * Klick-Tipp
+* Loopify
 * MailChimp
 * MailEngine
 * MailerLite
@@ -73,6 +76,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Sendlane
 * Tubular
 * UserEngage
+* WP ERP
 * ZeroBS CRM
 * Zoho
 

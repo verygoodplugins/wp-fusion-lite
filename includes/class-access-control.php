@@ -113,7 +113,6 @@ class WPF_Access_Control {
 			if ( ! empty( $result ) ) {
 				return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
 			}
-
 		}
 
 		// If content isn't locked
@@ -297,6 +296,52 @@ class WPF_Access_Control {
 	}
 
 	/**
+	 * Checks if a user can access a given post type based on the post type rules
+	 *
+	 * @access public
+	 * @return bool Whether or not a user can access specified content.
+	 */
+
+	public function user_can_access_post_type( $post_type, $user_id = false ) {
+
+		if ( false == $user_id ) {
+			$user_id = wpf_get_current_user_id();
+		}
+
+		$settings = wp_fusion()->settings->get( 'post_type_rules', array() );
+		$settings = apply_filters( 'wpf_post_type_rules', $settings );
+
+		$can_access = true;
+
+		if ( ! empty( $settings[ $post_type ] ) && ! empty( $settings[ $post_type ]['allow_tags'] ) ) {
+
+			if ( ! wpf_is_user_logged_in() ) {
+
+				$can_access = false;
+
+			} else {
+
+				$user_tags = wp_fusion()->user->get_tags( $user_id );
+
+				$result = array_intersect( $settings[ $post_type ]['allow_tags'], $user_tags );
+
+				if ( empty( $result ) ) {
+					$can_access = false;
+				}
+			}
+		}
+
+		// If admins are excluded from restrictions
+
+		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && user_can( $user_id, 'manage_options' ) ) {
+			$can_access = true;
+		}
+
+		return apply_filters( 'wpf_user_can_access_post_type', $can_access, $user_id, $post_type );
+
+	}
+
+	/**
 	 * Finds redirect for a given post
 	 *
 	 * @access public
@@ -420,6 +465,42 @@ class WPF_Access_Control {
 
 		if ( is_admin() || is_search() || ( is_front_page() && is_home() ) ) { // Don't run if the front page is the blog index page
 
+			return true;
+
+		} elseif ( is_post_type_archive() ) {
+
+			// Check the post type rules
+			$queried_object = get_queried_object();
+
+			if ( true == $this->user_can_access_post_type( $queried_object->name ) ) {
+				return true;
+			}
+
+			$settings = wp_fusion()->settings->get( 'post_type_rules', array() );
+			$settings = apply_filters( 'wpf_post_type_rules', $settings );
+
+			$redirect = false;
+
+			if ( ! empty( $settings[ $queried_object->name ] ) && ! empty( $settings[ $queried_object->name ]['redirect'] ) ) {
+
+				$redirect = get_permalink( $settings[ $queried_object->name ]['redirect'] );
+
+			} elseif ( ! empty( wp_fusion()->settings->get( 'default_redirect' ) ) ) {
+
+				$redirect = wp_fusion()->settings->get( 'default_redirect' );
+
+			}
+
+			$redirect = apply_filters( 'wpf_redirect_url', $redirect, false );
+
+			if ( ! empty( $redirect ) ) {
+
+				wp_redirect( $redirect, 302, 'WP Fusion; Post Type ' . $queried_object->name );
+				exit();
+
+			}
+
+			// Don't do anything for post type archives if no redirect specified
 			return true;
 
 		} elseif ( is_archive() ) {
@@ -574,14 +655,20 @@ class WPF_Access_Control {
 	 * @return mixed
 	 */
 
-	public function get_restricted_content_message() {
+	public function get_restricted_content_message( $post_id = false ) {
 
 		$message = false;
 
 		if ( wp_fusion()->settings->get( 'per_post_messages', false ) == true ) {
 
-			global $post;
-			$settings = get_post_meta( $post->ID, 'wpf-settings', true );
+			if ( false == $post_id ) {
+
+				global $post;
+				$post_id = $post->ID;
+
+			}
+
+			$settings = get_post_meta( $post_id, 'wpf-settings', true );
 
 			if ( ! empty( $settings['message'] ) ) {
 
@@ -818,6 +905,15 @@ class WPF_Access_Control {
 
 					unset( $items[ $key ] );
 
+				} elseif ( $item->type == 'custom' ) {
+
+					// If it's a post, try and get the ID
+
+					$post_id = url_to_postid( $item->url );
+
+					if ( 0 !== $post_id && false === $this->user_can_access( $post_id ) ) {
+						unset( $items[ $key ] );
+					}
 				}
 			}
 		}
@@ -860,6 +956,71 @@ class WPF_Access_Control {
 		}
 
 		return $items;
+
+	}
+
+
+	/**
+	 * Filters out restricted term items
+	 *
+	 * @access  public
+	 * @return  array Args
+	 */
+
+	public function get_terms_args( $args, $taxonomies ) {
+
+		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
+
+		if ( empty( $taxonomy_rules ) ) {
+			return $args;
+		}
+
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return $args;
+		}
+
+		// Stop this from breaking things if it's called before pluggable.php is loaded
+
+		if ( ! function_exists( 'wp_get_current_user' ) ) {
+			return $args;
+		}
+
+		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+			return $args;
+		}
+
+		$user_tags = wp_fusion()->user->get_tags();
+
+		foreach ( $taxonomy_rules as $term_id => $rule ) {
+
+			if ( ! isset( $rule['lock_content'] ) || ! isset( $rule['hide_term'] ) || empty( $rule['allow_tags'] ) ) {
+				continue;
+			}
+
+			if ( ! wpf_is_user_logged_in() ) {
+
+				if ( ! is_array( $args['exclude'] ) ) {
+					$args['exclude'] = array();
+				}
+
+				$args['exclude'][] = $term_id;
+
+			} else {
+
+				$result = array_intersect( $rule['allow_tags'], $user_tags );
+
+				if ( empty( $result ) ) {
+
+					if ( ! is_array( $args['exclude'] ) ) {
+						$args['exclude'] = array();
+					}
+
+					$args['exclude'][] = $term_id;
+				}
+			}
+		}
+
+		return $args;
 
 	}
 
@@ -933,70 +1094,6 @@ class WPF_Access_Control {
 
 			}
 		}
-
-	}
-
-	/**
-	 * Filters out restricted term items
-	 *
-	 * @access  public
-	 * @return  array Args
-	 */
-
-	public function get_terms_args( $args, $taxonomies ) {
-
-		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
-
-		if ( empty( $taxonomy_rules ) ) {
-			return $args;
-		}
-
-		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
-			return $args;
-		}
-
-		// Stop this from breaking things if it's called before pluggable.php is loaded
-
-		if ( ! function_exists( 'wp_get_current_user' ) ) {
-			return $args;
-		}
-
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
-			return $args;
-		}
-
-		$user_tags = wp_fusion()->user->get_tags();
-
-		foreach ( $taxonomy_rules as $term_id => $rule ) {
-
-			if ( ! isset( $rule['lock_content'] ) || ! isset( $rule['hide_term'] ) || empty( $rule['allow_tags'] ) ) {
-				continue;
-			}
-
-			if ( ! wpf_is_user_logged_in() ) {
-
-				if ( ! is_array( $args['exclude'] ) ) {
-					$args['exclude'] = array();
-				}
-
-				$args['exclude'][] = $term_id;
-
-			} else {
-
-				$result = array_intersect( $rule['allow_tags'], $user_tags );
-
-				if ( empty( $result ) ) {
-
-					if ( ! is_array( $args['exclude'] ) ) {
-						$args['exclude'] = array();
-					}
-
-					$args['exclude'][] = $term_id;
-				}
-			}
-		}
-
-		return $args;
 
 	}
 
@@ -1222,7 +1319,10 @@ class WPF_Access_Control {
 
 	public function apply_tags_on_view() {
 
-		if ( is_admin() || ! is_singular() || ! wpf_is_user_logged_in() ) {
+		// We used to check for wpf_is_logged_in() here as well, but we're not going to anymore
+		// Since an auto-login session on WP Engine will show as not-logged-in, even though the AJAX call to apply tags (with a delay) works
+
+		if ( is_admin() || ! is_singular() ) {
 			return;
 		}
 
@@ -1277,6 +1377,12 @@ class WPF_Access_Control {
 
 			if ( empty( $settings['apply_delay'] ) ) {
 
+				// Won't do any good applying tags if they aren't logged in
+
+				if ( ! wpf_is_user_logged_in() ) {
+					return;
+				}
+
 				if ( ! empty( $settings['apply_tags'] ) ) {
 
 					wp_fusion()->user->apply_tags( $settings['apply_tags'] );
@@ -1293,20 +1399,18 @@ class WPF_Access_Control {
 
 				wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . 'assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
 
-				if( ! isset( $settings['apply_tags'] ) ) {
-					$settings['apply_tags'] = null;
-				}
-
-				if( ! isset( $settings['remove_tags'] ) ) {
-					$settings['remove_tags'] = null;
-				}
-
 				$localize_data = array(
 					'ajaxurl' => admin_url( 'admin-ajax.php' ),
-					'tags'    => $settings['apply_tags'],
-					'remove'  => $settings['remove_tags'],
 					'delay'   => $settings['apply_delay'],
 				);
+
+				if ( ! empty( $settings['apply_tags'] ) ) {
+					$localize_data['tags'] = $settings['apply_tags'];
+				}
+
+				if ( ! empty( $settings['remove_tags'] ) ) {
+					$localize_data['remove'] = $settings['remove_tags'];
+				}
 
 				wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', $localize_data );
 

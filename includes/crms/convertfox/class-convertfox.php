@@ -651,14 +651,8 @@ class WPF_ConvertFox {
 		// Fix names
 
 		if( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
-
 			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
-
-			unset( $data['first_name'] );
-			unset( $data['last_name'] );
-
 		}
-
 
 		$update_data = (object) array(
 			'id'	  => $contact_id,

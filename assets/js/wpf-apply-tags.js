@@ -4,7 +4,7 @@ jQuery(document).ready(function($){
 
 		setTimeout(function() {
 
-			if( wpf_ajax.tags !== null ) {
+			if( wpf_ajax.hasOwnProperty( 'tags' ) ) {
 
 				var data = {
 					'action'	 : 'apply_tags',
@@ -15,7 +15,7 @@ jQuery(document).ready(function($){
 
 			}
 
-			if( wpf_ajax.remove !== null ) {
+			if( wpf_ajax.hasOwnProperty( 'remove' ) ) {
 
 				var data = {
 					'action'	 : 'remove_tags',

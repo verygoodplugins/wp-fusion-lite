@@ -127,3 +127,81 @@ if ( ! function_exists( 'wpf_get_tag_label' ) ) {
 	}
 }
 
+/**
+ * Get the CRM field ID for a single WordPress meta key
+ *
+ * @since 3.35.14
+ *
+ * @param string      $meta_key The meta key to look up
+ * @param string|bool $default  The default value to return if no CRM key is found
+ * @return string|bool The CRM field
+ */
+
+function wpf_get_crm_field( $meta_key, $default = false ) {
+
+	return wp_fusion()->crm_base->get_crm_field( $meta_key, $default );
+
+}
+
+/**
+ * Is a WordPress meta key enabled for sync with the CRM?
+ *
+ * @since 3.35.14
+ *
+ * @param string $meta_key The meta key to look up
+ * @return bool Whether or not the field is active
+ */
+
+function wpf_is_field_active( $meta_key ) {
+
+	return wp_fusion()->crm_base->is_field_active( $meta_key );
+
+}
+
+/**
+ * Get the field type (set on the Contact Fields list) for a given field
+ *
+ * @since 3.35.14
+ *
+ * @param string $meta_key The meta key to look up
+ * @param string $default  The default value to return if no type is found
+ * @return string The field type
+ */
+
+function wpf_get_field_type( $meta_key, $default = 'text' ) {
+
+	return wp_fusion()->crm_base->get_field_type( $meta_key, $default );
+
+}
+
+/**
+ * Are we currently in an auto-login session?
+ *
+ * @return bool
+ */
+
+function doing_wpf_auto_login() {
+
+	if ( defined( 'DOING_WPF_AUTO_LOGIN' ) && true == DOING_WPF_AUTO_LOGIN ) {
+		return true;
+	} else {
+		return false;
+	}
+
+}
+
+/**
+ * Are we currently handing a webhook?
+ *
+ * @return bool
+ */
+
+function doing_wpf_webhook() {
+
+	if ( defined( 'DOING_WPF_WEBHOOK' ) && true == DOING_WPF_WEBHOOK ) {
+		return true;
+	} else {
+		return false;
+	}
+
+}

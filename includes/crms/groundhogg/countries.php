@@ -166,7 +166,7 @@ return array(
 	'NA' => 'Namibia',
 	'NR' => 'Nauru',
 	'NP' => 'Nepal',
-	'NL' => 'Netherlands (the)',
+	'NL' => 'Netherlands',
 	'NC' => 'New Caledonia',
 	'NZ' => 'New Zealand',
 	'NI' => 'Nicaragua',

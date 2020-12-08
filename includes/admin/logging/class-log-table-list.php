@@ -138,10 +138,10 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 */
 	public function column_user( $log ) {
 
-		if( empty( $log['user'] ) || $log['user'] < 1 ) {
+		if ( empty( $log['user'] ) || $log['user'] < 1 ) {
 			return 'system';
-		} elseif( $log['user'] >= 100000000 ) {
-			return 'auto-login-link';
+		} elseif ( $log['user'] >= 100000000 || false !== strpos( $log['source'], 'auto-login' ) ) {
+			return 'auto-login-' . $log['user'];
 		}
 
 		$userdata = get_userdata( $log['user'] );
@@ -172,14 +172,35 @@ class WPF_Log_Table_List extends WP_List_Table {
 				$context['meta_array'] = $context['meta_array_nofilter'];
 			}
 
-			if( ! empty( $context['meta_array'] ) ) {
-				
+			if ( ! empty( $context['meta_array'] ) ) {
+
 				$output .= '<br /><ul class="log-table-meta-fields">';
 
-				foreach($context['meta_array'] as $key => $value) {
+				foreach ( $context['meta_array'] as $key => $value ) {
+
 					$output .= '<li><strong>' . $key . '</strong>: ';
 
-					if( is_array( $value ) || is_object( $value ) ) {
+					if ( is_array( $value ) && isset( $value['original'] ) ) {
+
+						// value went through wpf_format_field_value
+
+						$text = sprintf( __( 'This value was modified by the wpf_format_field_value filter before being sent to HubSpot, using field format %s.', 'wp-fusion-lite' ), '<strong>' . $value['type'] . '</strong>' );
+
+						// print_r arrays / original value
+
+						if ( is_array( $value['original'] ) || is_object( $value['original'] ) ) {
+							$value['original'] = '<pre>' . print_r( $value['original'], true ) . '</pre>';
+						}
+
+						// print_r arrays / new value
+
+						if ( is_array( $value['new'] ) || is_object( $value['new'] ) ) {
+							$value['new'] = '<pre>' . print_r( $value['new'], true ) . '</pre>';
+						}
+
+						$output .= $value['original'] . ' &rarr; <code>' . $value['new'] . '</code><span class="dashicons dashicons-editor-help wpf-tip right" data-tip="' . $text . '"></span>';
+
+					} elseif ( is_array( $value ) || is_object( $value ) ) {
 						$output .= '<pre>' . print_r( $value, true ) . '</pre>';
 					} else {
 						$output .= $value;
@@ -192,8 +213,8 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 			}
 
-			if( ! empty( $context['tag_array'] ) ) {
-				
+			if ( ! empty( $context['tag_array'] ) ) {
+
 				$output .= '<br /><ul class="log-table-tag-list">';
 
 				foreach($context['tag_array'] as $tag_id) {

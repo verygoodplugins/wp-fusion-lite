@@ -11,13 +11,6 @@ class WPF_Groundhogg {
 
 
 	/**
-	 * Check for verson 2.0 and higher
-	 */
-
-	public $is_v2 = true;
-
-
-	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -28,17 +21,14 @@ class WPF_Groundhogg {
 
 		$this->slug     = 'groundhogg';
 		$this->name     = 'Groundhogg';
-		$this->supports = array( 'add_tags' );
+		$this->supports = array();
+
+		//$this->supports = array( 'add_tags' ); // Removed in 3.35.10
 
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
 			new WPF_Groundhogg_Admin( $this->slug, $this->name, $this );
-		}
-
-		// Compatibility check
-		if ( ! defined( 'GROUNDHOGG_VERSION' ) || version_compare( GROUNDHOGG_VERSION, '2.0', '<' ) ) {
-			$this->is_v2 = false;
 		}
 
 	}
@@ -64,27 +54,14 @@ class WPF_Groundhogg {
 
 		add_action( 'plugins_loaded', array( $this, 'remove_actions' ) );
 
-		if ( $this->is_v2 ) {
+		add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
+		add_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
+		add_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
+		add_action( 'groundhogg/meta/contact/update', array( $this, 'contact_post_update_fallback' ), 10, 4 );
 
-			add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
-			add_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
-			add_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
-			add_action( 'groundhogg/meta/contact/update', array( $this, 'contact_post_update_fallback' ), 10, 4 );
-
-			// Tags
-			add_action( 'groundhogg/db/post_insert/tag', array( $this, 'tag_created' ) );
-			add_action( 'groundhogg/db/post_delete/tag', array( $this, 'tag_deleted' ) );
-
-		} else {
-
-			add_action( 'wpgh_tag_applied', array( $this, 'tag_applied' ), 10, 2 );
-			add_action( 'wpgh_tag_removed', array( $this, 'tag_removed' ), 10, 2 );
-
-			// Tags
-			add_action( 'wpgh_tag_created', array( $this, 'tag_created' ) );
-			add_action( 'wpgh_delete_tag', array( $this, 'tag_deleted' ) );
-
-		}
+		// Tags
+		add_action( 'groundhogg/db/post_insert/tag', array( $this, 'tag_created' ) );
+		add_action( 'groundhogg/db/post_delete/tag', array( $this, 'tag_deleted' ) );
 
 	}
 
@@ -118,9 +95,7 @@ class WPF_Groundhogg {
 				$value = 'no';
 			}
 
-		}
-
-		if ( $field == 'optin_status' && ! is_numeric( $field ) ) {
+		} elseif ( $field == 'optin_status' && ! is_numeric( $field ) ) {
 
 			// Convert optin status strings to proper format
 
@@ -134,6 +109,10 @@ class WPF_Groundhogg {
 			} else {
 				$value = false;
 			}
+		} elseif ( 'datepicker' == $field_type || 'date' == $field_type ) {
+
+			// Adjust formatting for date fields
+			$value = date( 'Y-m-d', $value );
 
 		}
 
@@ -206,18 +185,7 @@ class WPF_Groundhogg {
 			return;
 		}
 
-		if ( $this->is_v2 ) {
-
-			$user_id = $contact->get_user_id();
-
-		} else {
-
-			if ( ! empty( $contact->user ) ) {
-
-				$user_id = $contact->user->ID;
-
-			}
-		}
+		$user_id = $contact->get_user_id();
 
 		if ( ! empty( $user_id ) ) {
 
@@ -237,18 +205,7 @@ class WPF_Groundhogg {
 
 	public function tag_removed( $contact, $tag_id ) {
 
-		if ( $this->is_v2 ) {
-
-			$user_id = $contact->get_user_id();
-
-		} else {
-
-			if ( ! empty( $contact->user ) ) {
-
-				$user_id = $contact->user->ID;
-
-			}
-		}
+		$user_id = $contact->get_user_id();
 
 		if ( ! empty( $user_id ) ) {
 
@@ -358,15 +315,11 @@ class WPF_Groundhogg {
 
 	public function connect( $test = false ) {
 
-		if ( $test == false ) {
+		if ( false == $test ) {
 			return true;
 		}
 
-		if ( $this->is_v2 && ! class_exists( '\Groundhogg\Contact' ) ) {
-
-			return new WP_Error( 'error', 'Groundhogg plugin not active.' );
-
-		} elseif ( ! $this->is_v2 && ! function_exists( 'WPGH' ) ) {
+		if ( ! class_exists( '\Groundhogg\Contact' ) ) {
 
 			return new WP_Error( 'error', 'Groundhogg plugin not active.' );
 
@@ -388,15 +341,7 @@ class WPF_Groundhogg {
 
 		$available_tags = array();
 
-		if ( $this->is_v2 ) {
-
-			$data = \Groundhogg\Plugin::$instance->dbs->get_db( 'tags' )->search();
-
-		} else {
-
-			$data = WPGH()->tags->get_tags();
-
-		}
+		$data = \Groundhogg\Plugin::$instance->dbs->get_db( 'tags' )->search();
 
 		foreach ( $data as $row ) {
 			$available_tags[ $row->tag_id ] = trim( $row->tag_name );
@@ -418,54 +363,33 @@ class WPF_Groundhogg {
 
 		$crm_fields = array();
 
-		if ( $this->is_v2 ) {
+		require dirname( __FILE__ ) . '/admin/groundhogg-fields.php';
 
-			require dirname( __FILE__ ) . '/admin/groundhogg-fields.php';
+		foreach ( $groundhogg_fields as $field ) {
+			$crm_fields[ $field['crm_field'] ] = $field['crm_label'];
+		}
 
-			foreach ( $groundhogg_fields as $field ) {
-				$crm_fields[ $field['crm_field'] ] = $field['crm_label'];
-			}
+		$meta_keys = \Groundhogg\Plugin::$instance->dbs->get_db( 'contactmeta' )->get_keys();
 
-			$meta_keys = \Groundhogg\Plugin::$instance->dbs->get_db( 'contactmeta' )->get_keys();
+		foreach ( $meta_keys as $meta_key ) {
 
-			foreach ( $meta_keys as $meta_key ) {
-
-				if ( ! isset( $crm_fields[ $meta_key ] ) ) {
-					$crm_fields[ $meta_key ] = ucwords( str_replace( '_', ' ', $meta_key ) );
-				}
-			}
-
-			// Advanced Meta
-
-			if ( class_exists( 'GroundhoggBetterMeta\Tab_Api\Fields' ) ) {
-
-				$additional_fields = GroundhoggBetterMeta\Tab_Api\Fields::$instance->get_all();
-
-				if ( ! empty( $additional_fields ) ) {
-					foreach ( $additional_fields as $field ) {
-						$crm_fields[ $field['meta'] ] = $field['name'];
-					}
-				}
-
-			}
-
-		} else {
-
-			$data = new WPGH_Contact( 0 );
-
-			foreach ( $data as $key => $field_data ) {
-				$crm_fields[ $key ] = ucwords( str_replace( '_', ' ', $key ) );
-			}
-
-			global $wpdb;
-
-			$meta_keys = $wpdb->get_col(
-				"SELECT DISTINCT meta_key FROM {$wpdb->prefix}gh_contactmeta ORDER BY meta_key DESC"
-			);
-
-			foreach ( $meta_keys as $meta_key ) {
+			if ( ! isset( $crm_fields[ $meta_key ] ) ) {
 				$crm_fields[ $meta_key ] = ucwords( str_replace( '_', ' ', $meta_key ) );
 			}
+		}
+
+		// Advanced Meta
+
+		if ( class_exists( 'GroundhoggBetterMeta\Tab_Api\Fields' ) ) {
+
+			$additional_fields = GroundhoggBetterMeta\Tab_Api\Fields::$instance->get_all();
+
+			if ( ! empty( $additional_fields ) ) {
+				foreach ( $additional_fields as $field ) {
+					$crm_fields[ $field['meta'] ] = $field['name'];
+				}
+			}
+
 		}
 
 		asort( $crm_fields );
@@ -484,15 +408,7 @@ class WPF_Groundhogg {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( $this->is_v2 ) {
-
-			$contact = \Groundhogg\Plugin::$instance->dbs->get_db( 'contacts' )->get_contact_by( 'email', $email_address );
-
-		} else {
-
-			$contact = WPGH()->contacts->get_contact_by( 'email', $email_address );
-
-		}
+		$contact = \Groundhogg\Plugin::$instance->dbs->get_db( 'contacts' )->get_contact_by( 'email', $email_address );
 
 		if ( empty( $contact ) ) {
 			return false;
@@ -511,15 +427,7 @@ class WPF_Groundhogg {
 
 	public function get_tags( $contact_id ) {
 
-		if ( $this->is_v2 ) {
-
-			$data = new \Groundhogg\Contact( $contact_id );
-
-		} else {
-
-			$data = new WPGH_Contact( $contact_id );
-
-		}
+		$data = new \Groundhogg\Contact( $contact_id );
 
 		$tags = array();
 
@@ -544,26 +452,11 @@ class WPF_Groundhogg {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( $this->is_v2 ) {
+		remove_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
 
-			remove_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
+		$contact = new \Groundhogg\Contact( $contact_id );
 
-			$contact = new \Groundhogg\Contact( $contact_id );
-
-			$contact->add_tag( $tags );
-
-		} else {
-
-			remove_action( 'wpgh_tag_applied', array( $this, 'tag_applied' ), 10, 2 );
-
-			$contact = new WPGH_Contact( $contact_id );
-
-			foreach ( $tags as $key => $value ) {
-
-				$contact->add_tag( array( $contact_id => $value ) );
-
-			}
-		}
+		$contact->add_tag( $tags );
 
 		return true;
 
@@ -579,26 +472,11 @@ class WPF_Groundhogg {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( $this->is_v2 ) {
+		remove_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
 
-			remove_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
+		$contact = new \Groundhogg\Contact( $contact_id );
 
-			$contact = new \Groundhogg\Contact( $contact_id );
-
-			$contact->remove_tag( $tags );
-
-		} else {
-
-			remove_action( 'wpgh_tag_removed', array( $this, 'tag_removed' ), 10, 2 );
-
-			$contact = new WPGH_Contact( $contact_id );
-
-			foreach ( $tags as $key => $value ) {
-
-				$contact->remove_tag( array( $contact_id => $value ) );
-
-			}
-		}
+		$contact->remove_tag( $tags );
 
 		return true;
 
@@ -634,27 +512,15 @@ class WPF_Groundhogg {
 			$data['optin_status'] = wp_fusion()->settings->get( 'gh_default_status', 2 );
 		}
 
-		if ( $this->is_v2 ) {
+		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 
-			remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
+		$contact = new \Groundhogg\Contact( $data );
 
-			$contact = new \Groundhogg\Contact( $data );
-
-			if ( ! $contact->exists() ) {
-				return new WP_Error( 'error', 'Contact creation failed.' );
-			}
-
-			$id = $contact->get_id();
-
-		} else {
-
-			remove_action( 'wpgh_contact_post_update', array( $this, 'contact_post_update' ), 10, 3 );
-
-			$id = WPGH()->contacts->add( $data );
-
-			$contact = new WPGH_Contact( $id );
-
+		if ( ! $contact->exists() ) {
+			return new WP_Error( 'error', 'Contact creation failed.' );
 		}
+
+		$id = $contact->get_id();
 
 		// These things don't go into meta
 
@@ -700,23 +566,14 @@ class WPF_Groundhogg {
 			return false;
 		}
 
-		if ( $this->is_v2 ) {
+		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 
-			remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
-
-			$contact = new \Groundhogg\Contact( $contact_id );
-
-		} else {
-
-			remove_action( 'wpgh_contact_post_update', array( $this, 'contact_post_update' ), 10, 3 );
-
-			$contact = new WPGH_Contact( $contact_id );
-
-		}
+		$contact = new \Groundhogg\Contact( $contact_id );
 
 		$contact->update( $data );
 
 		unset( $data['user_id'] );
+		unset( $data['owner_id'] );
 		unset( $data['optin_status'] );
 		unset( $data['first_name'] );
 		unset( $data['last_name'] );
@@ -740,18 +597,10 @@ class WPF_Groundhogg {
 
 	public function load_contact( $contact_id ) {
 
-		if ( $this->is_v2 ) {
-
-			$contact = new \Groundhogg\Contact( $contact_id );
-
-		} else {
-
-			$contact = new WPGH_Contact( $contact_id );
-
-		}
+		$contact = new \Groundhogg\Contact( $contact_id );
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
 
 		foreach ( $contact_fields as $key => $data ) {
 
@@ -781,15 +630,7 @@ class WPF_Groundhogg {
 
 	public function load_contacts( $tag ) {
 
-		if ( $this->is_v2 ) {
-
-			$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'tag_relationships' )->get_contacts_by_tag( $tag );
-
-		} else {
-
-			$contacts = WPGH()->tag_relationships->get_contacts_by_tag( $tag );
-
-		}
+		$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'tag_relationships' )->get_contacts_by_tag( $tag );
 
 		$contact_ids = array();
 

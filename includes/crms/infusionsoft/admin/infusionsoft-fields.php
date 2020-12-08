@@ -213,6 +213,21 @@ $infusionsoft_fields[] = array(
 );
 
 $infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 3',
+	'crm_field' => 'Phone3',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 4',
+	'crm_field' => 'Phone4',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 5',
+	'crm_field' => 'Phone5',
+);
+
+$infusionsoft_fields[] = array(
 	'crm_label' => 'Birthday',
 	'crm_field' => 'Birthday',
 );

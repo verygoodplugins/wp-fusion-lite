@@ -30,7 +30,7 @@ class WPF_Mautic {
 	public function __construct() {
 
 		$this->slug     = 'mautic';
-		$this->name     = 'Mautic v2';
+		$this->name     = 'Mautic';
 		$this->supports = array( 'add_tags', 'combined_updates' );
 
 		// Set up admin options
