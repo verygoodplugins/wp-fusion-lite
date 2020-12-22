@@ -26,7 +26,7 @@ class WPF_Growmatik {
 		$this->slug     = 'growmatik';
 		$this->name     = 'Growmatik';
 		$this->supports = array(); // Tags and Custom attributes should be synced.
-		$this->url      = 'https://api.stg.growmatik.ai/public/v1';
+		$this->url      = 'https://api.growmatik.ai/public/v1';
 
 		// Set up admin options
 		if ( is_admin() ) {
