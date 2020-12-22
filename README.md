@@ -51,6 +51,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * GetResponse
 * Gist
 * Groundhogg
+* Growmatik
 * HubSpot
 * Infusionsoft
 * Intercom
