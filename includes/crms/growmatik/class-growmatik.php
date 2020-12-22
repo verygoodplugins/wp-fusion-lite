@@ -46,6 +46,7 @@ class WPF_Growmatik {
 
 	public function init() {}
 
+
 	/**
 	 * Get user email by contact id.
 	 *
@@ -76,6 +77,7 @@ class WPF_Growmatik {
 		}
 	}
 
+
 	/**
 	 * Get a user by contact id.
 	 *
@@ -101,6 +103,7 @@ class WPF_Growmatik {
 		return $user['data'];
 	}
 
+
 	/**
 	 * Get all site tags.
 	 *
@@ -124,6 +127,79 @@ class WPF_Growmatik {
 		}
 
 		return $available_tags;
+	}
+
+
+	/**
+	 * Update user custom attributes.
+	 * We use a separate API endpoint and use email to know the user.
+	 *
+	 * @param $contact_id Growmatic user id.
+	 * @param $contact_data Data to push as new user data.
+	 * @access private
+	 * @return bool|WP_Error True on success, WP Error object on failure.
+	 */
+	private function update_contact_custom_attributes( $contact_id, $contact_data ) {
+		$params  = $this->get_params( false );
+		$request = $this->url . '/contact/attribute/email/';
+
+		$prepared_data = array();
+
+		foreach ( $contact_data as $name => $value ) {
+			if ( ! empty( $value ) ) {
+				$prepared_data[] = array(
+					'name'  => $name,
+					'value' => $value,
+				);
+			}
+		}
+
+		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
+		$params['body']['data']  = $prepared_data;
+
+		$response = wp_remote_post( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$results = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! is_wp_error( $results ) ) {
+			return true;
+		}
+
+		return $results;
+	}
+
+
+	/**
+	 * Update user basic attributes.
+	 * Same API call as add contact.
+	 *
+	 * @param $contact_id Growmatic user id.
+	 * @param $contact_data Data to push as new user data.
+	 * @param $map_meta_fields
+	 * @access private
+	 * @return bool|WP_Error True on success, WP Error object on failure.
+	 */
+	private function update_contact_basic_attributes( $contact_id, $contact_data, $map_meta_fields ) {
+
+		$contact_data['id'] = $contact_id;
+		$response           = $this->add_contact( $contact_data, $map_meta_fields );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$results = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! is_wp_error( $results ) ) {
+			return true;
+		}
+
+		return $results;
+
 	}
 
 
@@ -418,6 +494,10 @@ class WPF_Growmatik {
 
 		$contact_data['id'] = isset( $contact_data['id'] ) ? $contact_data['id'] : 0;
 
+		if ( $map_meta_fields ) {
+			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
+		}
+
 		$params['body']['user'] = $contact_data;
 
 		$response = wp_remote_post( $request, $params );
@@ -435,58 +515,6 @@ class WPF_Growmatik {
 		return $results->data->userId;
 	}
 
-
-	private function update_contact_basic_attributes( $contact_id, $contact_data, $map_meta_fields ) {
-
-		$contact_data['id'] = $contact_id;
-		$response           = $this->add_contact( $contact_data );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$results = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( ! is_wp_error( $results ) ) {
-			return true;
-		}
-
-		return $results;
-
-	}
-
-	private function update_contact_custom_attributes( $contact_id, $contact_data ) {
-		$params  = $this->get_params( false );
-		$request = $this->url . '/contact/attribute/email/';
-
-		$prepared_data = array();
-
-		foreach ( $contact_data as $name => $value ) {
-			if ( ! empty( $value ) ) {
-				$prepared_data[] = array(
-					'name'  => $name,
-					'value' => $value,
-				);
-			}
-		}
-
-		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
-		$params['body']['data']  = $prepared_data;
-
-		$response = wp_remote_post( $request, $params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$results = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( ! is_wp_error( $results ) ) {
-			return true;
-		}
-
-		return $results;
-	}
 
 	/**
 	 * Update contact
