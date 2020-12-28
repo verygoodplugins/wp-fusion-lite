@@ -9,8 +9,12 @@ class WPF_Growmatik_Admin {
 	/**
 	 * Get things started
 	 *
-	 * @access  public
-	 * @since   1.0
+	 * @since 3.36
+	 *
+	 * @param string $slug The CRM's slug
+	 * @param string $name The name of the CRM
+	 * @param object $crm  The CRM object
+	 * @return void
 	 */
 
 	public function __construct( $slug, $name, $crm ) {
@@ -21,7 +25,6 @@ class WPF_Growmatik_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_growmatik_header_begin', array( $this, 'show_field_growmatik_header_begin' ), 10, 2 );
-		add_action( 'show_field_growmatik_key_end', array( $this, 'show_field_growmatik_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -35,8 +38,9 @@ class WPF_Growmatik_Admin {
 	/**
 	 * Hooks to run when this CRM is selected as active
 	 *
-	 * @access  public
-	 * @since   1.0
+	 * @since 3.36
+	 *
+	 * @return void
 	 */
 
 	public function init() {
@@ -45,10 +49,13 @@ class WPF_Growmatik_Admin {
 
 
 	/**
-	 * Loads Gromatik connection information on settings page
+	 * Registers Growmatik API settings
 	 *
-	 * @access  public
-	 * @since   1.0
+	 * @since 3.36
+	 *
+	 * @param array $settings The registered settings on the options page.
+	 * @param array $options  The options saved in the database.
+	 * @return array $settings The settings.
 	 */
 
 	public function register_connection_settings( $settings, $options ) {
@@ -62,17 +69,16 @@ class WPF_Growmatik_Admin {
 			'section' => 'setup',
 		);
 
-		$new_settings['growmatik_api_secret'] = array(
-			'title'   => __( 'API Secret', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter your Growmatik API Secret. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
-			'std'     => '',
+		$new_settings['growmatik_api_key'] = array(
+			'title'   => __( 'API Key', 'wp-fusion' ),
+			'desc'    => __( 'Enter your Growmatik API key. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion' ),
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
-		$new_settings['growmatik_api_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion-lite' ),
-			'desc'        => __( 'Enter your Growmatik API key. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
+		$new_settings['growmatik_api_secret'] = array(
+			'title'       => __( 'API Secret', 'wp-fusion' ),
+			'desc'        => __( 'Enter your Growmatik API Secret. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -87,10 +93,12 @@ class WPF_Growmatik_Admin {
 
 
 	/**
-	 * Loads standard mailerlite field names and attempts to match them up with standard local ones
+	 * Loads standard field names and attempts to match them up with standard local ones
 	 *
-	 * @access  public
-	 * @since   1.0
+	 * @since 3.36
+	 *
+	 * @param array $options The options saved in the database
+	 * @return array $options The options saved in the database
 	 */
 
 	public function add_default_fields( $options ) {
@@ -115,8 +123,11 @@ class WPF_Growmatik_Admin {
 	/**
 	 * Puts a div around the CRM configuration section so it can be toggled
 	 *
-	 * @access  public
-	 * @since   1.0
+	 * @since 3.36
+	 *
+	 * @param string $id    The ID of the field
+	 * @param array  $field The field properties
+	 * @return mixed HTML output
 	 */
 
 	public function show_field_growmatik_header_begin( $id, $field ) {
@@ -128,31 +139,11 @@ class WPF_Growmatik_Admin {
 	}
 
 	/**
-	 * Close out Growmatik section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-	public function show_field_growmatik_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #growmatik div
-		echo '<table class="form-table">';
-
-	}
-
-	/**
 	 * Verify connection credentials
 	 *
-	 * @access public
-	 * @return bool
+	 * @since 3.36
+	 *
+	 * @return mixed JSON response
 	 */
 	public function test_connection() {
 
