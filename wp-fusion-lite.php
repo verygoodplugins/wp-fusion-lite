@@ -409,6 +409,7 @@ final class WP_Fusion_Lite {
 				'wp-erp'         => 'WPF_WP_ERP',
 				'engagebay'      => 'WPF_Engagebay',
 				'fluentcrm'      => 'WPF_FluentCRM',
+				'growmatik'      => 'WPF_Growmatik',
 			)
 		);
 
