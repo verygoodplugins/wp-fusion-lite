@@ -467,10 +467,8 @@ class WPF_Growmatik {
 		$request = $this->url . '/contact/tags/id';
 		$params  = $this->get_params( false );
 
-		$params['body'] = array(
-			'id'   => $contact_id,
-			'tags' => $tags,
-		);
+		$params['body']['id']   = $contact_id;
+		$params['body']['tags'] = $tags;
 
 		$response = wp_remote_post( $request, $params );
 
@@ -497,12 +495,10 @@ class WPF_Growmatik {
 		$params  = $this->get_params( false );
 		$request = $this->url . '/contact/tags/id/';
 
-		$params['method'] = 'DELETE';
-		$params['body']   = array(
-			'id'    => $contact_id,
-			'tags'  => $tags,
-			'email' => $this->get_email_from_cid( $contact_id ),
-		);
+		$params['method']        = 'DELETE';
+		$params['body']['id']    = $contact_id;
+		$params['body']['tags']  = $tags;
+		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
 
 		$response = wp_remote_request( $request, $params );
 
