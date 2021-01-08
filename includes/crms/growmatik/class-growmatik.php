@@ -533,10 +533,6 @@ class WPF_Growmatik {
 			$contact_data['email'] = isset( $contact_data['user_email'] ) ? $contact_data['user_email'] : '';
 		}
 
-		if ( ! isset( $contact_data['id'] ) ) {
-			$contact_data['id']; // Creates a new contact
-		}
-
 		$params['body']['user'] = $contact_data;
 
 		$response = wp_remote_post( $request, $params );
