@@ -2,11 +2,6 @@
 
 $growmatik_fields = array();
 
-$growmatik_fields['user_login'] = array(
-	'crm_label' => 'Username',
-	'crm_field' => 'userName',
-);
-
 $growmatik_fields['user_email'] = array(
 	'crm_label' => 'Email',
 	'crm_field' => 'email',
