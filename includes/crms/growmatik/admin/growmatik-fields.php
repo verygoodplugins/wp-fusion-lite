@@ -22,6 +22,11 @@ $growmatik_fields['billing_address_1'] = array(
 	'crm_field' => 'address',
 );
 
+$growmatik_fields['billing_phone'] = array(
+	'crm_label' => 'Phone Number',
+	'crm_field' => 'phoneNumber',
+);
+
 $growmatik_fields['phone_number'] = array(
 	'crm_label' => 'Phone Number',
 	'crm_field' => 'phoneNumber',
