@@ -580,7 +580,7 @@ class WPF_Growmatik {
 			return false;
 		}
 
-		return $results->data->userId;
+		return $results->data->gmId;
 	}
 
 
