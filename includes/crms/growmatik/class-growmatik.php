@@ -135,6 +135,39 @@ class WPF_Growmatik {
 		}
 	}
 
+	private function get_user_attributes() {
+		$params = $this->get_params();
+		$request = $this->url . '/site/attributes';
+
+		$response = wp_remote_get( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( is_wp_error( $body_json ) ) {
+			return array();
+		}
+
+		$attributes['basics'] = array_filter(
+			$body_json['data'],
+			function( $array ) {
+				return $array['type'] === 'basic';
+			}
+		);
+
+		$attributes['custom'] = array_filter(
+			$body_json['data'],
+			function( $array ) {
+				return $array['type'] === 'custom';
+			}
+		);
+
+		return $attributes;
+	}
+
 	/**
 	 * Update user custom attributes.
 	 * We use a separate API endpoint and use email to know the user.
