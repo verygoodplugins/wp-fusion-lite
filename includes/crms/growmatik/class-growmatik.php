@@ -596,8 +596,24 @@ class WPF_Growmatik {
 	 */
 
 	public function update_contact( $contact_id, $contact_data, $map_meta_fields = true ) {
-		$update_basics  = $this->update_contact_basic_attributes( $contact_id, $contact_data, $map_meta_fields );
-		$update_customs = $this->update_contact_custom_attributes( $contact_id, $contact_data );
+
+		$attributes = $this->get_user_attributes();
+
+		$basic_attributes  = wp_list_pluck( $attributes['basics'], 'name', 'id' );
+
+		$contact_basic_data = array();
+		$contact_custom_data = array();
+
+		foreach( $contact_data as $name => $value ) {
+			if ( array_key_exists( $name, $basic_attributes ) ) {
+				$contact_basic_data[ $name ] = $value;
+			} else {
+				$contact_custom_data[ $name ] = $value;
+			}
+		}
+
+		$update_basics  = $this->update_contact_basic_attributes( $contact_id, $contact_basic_data, $map_meta_fields );
+		$update_customs = $this->update_contact_custom_attributes( $contact_id, $contact_custom_data );
 
 		return ( $update_basics && $update_customs );
 	}
