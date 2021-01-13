@@ -135,6 +135,56 @@ class WPF_Growmatik {
 		}
 	}
 
+	private function get_user_attributes() {
+		$params = $this->get_params();
+		$request = $this->url . '/site/attributes';
+
+		$response = wp_remote_get( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( is_wp_error( $body_json ) ) {
+			return array();
+		}
+
+		$attributes['basics'] = array_filter(
+			$body_json['data'],
+			function( $array ) {
+				return $array['type'] === 'basic';
+			}
+		);
+
+		$keys = array(
+			'001' => 'email',
+			'003' => 'firstName',
+			'004' => 'lastName',
+			'005' => 'address',
+			'006' => 'phoneNumber',
+			'007' => 'country',
+			'008' => 'region',
+			'009' => 'city',
+		);
+
+		foreach( $attributes['basics'] as $key => $attr ) {
+			if ( isset( $keys[ $attr['id'] ] ) ) {
+				$attributes['basics'][ $key ]['slug'] = $keys[ $attr['id'] ];
+			}
+		}
+
+		$attributes['custom'] = array_filter(
+			$body_json['data'],
+			function( $array ) {
+				return $array['type'] === 'custom';
+			}
+		);
+
+		return $attributes;
+	}
+
 	/**
 	 * Update user custom attributes.
 	 * We use a separate API endpoint and use email to know the user.
@@ -355,6 +405,7 @@ class WPF_Growmatik {
 
 		// Custom fields
 		$params   = $this->get_params();
+		// This route returns all basic and custom attributes.
 		$request  = $this->url . '/site/attributes/';
 		$response = wp_remote_get( $request, $params );
 
@@ -367,7 +418,10 @@ class WPF_Growmatik {
 		$custom_fields = array();
 
 		foreach ( $fields->data as $field ) {
-			$custom_fields[ $field->id ] = $field->name;
+			// Add custom attributes only.
+			if ( 'custom' === $field->type ) {
+				$custom_fields[ $field->id ] = $field->name;
+			}
 		}
 
 		asort( $custom_fields );
@@ -533,10 +587,6 @@ class WPF_Growmatik {
 			$contact_data['email'] = isset( $contact_data['user_email'] ) ? $contact_data['user_email'] : '';
 		}
 
-		if ( ! isset( $contact_data['id'] ) ) {
-			$contact_data['id']; // Creates a new contact
-		}
-
 		$params['body']['user'] = $contact_data;
 
 		$response = wp_remote_post( $request, $params );
@@ -551,7 +601,7 @@ class WPF_Growmatik {
 			return false;
 		}
 
-		return $results->data->userId;
+		return $results->data->gmId;
 	}
 
 
@@ -567,8 +617,27 @@ class WPF_Growmatik {
 	 */
 
 	public function update_contact( $contact_id, $contact_data, $map_meta_fields = true ) {
-		$update_basics  = $this->update_contact_basic_attributes( $contact_id, $contact_data, $map_meta_fields );
-		$update_customs = $this->update_contact_custom_attributes( $contact_id, $contact_data );
+
+		$attributes = $this->get_user_attributes();
+
+		// Prepare a list of basic and custom attributes.
+		$basic_attributes = array_column( $attributes['basics'], 'slug' );
+		$custom_attributes = wp_list_pluck( $attributes['custom'], 'name', 'id' );
+
+		$contact_basic_data = array();
+		$contact_custom_data = array();
+
+		// Separate contact data to basic and custom. We are updating them separately.
+		foreach( $contact_data as $name => $value ) {
+			if ( in_array( $name, $basic_attributes, true ) ) {
+				$contact_basic_data[ $name ] = $value;
+			} else {
+				$contact_custom_data[ $custom_attributes[ $name ] ] = $value;
+			}
+		}
+		// Update user data and custom attributes separately.
+		$update_basics  = $this->update_contact_basic_attributes( $contact_id, $contact_basic_data, $map_meta_fields );
+		$update_customs = $this->update_contact_custom_attributes( $contact_id, $contact_custom_data );
 
 		return ( $update_basics && $update_customs );
 	}
