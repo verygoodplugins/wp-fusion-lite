@@ -136,7 +136,7 @@ class WPF_Growmatik {
 	}
 
 	private function get_user_attributes() {
-		$params = $this->get_params();
+		$params  = $this->get_params();
 		$request = $this->url . '/site/attributes';
 
 		$response = wp_remote_get( $request, $params );
@@ -169,7 +169,7 @@ class WPF_Growmatik {
 			'009' => 'city',
 		);
 
-		foreach( $attributes['basics'] as $key => $attr ) {
+		foreach ( $attributes['basics'] as $key => $attr ) {
 			if ( isset( $keys[ $attr['id'] ] ) ) {
 				$attributes['basics'][ $key ]['slug'] = $keys[ $attr['id'] ];
 			}
@@ -404,7 +404,7 @@ class WPF_Growmatik {
 		asort( $built_in_fields );
 
 		// Custom fields
-		$params   = $this->get_params();
+		$params = $this->get_params();
 		// This route returns all basic and custom attributes.
 		$request  = $this->url . '/site/attributes/';
 		$response = wp_remote_get( $request, $params );
@@ -621,14 +621,14 @@ class WPF_Growmatik {
 		$attributes = $this->get_user_attributes();
 
 		// Prepare a list of basic and custom attributes.
-		$basic_attributes = array_column( $attributes['basics'], 'slug' );
+		$basic_attributes  = array_column( $attributes['basics'], 'slug' );
 		$custom_attributes = wp_list_pluck( $attributes['custom'], 'name', 'id' );
 
-		$contact_basic_data = array();
+		$contact_basic_data  = array();
 		$contact_custom_data = array();
 
 		// Separate contact data to basic and custom. We are updating them separately.
-		foreach( $contact_data as $name => $value ) {
+		foreach ( $contact_data as $name => $value ) {
 			if ( in_array( $name, $basic_attributes, true ) ) {
 				$contact_basic_data[ $name ] = $value;
 			} else {
