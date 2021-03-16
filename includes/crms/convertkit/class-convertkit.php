@@ -19,6 +19,14 @@ class WPF_ConvertKit {
 	public $supports;
 
 	/**
+	 * Holds the API parameters.
+	 *
+	 * @since 3.36.6
+	 * @var   params
+	 */
+	public $params;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -30,6 +38,8 @@ class WPF_ConvertKit {
 		$this->slug     = 'convertkit';
 		$this->name     = 'ConvertKit';
 		$this->supports = array();
+
+		$this->api_secret = wp_fusion()->settings->get( 'ck_secret' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -80,12 +90,13 @@ class WPF_ConvertKit {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( is_object( $payload ) ) {
+		if ( is_object( $payload ) ) {
 
 			$post_data['contact_id'] = $payload->subscriber->id;
 
@@ -97,7 +108,12 @@ class WPF_ConvertKit {
 
 			if ( 'update' == $_REQUEST['wpf_action'] ) {
 
+				$user_id = wpf_get_user_id( $payload->subscriber->id );
+
 				$tag = wp_fusion()->settings->get( 'ck_update_tag' );
+
+				wpf_log( 'notice', $user_id, 'Removing update tag ' . wpf_get_tag_label( $tag[0] ) . ' so that it can be reapplied later if needed.' );
+
 				$this->remove_tags( array( $tag ), $post_data['contact_id'] );
 
 			}
@@ -133,11 +149,9 @@ class WPF_ConvertKit {
 				wp_mail( $email, 'WP Fusion - Unsubscribe Notification', 'User with email ' . $user->user_email . ' has unsubscribed from marketing in ConvertKit.' );
 
 			}
-
 		}
 
 		wp_die( 'Success', 'Success', 200 );
-
 
 	}
 
@@ -174,11 +188,11 @@ class WPF_ConvertKit {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'convertkit') !== false ) {
+		if ( strpos( $url, 'convertkit' ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if ( isset( $body_json->error ) ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
@@ -187,11 +201,40 @@ class WPF_ConvertKit {
 				$response = new WP_Error( 'error', 'API limits exceeded. Try again in one minute.' );
 
 			}
-
 		}
 
 		return $response;
 
+	}
+
+	/**
+	 * Gets the parameters for API calls.
+	 *
+	 * @since  3.36.10
+	 *
+	 * @param  string $api_secret The api secret, if different from what's in
+	 *                            the database.
+	 * @return array  The API parameters.
+	 */
+	public function get_params( $api_secret = null ) {
+
+		if ( ! empty( $api_secret ) ) {
+			$this->api_secret = $api_secret;
+		}
+
+		if ( $this->params ) {
+			return $this->params;
+		}
+
+		$this->params = array(
+			'timeout'    => 15,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type' => 'application/json',
+			),
+		);
+
+		return $this->params;
 	}
 
 
@@ -202,46 +245,46 @@ class WPF_ConvertKit {
 	 * @return int Rule ID
 	 */
 
-	public function register_webhook($type, $tag) {
+	public function register_webhook( $type, $tag ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
-		$access_key = wp_fusion()->settings->get('access_key');
+		$access_key = wp_fusion()->settings->get( 'access_key' );
 
 		if ( $type == 'unsubscribe' ) {
 
 			$data = array(
-				'api_secret' 	=> $this->api_secret,
-				'target_url'    => get_home_url(null, '/?wpf_action=ck_unsubscribed&access_key=' . $access_key ),
-				'event'			=> array( 'name' => 'subscriber.subscriber_unsubscribe' )
+				'api_secret' => $this->api_secret,
+				'target_url' => get_home_url( null, '/?wpf_action=ck_unsubscribed&access_key=' . $access_key ),
+				'event'      => array( 'name' => 'subscriber.subscriber_unsubscribe' ),
 			);
-
 
 		} else {
 
 			$data = array(
-				'api_secret' 	=> $this->api_secret,
-				'target_url'    => get_home_url(null, '/?wpf_action=' . $type . '&access_key=' . $access_key . '&send_notification=false'),
-				'event'			=> array( 'name' => 'subscriber.tag_add', 'tag_id' => $tag )
+				'api_secret' => $this->api_secret,
+				'target_url' => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key . '&send_notification=false' ),
+				'event'      => array(
+					'name'   => 'subscriber.tag_add',
+					'tag_id' => $tag,
+				),
 			);
 
 		}
 
-		$response = wp_remote_post( 'https://api.convertkit.com/v3/automations/hooks', array(
-			'headers' => array( 'Content-Type' => 'application/json' ),
-			'body'    => json_encode( $data ),
-			'method'  => 'POST'
-		) );
+		$response = wp_remote_post(
+			'https://api.convertkit.com/v3/automations/hooks', array(
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'body'    => json_encode( $data ),
+				'method'  => 'POST',
+			)
+		);
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$result = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if(is_object($result)) {
+		if ( is_object( $result ) ) {
 			return $result->rule->id;
 		} else {
 			return 0;
@@ -258,19 +301,17 @@ class WPF_ConvertKit {
 
 	public function destroy_webhook( $rule_id ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		$data = array(
-			'api_secret' 	=> $this->api_secret,
+			'api_secret' => $this->api_secret,
 		);
 
-		$result = wp_remote_request( 'https://api.convertkit.com/v3/automations/hooks/' . $rule_id, array(
-			'headers' => array( 'Content-Type' => 'application/json' ),
-			'body'    => json_encode( $data ),
-			'method'  => 'DELETE'
-		));
+		$result = wp_remote_request(
+			'https://api.convertkit.com/v3/automations/hooks/' . $rule_id, array(
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'body'    => json_encode( $data ),
+				'method'  => 'DELETE',
+			)
+		);
 
 	}
 
@@ -283,10 +324,13 @@ class WPF_ConvertKit {
 
 	private function get_email_from_cid( $contact_id ) {
 
-		$users = get_users( array( 'meta_key'   => 'convertkit_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
+		$users = get_users(
+			array(
+				'meta_key'   => 'convertkit_contact_id',
+				'meta_value' => $contact_id,
+				'fields'     => array( 'user_email' ),
+			)
+		);
 
 		if ( ! empty( $users ) ) {
 
@@ -295,14 +339,14 @@ class WPF_ConvertKit {
 		} else {
 
 			// Try and get it via API call
-			
+
 			if ( is_wp_error( $this->connect() ) ) {
 				return false;
 			}
 
 			$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return false;
 			}
 
@@ -316,7 +360,6 @@ class WPF_ConvertKit {
 
 		}
 
-
 	}
 
 
@@ -329,20 +372,16 @@ class WPF_ConvertKit {
 
 	public function connect( $api_secret = null, $test = false ) {
 
-		if ( ! empty( $this->api_secret ) ) {
+		if ( false == $test ) {
 			return true;
 		}
 
-		// Get saved data from DB
-		if ( empty( $api_secret ) ) {
-			$this->api_secret = wp_fusion()->settings->get( 'ck_secret' );
+		if ( ! $this->params ) {
+			$this->get_params( $api_key );
 		}
 
-		if ( $test == false ) {
-			return true;
-		}
-
-		$result = json_decode( wp_remote_retrieve_body( wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $api_secret ) ) );
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $api_secret, $this->get_params() );
+		$result   = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( isset( $result->error ) ) {
 
@@ -369,10 +408,6 @@ class WPF_ConvertKit {
 
 	public function sync() {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		$this->sync_tags();
 		$this->sync_crm_fields();
 
@@ -392,13 +427,9 @@ class WPF_ConvertKit {
 
 	public function sync_tags() {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/tags?api_secret=' . $this->api_secret, $this->get_params() );
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/tags?api_secret=' . $this->api_secret );
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -411,7 +442,6 @@ class WPF_ConvertKit {
 			foreach ( $result->tags as $tag ) {
 				$available_tags[ $tag->id ] = $tag->name;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -429,18 +459,14 @@ class WPF_ConvertKit {
 
 	public function sync_crm_fields() {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		$crm_fields = array(
 			'first_name'    => 'First Name',
-			'email_address' => 'Email'
+			'email_address' => 'Email',
 		);
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret );
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret, $this->get_params() );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -451,7 +477,6 @@ class WPF_ConvertKit {
 			foreach ( $result->subscribers[0]->fields as $field_key => $field_value ) {
 				$crm_fields[ $field_key ] = ucwords( str_replace( '_', ' ', $field_key ) );
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
@@ -469,19 +494,15 @@ class WPF_ConvertKit {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) . '&status=all', $this->get_params() );
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) . '&status=all' );
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$result = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( empty($result) || empty( $result->subscribers ) || ! is_array( $result->subscribers ) ) {
+		if ( empty( $result ) || empty( $result->subscribers ) || ! is_array( $result->subscribers ) ) {
 
 			return false;
 
@@ -501,58 +522,52 @@ class WPF_ConvertKit {
 
 	public function get_tags( $contact_id ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		$contact_tags = array();
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags?api_secret=' . $this->api_secret );
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags?api_secret=' . $this->api_secret, $this->get_params() );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $body ) || empty( $body->tags ) ) {
+		if ( empty( $body ) || empty( $body->tags ) ) {
 			return $contact_tags;
 		}
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
 
-		foreach( $body->tags as $tag ) {
+		foreach ( $body->tags as $tag ) {
 			$contact_tags[] = $tag->id;
 
-			if( !isset( $available_tags[$tag->id] ) ) {
-				$available_tags[$tag->id] = $tag->name;
+			if ( ! isset( $available_tags[ $tag->id ] ) ) {
+				$available_tags[ $tag->id ] = $tag->name;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		// Possibly remove update / import tags
 
-		if( isset( $_REQUEST['wpf_action'] ) ) {
+		if ( isset( $_REQUEST['wpf_action'] ) ) {
 
-			$update_tag = wp_fusion()->settings->get('ck_update_tag');
-			$import_tag = wp_fusion()->settings->get('ck_add_tag');
+			$update_tag = wp_fusion()->settings->get( 'ck_update_tag' );
+			$import_tag = wp_fusion()->settings->get( 'ck_add_tag' );
 
-			if( in_array( $update_tag[0], $contact_tags ) ) {
+			if ( in_array( $update_tag[0], $contact_tags ) ) {
 
-				unset( $contact_tags[$update_tag[0]] );
-				$this->remove_tags( array($update_tag[0]), $contact_id );
-
-			}
-
-			if( in_array( $import_tag[0], $contact_tags ) ) {
-
-				unset( $contact_tags[$import_tag[0]] );
-				$this->remove_tags( array($import_tag[0]), $contact_id );
+				unset( $contact_tags[ $update_tag[0] ] );
+				$this->remove_tags( array( $update_tag[0] ), $contact_id );
 
 			}
 
+			if ( in_array( $import_tag[0], $contact_tags ) ) {
+
+				unset( $contact_tags[ $import_tag[0] ] );
+				$this->remove_tags( array( $import_tag[0] ), $contact_id );
+
+			}
 		}
 
 		return $contact_tags;
@@ -568,10 +583,6 @@ class WPF_ConvertKit {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		$tag_string = implode( ',', $tags );
 
 		$email_address = $this->get_email_from_cid( $contact_id );
@@ -579,16 +590,15 @@ class WPF_ConvertKit {
 		$data = array(
 			'api_secret' => $this->api_secret,
 			'email'      => $email_address,
-			'tags'       => $tag_string
+			'tags'       => $tag_string,
 		);
 
-		$response = wp_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', array(
-					'headers' => array( 'Content-Type' => 'application/json' ),
-					'body'    => json_encode( $data ),
-					'method'  => 'POST'
-				) );
+		$params         = $this->get_params();
+		$params['body'] = json_encode( $data );
 
-		if( is_wp_error( $response ) ) {
+		$response = wp_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', $params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -606,17 +616,14 @@ class WPF_ConvertKit {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		foreach ( $tags as $tag_id ) {
 
-			$response = wp_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags/' . $tag_id . '?api_secret=' . $this->api_secret, array(
-				'method' => 'DELETE'
-			) );
+			$params           = $this->get_params();
+			$params['method'] = 'DELETE';
 
-			if( is_wp_error( $response ) ) {
+			$response = wp_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags/' . $tag_id . '?api_secret=' . $this->api_secret, $params );
+
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -637,10 +644,6 @@ class WPF_ConvertKit {
 	 */
 
 	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -671,7 +674,7 @@ class WPF_ConvertKit {
 		$post_data = array(
 			'api_secret' => $this->api_secret,
 			'email'      => $data['email_address'],
-			'tags'       => $tag_string
+			'tags'       => $tag_string,
 		);
 
 		// First name is included in the top level of the subscription data
@@ -685,13 +688,12 @@ class WPF_ConvertKit {
 
 		$post_data['fields'] = $data;
 
-		$response = wp_remote_post( 'https://api.convertkit.com/v3/tags/' . $assign_tags[0] . '/subscribe', array(
-			'headers' => array( 'Content-Type' => 'application/json' ),
-			'body'    => json_encode( $post_data ),
-			'method'  => 'POST'
-		) );
+		$params         = $this->get_params();
+		$params['body'] = json_encode( $post_data );
 
-		if( is_wp_error( $response ) ) {
+		$response = wp_remote_post( 'https://api.convertkit.com/v3/tags/' . $assign_tags[0] . '/subscribe', $params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -714,18 +716,13 @@ class WPF_ConvertKit {
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
-
 
 		$post_data = array( 'api_secret' => $this->api_secret );
 
@@ -742,13 +739,13 @@ class WPF_ConvertKit {
 
 		$post_data['fields'] = $data;
 
-		$response = wp_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id, array(
-					'headers' => array( 'Content-Type' => 'application/json' ),
-					'body'    => json_encode( $post_data ),
-					'method'  => 'PUT'
-				) );
+		$params           = $this->get_params();
+		$params['body']   = json_encode( $post_data );
+		$params['method'] = 'PUT';
 
-		if( is_wp_error( $response ) ) {
+		$response = wp_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id, $params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -766,13 +763,9 @@ class WPF_ConvertKit {
 
 	public function load_contact( $contact_id ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
+		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret . '&status=all', $this->get_params() );
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret . '&status=all' );
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -784,7 +777,7 @@ class WPF_ConvertKit {
 
 		$returned_contact_data = array(
 			'first_name'    => $result->subscriber->first_name,
-			'email_address' => $result->subscriber->email_address
+			'email_address' => $result->subscriber->email_address,
 		);
 
 		if ( isset( $result->subscriber->fields ) ) {
@@ -801,7 +794,6 @@ class WPF_ConvertKit {
 			if ( $field_data['active'] == true && isset( $returned_contact_data[ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $returned_contact_data[ $field_data['crm_field'] ];
 			}
-
 		}
 
 		return $user_meta;
@@ -817,19 +809,15 @@ class WPF_ConvertKit {
 
 	public function load_contacts( $tag ) {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
-
 		$contact_ids = array();
-		$page = 1;
-		$proceed = true;
+		$page        = 1;
+		$proceed     = true;
 
-		while( $proceed == true ) {
+		while ( $proceed == true ) {
 
-			$response = wp_remote_get( 'https://api.convertkit.com/v3/tags/' . $tag . '/subscriptions?api_secret=' . $this->api_secret . '&page=' . $page );
+			$response = wp_remote_get( 'https://api.convertkit.com/v3/tags/' . $tag . '/subscriptions?api_secret=' . $this->api_secret . '&page=' . $page, $this->get_params() );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -841,16 +829,14 @@ class WPF_ConvertKit {
 					$contact_ids[] = $subscription->subscriber->id;
 				}
 
-				if( $result->total_pages == $page ) {
+				if ( $result->total_pages == $page ) {
 					$proceed = false;
 				} else {
 					$page++;
 				}
-
 			} else {
 				$proceed = false;
 			}
-
 		}
 
 		return $contact_ids;

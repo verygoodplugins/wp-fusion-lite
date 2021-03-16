@@ -465,8 +465,16 @@ class WPF_Mailjet {
 		$post_data = array();
 
 		$post_data['IsExcludedFromCampaigns'] = false;
-		$post_data['Name']                    = $data['Name'];
-		$post_data['Email']                   = $data['Email'];
+
+		if ( isset( $data['Name'] ) ) {
+			$post_data['Name'] = $data['Name'];
+			unset( $data['Name'] );
+		}
+
+		if ( isset( $data['Email'] ) ) {
+			$post_data['Email'] = $data['Email'];
+			unset( $data['Email'] );
+		}
 
 		$url            = 'https://api.mailjet.com/v3/REST/contact';
 		$params         = $this->params;
@@ -479,9 +487,6 @@ class WPF_Mailjet {
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-		unset( $data['Name'] );
-		unset( $data['Email'] );
 
 		if ( ! empty( $data ) ) {
 
@@ -534,8 +539,16 @@ class WPF_Mailjet {
 
 		$post_data                            = array();
 		$post_data['IsExcludedFromCampaigns'] = false;
-		$post_data['Name']                    = $data['Name'];
-		$post_data['Email']                   = $data['Email'];
+
+		if ( isset( $data['Name'] ) ) {
+			$post_data['Name'] = $data['Name'];
+			unset( $data['Name'] );
+		}
+
+		if ( isset( $data['Email'] ) ) {
+			$post_data['Email'] = $data['Email'];
+			unset( $data['Email'] );
+		}
 
 		$url              = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id;
 		$params           = $this->params;
@@ -547,10 +560,6 @@ class WPF_Mailjet {
 		if ( is_wp_error( $response ) && $response->get_error_message() !== 'Not Modified' ) {
 			return $response;
 		}
-
-		// Update metadata below (everything other the Email and Name fields that are dealt with above)
-		unset( $data['Name'] );
-		unset( $data['Email'] );
 
 		if ( ! empty( $data ) ) {
 

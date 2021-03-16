@@ -142,6 +142,10 @@ class WPF_EngageBay {
 
 				$response = new WP_Error( 'error', 'Invalid API key.' );
 
+			} elseif ( 500 == wp_remote_retrieve_response_code( $response ) ) {
+
+				$response = new WP_Error( 'error', '500 error, EngageBay API is currently unavailable.' );
+
 			}
 		}
 
@@ -193,10 +197,13 @@ class WPF_EngageBay {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( ( 'checkbox' == $field_type || 'multiselect' == $field_type ) && empty( $value ) ) {
-
-			$value = null;
-
+		if ( 'checkbox' == $field_type || 'multiselect' == $field_type ) {
+			if ( empty( $value ) ) {
+				$value = null;      // no values selected so clear the entire thing
+			} elseif ( is_array( $value ) ) {
+				// engageBay expects a CSV string for this
+				$value = implode( ',', array_filter( $value ) );
+			}
 		}
 
 		// Dates are already timestamps at this point
@@ -657,21 +664,30 @@ class WPF_EngageBay {
 
 					$maybe_json = json_decode( $value );
 
-					if ( json_last_error() === JSON_ERROR_NONE && is_object( $maybe_json ) ) {
+					// Multi-checkbox
 
-						foreach ( (array) $maybe_json as $key => $value ) {
-							$loaded_meta[ $field_object->name . '+' . $key ] = $value;
-						}
-					} else {
-
-						// Multi-checkbox
-
-						if ( 'MULTICHECKBOX' == $field_object->field_type && ! empty( $value ) ) {
+					if ( 'MULTICHECKBOX' == $field_object->field_type ) {
+						if ( ! empty( $value ) ) {
 							$value = explode( ',', $value );
+						} else {
+							$value = array();
 						}
 
 						$loaded_meta[ $field_object->name ] = $value;
 
+					} elseif ( 'CHECKBOX' == $field_object->field_type ) {
+						if ( empty( $value ) ) {
+							$value = false;
+						} else {
+							$value = explode( ',', $value );
+						}
+						$loaded_meta[ $field_object->name ] = $value;
+
+					} elseif ( json_last_error() === JSON_ERROR_NONE && is_object( $maybe_json ) ) {
+
+						foreach ( (array) $maybe_json as $key => $value ) {
+							$loaded_meta[ $field_object->name . '+' . $key ] = $value;
+						}
 					}
 				}
 			}
@@ -880,6 +896,8 @@ class WPF_EngageBay {
 			);
 
 		}
+
+		$contact_data['ignoreSendingWebhook'] = true;
 
 		return $contact_data;
 

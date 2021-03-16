@@ -23,7 +23,7 @@ class WPF_Groundhogg {
 		$this->name     = 'Groundhogg';
 		$this->supports = array();
 
-		//$this->supports = array( 'add_tags' ); // Removed in 3.35.10
+		// $this->supports = array( 'add_tags' ); // Removed in 3.35.10
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -43,14 +43,16 @@ class WPF_Groundhogg {
 
 	public function init() {
 
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-		add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
+		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
 
 		// Don't watch GH for changes if staging mode is active
 
-		if ( wp_fusion()->settings->get( 'staging_mode' ) == true ) {
+		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || ! class_exists( '\Groundhogg\Contact' ) ) {
 			return;
 		}
+
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
 
 		add_action( 'plugins_loaded', array( $this, 'remove_actions' ) );
 
@@ -62,6 +64,26 @@ class WPF_Groundhogg {
 		// Tags
 		add_action( 'groundhogg/db/post_insert/tag', array( $this, 'tag_created' ) );
 		add_action( 'groundhogg/db/post_delete/tag', array( $this, 'tag_deleted' ) );
+
+	}
+
+	/**
+	 * Make sure Groundhogg is active before using any of these methods
+	 *
+	 * @since  3.35.16
+	 *
+	 * @param bool $check Whether the dependencies are met
+	 *
+	 * @return bool|WP_Error
+	 */
+
+	public function preflight_check( $check ) {
+
+		if ( ! class_exists( '\Groundhogg\Contact' ) ) {
+			return new WP_Error( 'error', 'Groundhogg plugin not active.' );
+		}
+
+		return true;
 
 	}
 

@@ -98,14 +98,66 @@ class WPF_CRM_Queue {
 
 		}
 
-		// Queue sending data
-		if ( ( $method == 'apply_tags' || $method == 'remove_tags' || $method == 'update_contact' ) ) {
+		/**
+		 * Allows bypassing the API call, for example if a required dependency was deactivated
+		 *
+		 * @since 3.35.16
+		 *
+		 * @param bool|WP_Error $error  The error object
+		 * @param string        $method The API method to be performed
+		 * @param array         $args   The API arguments
+		 */
+
+		$error = apply_filters( 'wpf_api_preflight_check', true, $method, $args );
+
+		if ( is_wp_error( $error ) ) {
+			return $error;
+		}
+
+		// If the CRM supports custom objects, bypass the queue and call it
+
+		// This routes calls like wp_fusion()->crm->add_object( $data, 'Lead' ) to
+		// wp_fusion()->crm->add_contact( $data, $map_meta_fields = false ), while changing
+		// the object type to "Lead".
+
+		if ( false !== strpos( $method, '_object' ) && isset( $this->crm->object_type ) ) {
+
+			$method      = str_replace( '_object', '', $method );
+			$object_type = array_pop( $args );
+
+			// Switch the object type for the API call
+			add_filter( 'wpf_crm_object_type', function() use ( &$object_type ) {
+				return $object_type;
+			} );
+
+			// Set $map_meta_fields to always false
+
+			if ( 'add' == $method ) {
+				$args[1] = false;
+			} elseif ( 'update' == $method ) {
+				$args[2] = false;
+			}
+
+			$method .= '_contact'; // "add" becomes "add_contact"
+
+			$result = call_user_func_array( array( $this->crm, $method ), $args );
+			$result = apply_filters( "wpf_api_{$method}_result", $result, $args );
+
+			return $result;
+
+		}
+
+		if ( 'apply_tags' == $method || 'remove_tags' == $method || 'update_contact' == $method ) {
+
+			// Queue sending data and return true
 
 			$this->add_to_buffer( $method, $args );
 
 			return true;
 
 		} else {
+
+			// Can't be queued, execute right away
 
 			$result = call_user_func_array( array( $this->crm, $method ), $args );
 

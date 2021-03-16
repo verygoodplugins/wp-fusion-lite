@@ -110,6 +110,9 @@ class WPF_MailerLite_Admin {
 			'desc'    => __( 'MailerLite doesn\'t allow for changing the email address of an existing subscriber. Choose <strong>Ignore</strong> and WP Fusion will continue updating a single subscriber, ignoring email address changes. Choose <strong>Duplicate and Delete</strong> and WP Fusion will attempt to create a new subscriber with the same details when an email address has been changed, and remove the original subscriber.', 'wp-fusion-lite' ),
 		);
 
+		$new_settings['email_changes']['desc'] .= '<br /><br />';
+		$new_settings['email_changes']['desc'] .= sprintf( __( 'For more information, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/crm-specific-docs/email-address-changes-with-mailerlite/" target="_blank">', '</a>' );
+
 		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
 
 		if( wp_fusion()->is_full_version() ) {

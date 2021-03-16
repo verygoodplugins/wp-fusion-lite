@@ -17,8 +17,12 @@ class WPF_Shortcodes {
 
 		add_shortcode( 'wpf_user_can_access', array( $this, 'shortcode_user_can_access' ) );
 
-		if( ! shortcode_exists( 'user_meta' ) ) {
+		if ( ! shortcode_exists( 'user_meta' ) ) {
 			add_shortcode( 'user_meta', array( $this, 'shortcode_user_meta' ), 10, 2 );
+		}
+
+		if ( ! shortcode_exists( 'user_meta_if' ) ) {
+			add_shortcode( 'user_meta_if', array( $this, 'shortcode_user_meta_if' ), 10, 2 );
 		}
 
 	}
@@ -33,23 +37,32 @@ class WPF_Shortcodes {
 
 	public function shortcodes( $atts, $content = '' ) {
 
-		if( ( is_array( $atts ) && in_array( 'logged_out', $atts ) ) || $atts == 'logged_out' ) {
+		if ( ( is_array( $atts ) && in_array( 'logged_out', $atts ) ) || $atts == 'logged_out' ) {
 			$atts['logged_out'] = true;
 		}
 
-		$atts = shortcode_atts( array(
-			'tag'    		=> '',
-			'not'    		=> '',
-			'method' 		=> '',
-			'logged_out'	=> false
-		), $atts, 'wpf' );
+		$atts = shortcode_atts(
+			array(
+				'tag'        => '',
+				'not'        => '',
+				'method'     => '',
+				'logged_out' => false,
+			), $atts, 'wpf'
+		);
+
+		if ( false !== strpos( $atts['tag'], '“' ) || false !== strpos( $atts['not'], '“' ) ) {
+			return '<pre>' . __( '<strong>Oops!</strong> Curly quotes were found in a shortcode parameter of the [wpf] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+		}
 
 		// Hide content for non-logged in users
-		if ( ! wpf_is_user_logged_in() && $atts['logged_out'] == false) {
+		if ( ! wpf_is_user_logged_in() && $atts['logged_out'] == false ) {
 			return false;
 		}
 
 		$user_tags = wp_fusion()->user->get_tags();
+
+		$user_tags = str_replace( '[', '(', $user_tags );
+		$user_tags = str_replace( ']', ')', $user_tags );
 
 		$proceed_tag = false;
 		$proceed_not = false;
@@ -76,7 +89,6 @@ class WPF_Shortcodes {
 					if ( $atts['method'] == 'any' ) {
 						break;
 					}
-
 				} else {
 					$proceed_tag = false;
 
@@ -92,7 +104,6 @@ class WPF_Shortcodes {
 					$proceed_tag = true;
 				}
 			}
-
 		} else {
 			$proceed_tag = true;
 		}
@@ -126,7 +137,6 @@ class WPF_Shortcodes {
 					return false;
 				}
 			}
-
 		} else {
 			$proceed_not = true;
 		}
@@ -146,7 +156,7 @@ class WPF_Shortcodes {
 
 		}
 
-		if( $proceed_tag == true && $proceed_not == true ) {
+		if ( $proceed_tag == true && $proceed_not == true ) {
 			$can_access = true;
 		} else {
 			$can_access = false;
@@ -213,7 +223,17 @@ class WPF_Shortcodes {
 
 	public function shortcode_user_meta( $atts, $content = null ) {
 
-		$atts = shortcode_atts( array('field' => '', 'date-format' => '', 'format' => ''), $atts );
+		$atts = shortcode_atts(
+			array(
+				'field'       => '',
+				'date-format' => '',
+				'format'      => '',
+			), $atts
+		);
+
+		if ( false !== strpos( $atts['field'], '“' ) || false !== strpos( $atts['format'], '“' ) ) {
+			return '<pre>' . __( '<strong>Oops!</strong> Curly quotes were found in a shortcode parameter of the [user_meta] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+		}
 
 		if ( empty( $atts['field'] ) ) {
 			return;
@@ -231,7 +251,7 @@ class WPF_Shortcodes {
 
 		$user_data = get_userdata( $user_id );
 
-		if( is_object($user_data) && property_exists( $user_data->data, $atts['field'] ) ) {
+		if ( is_object( $user_data ) && property_exists( $user_data->data, $atts['field'] ) ) {
 
 			$value = $user_data->data->{$atts['field']};
 
@@ -260,9 +280,15 @@ class WPF_Shortcodes {
 
 		$value = apply_filters( 'wpf_user_meta_shortcode_value', $value, $atts['field'] );
 
-		if( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {
+		// Prevent array-to-string conversion warnings when this value is an array
 
-			if( is_numeric( $value ) ) {
+		if ( is_array( $value ) ) {
+			$value = reset( $value );
+		}
+
+		if ( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {
+
+			if ( is_numeric( $value ) ) {
 
 				$value = date( $atts['date-format'], $value );
 
@@ -271,15 +297,14 @@ class WPF_Shortcodes {
 				$value = date( $atts['date-format'], strtotime( $value ) );
 
 			}
-
 		}
 
 		if ( $atts['format'] == 'ucwords' ) {
 			$value = ucwords( $value );
 		}
 
-		if( empty( $value ) && ! is_numeric( $value ) ) {
-			return do_shortcode($content);
+		if ( empty( $value ) && ! is_numeric( $value ) ) {
+			return do_shortcode( $content );
 		} else {
 			return $value;
 		}
@@ -366,6 +391,93 @@ class WPF_Shortcodes {
 		if ( ( ! wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
 			return do_shortcode( $content );
 		}
+
+	}
+
+
+	/**
+	 * [usermeta_if] shortcode.
+	 *
+	 * @since  3.36.5
+	 *
+	 * @param  array  $atts    Shortcode atts.
+	 * @param  string $content The content to display if the condition matches.
+	 * @return string The content.
+	 */
+	public function shortcode_user_meta_if( $atts, $content = null ) {
+
+		$atts = shortcode_atts(
+			array(
+				'field'        => '',
+				'field_format' => '', // format for the value from meta
+				'value'        => '',
+				'value_format' => 'strval', // format for the value we enter
+				'compare'      => '=',
+			), $atts, 'user_meta_if'
+		);
+
+		// Check for curly quotes
+
+		foreach ( $atts as $att ) {
+
+			if ( false !== strpos( $att, '“' ) ) {
+				return '<pre>' . __( '<strong>Oops!</strong> Curly quotes were found in a shortcode parameter of the [usermeta_if] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+			}
+		}
+
+		$user_id = wpf_get_current_user_id();
+
+		if ( ! $user_id ) {
+			return '';
+		}
+
+		if ( ! $atts['field'] || ! $atts['value'] ) {
+			return '';
+		}
+
+		$user_meta = wp_fusion()->user->get_user_meta( $user_id );
+
+		if ( isset( $user_meta[ $atts['field'] ] ) ) {
+			$meta_value = $user_meta[ $atts['field'] ];
+		} else {
+			$meta_value = '';
+		}
+
+		$meta_value = $atts['field_format'] ? call_user_func( $atts['field_format'], $meta_value ) : $meta_value;
+		$value      = $atts['value_format'] ? call_user_func( $atts['value_format'], $atts['value'] ) : $atts['value'];
+
+		if ( 'strtotime' == $atts['field_format'] && false === $meta_value ) {
+			return sprintf( __( '<strong>Oops!</strong> Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'userfield' );
+		} elseif ( 'strtotime' == $atts['value_format'] && false === $value ) {
+			return sprintf( __( '<strong>Oops!</strong> Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'value' );
+		}
+
+		$atts['compare'] = wp_specialchars_decode( $atts['compare'] );
+
+		$show_content = false;
+		switch ( $atts['compare'] ) {
+			case '<':
+				$show_content = $meta_value < $value;
+				break;
+			case '<=':
+				$show_content = $meta_value <= $value;
+				break;
+			case '>':
+				$show_content = $meta_value > $value;
+				break;
+			case '>=':
+				$show_content = $meta_value >= $value;
+				break;
+			default:
+				$show_content = $meta_value === $value;
+				break;
+		}
+
+		if ( ! $show_content ) {
+			return '';
+		}
+
+		return do_shortcode( $content );
 
 	}
 

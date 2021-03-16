@@ -1,6 +1,6 @@
 <?php
 
-class WPF_Growmatik_Admin {
+class WPF_HighLevel_Admin {
 
 	private $slug;
 	private $name;
@@ -24,7 +24,7 @@ class WPF_Growmatik_Admin {
 		$this->crm  = $crm;
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_growmatik_header_begin', array( $this, 'show_field_growmatik_header_begin' ), 10, 2 );
+		add_action( 'show_field_highlevel_header_begin', array( $this, 'show_field_highlevel_header_begin' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -49,7 +49,7 @@ class WPF_Growmatik_Admin {
 
 
 	/**
-	 * Registers Growmatik API settings
+	 * Registers HighLevel API settings
 	 *
 	 * @since 3.36
 	 *
@@ -62,27 +62,19 @@ class WPF_Growmatik_Admin {
 
 		$new_settings = array();
 
-		$new_settings['growmatik_header'] = array(
-			'title'   => __( 'Growmatik CRM Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
+		$new_settings['highlevel_header'] = array(
+			'title'   => __( 'HighLevel Configuration', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
-		$new_settings['growmatik_api_key'] = array(
-			'title'   => __( 'API Key', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter your Growmatik API key. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
-			'type'    => 'text',
-			'section' => 'setup',
-		);
-
-		$new_settings['growmatik_api_secret'] = array(
-			'title'       => __( 'API Secret', 'wp-fusion-lite' ),
-			'desc'        => __( 'Enter your Growmatik API Secret. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
+		$new_settings['highlevel_api_key'] = array(
+			'title'       => __( 'API Key', 'wp-fusion-lite' ),
+			'desc'        => sprintf( __( 'Enter your HighLevel API Key. You can find it in the %1$sCompany Settings%2$s of your HighLevel account.', 'wp-fusion-lite' ), '<a href="https://help.gohighlevel.com/support/solutions/articles/48000982605-company-settings" target="_blank">', '</a>' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'growmatik_api_secret', 'growmatik_api_key' ),
+			'post_fields' => array( 'highlevel_api_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -105,12 +97,12 @@ class WPF_Growmatik_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/growmatik-fields.php';
+			require_once dirname( __FILE__ ) . '/highlevel-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
-				if ( isset( $growmatik_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
-					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $growmatik_fields[ $field ] );
+				if ( isset( $highlevel_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
+					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $highlevel_fields[ $field ] );
 				}
 			}
 		}
@@ -130,7 +122,7 @@ class WPF_Growmatik_Admin {
 	 * @return mixed HTML output
 	 */
 
-	public function show_field_growmatik_header_begin( $id, $field ) {
+	public function show_field_highlevel_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
@@ -147,18 +139,16 @@ class WPF_Growmatik_Admin {
 	 */
 	public function test_connection() {
 
-		$api_secret = sanitize_text_field( $_POST['growmatik_api_secret'] );
-		$api_key    = sanitize_text_field( $_POST['growmatik_api_key'] );
+		$api_key = sanitize_text_field( $_POST['highlevel_api_key'] );
 
-		$connection = $this->crm->connect( $api_secret, $api_key );
+		$connection = $this->crm->connect( $api_key, $test = true );
 
 		if ( is_wp_error( $connection ) ) {
 			wp_send_json_error( $connection->get_error_message() );
 		}
 
 		$options                          = wp_fusion()->settings->get_all();
-		$options['growmatik_api_secret']  = $api_secret;
-		$options['growmatik_api_key']     = $api_key;
+		$options['highlevel_api_key']     = $api_key;
 		$options['crm']                   = $this->slug;
 		$options['connection_configured'] = true;
 

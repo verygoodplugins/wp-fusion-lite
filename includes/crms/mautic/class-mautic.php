@@ -73,7 +73,7 @@ class WPF_Mautic {
 
 	public function tracking_code_output() {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -164,23 +164,35 @@ class WPF_Mautic {
 
 		if ( isset( $payload->{'mautic.lead_post_save_update'} ) ) {
 
-			$contact_id = false;
-
 			if ( isset( $payload->{'mautic.lead_post_save_update'}[0]->lead ) ) {
 
-				$contact_id = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
+				$post_data['contact_id'] = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
 
+				if ( ! empty( $payload->{'mautic.lead_post_save_update'}[0]->lead->tags ) ) {
+
+					$post_data['tags'] = array();
+
+					foreach ( $payload->{'mautic.lead_post_save_update'}[0]->lead->tags as $tag ) {
+						$post_data['tags'][] = $tag->tag;
+					}
+				}
 			} elseif ( isset( $payload->{'mautic.lead_post_save_update'}[0]->contact ) ) {
 
-				$contact_id = $payload->{'mautic.lead_post_save_update'}[0]->contact->id;
+				$post_data['contact_id'] = $payload->{'mautic.lead_post_save_update'}[0]->contact->id;
 
+				if ( ! empty( $payload->{'mautic.lead_post_save_update'}[0]->contact->tags ) ) {
+
+					$post_data['tags'] = array();
+
+					foreach ( $payload->{'mautic.lead_post_save_update'}[0]->contact->tags as $tag ) {
+						$post_data['tags'][] = $tag->tag;
+					}
+				}
 			}
-
-			$post_data['contact_id'] = $contact_id;
 
 			// Deal with changing contact IDs
 
-			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+			$user_id = wp_fusion()->user->get_user_id( $post_data['contact_id'] );
 
 			if ( empty( $user_id ) ) {
 
@@ -419,7 +431,7 @@ class WPF_Mautic {
 
 		$available_tags = array();
 
-		$request  = $this->url . 'api/tags';
+		$request  = $this->url . 'api/tags?limit=5000';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {

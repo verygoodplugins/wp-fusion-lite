@@ -34,7 +34,6 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 
 ### Supported CRMs
 
-* AWeber
 * ActiveCampaign
 * AgileCRM
 * Autopilot
@@ -52,6 +51,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Gist
 * Groundhogg
 * Growmatik
+* HighLevel
 * HubSpot
 * Infusionsoft
 * Intercom

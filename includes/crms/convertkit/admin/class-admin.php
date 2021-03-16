@@ -144,6 +144,10 @@ class WPF_ConvertKit_Admin {
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
 
+		// We don't need to show the webhook URL
+
+		unset( $settings['webhook_url'] );
+
 		$new_settings = array();
 
 		$new_settings['ck_header'] = array(
@@ -178,6 +182,7 @@ class WPF_ConvertKit_Admin {
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
+
 
 		return $settings;
 

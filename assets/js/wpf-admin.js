@@ -190,9 +190,35 @@ jQuery(document).ready(function($){
 		
 	}
 
+	// Redirect select
+
+	if( $("select.select4-select-page").length ) {
+
+		$("select.select4-select-page").select4({
+			allowClear: true,
+			minimumInputLength: 3,
+			ajax: {
+    			url: ajaxurl,
+    			dataType: 'json',
+    			type: 'POST',
+    			delay: 250,
+    			cache: true,
+    			data: function( params ) {
+    				var query = {
+						search: params.term,
+						action: 'wpf_get_redirect_options'
+					}
+
+					return query;
+    			}
+    		}
+		});
+		
+	}
+
 	// Tooltips
 
-	$( '.wpf-tip.right' ).tipTip({
+	$( '.wpf-tip.wpf-tip-right' ).tipTip({
 		'attribute': 'data-tip',
 		'fadeIn': 50,
 		'fadeOut': 50,
@@ -200,7 +226,7 @@ jQuery(document).ready(function($){
 		'defaultPosition': 'right',
 	});
 
-	$( '.wpf-tip.bottom' ).tipTip({
+	$( '.wpf-tip.wpf-tip-bottom' ).tipTip({
 		'attribute': 'data-tip',
 		'fadeIn': 50,
 		'fadeOut': 50,
@@ -342,21 +368,6 @@ jQuery(document).ready(function($){
 	}
 
 	//
-	// Admin notices
-	//
-
-	$('#wpf-woo-warning .notice-dismiss').on( "click", function(event) {
-		
-		var data = {
-			'action'	: 'wpf_dismiss_notice',
-			'notice'	: $(this).parent().attr('data-name')
-		}
-
-		$.post(ajaxurl, data);
-
-	});
-
-	//
 	// Meta boxes
 	//
 
@@ -375,6 +386,8 @@ jQuery(document).ready(function($){
 	// Warn on linked tag change
 
 	$('select[name*="tag_link"], select[name*="link_tag"]').on( 'change', function(event) {
+
+		$(this).next( 'span.select4' ).next( '.wpf-tags-notice' ).remove(); // Remove if there is already one
 
 		var selected = $('option:selected', this ).text();
 

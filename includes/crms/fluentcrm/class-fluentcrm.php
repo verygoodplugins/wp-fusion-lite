@@ -37,11 +37,13 @@ class WPF_FluentCRM {
 
 	public function init() {
 
+		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
+
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		// Don't watch FluentCRM for changes if staging mode is active
 
-		if ( true == wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( true == wp_fusion()->settings->get( 'staging_mode' ) || ! defined( 'FLUENTCRM' ) ) {
 			return;
 		}
 
@@ -68,6 +70,27 @@ class WPF_FluentCRM {
 		 */
 
 	}
+
+	/**
+	 * Make sure FluentCRM is active before using any of these methods
+	 *
+	 * @since  3.35.16
+	 *
+	 * @param bool $check Whether the dependencies are met
+	 *
+	 * @return bool|WP_Error
+	 */
+
+	public function preflight_check( $check ) {
+
+		if ( ! defined( 'FLUENTCRM' ) ) {
+			return new WP_Error( 'error', 'FluentCRM plugin not active.' );
+		}
+
+		return true;
+
+	}
+
 
 
 	/**
@@ -220,8 +243,11 @@ class WPF_FluentCRM {
 	 */
 
 	public function get_tags( $contact_id ) {
+
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
-		$tags    = [];
+
+		$tags = array();
+
 		foreach ( $contact->tags as $tag ) {
 			$tags[] = $tag->id;
 		}
@@ -398,16 +424,15 @@ class WPF_FluentCRM {
 	public function contact_tags_added_removed( $tags, $subscriber ) {
 
 		$user_id = $subscriber->user_id;
+
 		if ( ! $user_id ) {
-			// find the user ID from email
-			$user = get_user_by( 'user_email', $subscriber->email );
-			if ( ! $user ) {
-				return;
-			}
-			$user_id = $user->ID;
+			// find the user ID from contact ID
+			$user_id = wp_fusion()->user->get_user_id( $subscriber->id );
 		}
 
-		wp_fusion()->user->get_tags( $user_id, true, false );
+		if ( $user_id ) {
+			wp_fusion()->user->set_tags( $tags, $user_id );
+		}
 
 	}
 
@@ -422,7 +447,7 @@ class WPF_FluentCRM {
 		$user_id = $subscriber->user_id;
 		if ( ! $user_id ) {
 			// find the user ID from email
-			$user = get_user_by( 'user_email', $subscriber->email );
+			$user = get_user_by( 'email', $subscriber->email );
 			if ( ! $user ) {
 				return;
 			}
@@ -431,10 +456,10 @@ class WPF_FluentCRM {
 	}
 
 	private function get_custom_fields() {
-		$allCustomFields = fluentcrm_get_option( 'contact_custom_fields', [] );
-		$custom_fields   = [];
-		if ( $allCustomFields ) {
-			foreach ( $allCustomFields as $item ) {
+		$all_custom_fields = fluentcrm_get_option( 'contact_custom_fields', [] );
+		$custom_fields     = [];
+		if ( $all_custom_fields ) {
+			foreach ( $all_custom_fields as $item ) {
 				$custom_fields[ $item['slug'] ] = $item['label'];
 			}
 		}

@@ -40,8 +40,8 @@ class WPF_Kartra {
 		$this->supports = array();
 
 		// WP Fusion app ID
-		$this->app_id 	= 'EoPIrcjdRhQl';
-		$this->api_url 	= 'https://app.kartra.com/api';
+		$this->app_id  = 'EoPIrcjdRhQl';
+		$this->api_url = 'https://app.kartra.com/api';
 
 		// Set up admin options
 		if ( is_admin() ) {

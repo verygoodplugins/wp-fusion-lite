@@ -160,6 +160,7 @@ class WPF_Log_Handler {
 			return;
 		}
 
+		wp_enqueue_style( 'options-css', WPF_DIR_URL . 'includes/admin/options/css/options.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_style( 'wpf-options', WPF_DIR_URL . 'assets/css/wpf-options.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_style( 'wpf-admin', WPF_DIR_URL . 'assets/css/wpf-admin.css', array(), WP_FUSION_VERSION );
 
@@ -213,7 +214,7 @@ class WPF_Log_Handler {
 		$page['sections'] = wp_fusion()->settings->insert_setting_after(
 			'advanced', $page['sections'], array(
 				'logs' => array(
-					'title' => __( 'Logs', 'wp-fusion-lite' ),
+					'title' => __( 'Logs', 'wp-fusion-lite' ) . ' &rarr;',
 					'slug'  => 'wpf-settings-logs',
 				),
 			)
@@ -297,18 +298,34 @@ class WPF_Log_Handler {
 		?>
 
 		<div class="wrap">
-			<h1><?php _e( 'WP Fusion Activity Log', 'wp-fusion-lite' ); ?></h1>
-
-			<span class="description" style="display: inline-block; padding: 5px 0;"><?php printf( __( 'For more information on the logs, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/getting-started/activity-logs/" target="_blank">', '</a>' ); ?></span>
 
 			<form method="get" id="mainform">
+
+				<h1 class="wp-heading-inline"><?php _e( 'WP Fusion Activity Log', 'wp-fusion-lite' ); ?></h1>
+				<a style="vertical-align: middle;" href="<?php echo admin_url( 'tools.php?page=wpf-settings-logs&flush-logs=true' ) ?>" name="flush-logs" class="button page-title-action"><?php _e( 'Flush all logs', 'wp-fusion-lite' ); ?></a>
+
+				<?php wp_nonce_field( 'wp-fusion-status-logs' ); ?>
+
+				<hr class="wp-header-end" />
+
+				<span class="description" style="display: inline-block; padding: 5px 0;">
+					<?php printf( __( 'For more information on the logs, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/getting-started/activity-logs/" target="_blank">', '</a>' ); ?>
+					<?php printf( __( 'To go back to the main settings page, %1$sclick here%2$s.', 'wp-fusion-lite' ), '<a href="' . admin_url( 'options-general.php?page=wpf-settings' ) . '">', '</a>' ); ?>
+				</span>
+
+				<?php if ( wp_fusion()->settings->get( 'logging_errors_only' ) ) : ?>
+
+					<div class="notice notice-warning">
+						<p><?php _e( '<strong>Note:</strong> The logs are currently set to record <strong>Only Errors</strong>, from the Advanced tab in the WP Fusion settings. Informational and debugging messages are not being recorded.', 'wp-fusion-lite' ); ?></p>
+					</div>
+
+				<?php endif; ?>
 
 				<input type="hidden" name="page" value="wpf-settings-logs">
 
 				<?php $log_table_list->display(); ?>
 
 				<?php submit_button( __( 'Flush all logs', 'wp-fusion-lite' ), 'delete', 'flush-logs' ); ?>
-				<?php wp_nonce_field( 'wp-fusion-status-logs' ); ?>
 
 			</form>
 		</div>
@@ -325,7 +342,7 @@ class WPF_Log_Handler {
 	 * @return bool True if $level is a valid level.
 	 */
 	public static function is_valid_level( $level ) {
-		return array_key_exists( strtolower( $level ), self::$level_to_severity );
+		return isset( self::$level_to_severity[ strtolower( $level ) ] );
 	}
 
 	/**
@@ -350,7 +367,7 @@ class WPF_Log_Handler {
 	 * @return bool|string False if not recognized. Otherwise string representation of level.
 	 */
 	public static function get_severity_level( $severity ) {
-		if ( array_key_exists( $severity, self::$severity_to_level ) ) {
+		if ( isset( self::$severity_to_level[ $severity ] ) ) {
 			return self::$severity_to_level[ $severity ];
 		} else {
 			return false;
@@ -360,19 +377,19 @@ class WPF_Log_Handler {
 	/**
 	 * Handle a log entry.
 	 *
-	 * @param int    $timestamp Log timestamp.
-	 * @param string $level emergency|alert|critical|error|warning|notice|info|debug
-	 * @param string $message Log message.
-	 * @param array  $context {
-	 *      Additional information for log handlers.
+	 * @since  3.3.0
 	 *
-	 *     @type string $source Optional. Source will be available in log table.
-	 *                  If no source is provided, attempt to provide sensible default.
-	 * }
+	 * @param  string $level   emergency|alert|critical|error|warning|notice|info|debug
+	 * @param  int    $user    The user
+	 * @param  string $message Log message.
+	 * @param  array  $context { Additional information for log handlers.
 	 *
-	 * @see WPF_Log_Handler::get_log_source() for default source.
+	 * @type string $source Optional. Source will be available in log table. If
+	 * no source is provided, attempt to provide sensible default. }
+	 * @param int   $timestamp Log timestamp.
 	 *
-	 * @return bool False if value was not handled and true if value was handled.
+	 * @see    WPF_Log_Handler::get_log_source() for default source.
+	 * @return bool   False if value was not handled and true if value was handled.
 	 */
 	public function handle( $level, $user, $message, $context = array() ) {
 
@@ -398,8 +415,19 @@ class WPF_Log_Handler {
 
 		$message = wp_fusion()->settings->set_tag_labels( $message, false, 'wp-fusion-lite' );
 
-		// Filter out irrelevant meta fields and show any field format changes
-		if ( ! empty( $context['meta_array'] ) ) {
+		// If a custom object type is in use, change it in the message
+
+		if ( ! empty( wp_fusion()->crm->object_type ) ) {
+
+			$selected_type = strtolower( rtrim( wp_fusion()->crm->object_type, 's' ) ); // make singular
+
+			if ( 'contact' != $selected_type ) {
+				$message = str_replace( 'contact', $selected_type, $message );
+			}
+		}
+
+		// Filter out irrelevant meta fields and show any field format changes (don't do it when loading data)
+		if ( ! empty( $context['meta_array'] ) && ! did_action( 'wpf_pre_pull_user_meta' ) ) {
 
 			$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 
@@ -410,9 +438,13 @@ class WPF_Log_Handler {
 					continue;
 				}
 
+				if ( ! isset( $contact_fields[ $key ]['type'] ) ) {
+					$contact_fields[ $key ]['type'] = 'text';
+				}
+
 				$filtered_value = apply_filters( 'wpf_format_field_value', $data, $contact_fields[ $key ]['type'], $contact_fields[ $key ]['crm_field'] );
 
-				if ( $data !== $filtered_value ) {
+				if ( $data != $filtered_value ) {
 
 					// Store what happened to the data so we can show a little more context in the logs
 
@@ -499,6 +531,7 @@ class WPF_Log_Handler {
 	 * @return bool True if flush was successful.
 	 */
 	public static function flush() {
+
 		global $wpdb;
 
 		return $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}wpf_logging" );
@@ -575,7 +608,7 @@ class WPF_Log_Handler {
 
 		$full_trace = debug_backtrace( $debug_backtrace_arg );
 
-		$slugs = array( 'user-profile', 'api', 'access-control', 'class-auto-login', 'class-ajax' );
+		$slugs = array( 'user-profile', 'class-api', 'access-control', 'class-auto-login', 'class-ajax', 'class-shortcodes' );
 
 		foreach ( wp_fusion()->get_integrations() as $slug => $integration ) {
 			$slugs[] = $slug;
@@ -595,10 +628,25 @@ class WPF_Log_Handler {
 
 					if ( strpos( $trace['file'], $slug ) !== false ) {
 
+						// Remove the "class"
+
+						$slug = str_replace( 'class-', '', $slug );
+
 						$found_integrations[] = $slug;
 					}
 				}
 			}
+		}
+
+		// If we're doing a batch operation it's good to know which one
+
+		if ( defined( 'DOING_WPF_BATCH_TASK' ) ) {
+
+			if ( ! empty( DOING_WPF_BATCH_TASK ) ) {
+				$found_integrations[] = str_replace( '_', '-', DOING_WPF_BATCH_TASK );
+			}
+
+			$found_integrations[] = 'batch-process';
 		}
 
 		// Figure out most likely integration

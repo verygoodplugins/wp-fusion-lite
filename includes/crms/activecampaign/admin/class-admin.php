@@ -64,17 +64,15 @@ class WPF_ActiveCampaign_Admin {
 
 		$new_settings['activecampaign_header'] = array(
 			'title'   => __( 'ActiveCampaign Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['ac_url'] = array(
 			'title'   => __( 'API URL', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter the API URL for your ActiveCampaign account (find it under Settings >> Developer in your account).', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['ac_key'] = array(
@@ -83,7 +81,7 @@ class WPF_ActiveCampaign_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'ac_url', 'ac_key' )
+			'post_fields' => array( 'ac_url', 'ac_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );

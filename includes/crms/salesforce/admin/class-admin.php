@@ -101,7 +101,7 @@ class WPF_Salesforce_Admin {
 					'Personal'	=> 'Personal tags',
 					'Public'	=> 'Public tags'
 					),
-				'desc'	  => __( 'After changing the tag type, save the settings page and click Resynchronize above.', 'wp-fusion-lite' ),
+				'desc'	  => __( 'After changing the tag type, save the settings page and click Refresh above.', 'wp-fusion-lite' ),
 			);
 
 		}
@@ -130,6 +130,25 @@ class WPF_Salesforce_Admin {
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+
+		$new_settings = array();
+
+		$text = __(
+			'<strong>Note:</strong> WP Fusion\'s import tool is based around Topics (or Tags) in your CRM.
+			However with Salesforce it can be very difficult to bulk-assign topics to contact records.<br /><br />
+			We recommend exporting a .csv of your contacts out of Salesforce, and using the 
+			<a href="https://wordpress.org/plugins/wp-all-import/" target="_blank">WP All Import plugin</a> to import 
+			your users from the .csv. As the users are imported WP Fusion will automatically link them up with
+			their corresponding Salesforce contact records, and they will be enabled for sync going forward.'
+		);
+
+		$new_settings['sf_import_p'] = array(
+			'desc'    => '<div class="alert alert-info">' . $text . '</div>',
+			'type'    => 'paragraph',
+			'section' => 'import',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'import_users_p', $settings, $new_settings );
 
 		return $settings;
 

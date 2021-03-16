@@ -201,6 +201,12 @@ class WPF_AgileCRM {
 				// If checkbox is selected
 				return 'on';
 			}
+		} elseif ( is_array( $value ) ) {
+
+			// Multiselects and checkboxes that aren't single
+
+			return implode( ', ', $value );
+
 		} else {
 
 			return $value;
@@ -510,7 +516,7 @@ class WPF_AgileCRM {
 
 		// Agile can't list custom fields so we'll query contacts instead. Not sure about the order of results. Might be oldest first.
 
-		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/search/?q=%&page_size=100&type=PERSON';
+		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/search/?q=%&page_size=1000&type=PERSON';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -917,7 +923,7 @@ class WPF_AgileCRM {
 		while ( true == $proceed ) {
 
 			$params['body'] = array(
-				'page_size'  => 5000,
+				'page_size'  => 1000,
 				'filterJson' => json_encode( $filter ),
 			);
 

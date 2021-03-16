@@ -154,7 +154,7 @@ class WPF_Mautic_Admin {
 			'unlock'  => array( 'advanced_site_tracking' ),
 		);
 
-		if ( true == $options['site_tracking'] ) {
+		if ( ! empty( $options['site_tracking'] ) ) {
 			$std = true;
 		} else {
 			$std = false;

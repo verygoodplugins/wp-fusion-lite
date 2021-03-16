@@ -63,7 +63,7 @@
 				var timeout = false;
 
 				if(opts.activation == "hover"){
-					org_elem.hover(function(){
+					org_elem.hover( function(){
 						active_tiptip();
 					}, function(){
 						if(!opts.keepAlive){
@@ -71,7 +71,7 @@
 						}
 					});
 					if(opts.keepAlive){
-						tiptip_holder.hover(function(){}, function(){
+						tiptip_holder.hover( function(){}, function(){
 							deactive_tiptip();
 						});
 					}
@@ -85,13 +85,13 @@
 					org_elem.click(function(){
 						active_tiptip();
 						return false;
-					}).hover(function(){},function(){
+					}).hover( function(){},function(){
 						if(!opts.keepAlive){
 							deactive_tiptip();
 						}
 					});
 					if(opts.keepAlive){
-						tiptip_holder.hover(function(){}, function(){
+						tiptip_holder.hover( function(){}, function(){
 							deactive_tiptip();
 						});
 					}

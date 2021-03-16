@@ -133,21 +133,28 @@ class WPF_NationBuilder {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos( $url, 'nationbuilder') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'nationbuilder') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			if ( wp_remote_retrieve_response_code( $response ) > 204 ) {
 
 				$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-				if ( 'no_matches' == $body->code ) {
+				if ( ! empty( $body->code ) ) {
 
-					// This one is okay
-					return $response;
+					if ( 'no_matches' == $body->code && false !== strpos( $url, 'people/match' ) ) {
+
+						// This one is okay
+						return $response;
+
+					}
+
+					$response = new WP_Error( 'error', $body->message );
+
+				} else {
+
+					$response = new WP_Error( 'error', wp_remote_retrieve_response_message() );
 
 				}
-
-				$response = new WP_Error( 'error', $body->message );
-
 			}
 		}
 

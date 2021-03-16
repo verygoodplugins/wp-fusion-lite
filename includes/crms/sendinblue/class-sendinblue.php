@@ -123,6 +123,8 @@ class WPF_SendinBlue {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
+		// Categories are stored numerically, like https://share.getcloudapp.com/L1uNjnLA
+
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields

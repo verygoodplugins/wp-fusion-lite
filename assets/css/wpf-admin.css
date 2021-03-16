@@ -392,6 +392,10 @@ div.notice.wpf-tags-notice {
 	background-color: #f9f9f9!important;
 }
 
+.select4-container--default .select4-search--inline input.select4-search__field {
+	width: auto !important;
+}
+
 .select4-container .select4-selection {
 	border-radius: 0px;
 }
@@ -464,6 +468,13 @@ a#wpf-select4-tags-resync {
 
 .select4-container .select4-selection > .select4-selection__rendered {
 	padding: 2px 8px 2px;
+}
+
+/* Labels in select */
+
+.select4-container small {
+	margin-left: 2px;
+    opacity: 0.6;
 }
 
 #wpf-settings-message {

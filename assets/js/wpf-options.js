@@ -4,8 +4,6 @@ jQuery(document).ready(function($){
 
 	if($('body').hasClass('settings_page_wpf-settings')) {
 
-		var spinnerIcon = "data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1s%0D%0AbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNCIgaGVpZ2h0%0D%0APSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KPHBhdGggZD0iTTQuMTA5IDEwLjg5MXEwIDAuNDE0%0D%0ALTAuMjkzIDAuNzA3dC0wLjcwNyAwLjI5M3EtMC40MDYgMC0wLjcwMy0wLjI5N3QtMC4yOTctMC43%0D%0AMDNxMC0wLjQxNCAwLjI5My0wLjcwN3QwLjcwNy0wLjI5MyAwLjcwNyAwLjI5MyAwLjI5MyAwLjcw%0D%0AN3pNOCAxMi41cTAgMC40MTQtMC4yOTMgMC43MDd0LTAuNzA3IDAuMjkzLTAuNzA3LTAuMjkzLTAu%0D%0AMjkzLTAuNzA3IDAuMjkzLTAuNzA3IDAuNzA3LTAuMjkzIDAuNzA3IDAuMjkzIDAuMjkzIDAuNzA3%0D%0Aek0yLjUgN3EwIDAuNDE0LTAuMjkzIDAuNzA3dC0wLjcwNyAwLjI5My0wLjcwNy0wLjI5My0wLjI5%0D%0AMy0wLjcwNyAwLjI5My0wLjcwNyAwLjcwNy0wLjI5MyAwLjcwNyAwLjI5MyAwLjI5MyAwLjcwN3pN%0D%0AMTEuODkxIDEwLjg5MXEwIDAuNDA2LTAuMjk3IDAuNzAzdC0wLjcwMyAwLjI5N3EtMC40MTQgMC0w%0D%0ALjcwNy0wLjI5M3QtMC4yOTMtMC43MDcgMC4yOTMtMC43MDcgMC43MDctMC4yOTMgMC43MDcgMC4y%0D%0AOTMgMC4yOTMgMC43MDd6TTQuMzU5IDMuMTA5cTAgMC41MTYtMC4zNjcgMC44ODN0LTAuODgzIDAu%0D%0AMzY3LTAuODgzLTAuMzY3LTAuMzY3LTAuODgzIDAuMzY3LTAuODgzIDAuODgzLTAuMzY3IDAuODgz%0D%0AIDAuMzY3IDAuMzY3IDAuODgzek0xMy41IDdxMCAwLjQxNC0wLjI5MyAwLjcwN3QtMC43MDcgMC4y%0D%0AOTMtMC43MDctMC4yOTMtMC4yOTMtMC43MDcgMC4yOTMtMC43MDcgMC43MDctMC4yOTMgMC43MDcg%0D%0AMC4yOTMgMC4yOTMgMC43MDd6TTguNSAxLjVxMCAwLjYyNS0wLjQzOCAxLjA2MnQtMS4wNjIgMC40%0D%0AMzgtMS4wNjItMC40MzgtMC40MzgtMS4wNjIgMC40MzgtMS4wNjIgMS4wNjItMC40MzggMS4wNjIg%0D%0AMC40MzggMC40MzggMS4wNjJ6TTEyLjY0MSAzLjEwOXEwIDAuNzI3LTAuNTE2IDEuMjM4dC0xLjIz%0D%0ANCAwLjUxMnEtMC43MjcgMC0xLjIzOC0wLjUxMnQtMC41MTItMS4yMzhxMC0wLjcxOSAwLjUxMi0x%0D%0ALjIzNHQxLjIzOC0wLjUxNnEwLjcxOSAwIDEuMjM0IDAuNTE2dDAuNTE2IDEuMjM0eiI+PC9wYXRo%0D%0APgo8L3N2Zz4K";
-
 		$('table [data-toggle="toggle"]').on( 'change', function(){
 			$(this).parent().find('label').toggleClass('collapsed');
 			$(this).parents().next('.table-collapse').toggleClass('hide');
@@ -16,17 +14,16 @@ jQuery(document).ready(function($){
 		 */
 		
 		var hash = window.location.hash;
-		hash && $('ul.nav a[href="' + hash + '"]').tab('show');
+
+		if ( hash ) {
+			$('ul.nav a[href="' + hash + '"]').tab('show');
+		}
 
 		$('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
 
 			var scrollmem = $('body').scrollTop();
 			window.location.hash = e.target.hash;
 			$('html,body').scrollTop(scrollmem);
-
-			console.log( e.target.hash );
-
-			initializeTagsSelect( e.target.hash );
 
 		});
 
@@ -272,7 +269,7 @@ jQuery(document).ready(function($){
 
 			button.attr('disabled', 'disabled');
 
-			button.html('<img class="rotating oldspinner" src="' + spinnerIcon + '"/><div style="margin-left:20px;">' + wpf_ajax.strings.beginningProcessing.replace( 'ACTIONTITLE', action.title ) + '</div>');
+			button.html('<span class="dashicons dashicons-update-alt wpf-spin"></span>' + wpf_ajax.strings.beginningProcessing.replace( 'ACTIONTITLE', action.title ));
 			 
 			var data = {
 				'action'	: 'wpf_batch_init',
@@ -403,7 +400,9 @@ jQuery(document).ready(function($){
 
 		var syncTags = function(button, total, crmContainer) {
 
-			button.html('<img class="rotating oldspinner" style="filter: invert(100%); " src="' + spinnerIcon + '"><div style="margin-left:20px;">' + wpf_ajax.strings.syncTags + '</div>').addClass('btn-success');
+			button.addClass('button-primary');
+			button.find('span.dashicons').addClass('wpf-spin');
+			button.find('span.text').html( wpf_ajax.strings.syncTags );
 
 			var data = {
 				'action'	: 'wpf_sync'
@@ -416,12 +415,12 @@ jQuery(document).ready(function($){
 					if( $('#connection_configured').val() == true || $('#connection_configured').val() == "1" || $('#connection_configured').val() == "true" ) {
 
 						// If connection already configured, skip users sync
-						button.html('Complete');
+						button.find('span.dashicons').removeClass('wpf-spin');
+						button.find('span.text').html( 'Complete' );
 
 					} else {
 
-						// Begin syncing users and tags
-						button.html('<img class="rotating oldspinner" style="filter: invert(100%);" src="' + spinnerIcon + '"/> <div style="margin-left:20px;">' + wpf_ajax.strings.loadContactIDs + '</div>');
+						button.find('span.text').html( wpf_ajax.strings.loadContactIDs );
 
 						var data = {
 							'action'	: 'wpf_batch_init',
@@ -433,9 +432,10 @@ jQuery(document).ready(function($){
 							//getBatchStatus(total, 'Users (syncing contact IDs and tags, no data is being sent)');
 
 							$('#connection_configured').val(true);
-							button.html('Complete');
+							button.find('span.dashicons').removeClass('wpf-spin');
+							button.find('span.text').html( 'Complete' );
 
-							$('<div class="updated"><p>' + wpf_ajax.strings.connectionSuccess.replace( 'CRMNAME', $( crmContainer ).attr('data-name') ) + '</p></div>').insertAfter('.crm-active');
+							$('#wpf-settings-notices').html( '<div class="updated"><p>' + wpf_ajax.strings.connectionSuccess.replace( 'CRMNAME', $( crmContainer ).attr('data-name') ) + '</p></div>' );
 
 						});
 
@@ -453,16 +453,15 @@ jQuery(document).ready(function($){
 
 		// Button handler for test connection / resync
 
-		$( "a#test-connection" ).on( "click", function() {
-
-			if( $(this).hasClass('btn-danger') || $(this).hasClass('btn-success') ) {
-				$(this).html('<img class="rotating oldspinner" style="filter: invert(100%);" src="' + spinnerIcon + '"/> ' + wpf_ajax.strings.connecting );
-			} else {
-				$(this).html('<img class="rotating oldspinner" src="' + spinnerIcon + '"/> ' + wpf_ajax.strings.connecting );
-			}
+		$( "a#test-connection, a#header-resync" ).on( "click", function() {
 
 	        var button = $(this);
-	        var crmContainer = $(this).parents('div.crm-config');
+	        var crmContainer = $('div.crm-config.crm-active');
+
+			button.addClass('button-primary');
+			button.find('span.dashicons').addClass('wpf-spin');
+			button.find('span.text').html( wpf_ajax.strings.connecting );
+
 	        var crm = $(crmContainer).attr('data-crm');
 
 	        var data = {
@@ -470,7 +469,7 @@ jQuery(document).ready(function($){
 			};
 
 			// Add the submitted data
-			postFields = $(this).attr('data-post-fields').split(',');
+			postFields = $(crmContainer).find('#test-connection').attr('data-post-fields').split(',');
 
 			$(postFields).each(function(index, el) {
 				data[el] = $('input#' + el).val();
@@ -482,8 +481,12 @@ jQuery(document).ready(function($){
 				
 				if(response.success != true) {
 
+					$('li#tab-setup a').trigger('click'); // make sure we're on the Setup tab
+
 					$(crmContainer).find('#connection-output').html('<div class="error"><p><strong>' + wpf_ajax.strings.error + ': </strong>' + response.data + '</p></div>');
-					button.html('Retry').removeClass('btn-success').addClass('btn-danger').removeAttr('disabled');
+
+					button.find('span.dashicons').removeClass('wpf-spin');
+					button.find('span.text').html( 'Retry' );
 
 				} else {
 
@@ -492,58 +495,6 @@ jQuery(document).ready(function($){
 					syncTags(button, total, crmContainer);
 
 				}
-
-			});
-
-		});
-
-
-		$( "a#header-resync" ).on( "click", function() {
-
-			var button = $(this);
-
-			button.find( 'span.dashicons' ).addClass('rotating');
-			button.find( 'span.detail' ).remove();
-			button.append('<span class="detail" style="padding-left: 5px;">' + wpf_ajax.strings.refreshingTags + '</span>' );
-
-			$( '#tiptip_holder' ).remove();
-
-			var data = {
-				'action'	: 'sync_tags'
-			}
-
-			// Tags
-
-			jQuery.post(ajaxurl, data, function(response) {
-
-				$( 'select.select4-wpf-tags' ).each(function(index, el) {
-					
-					$(el).append(response);
-					$(el).trigger('change');
-
-				});
-
-				// Fields
-
-				button.find( 'span.detail' ).html( wpf_ajax.strings.refreshingFields );
-
-				var data = {
-					'action'	: 'sync_custom_fields'
-				}
-
-				jQuery.post(ajaxurl, data, function(response) {
-
-					$( 'select.select4-crm-field' ).each(function(index, el) {
-						
-						$(el).append(response);
-						$(el).trigger('change');
-
-					});
-
-					button.find( 'span.detail' ).html( 'Complete' );
-					button.find( 'span.dashicons' ).removeClass('rotating');
-
-				});
 
 			});
 
@@ -558,7 +509,7 @@ jQuery(document).ready(function($){
 			var container = $( '.crm-config.crm-active' );
 			var button = container.find( '#test-connection' );
 
-			if( button.length && ! button.hasClass('btn-success') ) {
+			if( button.length && ! $('#connection_configured').val() ) {
 
 				postFields = button.attr('data-post-fields').split(',');
 				
@@ -631,7 +582,7 @@ jQuery(document).ready(function($){
 		//
 
 		$( "#edd-license" ).on( "click", function() {
-			$(this).html('<img class="rotating oldspinner" src="' + spinnerIcon + '"/> Connecting'); 
+			$(this).html('<span class="dashicons dashicons-update-alt wpf-spin"></span> Connecting'); 
 	        $(this).attr('disabled', 'disabled');
 
 	        var button = $(this);
@@ -653,6 +604,7 @@ jQuery(document).ready(function($){
 
 					button.html('Activate License').removeAttr('disabled').attr('data-action', 'edd_activate');
 					$('#license_key').removeAttr('disabled');
+					$('#license_key').val('');
 					$('#license_status').val('invalid');
 
 				} else {
@@ -680,6 +632,12 @@ jQuery(document).ready(function($){
 
 
 		});
+
+		// Webhooks test url
+
+		if ( $('#webhook-base-url').val() ) {
+			$('#webhook-base-url').attr( 'size', $('#webhook-base-url').val().length + 5 );
+		}
 
 		// Add new field
 
@@ -731,17 +689,45 @@ jQuery(document).ready(function($){
 		});
 
 		// When a checkbox is configured to unlock other options
-		$('[data-unlock]').on( "click", function() {
+		$('[data-unlock]').on( 'change', function() {
 
 			var targets = $(this).data('unlock').split(" ");
 			var ischecked = $(this).prop('checked');
 
-			$.each(targets, function( index, target ) {
+			if ( typeof(ischecked) == 'undefined' ) {
 
-				$('#' + target).closest( 'tr' ).toggleClass('disabled');
-			    $('#' + target).prop('disabled', !ischecked); 
+				// Selects
 
-			});
+				if ( false == $(this).val() ) {
+					ischecked = false;
+				} else {
+					ischecked = true;
+				}
+
+				$.each(targets, function( index, target ) {
+
+					if ( ischecked ) {
+						$('#' + target).closest( 'tr' ).removeClass('disabled');
+					} else {
+						$('#' + target).closest( 'tr' ).addClass('disabled');
+					}
+
+					$('#' + target).prop('disabled', ! ischecked );
+
+				});
+
+			} else {
+
+				// Others
+
+				$.each(targets, function( index, target ) {
+
+					$( '[id*="' + target + '"]' ).closest( 'tr' ).toggleClass('disabled');
+				    $( '[id*="' + target + '"]' ).prop('disabled', function(i, v) { return !v; });
+
+				});
+
+			}
 
 		});
 

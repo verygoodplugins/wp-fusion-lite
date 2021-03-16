@@ -21,6 +21,15 @@ class WPF_Infusionsoft_iSDK {
 	private $error;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @var string
+	 * @since 3.36.10
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -61,6 +70,13 @@ class WPF_Infusionsoft_iSDK {
 
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+
+		// Set edit link
+		$app_name = wp_fusion()->settings->get( 'app_name' );
+
+		if ( ! empty( $app_name ) ) {
+			$this->edit_url = 'https://' . $app_name . '.infusionsoft.com/Contact/manageContact.jsp?view=edit&ID=%s';
+		}
 
 	}
 
@@ -107,8 +123,9 @@ class WPF_Infusionsoft_iSDK {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false )
+		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
 			return;
+		}
 
 		echo '<script type="text/javascript" src="https://' . wp_fusion()->settings->get('app_name') . '.infusionsoft.com/app/webTracking/getTrackingCode"></script>';
 
@@ -164,6 +181,10 @@ class WPF_Infusionsoft_iSDK {
 			$date = date( "Ymd\T00:00:00", $value );
 
 			return $date;
+
+		} elseif ( is_array( $value ) ) {
+
+			return implode( ',', array_filter( $value ) );
 
 		} elseif ( $field_type == 'country' ) {
 

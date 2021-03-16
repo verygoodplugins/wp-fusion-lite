@@ -26,6 +26,8 @@ class WPF_Auto_Login {
 		add_filter( 'wpf_end_auto_login', array( $this, 'maybe_end' ), 10, 2 );
 		add_filter( 'wpf_skip_auto_login', array( $this, 'maybe_skip' ), 10, 2 );
 
+		// add_action( 'wp_head', array( $this, 'hide_auto_login_parameter' ) );
+
 		// Session cleanup cron
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
 
@@ -72,6 +74,31 @@ class WPF_Auto_Login {
 
 
 	/**
+	 * Hides the ?cid= login parameter from the URL.
+	 *
+	 * @since 3.36.5
+	 *
+	 * @return string Javascript
+	 */
+
+	public function hide_auto_login_parameter() {
+
+		if ( doing_wpf_auto_login() && isset( $_GET['cid'] ) ) {
+			echo "
+			<!-- WP Fusion auto login -->
+			<script>
+			if( typeof window.history.replaceState == 'function') {
+				const url = new URL(location);
+				url.searchParams.delete('cid');
+				history.replaceState(null, null, url)
+			}
+			</script>
+			<!-- END WP Fusion auto login -->";
+		}
+
+	}
+
+	/**
 	 * Starts a session if contact ID is passed in URL
 	 *
 	 * @access public
@@ -104,7 +131,7 @@ class WPF_Auto_Login {
 		}
 
 		// Allow permanently ending the session
-		if ( isset( $contact_data ) && true === apply_filters( 'wpf_end_auto_login', false, $contact_data ) ) {
+		if ( true === apply_filters( 'wpf_end_auto_login', false, $contact_data ) ) {
 			$this->end_auto_login();
 			return;
 		}
@@ -114,10 +141,6 @@ class WPF_Auto_Login {
 			$this->end_auto_login();
 			$contact_data = array();
 		}
-
-		// Start the auto login
-
-		define( 'DOING_WPF_AUTO_LOGIN', true );
 
 		if ( empty( $contact_data ) && isset( $contact_id ) ) {
 
@@ -224,12 +247,12 @@ class WPF_Auto_Login {
 		}
 
 		// Check transient
-		$transient = get_transient( 'wpf_end_auto_login_' . $contact_data['contact_id'] );
+		$transient = get_option( 'wpf_end_auto_login_' . $contact_data['contact_id'] );
 
-		if ( true == $transient ) {
+		if ( $transient ) {
 
 			$end = true;
-			delete_transient( 'wpf_end_auto_login_' . $contact_data['contact_id'] );
+			delete_option( 'wpf_end_auto_login_' . $contact_data['contact_id'] );
 
 		}
 
@@ -280,6 +303,15 @@ class WPF_Auto_Login {
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
 
+		// Load meta data
+		$user = wp_fusion()->user->pull_user_meta( $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		update_user_meta( $user_id, 'user_email', $user['user_email'] );
+
 		$contact_data = array(
 			'contact_id' => $contact_id,
 			'user_id'    => $user_id,
@@ -288,9 +320,6 @@ class WPF_Auto_Login {
 		$cookie_expiration = apply_filters( 'wpf_auto_login_cookie_expiration', DAY_IN_SECONDS * 180 );
 
 		setcookie( 'wpf_contact', json_encode( $contact_data ), time() + $cookie_expiration, COOKIEPATH, COOKIE_DOMAIN );
-
-		// Load meta data
-		wp_fusion()->user->pull_user_meta( $user_id );
 
 		// Schedule cleanup after one day
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
@@ -326,10 +355,11 @@ class WPF_Auto_Login {
 
 			} elseif ( wpf_is_user_logged_in() ) {
 
-				// If headers have been sent, set a transient to clear the cookie on next load
-				set_transient( 'wpf_end_auto_login_' . $contact_data['contact_id'], true, 60 * 60 );
+				// If headers have been sent, set a transient to clear the cookie on next load (since 3.36.1 we'll use update_option instead of set_transient)
+				update_option( 'wpf_end_auto_login_' . $contact_data['contact_id'], true );
 
 			}
+
 		}
 
 	}

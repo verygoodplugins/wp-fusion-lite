@@ -37,7 +37,7 @@ class WPF_AJAX {
 			$tags = explode(',', $tags);
 		}
 
-		$tags = array_map('sanitize_text_field', $tags);
+		$tags = array_map( 'sanitize_text_field', $tags );
 
 		$tags_to_apply = array();
 

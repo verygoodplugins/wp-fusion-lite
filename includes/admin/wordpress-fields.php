@@ -21,6 +21,11 @@ $wp_fields['display_name'] = array(
 	'label' => __( 'Profile Display Name', 'wp-fusion-lite' ),
 );
 
+$wp_fields['user_nicename'] = array(
+	'type'  => 'text',
+	'label' => __( 'Nicename', 'wp-fusion-lite' ),
+);
+
 $wp_fields['nickname'] = array(
 	'type'  => 'text',
 	'label' => __( 'Nickname', 'wp-fusion-lite' ),

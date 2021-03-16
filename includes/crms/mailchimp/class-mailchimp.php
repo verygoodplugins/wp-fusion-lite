@@ -60,6 +60,8 @@ class WPF_MailChimp {
 
 	public function init() {
 
+		$this->get_params(); // Set up the datacenter, etc
+
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
@@ -163,7 +165,14 @@ class WPF_MailChimp {
 					$message .= '<ul>';
 
 					foreach ( $body->errors as $error ) {
-						$message .= '<li><strong>' . $error->field . ':</strong> ' . $error->message . '</li>';
+						$message .= '<li><strong>' . $error->field . ':</strong> ' . $error->message;
+
+						// More helpful logging
+						if ( 'Please enter a value' == $error->message ) {
+							$message .= ' <br /><br />This error message means that ' . $error->field . ' is a required field in Mailchimp, but your API call did not contain this field, so it was rejected. To fix this, make sure that ' . $error->field . ' is not a required field.';
+						}
+
+						$message .= '</li>';
 					}
 
 					$message .= '</ul>';
@@ -202,13 +211,8 @@ class WPF_MailChimp {
 
 		} else {
 
-			// Try and get it via API call
-			if ( ! $this->params ) {
-				$this->get_params();
-			}
-
 			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -322,14 +326,10 @@ class WPF_MailChimp {
 
 	public function sync_lists() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$available_lists = array();
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/?count=1000';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -368,14 +368,10 @@ class WPF_MailChimp {
 
 	public function sync_tags() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$available_tags = array();
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=1000';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -411,10 +407,6 @@ class WPF_MailChimp {
 
 	public function sync_crm_fields() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/mailchimp-fields.php';
 
@@ -425,7 +417,7 @@ class WPF_MailChimp {
 		}
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/merge-fields/?count=100';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -484,13 +476,9 @@ class WPF_MailChimp {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$contact_info = array();
 		$request      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/search-members/?query=' . $email_address;
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -535,13 +523,9 @@ class WPF_MailChimp {
 
 	public function get_tags( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$tags     = array();
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/?count=1000';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -569,16 +553,12 @@ class WPF_MailChimp {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$email_address = $this->get_email_from_cid( $contact_id );
 
 		foreach ( $tags as $tag ) {
 
 			$request        = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/';
-			$params         = $this->params;
+			$params         = $this->get_params();
 			$params['body'] = json_encode( array( 'email_address' => $email_address ) );
 
 			$response = wp_remote_post( $request, $params );
@@ -602,16 +582,12 @@ class WPF_MailChimp {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$email_address = $this->get_email_from_cid( $contact_id );
 
 		foreach ( $tags as $tag ) {
 
 			$request          = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members/' . $contact_id;
-			$params           = $this->params;
+			$params           = $this->get_params();
 			$params['method'] = 'DELETE';
 
 			$response = wp_remote_request( $request, $params );
@@ -634,10 +610,6 @@ class WPF_MailChimp {
 	 */
 
 	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -688,7 +660,7 @@ class WPF_MailChimp {
 		}
 
 		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . md5( strtolower( $data['email_address'] ) );
-		$params           = $this->params;
+		$params           = $this->get_params();
 		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $payload );
 
@@ -713,10 +685,6 @@ class WPF_MailChimp {
 	 */
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -764,7 +732,7 @@ class WPF_MailChimp {
 		// Yes email address changes do work
 
 		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-		$params           = $this->params;
+		$params           = $this->get_params();
 		$params['method'] = 'PATCH';
 		$params['body']   = json_encode(
 			array(
@@ -802,12 +770,8 @@ class WPF_MailChimp {
 
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -855,14 +819,10 @@ class WPF_MailChimp {
 
 	public function load_contacts( $tag ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$contact_ids = array();
 
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members?count=1000';
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

@@ -2,7 +2,6 @@
 
 class WPF_Ontraport {
 
-	// 
 	// Note: OP support says their API can take up to 60s to give a response
 
 	/**
@@ -117,7 +116,11 @@ class WPF_Ontraport {
 
 				// Maybe convert multiselect options to picklist IDs if matches are found
 
-				$values = explode( ',', $value );
+				if ( ! is_array( $value ) ) {
+					$values = explode( ',', $value );
+				} else {
+					$values = $value;
+				}
 
 				$maybe_new_values = array();
 
@@ -269,7 +272,7 @@ class WPF_Ontraport {
 
 	public function tracking_code_output() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -291,7 +294,7 @@ class WPF_Ontraport {
 	public function handle_http_response( $response, $args, $url ) {
 
 		// Ignore on find by email requests since they'll return a 400 error if no matching email is found
-		if ( strpos( $url, 'ontraport' ) !== false && strpos( $url, 'getByEmail' ) === false ) {
+		if ( strpos( $url, 'ontraport' ) !== false && strpos( $url, 'getByEmail' ) === false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
 
 			$body          = wp_remote_retrieve_body( $response );
 			$response_code = wp_remote_retrieve_response_code( $response );
@@ -334,6 +337,10 @@ class WPF_Ontraport {
 							return wp_remote_request( $url, $args );
 						}
 					}
+				}
+
+				if ( empty( $body ) ) {
+					$body = wp_remote_retrieve_response_message( $response );
 				}
 
 				$response = new WP_Error( 'error', $body );

@@ -184,7 +184,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 						// value went through wpf_format_field_value
 
-						$text = sprintf( __( 'This value was modified by the wpf_format_field_value filter before being sent to HubSpot, using field format %s.', 'wp-fusion-lite' ), '<strong>' . $value['type'] . '</strong>' );
+						$text = sprintf( __( 'This value was modified by the wpf_format_field_value filter before being sent to %1$s, using field format %2$s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, '<strong>' . $value['type'] . '</strong>' );
 
 						// print_r arrays / original value
 
@@ -198,7 +198,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 							$value['new'] = '<pre>' . print_r( $value['new'], true ) . '</pre>';
 						}
 
-						$output .= $value['original'] . ' &rarr; <code>' . $value['new'] . '</code><span class="dashicons dashicons-editor-help wpf-tip right" data-tip="' . $text . '"></span>';
+						$output .= $value['original'] . ' &rarr; <code>' . $value['new'] . '</code><span class="dashicons dashicons-editor-help wpf-tip wpf-tip-right" data-tip="' . $text . '"></span>';
 
 					} elseif ( is_array( $value ) || is_object( $value ) ) {
 						$output .= '<pre>' . print_r( $value, true ) . '</pre>';
@@ -273,6 +273,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 				$this->level_dropdown();
 				$this->source_dropdown();
 				$this->user_dropdown();
+				$this->date_select();
 				submit_button( __( 'Filter', 'wp-fusion-lite' ), '', 'filter-action', false );
 			echo '</div>';
 		}
@@ -350,6 +351,19 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * @global wpdb $wpdb
 	 */
 	protected function user_dropdown() {
+
+		// Memory safety catch
+
+		echo '<div id="users-memory-check"><br /><br />';
+		_e( '<p>If you can read this then your site ran out of memory while building the dropdown of log users.</p><p>You can fix this by clicking <strong>Flush All Logs</strong> above, or by increasing your available memory.</p>', 'wp-fusion-lite' );
+		echo '</p>';
+
+		if ( function_exists( 'ini_get' ) ) {
+			$memory_limit = ini_get( 'memory_limit' );
+			echo '<p>' . __( 'Current memory limit:', 'wp-fusion-lite' ) . '<code>' . $memory_limit . '</code></p>';
+		}
+		echo '</p></div>';
+
 		global $wpdb;
 
 		$users = $wpdb->get_col( "
@@ -388,8 +402,43 @@ class WPF_Log_Table_List extends WP_List_Table {
 						);
 					} ?>
 				</select>
+
 			<?php
 		}
+
+		// If we've gotten this far then we can hide the warning
+		echo '<style type="text/css"> div#users-memory-check { display: none; } </style>';
+
+	}
+
+
+	/**
+	 * Display date selector
+	 *
+	 * @since 3.35.17
+	 *
+	 * @return mixed HTML output
+	 */
+	protected function date_select() {
+
+		?>
+			<label for="start-date" class="screen-reader-text"><?php _e( 'Start date', 'wp-fusion-lite' ); ?></label>
+
+			<?php if ( ! empty( $_GET['startdate'] ) ) : ?>
+				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="date" value="<?php echo $_GET['startdate']; ?>" />
+			<?php else : ?>
+				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="text" onfocus="(this.type='date')" />
+			<?php endif; ?>
+
+			<label for="end-date" class="screen-reader-text"><?php _e( 'End date', 'wp-fusion-lite' ); ?></label>
+
+			<?php if ( ! empty( $_GET['enddate'] ) ) : ?>
+				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="date" value="<?php echo $_GET['enddate']; ?>" />
+			<?php else : ?>
+				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="text" onfocus="(this.type='date')" />
+			<?php endif; ?>
+
+		<?php
 	}
 
 	/**
@@ -510,6 +559,16 @@ class WPF_Log_Table_List extends WP_List_Table {
 		if ( ! empty( $_REQUEST['user'] ) ) {
 			$where_conditions[] = 'user = %s';
 			$where_values[]     = esc_attr( $_REQUEST['user'] );
+		}
+
+		if ( ! empty( $_REQUEST['startdate'] ) ) {
+			$where_conditions[] = 'timestamp > %s';
+			$where_values[]     = esc_attr( $_REQUEST['startdate'] );
+		}
+
+		if ( ! empty( $_REQUEST['enddate'] ) ) {
+			$where_conditions[] = 'timestamp < %s';
+			$where_values[]     = esc_attr( $_REQUEST['enddate'] );
 		}
 
 		if ( ! empty( $where_conditions ) ) {

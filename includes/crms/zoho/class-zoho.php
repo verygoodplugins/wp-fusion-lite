@@ -266,7 +266,12 @@ class WPF_Zoho {
 
 				} elseif ( $body_json->data[0]->code == 'INVALID_DATA' ) {
 
-					$message = 'Invalid data passed for field. <pre>' . print_r( $body_json, true ) . '</pre>';
+					$message  = 'Invalid data passed for field.';
+					$message .= '<br /><br />';
+					$message .= 'This error normally means that you tried to update a Zoho field with invalid data. For example syncing multi-select data to a text field.<br /><br />';
+					$message .= 'It can also mean you synced multi-select or picklist data, but one or more of the options sent over the API didn\'t match the allowed options inside Zoho.';
+
+					$message .= '<pre>' . print_r( $body_json, true ) . '</pre>';
 
 				}
 
@@ -415,7 +420,7 @@ class WPF_Zoho {
 
 			foreach ( $body_json->fields as $field ) {
 
-				if ( $field->custom_field == false ) {
+				if ( false == $field->custom_field ) {
 					$built_in_fields[ $field->api_name ] = $field->field_label;
 				} else {
 					$custom_fields[ $field->api_name ] = $field->field_label;
@@ -498,10 +503,10 @@ class WPF_Zoho {
 
 		$available_users = array();
 
-		foreach ( $body_json->users as $user ) {
-
-			$available_users[ $user->id ] = $user->first_name . ' ' . $user->last_name;
-
+		if ( ! empty( $body_json->users ) ) {
+			foreach ( $body_json->users as $user ) {
+				$available_users[ $user->id ] = $user->first_name . ' ' . $user->last_name;
+			}
 		}
 
 		wp_fusion()->settings->set( 'zoho_users', $available_users );

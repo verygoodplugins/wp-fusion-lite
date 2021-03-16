@@ -3,10 +3,10 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, wpfusion, wp-fusion
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 5.6
-Stable tag: 3.35
+Tested up to: 5.7
+Stable tag: 3.37.0
 
-WP Fusion integrates your website with your CRM or marketing automation system.
+WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
 == Description ==
 
@@ -32,7 +32,6 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 
 = Supported CRMs =
 
-* AWeber
 * ActiveCampaign
 * AgileCRM
 * Autopilot
@@ -49,6 +48,8 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * GetResponse
 * Gist
 * Groundhogg
+* Growmatik
+* HighLevel
 * HubSpot
 * Infusionsoft
 * Intercom
@@ -94,6 +95,137 @@ Upload and activate the plugin, then go to Settings >> WP Fusion. Select your de
 See our [FAQ](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.37 - 3/16/2021 =
+
+##### New CRMs
+
+* Growmatik
+* HighLevel
+
+##### New Features
+
+* Added "Default Not Logged-In Redirect" setting
+* Added [[user_meta_if]] shortcode (thanks @igorbenic!)
+* Added automatic detection for first_name and last_name fields during registration
+* Added View In CRM link to admin user profile for ActiveCampaign and Infusionsoft
+* Added option to set default format for usernames for imported users
+* Added option to limit Filter Queries to specific post types
+* Added user_nicename field for sync
+* Added "Apply registration tags" batch operation
+* Added Read Only indicator on non-writeable Salesforce fields
+* Added support for Datetime fields with ActiveCampaign
+* Added track_event function to ActiveCampaign integration
+* Added "ignoreSendingWebhook" parameter to EngageBay API calls
+* Added warning when curly quotes are detected in shortcode parameters
+* Added First Name and Last Name fields for sync with Intercom
+* Added support for loading picklist / multiselect fields from Salesforce
+* Added logging for when an API call to apply a tag isn't sent because the user already has that tag
+* Added 1 second sleep time to Quentn batch operations to get around API throttling
+* Added additional Standard Fields for sync with Autopilot
+* Added Work Address fields for sync with NationBuilder
+* Added debugging message to logs page for when the site runs out of memory building the Users dropdown
+* Added Flush All Logs button at top of logs page
+* Added Start Date and End Date filters to the activity logs
+* Added admin notice when logs are set to Only Errors mode
+* Added link back to main settings page from the logs page
+
+
+#### Improvements
+
+* Tested and updated for WordPress 5.7
+
+* Removed AWeber integration
+* Improved - Parentheses can now be used in shortcode attributes to match tags with square brackets in the name
+* Improved - Added note about .csv imports to Import settings tab for Salesforce
+* Improved - Role slug or name can be loaded from the CRM and used to set a user's role
+* Improved - Added notice in the logs when a user's role or capabilities were changed via loading a new role from the CRM
+* Improved - Login Tags Sync and Login Meta Sync features will now give up after 5 seconds if the CRM API is offline
+* Improved - Added search filter to select boxes in the admin
+* Improved - Significantly reduced the amount of memory required for the main settings storage
+* Improved - Admin notices from other plugins will be hidden on the WPF settings page
+* Improved - Available tags and available fields have been moved to their own wp_options keys for improved performance
+* Improved - The wpf_options options key is now set to autoload, for improved performance
+* Improved - AJAX'ified the page redirect select in the meta box for improved admin performance
+* Improved performance with Filter Queries - Advanced, query results for the same post type will now be cached with wp_cache_set()
+* Improved performance - wpf-settings postmeta key will now be deleted on post save if there are no WPF settings configured for the post
+* Improved - If Staging Mode is enabled, site tracking scripts will be turned off with supported CRMs
+* Improved - Log messages will now use the correct custom object type (instead of "contact") when a custom object is being edited
+* Improved - If FirstnameLastname or Firstname12345 are selected for the user import username format, and a user already exists with that username, the username will be randomized further
+* Improved - Test Connection / Refresh Available Tags errors will now be shown on the top of the settings page (instead of the Setup tab)
+* Improved - Logs will now show when an entry was recorded as a part of a batch operation
+* Improved admin style for consistency with the rest of WP
+* Improved - Data will no longer be synced to Salesforce for read-only fields
+* Improved - ConvertKit API timeout is now extended to 15 seconds
+* Improved support for multiselect fields with EngageBay
+* Improved NationBuilder error handling
+* Improved Mailchimp error handling
+* Improved EngageBay error handling
+* Improved Zoho error handling
+* Improved HubSpot error logging
+* Improved error handling with Groundhogg and FluentCRM when those plugins are deactivated
+
+
+#### Bug Fixes
+
+* Fixed roles or capabilities loaded from the CRM being able to remove roles and/or capabilities from administrators
+* Fixed wp_capabilities field not saved in correct format when loaded from the CRM
+* Fixed Add New Field on Contact Fields list not saving when no CRM field was selected
+* Fixed Prevent Reapplying Tags setting not saving when un-checked
+* Fixed menu visibility controls sometimes getting output twice
+* Fixed Gutenberg block visibility not respecting auto login sessions
+* Fixed the logs getting flushed if the filter form was submitted using the enter key
+* Fixed imported users not respecting "role" field loaded in user meta
+* Fixed fatal error loading admin user profile when WP Fusion was not connected to a CRM
+* Fixed apostrophes getting escaped with slashes before being synced
+* Fixed header resync button on settings page not resyncing CRM lists
+* Fixed the No Tags filter in the users list showing all users
+* Fixed Create Tags from Value on user_role conflicting with Limit User Roles setting
+* Fixed post type rules taking priority over single post access rules for query filtering
+* Fixed some post types registered by other plugins not showing as options for Filter Queries - Post Types
+* Fixed menu items being hidden when Filter Queries was used in Standard mode and limited to specific post types
+* Fixed query filtering not working on queries that used post__in
+* Fixed auto-login session setting user to logged in when the contact ID was invalid
+* Fixed tag changes in FluentCRM not being synced back to WP Fusion
+* Fixed date-format fields sometimes not syncing correctly to Kartra
+* Fixed bug applying and removing tags with Growmatik
+* Fixed Mautic not loading more than 30 tags on some sites
+* Fixed dates loaded from HubSpot being loaded as milliseconds not seconds since the epoch
+* Fixed ActiveCampaign not loading more than 100 lists
+* Fixed ActiveCampaign integration not treating 429 status code as an error
+* Fixed Create Tag(s) from Value creating errors with NationBuilder
+* Fixed WP Fusion trying to handle API error responses from ontraport.com that originated with other plugins
+* Fixed Autopilot integration creating new contacts when email address wasn't specified in update data
+* Fixed standard fields not being loaded from Autopilot
+* Fixed JavaScript error on settings page when connected to ConvertKit
+* Fixed HTTP API logging not showing up for ConvertKit
+* Fixed error when trying to add an entry to the logs before the CRM connection was configured
+* Fixed "Invalid argument" warning listing custom fields with some CRMs
+* Fixed PHP warning loading available users from Zoho
+* Fixed PHP warning trying to get tag ID from tag label when no tags exist in the CRM
+* Fixed PHP warning when force-ending an auto login session
+* Fixed PHP warning during login when Login Tags Sync is enabled
+* Fixed PHP notice "Constant DOING_WPF_BATCH_TASK already defined"
+* Fixed PHP warning in Salesforce integration
+* Fixed PHP notices in Mailjet integration
+
+
+#### Developer
+
+* Added add_object() update_object() and load_object() methods to Salesforce, HubSpot, and Zoho
+* Added wpf_get_contact_id() function
+* Added wpf_bypass_query_filtering filter
+* Added wpf_query_filtering_mode filter
+* Added wpf_configure_setting_{$setting_id} filter
+* Added wpf_hubspot_auth_url filter
+* Added wpf_zoho_auth_url filter
+* Added wpf_api_preflight_check filter
+* Added third parameter $searchfield to wpf_salesforce_query_args filter
+* Improved - wpf_format_field_value in WPF_CRM_Base will stop imploding arrays (fixes issue syncing picklists options with commas in them to Salesforce and HubSpot)
+* Improved - the available CRMs are now loaded on plugins_loaded to better support custom CRMs modules in other plugins
+* Improved - Added second argument $user_meta to wpf_map_meta_fields filter
+
+
 
 = 3.35 - 12/8/2020 =
 

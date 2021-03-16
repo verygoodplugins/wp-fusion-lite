@@ -27,7 +27,7 @@ class WPF_Batch {
 		add_filter( 'wpf_export_options', array( $this, 'export_options' ) );
 
 		// Status monitor
-		add_action( 'wpf_settings_after_page_title', array( $this, 'batch_status_bar' ) );
+		add_action( 'wpf_settings_notices', array( $this, 'batch_status_bar' ) );
 
 		// Global handlers
 		add_action( 'wp_ajax_wpf_batch_init', array( $this, 'batch_init' ), 10, 2 );
@@ -40,6 +40,10 @@ class WPF_Batch {
 		// Export users
 		add_filter( 'wpf_batch_users_register_init', array( $this, 'users_register_init' ) );
 		add_action( 'wpf_batch_users_register', array( $this, 'users_register_step' ) );
+
+		// Tag all users with registration tags
+		add_filter( 'wpf_batch_users_register_tags_init', array( $this, 'users_register_tags_init' ) );
+		add_action( 'wpf_batch_users_register_tags', array( $this, 'users_register_tags_step' ) );
 
 		// Push user meta
 		add_filter( 'wpf_batch_users_meta_init', array( $this, 'users_meta_init' ) );
@@ -88,7 +92,7 @@ class WPF_Batch {
 			'users_tags_sync' => array(
 				'label'     => __( 'Resync tags for every user', 'wp-fusion-lite' ),
 				'title'     => __( 'Users (tags)', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID, and triggers any automated enrollments via linked tags.', 'wp-fusion-lite' ) )
+				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID, and triggers any automated enrollments via linked tags.', 'wp-fusion-lite' ) ),
 			),
 			'users_sync' => array(
 				'label'     => __( 'Resync contact IDs and tags for every user', 'wp-fusion-lite' ),
@@ -98,7 +102,12 @@ class WPF_Batch {
 			'users_register' => array(
 				'label'     => __( 'Export users', 'wp-fusion-lite' ),
 				'title'     => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts.', 'wp-fusion-lite' ), wp_fusion()->crm->name )
+				'tooltip'   => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+			),
+			'users_register_tags' => array(
+				'label'     => __( 'Apply registration tags', 'wp-fusion-lite' ),
+				'title'     => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip'   => __( 'For every registered user on the site, apply the tags configured in the <strong>Assign Tags</strong> setting on the General options tab.<br /><br />Does not create any new contact records.', 'wp-fusion-lite' ),
 			),
 			'users_meta'     => array(
 				'label'     => __( 'Push user meta', 'wp-fusion-lite' ),
@@ -117,7 +126,7 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Initialize batch processing library
+	 * Get the title of a batch operation, by ID
 	 *
 	 * @since 3.35.7
 	 * @return string Name of the batch operation
@@ -196,7 +205,7 @@ class WPF_Batch {
 		$done      = $total - $remaining;
 
 		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . $remaining . '"' : '' ) . ' ' . ( $active ? 'data-key="' . $status['key'] . '"' : '' ) . '>';
-		echo '<i class="fa fa-li fa-spin fa-spinner"></i><p><span class="title"><strong>' . __( 'Background operation running:', 'wp-fusion-lite' ) . '</strong></span> <span class="status">';
+		echo '<p><span class="dashicons dashicons-update-alt wpf-spin"></span><span class="title"><strong>' . __( 'Background operation running:', 'wp-fusion-lite' ) . '</strong></span> <span class="status">';
 
 		$title = 'records';
 
@@ -369,7 +378,6 @@ class WPF_Batch {
 
 			update_site_option( 'wpfb_status_' . $keys[0], $status );
 
-
 		}
 
 	}
@@ -416,7 +424,7 @@ class WPF_Batch {
 		$message = 'Beginning <strong>Import Contacts</strong> batch operation on ' . count( $contact_ids ) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>.';
 
 		if ( $removed ) {
-			$message .= $removed . ' contacts were excluded from the import because they already have user accounts.';
+			$message .= ' ' . $removed . ' contacts were excluded from the import because they already have user accounts.';
 		}
 
 		wpf_log( 'info', 0, $message, array( 'source' => 'batch-process' ) );
@@ -629,6 +637,47 @@ class WPF_Batch {
 	public function users_register_step( $user_id ) {
 
 		wp_fusion()->user->user_register( $user_id, null, true );
+
+	}
+
+	/**
+	 * Users register batch process init
+	 *
+	 * @since 3.35.17
+	 *
+	 * @return array Users
+	 */
+
+	public function users_register_tags_init() {
+
+		$args = array(
+			'fields' => 'ID',
+		);
+
+		$users = get_users( $args );
+
+		wpf_log( 'info', 0, 'Beginning <strong>Apply registration tags</strong> batch operation on ' . count( $users ) . ' users', array( 'source' => 'batch-process' ) );
+
+		return $users;
+
+	}
+
+	/**
+	 * Users register batch process - single step
+	 *
+	 * @since 3.35.17
+	 *
+	 * @param $user_id The ID of the user to process
+	 * @return void
+	 */
+
+	public function users_register_tags_step( $user_id ) {
+
+		$assign_tags = wp_fusion()->settings->get( 'assign_tags' );
+
+		if ( ! empty( $assign_tags ) ) {
+			wp_fusion()->user->apply_tags( $assign_tags, $user_id );
+		}
 
 	}
 

@@ -66,7 +66,6 @@ class WPF_CRM_Base {
 					if( isset( $crm->tag_type ) ) {
 						$this->tag_type = $crm->tag_type;
 					}
-
 				}
 
 				$this->available_crms[ $slug ] = array( 'name' => $crm->name );
@@ -106,6 +105,46 @@ class WPF_CRM_Base {
 		}
 
 		$this->contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
+
+	}
+
+	/**
+	 * Some CRMs require an email address to be used instead of a contact ID for
+	 * certain operations.
+	 *
+	 * @since  3.36.17
+	 *
+	 * @param  string $contact_id The contact ID.
+	 * @return string The email address.
+	 */
+
+	public function get_email_from_cid( $contact_id ) {
+
+		$users = get_users(
+			array(
+				'meta_key'   => "{$this->crm->slug}_contact_id",
+				'meta_value' => $contact_id,
+				'fields'     => array( 'user_email' ),
+			)
+		);
+
+		if ( ! empty( $users ) ) {
+
+			return $users[0]->user_email;
+
+		} else {
+
+			// Make an API call
+
+			$contact = $this->crm->load_contact( $contact_id );
+
+			if ( is_wp_error( $contact ) ) {
+				return false;
+			}
+
+			return $contact['user_email'];
+
+		}
 
 	}
 
@@ -248,9 +287,9 @@ class WPF_CRM_Base {
 	 * @return array
 	 */
 
-	public function map_meta_fields( $user_data ) {
+	public function map_meta_fields( $user_meta ) {
 
-		if ( ! is_array( $user_data ) ) {
+		if ( ! is_array( $user_meta ) ) {
 			return false;
 		}
 
@@ -258,14 +297,19 @@ class WPF_CRM_Base {
 
 		foreach ( $this->contact_fields as $field => $field_data ) {
 
+			// Don't send add_tag_ fields to the CRM as fields
+			if ( strpos( $field_data['crm_field'], 'add_tag_' ) !== false ) {
+				continue;
+			}
+
 			// If field exists in form and sync is active
-			if ( array_key_exists( $field, $user_data ) && $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
+			if ( isset( $user_meta[ $field ] ) && $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
 
 				if ( empty( $field_data['type'] ) ) {
 					$field_data['type'] = 'text';
 				}
 
-				$value = apply_filters( 'wpf_format_field_value', $user_data[ $field ], $field_data['type'], $field_data['crm_field'] );
+				$value = apply_filters( 'wpf_format_field_value', $user_meta[ $field ], $field_data['type'], $field_data['crm_field'] );
 
 				if ( 'raw' == $field_data['type'] ) {
 
@@ -291,7 +335,7 @@ class WPF_CRM_Base {
 			}
 		}
 
-		$update_data = apply_filters( 'wpf_map_meta_fields', $update_data );
+		$update_data = apply_filters( 'wpf_map_meta_fields', $update_data, $user_meta );
 
 		return $update_data;
 
@@ -343,12 +387,29 @@ class WPF_CRM_Base {
 
 	public function get_field_type( $meta_key, $default = 'text' ) {
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
-
 		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['type'] ) ) {
 			return $this->contact_fields[ $meta_key ]['type'];
 		} else {
 			return $default;
+		}
+
+	}
+
+	/**
+	 * Is a WordPress meta key a pseudo field and should only be sent to the CRM, not loaded
+	 *
+	 * @since 3.35.16
+	 *
+	 * @param string $meta_key The meta key to look up
+	 * @return bool Whether or not the field is a pseudo field
+	 */
+
+	public function is_pseudo_field( $meta_key ) {
+
+		if ( ! empty( $this->contact_fields[ $meta_key ] ) && isset( $this->contact_fields[ $meta_key ]['pseudo'] ) ) {
+			return true;
+		} else {
+			return false;
 		}
 
 	}
@@ -364,20 +425,26 @@ class WPF_CRM_Base {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
-			if( ! is_numeric( $value ) && ! empty( $value ) ) {
+			if ( ! is_numeric( $value ) && ! empty( $value ) ) {
 				$value = strtotime( $value );
 			}
 
-			return $value;
+			// invtal() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning
+
+			return intval( $value );
 
 		} elseif ( false !== strpos( $field, 'add_tag_' ) ) {
 
 			// Don't modify it if it's a dynamic tag field
+			// (this needs to stay so that WPF_Forms_Helper can still do dynamic tagging)
+
 			return $value;
 
 		} elseif ( ( $field_type == 'multiselect' && is_array( $value ) ) || is_array( $value ) ) {
 
-			$value = implode( ',', $value );
+			// Removed in v3.36.5 since it causes problems with HubSpot, Salesforce, and others (this could cause problems)
+
+			// $value = implode( ',', array_filter( $value ) );
 
 			return $value;
 

@@ -7,13 +7,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPF_Admin_Interfaces {
 
 	/**
-	 * Contains user profile admin interfaces
+	 * Contains user profile admin interfaces.
 	 *
 	 * @var WPF_User_Profile
 	 * @since 3.0
 	 */
 
 	public $user_profile;
+
+	/**
+	 * Prevent the settings from getting output twice on the same menu item
+	 *
+	 * @var array
+	 * @since 3.36.8
+	 */
+
+	private $menu_items = array();
+
+	/**
+	 * Contains the default values for the main WPF access control meta box.
+	 *
+	 * @var array
+	 * @since 3.36.7
+	 */
+
+	public static $meta_box_defaults = array(
+		'lock_content'   => 0,
+		'allow_tags'     => array(),
+		'allow_tags_all' => array(),
+		'allow_tags_not' => array(),
+		'apply_tags'     => array(),
+		'remove_tags'    => array(),
+		'apply_delay'    => 0,
+		'redirect'       => '',
+		'redirect_url'   => '',
+	);
+
 
 	public function __construct() {
 
@@ -54,6 +83,8 @@ class WPF_Admin_Interfaces {
 		add_action( 'wpf_meta_box_content', array( $this, 'external_redirect_input' ), 25, 2 );
 		add_action( 'wpf_meta_box_content', array( $this, 'apply_tags_select' ), 30, 2 );
 		add_action( 'wpf_meta_box_content', array( $this, 'apply_to_children' ), 40, 2 );
+
+		add_action( 'wp_ajax_wpf_get_redirect_options', array( $this, 'get_redirect_options' ) );
 
 		// Saving metabox
 		add_action( 'save_post', array( $this, 'save_meta_box_data' ) );
@@ -247,7 +278,7 @@ class WPF_Admin_Interfaces {
 					),
 					array(
 						'key'   => wp_fusion()->crm->slug . '_tags',
-						'value' => array(),
+						'value' => 'a:0:{}',
 					),
 				);
 
@@ -470,8 +501,17 @@ class WPF_Admin_Interfaces {
 
 			$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
 
-			$taxonomy_rules             = get_option( 'wpf_taxonomy_rules', array() );
-			$taxonomy_rules[ $term_id ] = $settings;
+			$settings = array_filter( $settings );
+
+			if ( ! empty( $settings ) ) {
+
+				$taxonomy_rules[ $term_id ] = $settings;
+
+			} elseif ( isset( $taxonomy_rules[ $term_id ] ) ) {
+
+				unset( $taxonomy_rules[ $term_id ] );
+
+			}
 
 			// Save the option array.
 			update_option( 'wpf_taxonomy_rules', $taxonomy_rules, false );
@@ -508,6 +548,7 @@ class WPF_Admin_Interfaces {
 		if ( ! empty( $wpf_settings ) && isset( $wpf_settings['lock_content'] ) && $wpf_settings['lock_content'] == true ) {
 
 			$post_type_object = get_post_type_object( $post->post_type );
+			$post_type_object = apply_filters( 'wpf_restrict_content_post_type_object_label', strtolower( $post_type_object->labels->singular_name ), $post );
 
 			if ( ! empty( $wpf_settings['allow_tags'] ) || ! empty( $wpf_settings['allow_tags_all'] ) ) {
 
@@ -523,17 +564,17 @@ class WPF_Admin_Interfaces {
 					$tags           = array_merge( $tags, $allow_tags_all );
 				}
 
-				$content = sprintf( __( 'This %1$s is protected by %2$s tags: ', 'wp-fusion-lite' ), strtolower( $post_type_object->labels->singular_name ), wp_fusion()->crm->name );
+				$content = sprintf( __( 'This %1$s is protected by %2$s tags: ', 'wp-fusion-lite' ), $post_type_object, wp_fusion()->crm->name );
 
 				$content .= implode( ', ', $tags );
 
 			} else {
 
-				$content = sprintf( __( 'This %1$s is protected by WP Fusion. Users must be logged in to view this %2$s.', 'wp-fusion-lite' ), strtolower( $post_type_object->labels->singular_name ), strtolower( $post_type_object->labels->singular_name ) );
+				$content = sprintf( __( 'This %1$s is protected by WP Fusion. Users must be logged in to view this %2$s.', 'wp-fusion-lite' ), $post_type_object, $post_type_object );
 
 			}
 
-			$post_states['wpfusion'] = '<span class="dashicons dashicons-lock wpf-tip bottom" data-tip="' . $content . '"></span>';
+			$post_states['wpfusion'] = '<span class="dashicons dashicons-lock wpf-tip wpf-tip-bottom" data-tip="' . $content . '"></span>';
 
 		}
 
@@ -651,27 +692,16 @@ class WPF_Admin_Interfaces {
 
 		$post = $posts[0];
 
-		// Set defaults
-		$settings = array(
-			'lock_content'   => 0,
-			'allow_tags'     => array(),
-			'allow_tags_all' => array(),
-			'apply_tags'     => array(),
-			'apply_delay'    => 0,
-			'redirect'       => '',
-			'redirect_url'   => '',
-		);
-
 		?>
 
 		<div id="wpf-meta" class="inline-edit-col-wpf">
 			<div class="inline-edit-col">
 				<div style="margin: 10px">
-					<?php $this->restrict_content_checkbox( $post, $settings ); ?>
+					<?php $this->restrict_content_checkbox( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
 				</div>
-				<?php $this->required_tags_select( $post, $settings ); ?>
-				<?php $this->page_redirect_select( $post, $settings ); ?>
-				<?php $this->external_redirect_input( $post, $settings ); ?>
+				<?php $this->required_tags_select( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
+				<?php $this->page_redirect_select( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
+				<?php $this->external_redirect_input( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
 
 				<div style="margin: 20px 10px 10px;">
 					<input type="checkbox" name="wpf-settings[bulk_edit_merge]" value="1"> Merge Changes <br />
@@ -776,7 +806,16 @@ class WPF_Admin_Interfaces {
 			return;
 		}
 
-		/* Get the settings saved for the menu item. */
+		// Track which menu items the settings have been output on so they're not printed twice
+
+		if ( in_array( $item_id, $this->menu_items ) ) {
+			return;
+		}
+
+		$this->menu_items[] = $item_id;
+
+		// Get the settings saved for the menu item.
+
 		$settings = get_post_meta( $item->ID, 'wpf-settings', true );
 
 		if ( empty( $settings ) ) {
@@ -934,8 +973,16 @@ class WPF_Admin_Interfaces {
 
 		$post_type_object = get_post_type_object( $post->post_type );
 
+		if ( is_a( $post_type_object, 'WP_Post_Type' ) ) {
+			$label = strtolower( $post_type_object->labels->singular_name );
+		} else {
+			$label = 'content';
+		}
+
+		$post_type_object_label = apply_filters( 'wpf_restrict_content_post_type_object_label', $label, $post );
+
 		echo '<input class="checkbox wpf-restrict-access-checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <label for="wpf-lock-content" class="wpf-restrict-access">';
-		printf( __( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), strtolower( $post_type_object->labels->singular_name ) );
+		printf( __( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), $post_type_object_label );
 		echo '</label>';
 
 	}
@@ -957,7 +1004,7 @@ class WPF_Admin_Interfaces {
 
 		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? '' : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>' . __( 'Required tags (any)', 'wp-fusion-lite' ) . ':</small>';
 
-		echo '<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="' . __( 'The user must be logged in and have at least one of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
+		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . __( 'The user must be logged in and have at least one of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
 
 		$args = array(
 			'setting'   => $settings['allow_tags'],
@@ -972,7 +1019,7 @@ class WPF_Admin_Interfaces {
 
 		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? '' : ' class="disabled"' ) . ' for="wpf-allow-tags-all"><small>' . __( 'Required tags (all)', 'wp-fusion-lite' ) . ':</small>';
 
-		echo '<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="' . __( 'The user must be logged in and have <em>all</em> of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
+		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . __( 'The user must be logged in and have <em>all</em> of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
 
 		$args = array(
 			'setting'   => $settings['allow_tags_all'],
@@ -987,7 +1034,7 @@ class WPF_Admin_Interfaces {
 
 		echo '<p class="wpf-required-tags-select"><label for="wpf-allow-tags-not"><small>' . __( 'Required tags (not)', 'wp-fusion-lite' ) . ':</small>';
 
-		echo '<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="' . __( 'If the user is logged in, they must have <em>none</em> of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
+		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . __( 'If the user is logged in, they must have <em>none</em> of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
 
 		if ( ! isset( $settings['allow_tags_not'] ) ) {
 			$settings['allow_tags_not'] = array();
@@ -1015,45 +1062,16 @@ class WPF_Admin_Interfaces {
 
 	public function page_redirect_select( $post, $settings, $disabled = false ) {
 
-		$post_types      = get_post_types( array( 'public' => true ) );
-		$available_posts = array();
-
-		unset( $post_types['attachment'] );
-		$post_types = apply_filters( 'wpf_redirect_post_types', $post_types );
-
-		foreach ( $post_types as $post_type ) {
-
-			$posts = get_posts(
-				array(
-					'post_type'      => $post_type,
-					'posts_per_page' => 200,
-					'orderby'        => 'post_title',
-					'order'          => 'ASC',
-				)
-			);
-
-			foreach ( $posts as $post ) {
-				$available_posts[ $post_type ][ $post->ID ] = $post->post_title;
-			}
-		}
-
 		echo '<p class="wpf-page-redirect-select"><label for="wpf-redirect"><small>' . __( 'Redirect if access is denied:', 'wp-fusion-lite' ) . '</small>';
 
-		echo '<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="' . __( 'If you do not specify a redirect WP Fusion will try to replace the content area of the post with the restricted content message configured in the WP Fusion settings.', 'wp-fusion-lite' ) . '"></span></label>';
+		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . __( 'If you do not specify a redirect WP Fusion will try to replace the content area of the post with the restricted content message configured in the WP Fusion settings.', 'wp-fusion-lite' ) . '"></span></label>';
 
-		echo '<select ' . ( $disabled ? 'disabled' : '' ) . ' id="wpf-redirect" class="select4-search" style="width: 100%;" data-placeholder="' . __( 'None', 'wp-fusion-lite' ) . '" name="wpf-settings[redirect]">';
+		echo '<select ' . ( $disabled ? 'disabled' : '' ) . ' id="wpf-redirect" class="select4-select-page" style="width: 100%;" data-placeholder="' . __( 'Show restricted content message', 'wp-fusion-lite' ) . '" name="wpf-settings[redirect]">';
 
 		echo '<option></option>';
 
-		foreach ( $available_posts as $post_type => $data ) {
-
-			echo '<optgroup label="' . $post_type . '">';
-
-			foreach ( $available_posts[ $post_type ] as $id => $post_name ) {
-				echo '<option value="' . $id . '"' . selected( $id, $settings['redirect'], false ) . '>' . $post_name . '</option>';
-			}
-
-			echo '</optgroup>';
+		if ( ! empty( $settings['redirect'] ) ) {
+			echo '<option value="' . $settings['redirect'] . '" selected>' . get_the_title( $settings['redirect'] ) . '</option>';
 		}
 
 		echo '</select></p>';
@@ -1090,7 +1108,15 @@ class WPF_Admin_Interfaces {
 
 		$post_type_object = get_post_type_object( $post->post_type );
 
-		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>' . sprintf( __( 'Apply tags when a user views this %s', 'wp-fusion-lite' ), strtolower( $post_type_object->labels->singular_name ) ) . ':</small></label>';
+		if ( is_a( $post_type_object, 'WP_Post_Type' ) ) {
+			$label = strtolower( $post_type_object->labels->singular_name );
+		} else {
+			$label = 'content';
+		}
+
+		$post_type_object_label = apply_filters( 'wpf_restrict_content_post_type_object_label', $label, $post );
+
+		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>' . sprintf( __( 'Apply tags when a user views this %s', 'wp-fusion-lite' ), $post_type_object_label ) . ':</small></label>';
 
 		$args = array(
 			'setting'   => $settings['apply_tags'],
@@ -1102,7 +1128,7 @@ class WPF_Admin_Interfaces {
 
 		echo '</p>';
 
-		echo '<p class="wpf-apply-tags-select"><label for="wpf-remove-tags"><small>' . sprintf( __( 'Remove tags when a user views this %s', 'wp-fusion-lite' ), strtolower( $post_type_object->labels->singular_name ) ) . ':</small></label>';
+		echo '<p class="wpf-apply-tags-select"><label for="wpf-remove-tags"><small>' . sprintf( __( 'Remove tags when a user views this %s', 'wp-fusion-lite' ), $post_type_object_label ) . ':</small></label>';
 
 		$args = array(
 			'setting'   => $settings['remove_tags'],
@@ -1152,6 +1178,48 @@ class WPF_Admin_Interfaces {
 	}
 
 
+
+	/**
+	 * Gets the redirect options for the AJAX page redirect select.
+	 *
+	 * @since  3.37.0
+	 *
+	 * @return array The redirect options.
+	 */
+	public function get_redirect_options() {
+
+		if ( empty( $_POST['search'] ) ) {
+			wp_die();
+		}
+
+		$search = sanitize_text_field( $_POST['search'] );
+
+		$args = array(
+			'post_type'      => 'any',
+			'posts_per_page' => 100,
+			's'              => $search,
+		);
+
+		$results = get_posts( $args );
+
+		$return = array(
+			'results' => array(),
+		);
+
+		foreach ( $results as $result ) {
+			$return['results'][] = array(
+				'id'   => $result->ID,
+				'text' => $result->post_title,
+			);
+		}
+
+		echo json_encode( $return );
+
+		wp_die();
+
+	}
+
+
 	/**
 	 * Saves settings to children if "apply to children" is checked
 	 *
@@ -1195,20 +1263,12 @@ class WPF_Admin_Interfaces {
 		// Add an nonce field so we can check for it later.
 		wp_nonce_field( 'wpf_meta_box', 'wpf_meta_box_nonce' );
 
-		$settings = array(
-			'lock_content'   => 0,
-			'allow_tags'     => array(),
-			'allow_tags_all' => array(),
-			'allow_tags_not' => array(),
-			'apply_tags'     => array(),
-			'remove_tags'    => array(),
-			'apply_delay'    => 0,
-			'redirect'       => '',
-			'redirect_url'   => '',
-		);
+		if ( ! empty( $post->ID ) ) {
+			$settings = wp_parse_args( get_post_meta( $post->ID, 'wpf-settings', true ), WPF_Admin_Interfaces::$meta_box_defaults );
+		} else {
 
-		if ( get_post_meta( $post->ID, 'wpf-settings', true ) ) {
-			$settings = array_merge( $settings, (array) get_post_meta( $post->ID, 'wpf-settings', true ) );
+			// Cases where there is no "ID", like a BuddyPress group
+			$settings = WPF_Admin_Interfaces::$meta_box_defaults;
 		}
 
 		$settings = apply_filters( 'wpf_settings_for_meta_box', $settings, $post );
@@ -1250,31 +1310,28 @@ class WPF_Admin_Interfaces {
 
 	function save_meta_box_data( $post_id ) {
 
-		// If this is an autosave, our form has not been submitted, so we don't want to do anything.
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		if ( isset( $_POST['post_ID'] ) && $_POST['post_ID'] != $post_id ) {
 			return;
 		}
 
-		if ( ! isset( $_POST['wpf-settings'] ) ) {
-			return;
+		$post_data = isset( $_POST['wpf-settings'] ) ? $_POST['wpf-settings'] : array();
+		$settings  = apply_filters( 'wpf_sanitize_meta_box', $post_data );
+		$settings  = array_filter( $settings );
+
+		if ( isset( $_POST['wpf-settings'] ) && empty( $settings ) ) {
+
+			// Delete if empty
+			delete_post_meta( $post_id, 'wpf-settings' );
+
+		} elseif ( ! empty( $settings ) ) {
+
+			// Update the meta field in the database.
+			update_post_meta( $post_id, 'wpf-settings', $settings );
+
+			// Allow other plugins to save their own data
+			do_action( 'wpf_meta_box_save', $post_id, $settings );
+
 		}
-
-		// Don't update on revisions
-		if ( $_POST['post_type'] == 'revision' ) {
-			return;
-		}
-
-		if ( $_POST['post_ID'] != $post_id ) {
-			return;
-		}
-
-		$settings = apply_filters( 'wpf_sanitize_meta_box', $_POST['wpf-settings'] );
-
-		// Allow other plugins to save their own data
-		do_action( 'wpf_meta_box_save', $post_id, $settings );
-
-		// Update the meta field in the database.
-		update_post_meta( $post_id, 'wpf-settings', $settings );
 
 	}
 
@@ -1407,7 +1464,7 @@ class WPF_Admin_Interfaces {
 		}
 
 		if ( isset( $settings['redirect'] ) ) {
-			$settings['redirect'] = intval( $settings['redirect'] );
+			$settings['redirect'] = sanitize_text_field( $settings['redirect'] );
 		}
 
 		if ( isset( $settings['redirect_url'] ) ) {

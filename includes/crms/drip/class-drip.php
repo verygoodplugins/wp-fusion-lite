@@ -23,7 +23,7 @@ class WPF_Drip {
 	 * Account ID (used for API queries)
 	 */
 
-	private $account_id;
+	public $account_id;
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
@@ -124,7 +124,8 @@ class WPF_Drip {
 
 	public function get_params() {
 
-		$api_token = wp_fusion()->settings->get( 'drip_token' );
+		$this->account_id = wp_fusion()->settings->get( 'drip_account' );
+		$api_token        = wp_fusion()->settings->get( 'drip_token' );
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
@@ -208,7 +209,7 @@ class WPF_Drip {
 
 	public function tracking_code_output() {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -239,7 +240,7 @@ class WPF_Drip {
 
 			$userdata = wp_get_current_user();
 
-			if( empty( $userdata ) && defined( 'DOING_WPF_AUTO_LOGIN' ) ) {
+			if( empty( $userdata ) && doing_wpf_auto_login() ) {
 
 				$user_email = get_user_meta( wpf_get_current_user_id(), 'user_email', true );
 
@@ -468,6 +469,19 @@ class WPF_Drip {
 			return false;
 		}
 
+		// Load built in fields first
+		require dirname( __FILE__ ) . '/admin/drip-fields.php';
+
+		$built_in_fields = array();
+
+		foreach ( $drip_fields as $index => $data ) {
+			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
+		}
+
+		asort( $built_in_fields );
+
+		// Custom fields
+
 		$url      = 'https://api.getdrip.com/v2/' . $this->account_id . '/custom_field_identifiers/';
 		$response = $this->app->make_request( $url );
 
@@ -477,17 +491,21 @@ class WPF_Drip {
 
 		$response = json_decode( $response['buffer'] );
 
-		$crm_fields = array( 'email' => 'email' );
-
 		if ( ! empty( $response->custom_field_identifiers ) ) {
 			foreach ( $response->custom_field_identifiers as $field_id ) {
-				$crm_fields[ $field_id ] = $field_id;
+
+				if ( ! isset( $built_in_fields[ $field_id ] ) ) {
+					$crm_fields[ $field_id ] = $field_id;
+				}
 			}
 		}
 
 		asort( $crm_fields );
 
-		$crm_fields['status'] = 'Status';
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $crm_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 

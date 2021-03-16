@@ -27,6 +27,15 @@ class WPF_ActiveCampaign {
 	public $api_url;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @var string
+	 * @since 3.36.5
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -37,9 +46,9 @@ class WPF_ActiveCampaign {
 
 		$this->slug     = 'activecampaign';
 		$this->name     = 'ActiveCampaign';
-		$this->supports = array( 'add_tags', 'add_lists', 'quick_update_tags' );
+		$this->supports = array( 'add_tags', 'add_lists' );
+		$this->api_url  = wp_fusion()->settings->get( 'ac_url' );
 
-		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
 			new WPF_ActiveCampaign_Admin( $this->slug, $this->name, $this );
@@ -53,7 +62,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		$this->get_params();
@@ -65,6 +73,10 @@ class WPF_ActiveCampaign {
 
 		// Add tracking code to footer
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+
+		if ( ! empty( $this->api_url ) ) {
+			$this->edit_url = trailingslashit( preg_replace( '/\.api\-.+?(?=\.)/', '.activehosted', $this->api_url ) ) . 'app/contacts/%d/';
+		}
 
 	}
 
@@ -78,34 +90,15 @@ class WPF_ActiveCampaign {
 
 	public function format_post_data( $post_data ) {
 
-		if ( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
+		if ( isset( $post_data['contact']['id'] ) ) {
+			$post_data['contact_id'] = $post_data['contact']['id'];
 		}
-
-		$post_data['contact_id'] = $post_data['contact']['id'];
-
-		return $post_data;
-
-	}
-
-	/**
-	 * With a wpf_action=update_tags webhook we can read the tags out of the payload instead of making an API call back to AC
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function quick_update_tags( $post_data, $user_id ) {
 
 		if ( ! empty( $post_data['contact']['tags'] ) ) {
-			$tags = explode( ', ', $post_data['contact']['tags'] );
-		} else {
-			$tags = array();
+			$post_data['tags'] = explode( ', ', $post_data['contact']['tags'] );
 		}
 
-		wp_fusion()->user->set_tags( $tags, $user_id );
-
-		return $tags;
+		return $post_data;
 
 	}
 
@@ -122,13 +115,13 @@ class WPF_ActiveCampaign {
 		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			$date = date( 'm/d/Y h:i:s', $value );
 
 			return $date;
 
-		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! empty( $value ) ) {
+		} elseif ( is_array( $value ) ) {
 
-			return str_replace( ',', '||', $value );
+			return implode( '||', array_filter( $value ) );
 
 		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && empty( $value ) ) {
 
@@ -160,8 +153,7 @@ class WPF_ActiveCampaign {
 			),
 		);
 
-		$this->api_url = wp_fusion()->settings->get( 'ac_url' );
-		$this->params  = $params;
+		$this->params = $params;
 
 		return $params;
 
@@ -182,6 +174,8 @@ class WPF_ActiveCampaign {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
+			$code = wp_remote_retrieve_response_code( $response );
+
 			if ( isset( $body_json->errors ) ) {
 
 				$response = new WP_Error( 'error', $body_json->errors[0]->title );
@@ -190,9 +184,9 @@ class WPF_ActiveCampaign {
 
 				$response = new WP_Error( 'error', $body_json->message . ': ' . $body_json->error );
 
-			} elseif ( wp_remote_retrieve_response_code( $response ) == 500 ) {
+			} elseif ( 500 == $code || 429 == $code ) {
 
-				$response = new WP_Error( 'error', '500 Internal Server Error from ActiveCampaign.' );
+				$response = new WP_Error( 'error', sprintf( __( 'An error has occurred in the API server. [error %d]', 'wp-fusion-lite' ), $code ) );
 
 			}
 		}
@@ -210,7 +204,7 @@ class WPF_ActiveCampaign {
 
 	public function tracking_code_output() {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -258,11 +252,14 @@ class WPF_ActiveCampaign {
 		// Get site tracking ID
 		$this->connect();
 
+		wp_fusion()->crm->app->version( 1 );
 		$me = wp_fusion()->crm->app->api( 'user/me' );
 
 		if ( is_wp_error( $me ) || ! isset( $me->trackid ) ) {
 			return false;
 		}
+
+		wp_fusion()->settings->set( 'site_tracking_id', $me->trackid );
 
 		return $me->trackid;
 
@@ -359,7 +356,7 @@ class WPF_ActiveCampaign {
 
 			}
 
-			if ( count( $response->tags ) < 100 ) {
+			if ( empty( $response->tags ) || count( $response->tags ) < 100 ) {
 				$proceed = false;
 			}
 
@@ -384,19 +381,33 @@ class WPF_ActiveCampaign {
 
 	public function sync_lists() {
 
-		$response = wp_remote_get( $this->api_url . '/api/3/lists?limit=100', $this->params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
+		$offset          = 0;
+		$proceed         = true;
 		$available_lists = array();
 
-		foreach ( $response->lists as $list ) {
-			$available_lists[ $list->id ] = $list->name;
+		while ( $proceed ) {
+
+			$response = wp_remote_get( $this->api_url . '/api/3/lists?limit=100&offset=' . $offset, $this->params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $response->lists as $list ) {
+				$available_lists[ $list->id ] = $list->name;
+			}
+
+			if ( count( $response->lists ) < 100 ) {
+				$proceed = false;
+			}
+
+			$offset += 100;
+
 		}
+
+		asort( $available_lists );
 
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
@@ -771,7 +782,7 @@ class WPF_ActiveCampaign {
 
 		if ( empty( $response->tags ) ) {
 
-			wpf_log( 'error', 0, 'Unable to get tag ID for ' . $tag_name . ' cancelling import.' );
+			wpf_log( 'error', 0, 'Unable to get tag ID for ' . $tag_name . ', cancelling import.' );
 			return false;
 
 		}
@@ -945,6 +956,14 @@ class WPF_ActiveCampaign {
 
 	public function get_customer_id( $contact_id, $connection_id, $order_id = false ) {
 
+		$transient = get_transient( 'wpf_abandoned_cart_' . $contact_id );
+
+		if ( ! empty( $transient ) && ! empty( $transient['customer_id'] ) ) {
+
+			// For cases where we just created the customer via the Abandoned Cart addon
+			return $transient['customer_id'];
+		}
+
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
 		if ( false !== $user_id ) {
@@ -982,7 +1001,9 @@ class WPF_ActiveCampaign {
 
 		// Try to look up an existing customer
 
-		$response = wp_remote_get( $this->api_url . '/api/3/ecomCustomers?filters[email]=' . $user_email . '&filters[connectionid]=' . $connection_id, $params );
+		$request = $this->api_url . '/api/3/ecomCustomers?filters[email]=' . $user_email . '&filters[connectionid]=' . $connection_id;
+
+		$response = wp_remote_get( $request, $params );
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -1044,6 +1065,89 @@ class WPF_ActiveCampaign {
 
 		return $customer_id;
 
+	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the AC site tracking API.
+	 *
+	 * @since  3.36.12
+	 *
+	 * @link   https://wpfusion.com/documentation/crm-specific-docs/activecampaign-event-tracking/
+	 *
+	 * @param  string        $event      The event title.
+	 * @param  bool|string   $event_data The event descriotion.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false ) {
+
+		if ( ! wpf_is_user_logged_in() ) {
+			// Tracking only works if WP Fusion knows who the contact is
+			return;
+		}
+
+		// Get tracking ID
+
+		$trackid = wp_fusion()->settings->get( 'event_tracking_id' );
+
+		if ( false == $trackid ) {
+
+			$this->connect();
+			$me = $this->app->api( 'user/me' );
+
+			if ( empty( $me->eventkey ) ) {
+				wpf_log( 'error', 0, 'To use event tracking it must first be enabled in your ActiveCampaign account under Settings &raquo; Tracking &raquo; Event Tracking.' );
+				return false;
+			}
+
+			$trackid = $me->eventkey;
+
+			wp_fusion()->settings->set( 'event_tracking_id', $me->eventkey );
+
+		}
+
+		// Get account ID
+
+		$actid = wp_fusion()->settings->get( 'site_tracking_id' );
+
+		if ( false == $actid ) {
+			$actid = $this->get_tracking_id();
+		}
+
+		// Get the email address to track
+
+		if ( doing_wpf_auto_login() ) {
+			$user_email = get_user_meta( wpf_get_current_user_id(), 'user_email', true );
+		} else {
+			$user       = wp_get_current_user();
+			$user_email = $user->user_email;
+		}
+
+		$data = array(
+			'actid'     => $actid,
+			'key'       => $trackid,
+			'event'     => $event,
+			'eventdata' => $event_data,
+			'visit'     => array(
+				'email' => $user_email,
+			),
+		);
+
+		wpf_log( 'info', wpf_get_current_user_id(), 'Tracking event: ' . $event . ' ' . $event_data );
+
+		$params                            = $this->get_params();
+		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
+		$params['body']                    = $data;
+
+		$response = wp_remote_post( 'https://trackcmp.net/event', $params );
+
+		if ( is_wp_error( $response ) ) {
+			wpf_log( 'error', 0, 'Error tracking event: ' . $response->get_error_message() );
+			return $response;
+		}
+
+		return true;
 	}
 
 

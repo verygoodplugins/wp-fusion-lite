@@ -90,11 +90,11 @@ class WPF_Growmatik {
 				$response = new WP_Error( 'error', $body_json->message );
 
 			} elseif ( 500 == $response_code ) {
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion' ) );
+				$response = new WP_Error( 'error', sprintf( __( 'An error has occurred in API server. [error %d]', 'wp-fusion-lite' ), $response_code ) );
 			} elseif ( 401 == $response_code ) {
-				$response = new WP_Error( 'error', __( 'Invalid API credentials. [error 401]', 'wp-fusion' ) );
+				$response = new WP_Error( 'error', __( 'Invalid API credentials. [error 401]', 'wp-fusion-lite' ) );
 			} elseif ( 405 == $response_code ) {
-				$response = new WP_Error( 'error', __( 'Method not allowed. [error 405]', 'wp-fusion' ) );
+				$response = new WP_Error( 'error', __( 'Method not allowed. [error 405]', 'wp-fusion-lite' ) );
 			}
 		}
 

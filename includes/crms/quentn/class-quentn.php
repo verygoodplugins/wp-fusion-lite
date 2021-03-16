@@ -53,6 +53,22 @@ class WPF_Quentn {
 	public function init() {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+	}
+
+	/**
+	 * Slow down batch processses to get around API throttling
+	 *
+	 * @since 3.35.17
+	 *
+	 * @param int $seconds The number of seconds to sleep
+	 * @return int Sleep time
+	 */
+
+	public function set_sleep_time( $seconds ) {
+
+		return 1;
 
 	}
 

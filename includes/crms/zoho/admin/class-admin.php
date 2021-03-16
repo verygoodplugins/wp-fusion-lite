@@ -22,7 +22,6 @@ class WPF_Zoho_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_zoho_header_begin', array( $this, 'show_field_zoho_header_begin' ), 10, 2 );
-		add_action( 'show_field_zoho_refresh_token_end', array( $this, 'show_field_zoho_refresh_token_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -59,7 +58,7 @@ class WPF_Zoho_Admin {
 
 	public function maybe_oauth_complete() {
 
-		if( isset( $_GET['code'] ) && isset( $_GET['location'] ) && isset( $_GET['crm'] ) && 'zoho' == $_GET['crm'] ) {
+		if ( isset( $_GET['code'] ) && isset( $_GET['location'] ) && isset( $_GET['crm'] ) && 'zoho' == $_GET['crm'] ) {
 
 			if( $_GET['location'] == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
@@ -77,13 +76,15 @@ class WPF_Zoho_Admin {
 
 			$response = wp_remote_post( $_GET['accounts-server'] . '/oauth/v2/token?code=' . $_GET['code'] . '&client_id=' . $this->crm->client_id . '&grant_type=authorization_code&client_secret=' . $client_secret . '&redirect_uri=https%3A%2F%2Fwpfusionplugin.com%2Fparse-zoho-oauth.php' );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
+				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
 				return false;
 			}
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body->error ) ) {
+			if ( isset( $body->error ) ) {
+				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $body->error );
 				return false;
 			}
 
@@ -119,11 +120,14 @@ class WPF_Zoho_Admin {
 			'section' => 'setup',
 		);
 
-		if( empty( $options['zoho_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
+		$auth_url = 'https://wpfusion.com/parse-zoho-oauth.php?redirect=' . urlencode( admin_url( 'options-general.php?page=wpf-settings&crm=zoho' ) ) . '&action=wpf_get_zoho_token&client_id=' . $this->crm->client_id;
+		$auth_url = apply_filters( 'wpf_zoho_auth_url', $auth_url );
+
+		if ( empty( $options['zoho_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['zoho_header']['desc'] = '<table class="form-table"><tr>';
 			$new_settings['zoho_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="https://wpfusion.com/parse-zoho-oauth.php?redirect=' .  urlencode( admin_url( 'options-general.php?page=wpf-settings&crm=zoho' ) ) . '&action=wpf_get_zoho_token&client_id=' . $this->crm->client_id . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['zoho_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
@@ -141,7 +145,7 @@ class WPF_Zoho_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'zoho_token', 'zoho_refresh_token' ),
-				'desc'        => sprintf( __( 'If your connection with %s is broken you can erase the refresh token and save the settings page to re-authorize with %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
+				'desc'        => '<a href="' . $auth_url . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</a>',
 			);
 
 		}
@@ -236,7 +240,7 @@ class WPF_Zoho_Admin {
 
 
 	/**
-	 * Puts a div around the Infusionsoft configuration section so it can be toggled
+	 * Puts a div around the Zoho configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
@@ -250,27 +254,6 @@ class WPF_Zoho_Admin {
 
 	}
 
-	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_zoho_refresh_token_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #zoho div
-		echo '<table class="form-table">';
-
-	}
 
 	/**
 	 * Verify connection credentials

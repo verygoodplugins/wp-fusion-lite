@@ -96,6 +96,26 @@ button.btn-verifying {
 	padding-left: 30px;
 }
 
+.wpf-settings-wrap a.button {
+	padding: 1px 10px;
+	vertical-align: middle;
+}
+
+.wpf-settings-wrap .dashicons.wpf-spin {
+   animation: dashicons-spin 2s infinite;
+   animation-timing-function: linear;
+}
+
+@keyframes dashicons-spin {
+   0% {
+      transform: rotate( 0deg );
+   }
+   100% {
+      transform: rotate( 360deg );
+   }
+}
+
+
 form#wpf-settings .settings_page_wpf-settings-tab-content {
 	padding: 0 10px;
 }
@@ -110,10 +130,11 @@ button.btn-verifying i.fa {
 	font-size: 14px;
 }
 
-a#test-connection, a#edd-license, a#export-btn {
+a#edd-license, a#export-btn {
 	min-width: 150px;
 	text-align: center;
 	position: relative;
+	vertical-align: middle;
 }
 
 form#wpf-settings .tooltip .tooltip-inner {
@@ -139,9 +160,7 @@ form#wpf-settings .tooltip .tooltip-arrow {
 a#import-users-btn {
 	margin-left: 5px;
 	min-width: 150px;
-	position: relative;
-	border-color: #ccc;
-	
+	text-align: center;
 }
 
 th.import-date, td.import-date {
@@ -150,16 +169,6 @@ th.import-date, td.import-date {
 
 tr.import-group-row {
 	position: relative;
-}
-
-a#test-connection i.fa, a#edd-license i.fa, a#import-users-btn i.fa, a#export-btn i.fa {
-	left: 0px;
-	top: 7px;
-	font-size: 18px;
-}
-
-a#test-connection span, a#export-btn span, a#import-users-btn span {
-	padding-left: 24px;
 }
 
 #wpf-settings li#tab-batch-process {
@@ -187,16 +196,13 @@ a#test-connection span, a#export-btn span, a#import-users-btn span {
 	display: none !important;
 }
 
-#wpf-batch-status i.fa {
-	left: 2px;
-		font-size: 18px;
-		top: 10px;
-		opacity: 0.75;
+#wpf-batch-status span.dashicons {
+	color: #444;
 }
 
 #wpf-batch-status span.title {
 	display: inline-block;
-	padding-left: 22px;
+	padding-left: 8px;
 }
 
 #wpf-batch-status a#cancel-batch {
@@ -281,6 +287,11 @@ th.sync {
 	display: none;
 }
 
+#contact-fields-table tr.group-header td .table-header-docs-link {
+	margin-left: 10px;
+    font-weight: normal;
+}
+
 #contact-fields-table td, #import-groups td {
 	padding: 4px 8px;
 }
@@ -316,6 +327,47 @@ th.sync {
     width: 318px;
 }
 
+/* Test connection */
+
+.wpf-settings-wrap a.button span.dashicons {
+	vertical-align: middle;
+	margin-bottom: 3px;
+	margin-right: 5px;
+}
+
+.wpf-settings-wrap a.button.test-connection-button {
+	position: relative;
+	vertical-align: middle;
+	padding-left: 32px;
+}
+
+.wpf-settings-wrap a.button.test-connection-button span.text {
+	display: inline-block;
+	min-width: 110px;
+	text-align: center;
+}
+
+.wpf-settings-wrap a.button.test-connection-button span.dashicons {
+	position: absolute;
+	top: 5px;
+	left: 8px;
+}
+
+.wpf-settings-wrap a#header-resync {
+	margin-left: 10px;
+	margin-top: 10px;
+}
+
+/* Webhook URL input */
+
+#wpf-settings input[type="text"]#webhook-base-url {
+	font-family: monospace;
+	color: #32373c;
+	width: auto;
+	padding-right: 10px;
+	border-color: #7e8993;
+}
+
 
 #wp-restricted_message-wrap {
 	width: 60%;
@@ -323,16 +375,17 @@ th.sync {
 }
 
 #wpf-settings i.wpf-tip {
-	padding-left: 4px;
+	padding: 2px 4px;
 	font-size: 16px;
 	line-height: 1.5;
 	vertical-align: middle;
-	color: #666;
+	color: #428bca;
 	cursor: pointer;
+	width: 24px;
 }
 
 #wpf-settings i.wpf-tip:hover {
-	color: #333;
+	color: #0071a1;
 }
 
 /* Log viewer */

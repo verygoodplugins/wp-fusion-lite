@@ -111,8 +111,6 @@ class WPF_Autopilot {
 			echo '<script type="text/javascript">
 			  if (typeof Autopilot !== "undefined") {
 
-			  	console.log("doing it");
-
 				Autopilot.run("associate", {
 					_simpleAssociate: true,  
 					Email: "' . $email . '"
@@ -216,12 +214,12 @@ class WPF_Autopilot {
 		}
 
 		$this->params = array(
-			'timeout'     => 60,
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'headers'     => array(
+			'timeout'    => 20,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
 				'autopilotapikey' => $access_key,
-				'Content-type'	=> 'application/json'
-			)
+				'Content-type'    => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -595,7 +593,11 @@ class WPF_Autopilot {
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/autopilot-fields.php';
 
-		$update_data = array('contact' => array('custom' => array()));
+		$update_data = array(
+			'contact' => array(
+				'custom' => array(),
+			),
+		);
 
 		foreach( $data as $crm_field => $value ) {
 
@@ -625,7 +627,7 @@ class WPF_Autopilot {
 			// elseif (is_float($value)) {
 			// 	$update_data['contact']['custom'][ 'float--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
-			
+
 			// elseif (is_bool($value)) {
 			// 	$update_data['contact']['custom'][ 'boolean--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
@@ -637,7 +639,15 @@ class WPF_Autopilot {
 
 		}
 
-		$params = $this->params;
+		if ( empty( $update_data['Email'] ) ) {
+
+			// We can't update a contact without an email so we'll need to load it
+
+			$update_data['contact']['Email'] = wp_fusion()->crm_base->get_email_from_cid( $contact_id );
+
+		}
+
+		$params         = $this->params;
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api2.autopilothq.com/v1/contact';
@@ -660,39 +670,36 @@ class WPF_Autopilot {
 
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-		$response      	= json_decode( wp_remote_retrieve_body( $response ) );
+		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if( empty( $response ) ) {
+		if ( empty( $response ) ) {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Autopilot.' );
 		}
 
-		if ( ! empty( $response->custom_fields ) ) {
+		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			foreach ($response->custom_fields as $key => $custom_field) {
+			if ( $field_data['active'] ) {
 
-				foreach ( $contact_fields as $field_id => $field_data ) {
+				if ( isset( $response[ $field_data['crm_field'] ] ) ) {
 
-					if ( $field_data['active'] == true && ! empty( $response->{ $field_data['crm_field'] } ) ) {
-						$user_meta[ $field_id ] = $response->{ $field_data['crm_field'] };
-					}
+					$user_meta[ $field_id ] = $response[ $field_data['crm_field'] ];
+
+				} elseif ( isset( $response['custom'][ $field_data['crm_field'] ] ) ) {
+
+					// Custom fields
+					$user_meta[ $field_id ] = $response['custom'][ $field_data['crm_field'] ];
 
 				}
-
 			}
-
 		}
 
 		return $user_meta;

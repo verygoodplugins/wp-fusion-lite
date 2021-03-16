@@ -39,9 +39,9 @@ if ( ! function_exists( 'wpf_log' ) ) {
 
 if ( ! function_exists( 'wpf_has_tag' ) ) {
 
-	function wpf_has_tag( $tag, $user_id = false ) {
+	function wpf_has_tag( $tags, $user_id = false ) {
 
-		return wp_fusion()->user->has_tag( $tag, $user_id );
+		return wp_fusion()->user->has_tag( $tags, $user_id );
 
 	}
 }
@@ -81,6 +81,37 @@ if ( ! function_exists( 'wpf_get_current_user_id' ) ) {
 
 	}
 }
+
+/**
+ * Gets the WordPress user ID from a contact ID.
+ *
+ * @since 3.35.17
+ *
+ * @param string $contact_id The contact ID to search by.
+ * @return int|bool The user ID, or false if not found.
+ */
+
+function wpf_get_user_id( $contact_id ) {
+
+	return wp_fusion()->user->get_user_id( $contact_id );
+
+}
+
+/**
+ * Gets the CRM contact ID from WordPress user ID.
+ *
+ * @since 3.36.1
+ *
+ * @param int $user_id The user ID to search by.
+ * @return string|bool The contact ID, or false if not found,
+ */
+
+function wpf_get_contact_id( $user_id = false ) {
+
+	return wp_fusion()->user->get_contact_id( $user_id );
+
+}
+
 
 /**
  * Checks if user is logged in, with support for auto-logged-in users
@@ -175,6 +206,21 @@ function wpf_get_field_type( $meta_key, $default = 'text' ) {
 }
 
 /**
+ * Is a WordPress meta key a pseudo field and should only be sent to the CRM, not loaded
+ *
+ * @since 3.35.16
+ *
+ * @param string $meta_key The meta key to look up
+ * @return bool Whether or not the field is a pseudo field
+ */
+
+function wpf_is_pseudo_field( $meta_key ) {
+
+	return wp_fusion()->crm_base->is_pseudo_field( $meta_key );
+
+}
+
+/**
  * Are we currently in an auto-login session?
  *
  * @return bool
@@ -182,7 +228,7 @@ function wpf_get_field_type( $meta_key, $default = 'text' ) {
 
 function doing_wpf_auto_login() {
 
-	if ( defined( 'DOING_WPF_AUTO_LOGIN' ) && true == DOING_WPF_AUTO_LOGIN ) {
+	if ( is_object( wp_fusion()->auto_login ) && ! empty( wp_fusion()->auto_login->auto_login_user ) ) {
 		return true;
 	} else {
 		return false;

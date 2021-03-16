@@ -21,8 +21,9 @@ class WPF_Lead_Source_Tracking {
 
 		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 
-	}
+		add_filter( 'wpf_meta_field_groups', array( $this, 'add_meta_field_group' ), 5 );
 
+	}
 
 	/**
 	 * Tries to detect a leadsource for new visitors and makes the data available to integrations
@@ -59,18 +60,18 @@ class WPF_Lead_Source_Tracking {
 		foreach ( $leadsource_vars as $var ) {
 
 			if ( isset( $_GET[ $var ] ) && isset( $contact_fields[ $var ] ) && $contact_fields[ $var ]['active'] == true ) {
-				setcookie( 'wpf_leadsource[' . $var . ']', $_GET[ $var ], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( '_wpf_leadsource[' . $var . ']', $_GET[ $var ], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
 
-		if ( ! is_admin() && empty( $_COOKIE['wpf_ref'] ) ) {
+		if ( ! is_admin() && empty( $_COOKIE['_wpf_ref'] ) ) {
 
 			if ( isset( $contact_fields['original_ref'] ) && $contact_fields['original_ref']['active'] == true && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-				setcookie( 'wpf_ref[original_ref]', $_SERVER['HTTP_REFERER'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( '_wpf_ref[original_ref]', $_SERVER['HTTP_REFERER'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 
 			if ( isset( $contact_fields['landing_page'] ) && $contact_fields['landing_page']['active'] == true ) {
-				setcookie( 'wpf_ref[landing_page]', $_SERVER['REQUEST_URI'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( '_wpf_ref[landing_page]', $_SERVER['REQUEST_URI'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
 
@@ -88,12 +89,12 @@ class WPF_Lead_Source_Tracking {
 		// No need to run this when a user registers
 		remove_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
 
-		if ( ! empty( $_COOKIE['wpf_leadsource'] ) ) {
-			$user_meta = array_merge( $user_meta, $_COOKIE['wpf_leadsource'] );
+		if ( ! empty( $_COOKIE['_wpf_leadsource'] ) ) {
+			$user_meta = array_merge( $user_meta, $_COOKIE['_wpf_leadsource'] );
 		}
 
-		if ( ! empty( $_COOKIE['wpf_ref'] ) ) {
-			$user_meta = array_merge( $user_meta, $_COOKIE['wpf_ref'] );
+		if ( ! empty( $_COOKIE['_wpf_ref'] ) ) {
+			$user_meta = array_merge( $user_meta, $_COOKIE['_wpf_ref'] );
 		}
 
 		return $user_meta;
@@ -109,7 +110,7 @@ class WPF_Lead_Source_Tracking {
 
 	function merge_lead_source_guest( $args ) {
 
-		if ( ! isset( $_COOKIE['wpf_leadsource'] ) && ! isset( $_COOKIE['wpf_ref'] ) ) {
+		if ( ! isset( $_COOKIE['_wpf_leadsource'] ) && ! isset( $_COOKIE['_wpf_ref'] ) ) {
 			return $args;
 		}
 
@@ -122,12 +123,12 @@ class WPF_Lead_Source_Tracking {
 
 		$merged_data = array();
 
-		if ( isset( $_COOKIE['wpf_leadsource'] ) && is_array( $_COOKIE['wpf_leadsource'] ) ) {
-			$merged_data = array_merge( $merged_data, $_COOKIE['wpf_leadsource'] );
+		if ( isset( $_COOKIE['_wpf_leadsource'] ) && is_array( $_COOKIE['_wpf_leadsource'] ) ) {
+			$merged_data = array_merge( $merged_data, $_COOKIE['_wpf_leadsource'] );
 		}
 
-		if ( isset( $_COOKIE['wpf_ref'] ) && is_array( $_COOKIE['wpf_ref'] ) ) {
-			$merged_data = array_merge( $merged_data, $_COOKIE['wpf_ref'] );
+		if ( isset( $_COOKIE['_wpf_ref'] ) && is_array( $_COOKIE['_wpf_ref'] ) ) {
+			$merged_data = array_merge( $merged_data, $_COOKIE['_wpf_ref'] );
 		}
 
 		if ( ! empty( $merged_data ) ) {
@@ -199,10 +200,30 @@ class WPF_Lead_Source_Tracking {
 
 	function allowed_cookies( $cookies ) {
 
-		$cookies[] = 'wpf_leadsource';
-		$cookies[] = 'wpf_ref';
+		$cookies[] = '_wpf_leadsource';
+		$cookies[] = '_wpf_ref';
 
 		return $cookies;
+
+	}
+
+	/**
+	 * Add Lead Source Tracking field group to Contact Fields list
+	 *
+	 * @since  3.36.16
+	 *
+	 * @param  array $field_groups The field groups.
+	 * @return array  The field groups
+	 */
+	public function add_meta_field_group( $field_groups ) {
+
+		$field_groups['leadsource'] = array(
+			'title'  => __( 'Google Analytics and Lead Source Tracking', 'wp-fusion-lite' ),
+			'url'    => 'https://wpfusion.com/documentation/tutorials/lead-source-tracking/',
+			'fields' => array(),
+		);
+
+		return $field_groups;
 
 	}
 

@@ -57,7 +57,7 @@ class WP_Fusion_Options {
 	private $subpages;
 
 	// Will contain all of the options as stored in the database
-	protected $options;
+	public $options;
 
 	// Temporary array to contain all of the checboxes in use
 	private $checkboxes;
@@ -131,7 +131,7 @@ class WP_Fusion_Options {
 	 *
 	 * @internal param array $subpages (optional) Contains subpages to be generated off of the main page if a top-level menus is being created
 	 */
-	public function __construct( $setup, $settings, $sections = null, $subpages = null ) {
+	public function __construct( $setup, $sections = null, $subpages = null ) {
 
 		// Merge default setup with user-specified setup parameters
 		$setup = wp_parse_args( $setup, $this->default_project );
@@ -141,7 +141,7 @@ class WP_Fusion_Options {
 		$this->setup                      = $setup;
 		$this->sections                   = $sections;
 		$this->subpages                   = $subpages;
-		$this->settings                   = $settings;
+		$this->settings                   = array();
 		$this->default_setting['section'] = $setup['slug'];
 
 		// Load option group
@@ -155,13 +155,13 @@ class WP_Fusion_Options {
 
 	public function init() {
 
-		if ( isset( $_GET['page'] ) && $_GET['page'] == 'wpf-settings' ) {
+		if ( isset( $_GET['page'] ) && 'wpf-settings' == $_GET['page'] ) {
+
+			// Remove all notices from other plugins
+
+			remove_all_actions( 'admin_notices' );
 
 			do_action( 'wpf_settings_page_init' );
-
-			// Set options based on configured settings
-			//$this->options                 = apply_filters( $this->setup['project_slug'] . '_initialize_options', $this->options );
-			//wp_fusion()->settings->options = $this->options;
 
 			// Load in all pluggable settings
 			$settings = apply_filters( $this->setup['project_slug'] . '_configure_settings', $this->settings, $this->options );
@@ -169,13 +169,12 @@ class WP_Fusion_Options {
 			// Initialize settings to default values
 			$this->settings = $this->initialize_settings( $settings );
 
-			if ( isset( $_POST['action'] ) && $_POST['action'] == 'update' && isset( $_POST[ $this->setup['project_slug'] . '_nonce' ] ) ) {
+			if ( isset( $_POST['action'] ) && 'update' == $_POST['action'] && isset( $_POST[ $this->setup['project_slug'] . '_nonce' ] ) ) {
 
 				$this->save_options();
 
-				$this->initialize_settings( $this->options );
+				// Reconfigure settings based on the options that were just saved (for example unlocking things based on checkbox inputs)
 
-				// Reconfigure settings based on saved options
 				$this->settings = apply_filters( $this->setup['project_slug'] . '_configure_settings', $this->settings, $this->options );
 
 			}
@@ -205,20 +204,22 @@ class WP_Fusion_Options {
 		$nonce = $_POST[ $this->setup['project_slug'] . '_nonce' ];
 
 		if ( ! isset( $_POST[ $this->setup['project_slug'] . '_nonce' ] ) ) {
-			return;}
+			return;
+		}
 
 		if ( ! wp_verify_nonce( $nonce, $this->setup['project_slug'] ) ) {
 			die( 'Security check. Invalid nonce.' );
 		}
 
 		// Get array of form data
-		if ( array_key_exists( $this->option_group, $_POST ) ) {
+		if ( isset( $_POST[ $this->option_group ] ) ) {
 			$this->post_data = $_POST[ $this->option_group ];
 		} else {
 			$this->post_data = array();
 		}
 
 		// For each settings field, run the input through it's defined validation function
+
 		$settings = $this->settings;
 
 		// Beydefault $_POST ignores checkboxes with no value set, so we need to iterate through
@@ -248,16 +249,6 @@ class WP_Fusion_Options {
 
 				$this->post_data[ $id ] = $this->validate_options( $id, $this->post_data[ $id ], $setting );
 
-			} elseif ( isset( $this->post_data[ $id ] ) && isset( $setting['subfields'] ) ) {
-
-				foreach ( $this->post_data[ $id ] as $sub_id => $subfield ) {
-
-					if ( isset( $this->post_data[ $id ][ $sub_id ] ) ) {
-
-						$this->post_data[ $id ][ $sub_id ] = $this->validate_options( $sub_id, $this->post_data[ $id ][ $sub_id ], $setting['subfields'][ $sub_id ] );
-
-					}
-				}
 			}
 		}
 
@@ -266,11 +257,16 @@ class WP_Fusion_Options {
 			do_action( 'wpf_resetting_options', $this->options );
 
 			delete_option( $this->option_group );
-			$this->options = null;
+			$this->options = array();
 
 			// Rebuild defaults and apply filters
-			$settings       = $this->initialize_settings( $this->settings );
-			$this->settings = apply_filters( $this->setup['project_slug'] . '_configure_settings', $settings, $this->options );
+			$settings = apply_filters( $this->setup['project_slug'] . '_configure_settings', $this->settings, $this->options );
+
+			// Initialize settings to default values
+			$this->settings = $this->initialize_settings( $settings );
+
+			// Update the options within the class
+			wp_fusion()->settings->options = $this->options;
 
 		} else {
 
@@ -280,10 +276,46 @@ class WP_Fusion_Options {
 			// Re-do init
 			$this->options = apply_filters( $this->setup['project_slug'] . '_initialize_options', $this->options );
 
-			// Update the option in the database
-			update_option( $this->option_group, $this->options, false );
+			// Clear out any empty or default values so they don't need to be saved
 
-			// Update the options within the class
+			$options = $this->options;
+
+			foreach ( $options as $id => $value ) {
+
+				if ( isset( $settings[ $id ] ) ) {
+
+					// If the setting is known
+
+					if ( empty( $value ) && empty( $settings[ $id ]['std'] ) ) {
+
+						// If the setting is empty and the standard is empty, then we don't need to save it to the database
+						unset( $options[ $id ] );
+
+					}
+				} elseif ( ! isset( $settings[ $id ] ) && empty( $value ) ) {
+
+					// Cases where a setting was posted but it wasn't registered (like a CRM config panel we're no longer using)
+					unset( $options[ $id ] );
+
+				}
+			}
+
+			// As of v3.37.0 we now store these in their own keys for performance reasons
+
+			if ( isset( $options['available_tags'] ) ) {
+				update_option( 'wpf_available_tags', $options['available_tags'], false );
+				unset( $options['available_tags'] );
+			}
+
+			if ( isset( $options['crm_fields'] ) ) {
+				update_option( 'wpf_crm_fields', $options['crm_fields'], false );
+				unset( $options['crm_fields'] );
+			}
+
+			// Update the option in the database
+			update_option( $this->option_group, $options );
+
+			// Update the options within the WPF class
 			wp_fusion()->settings->options = $this->options;
 
 			// Let the page renderer know that the settings have been updated
@@ -355,7 +387,7 @@ class WP_Fusion_Options {
 	/*----------------------------------------------------------------*/
 
 	/**
-	 * Checks for new settings fields and sets them to default values
+	 * Checks for new settings fields and sets their options to default values
 	 *
 	 * @access private
 	 *
@@ -367,37 +399,38 @@ class WP_Fusion_Options {
 
 	private function initialize_settings( $settings ) {
 
-		$options      = get_option( $this->option_group );
-		$needs_update = false;
-
 		foreach ( $settings as $id => $setting ) {
 
-			$setting = wp_parse_args( $setting, $this->default_setting );
-
 			// Set default values from global setting default template
-			$settings[ $id ] = $setting;
 
-			if ( $setting['type'] == 'checkbox' ) {
+			$settings[ $id ] = wp_parse_args( $setting, $this->default_setting );
+
+			// We need to keep track of some types here
+
+			if ( 'checkbox' == $setting['type'] ) {
 				$this->checkboxes[] = $id;
-			}
-
-			if ( $setting['type'] == 'multi_select' ) {
+			} elseif ( 'multi_select' == $setting['type'] || 'checkboxes' == $setting['type'] || 'assign_tags' == $setting['type'] ) {
 				$this->multi_selects[] = $id;
 			}
 
-			if ( $setting['type'] == 'checkboxes' ) {
-				$this->multi_selects[] = $id;
-			}
+			// Add integrations tab
 
-			if ( $setting['type'] == 'assign_tags' ) {
-				$this->multi_selects[] = $id;
+			if ( 'integrations' == $setting['section'] && ! isset( $this->sections[ $this->setup['slug'] ]['integrations'] ) ) {
+				$this->sections[ $this->setup['slug'] ] = wp_fusion()->settings->insert_setting_after( 'contact-fields', $this->sections[ $this->setup['slug'] ], array( 'integrations' => __( 'Integrations', 'wp-fusion-lite' ) ) );
 			}
 
 			// If a custom setting template has been specified, load those values as well
+
 			if ( has_filter( 'default_field_' . $setting['type'] ) ) {
-				$settings[ $id ] = wp_parse_args( $settings[ $id ], apply_filters( 'default_field_' . $setting['type'], $setting ) );
+
+				$default         = apply_filters( 'default_field_' . $setting['type'], $setting );
+				$settings[ $id ] = wp_parse_args( $settings[ $id ], $default );
+
 			} elseif ( method_exists( $this, 'default_field_' . $setting['type'] ) ) {
-				$settings[ $id ] = wp_parse_args( $settings[ $id ], call_user_func( array( $this, 'default_field_' . $setting['type'] ) ) );
+
+				$default         = call_user_func( array( $this, 'default_field_' . $setting['type'] ) );
+				$settings[ $id ] = wp_parse_args( $settings[ $id ], $default );
+
 			}
 
 			// Load the array of settings currently in use
@@ -405,45 +438,16 @@ class WP_Fusion_Options {
 				$this->fields[ $setting['type'] ] = true;
 			}
 
-			// Set the default value if no option exists
-			if ( ! isset( $options[ $id ] ) && isset( $settings[ $id ]['std'] ) ) {
+			if ( ! isset( $this->options[ $id ] ) && ! empty( $settings[ $id ]['std'] ) ) {
 
-				$needs_update   = true;
-				$options[ $id ] = $settings[ $id ]['std'];
+				// Set the default value if no option exists
+				$this->options[ $id ] = $settings[ $id ]['std'];
 
-			} elseif ( ! isset( $options[ $id ] ) && ! isset( $settings[ $id ]['std'] ) ) {
+			} elseif ( ! isset( $this->options[ $id ] ) ) {
 
-				// If no default has been specified, set the option to an empty string (to prevent PHP notices)
-				$needs_update   = true;
-				$options[ $id ] = '';
+				// If there's no std, set it to false
+				$this->options[ $id ] = false;
 			}
-
-			// Set defaults for subfields if any subfields are present
-			if ( isset( $setting['subfields'] ) ) {
-				foreach ( $setting['subfields'] as $sub_id => $sub_setting ) {
-
-					// Fill in missing parts of the array
-					$settings[ $id ]['subfields'][ $sub_id ] = wp_parse_args( $sub_setting, $this->default_setting );
-
-					if ( method_exists( $this, 'default_field_' . $sub_setting['type'] ) ) {
-						$settings[ $id ]['subfields'][ $sub_id ] = wp_parse_args( $settings[ $id ]['subfields'][ $sub_id ], call_user_func( array( $this, 'default_field_' . $sub_setting['type'] ) ) );
-					}
-
-					// Set default value if needed
-					if ( ! isset( $options[ $id ][ $sub_id ] ) && isset( $setting['subfields'][ $sub_id ]['std'] ) ) {
-						$options[ $id ][ $sub_id ] = $setting['subfields'][ $sub_id ]['std'];
-					} elseif ( ! isset( $options[ $id ][ $sub_id ] ) && ! isset( $setting['subfields'][ $sub_id ]['std'] ) ) {
-						$options[ $id ][ $sub_id ] = '';
-					}
-				}
-			}
-		}
-
-		// If new options have been added, set their default values
-		if ( $needs_update ) {
-			update_option( $this->option_group, $options, false );
-			$this->options                 = $options;
-			wp_fusion()->settings->options = $options;
 		}
 
 		return $settings;
@@ -698,33 +702,41 @@ class WP_Fusion_Options {
 		<?php $page = $this->get_page_by_screen( get_current_screen() ); ?>
 		<?php $page = apply_filters( $this->setup['project_slug'] . '_configure_sections', $page, $this->options ); ?>
 
-		<div class="wrap">
+		<div class="wrap wpf-settings-wrap">
 		<img id="wpf-settings-logo" src="<?php echo WPF_DIR_URL; ?>/assets/img/logo-sm-trans.png">
-		<h2 id="wpf-settings-header"><?php echo $page['page_title']; ?> <?php do_action( 'wpf_settings_page_title' ); ?></h2>
+		<h2 class="wp-heading-inline" id="wpf-settings-header"><?php echo $page['page_title']; ?></h2>
+		<?php do_action( 'wpf_settings_page_title' ); ?>
 
-		<?php do_action( 'wpf_settings_after_page_title' ); ?>
+		<hr class="wp-header-end" />
 
-		<?php
-		if ( $this->settings_updated ) {
-			echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><strong>Settings saved.</strong></p></div>';
-		}
+		<div id="wpf-settings-notices">
 
-		if ( $this->settings_imported ) {
-			echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><strong>Settings successfully imported.</strong></p></div>';
-		}
+			<?php
 
-		if ( $this->reset_options ) {
-			echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><strong>Settings successfully reset.</strong></p></div>';
-		}
+			do_action( 'wpf_settings_notices' );
 
-		if ( $this->errors ) {
-			foreach ( $this->errors as $id => $error_message ) {
-				echo '<div id="message" class="error"><p><i class="fa fa-warning"></i>' . $error_message . '</p></div>';
-				echo '<style type="text/css">#' . $id . '{ border: 1px solid #d00; }</style>';
+			if ( $this->settings_updated ) {
+				echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><strong>Settings saved.</strong></p></div>';
 			}
-		}
 
-		?>
+			if ( $this->settings_imported ) {
+				echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><strong>Settings successfully imported.</strong></p></div>';
+			}
+
+			if ( $this->reset_options ) {
+				echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><strong>Settings successfully reset.</strong></p></div>';
+			}
+
+			if ( $this->errors ) {
+				foreach ( $this->errors as $id => $error_message ) {
+					echo '<div id="message" class="error"><p><i class="fa fa-warning"></i>' . $error_message . '</p></div>';
+					echo '<style type="text/css">#' . $id . '{ border: 1px solid #d00; }</style>';
+				}
+			}
+
+			?>
+
+		</div>
 
 		<form id="<?php echo $page['slug']; ?>" class="
 								<?php
@@ -870,6 +882,8 @@ class WP_Fusion_Options {
 
 					$setting = array_merge( $defaults, $setting );
 
+					$setting = apply_filters( 'wpf_configure_setting_' . $id, $setting, $this->options );
+
 					/**
 					 * "field_begin" override
 					 */
@@ -903,8 +917,8 @@ class WP_Fusion_Options {
 					 * "show_field" override
 					 */
 
-					// Allow filtering setting strings
-					$setting = apply_filters( 'wpf_pre_show_field_settings', $setting, $id );
+					// Allow filtering setting strings (removed in v3.37.0 in favor of wpf_configure_setting_ )
+					// $setting = apply_filters( 'wpf_pre_show_field_settings', $setting, $id );
 
 					if ( has_action( 'show_field_' . $id ) ) {
 
@@ -980,7 +994,7 @@ class WP_Fusion_Options {
 		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label>';
 
 		if ( isset( $field['tooltip'] ) ) {
-			echo ' <i class="fa fa-question-circle wpf-tip right" data-tip="' . $field['tooltip'] . '"></i>';
+			echo ' <i class="fa fa-question-circle wpf-tip wpf-tip-right" data-tip="' . $field['tooltip'] . '"></i>';
 		}
 
 		echo '</th>';
@@ -1486,7 +1500,20 @@ class WP_Fusion_Options {
 			$field['placeholder'] = false;
 		}
 
-		echo '<select id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="select4 ' . $field['class'] . '" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . ' ' . ( $field['placeholder'] ? 'data-placeholder="' . $field['placeholder'] . '"' : '' ) . ' ' . ( $field['allow_null'] == false ? 'data-allow-clear="false"' : '' ) . '>';
+		$unlock = '';
+
+		if ( isset( $field['unlock'] ) ) {
+
+			foreach ( $field['unlock'] as $target ) {
+				$unlock .= $target . ' ';
+			}
+		}
+
+		if ( count( $field['choices'] ) > 10 ) {
+			$field['class'] .= 'select4-search';
+		}
+
+		echo '<select id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="select4 ' . $field['class'] . '" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . ' ' . ( $field['placeholder'] ? 'data-placeholder="' . $field['placeholder'] . '"' : '' ) . ' ' . ( $field['allow_null'] == false ? 'data-allow-clear="false"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . trim( $unlock ) . '"' : '' ) . '>';
 		if ( $field['allow_null'] == true || ! empty( $field['placeholder'] ) ) {
 			echo '<option></option>';}
 

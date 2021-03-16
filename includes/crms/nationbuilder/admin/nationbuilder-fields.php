@@ -148,32 +148,32 @@ $nationbuilder_fields['shipping_country'] = array(
 // Work Address
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+address1',
-	'crm_label' => 'Address 1 (Work / Primary)',
+	'crm_label' => 'Address 1 (Work)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+address2',
-	'crm_label' => 'Address 2 (Work / Primary)',
+	'crm_label' => 'Address 2 (Work)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+city',
-	'crm_label' => 'City (Work / Primary)',
+	'crm_label' => 'City (Work)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+state',
-	'crm_label' => 'State (Work / Primary)',
+	'crm_label' => 'State (Work)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+zip',
-	'crm_label' => 'Postcode (Work / Primary)',
+	'crm_label' => 'Postcode (Work)',
 );
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+country_code',
-	'crm_label' => 'Country (Work / Primary)',
+	'crm_label' => 'Country (Work)',
 );
 
 // Other stuff
@@ -508,5 +508,6 @@ $nationbuilder_ignore_fields = array(
 	'user_submitted_address',
 	'voter_updated_at',
 	'warnings_count',
+	'work_address',
 );
 

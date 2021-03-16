@@ -120,7 +120,7 @@ class WPF_MailChimp_Admin {
 			'type'        => 'select',
 			'placeholder' => 'Select Audience',
 			'section'     => 'main',
-			'choices'     => $options['mc_lists']
+			'choices'     => $options['mc_lists'],
 		);
 
 		$new_settings['mc_optin'] = array(

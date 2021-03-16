@@ -19,8 +19,8 @@ class WPF_Access_Control {
 		add_filter( 'wp_get_nav_menu_items', array( $this, 'hide_menu_items' ), 10, 3 );
 
 		// Query / archive filtering
-		add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
 		add_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
+		add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
 		add_filter( 'the_posts', array( $this, 'exclude_restricted_posts' ), 10, 2 );
 
 		// Protect pseudo-pages
@@ -78,23 +78,16 @@ class WPF_Access_Control {
 		$post_id = apply_filters( 'wpf_user_can_access_post_id', $post_id );
 
 		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
-
-		if ( empty( $post_restrictions ) || ! is_array( $post_restrictions ) ) {
-			$post_restrictions = array();
-		}
-
-		if ( ! isset( $post_restrictions['allow_tags'] ) ) {
-			$post_restrictions['allow_tags'] = array();
-		}
-
-		if ( ! isset( $post_restrictions['allow_tags_all'] ) ) {
-			$post_restrictions['allow_tags_all'] = array();
-		}
-
+		$post_restrictions = wp_parse_args( $post_restrictions, WPF_Admin_Interfaces::$meta_box_defaults );
 		$post_restrictions = apply_filters( 'wpf_post_access_meta', $post_restrictions, $post_id );
 
 		// See if taxonomy restrictions are in effect
-		if ( $this->user_can_access_term( $post_id, $user_id ) == false ) {
+		if ( ! $this->user_can_access_term( $post_id, $user_id ) ) {
+			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
+		}
+
+		// See if post type restrictions are in effect
+		if ( ! $this->user_can_access_post_type( get_post_type( $post_id ), $user_id ) ) {
 			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
 		}
 
@@ -331,12 +324,6 @@ class WPF_Access_Control {
 			}
 		}
 
-		// If admins are excluded from restrictions
-
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && user_can( $user_id, 'manage_options' ) ) {
-			$can_access = true;
-		}
-
 		return apply_filters( 'wpf_user_can_access_post_type', $can_access, $user_id, $post_type );
 
 	}
@@ -367,6 +354,14 @@ class WPF_Access_Control {
 			$post_restrictions = $term_restrictions;
 		}
 
+		// Not logged in redirect
+
+		$redirect = wp_fusion()->settings->get( 'default_not_logged_in_redirect' );
+
+		if ( ! wpf_is_user_logged_in() && ! empty( $redirect ) ) {
+			return $redirect;
+		}
+
 		$default_redirect = wp_fusion()->settings->get( 'default_redirect' );
 
 		// Get redirect URL if one is set
@@ -381,8 +376,13 @@ class WPF_Access_Control {
 				return false;
 			}
 
-			$redirect = get_permalink( $post_restrictions['redirect'] );
-
+			if ( 'home' == $post_restrictions['redirect'] ) {
+				$redirect = home_url();
+			} elseif ( 'login' == $post_restrictions['redirect'] ) {
+				$redirect = wp_login_url();
+			} else {
+				$redirect = get_permalink( $post_restrictions['redirect'] );
+			}
 		} elseif ( ! empty( $default_redirect ) ) {
 
 			$redirect = $default_redirect;
@@ -969,12 +969,6 @@ class WPF_Access_Control {
 
 	public function get_terms_args( $args, $taxonomies ) {
 
-		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
-
-		if ( empty( $taxonomy_rules ) ) {
-			return $args;
-		}
-
 		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
 			return $args;
 		}
@@ -986,6 +980,12 @@ class WPF_Access_Control {
 		}
 
 		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+			return $args;
+		}
+
+		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
+
+		if ( empty( $taxonomy_rules ) ) {
 			return $args;
 		}
 
@@ -1031,7 +1031,7 @@ class WPF_Access_Control {
 	 * @return  void
 	 */
 
-	public function pre_get_posts( $query ) {
+	public function filter_queries( $query ) {
 
 		if ( empty( $query ) || ! is_object( $query ) ) {
 			return;
@@ -1041,37 +1041,86 @@ class WPF_Access_Control {
 
 			$setting = wp_fusion()->settings->get( 'hide_archives' );
 
-			if ( $setting === true || $setting == 'standard' ) {
+			if ( false == $setting ) {
+				return;
+			}
+
+			// See if the post type is eligible
+
+			$post_types = $query->get( 'post_type' );
+
+			// Some queries use an array of post types so we'll standardize that here
+
+			if ( ! is_array( $post_types ) ) {
+				$post_types = array( $post_types );
+			}
+
+			$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
+
+			if ( ! empty( $allowed_post_types ) && empty( array_intersect( $post_types, $allowed_post_types ) ) ) {
+
+				// Post type not allowed
+				return;
+
+			}
+
+			// Sometimes we may want to change the mode depending on the post type (for example bbPress topics)
+
+			$setting = apply_filters( 'wpf_query_filtering_mode', $setting, $query );
+
+			if ( 'standard' == $setting ) {
 
 				$query->set( 'suppress_filters', false );
 
-			} elseif ( $setting == 'advanced' ) {
+			} elseif ( 'advanced' == $setting ) {
 
-				$post_type = $query->get( 'post_type' );
+				if ( empty( $post_types ) && $query->is_search() ) {
 
-				if ( empty( $post_type ) && $query->is_search() ) {
+					if ( empty( $allowed_post_types ) ) {
 
-					$post_type = 'any'; // This will be slower but allows filtering to work on search results
+						$post_types = 'any'; // This will be slower but allows filtering to work on search results
 
-				} elseif ( empty( $post_type ) ) {
+					} else {
+
+						$post_types = $allowed_post_types;
+
+					}
+
+				} elseif ( empty( $post_types ) ) {
 					return;
 				}
 
-				remove_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
+				// Sometimes query filtering just doesn't work. We can quit early if needed
 
-				$args = array(
-					'post_type'  => $post_type,
-					'nopaging'   => true,
-					'fields'     => 'ids',
-					'meta_query' => array(
-						array(
-							'key'     => 'wpf-settings',
-							'compare' => 'EXISTS',
+				if ( apply_filters( 'wpf_bypass_query_filtering', false, $query ) ) {
+					return;
+				}
+
+				// Don't loop back on this or it will be bad
+
+				remove_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
+
+				$post_ids = wp_cache_get( 'wpf_query_filter_' . $post_types[0] );
+
+				if ( false === $post_ids ) {
+
+					$args = array(
+						'post_type'  => $post_types,
+						'nopaging'   => true,
+						'fields'     => 'ids',
+						'meta_query' => array(
+							array(
+								'key'     => 'wpf-settings',
+								'compare' => 'EXISTS',
+							),
 						),
-					),
-				);
+					);
 
-				$post_ids = get_posts( $args );
+					$post_ids = get_posts( $args );
+
+					wp_cache_set( 'wpf_query_filter_' . $post_types[0], $post_ids, '', MINUTE_IN_SECONDS );
+
+				}
 
 				if ( ! empty( $post_ids ) ) {
 
@@ -1086,11 +1135,22 @@ class WPF_Access_Control {
 						}
 					}
 
-					$query->set( 'post__not_in', $not_in );
+					if ( ! empty( $not_in ) ) {
 
+						$query->set( 'post__not_in', $not_in );
+
+						// If the query has a post__in, that will take priority, so we'll adjust for that here
+
+						$in = $query->get( 'post__in' );
+
+						if ( ! empty( $in ) ) {
+							$in = array_diff( $in, $not_in );
+							$query->set( 'post__in', $in );
+						}
+					}
 				}
 
-				add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
+				add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
 
 			}
 		}
@@ -1115,13 +1175,29 @@ class WPF_Access_Control {
 		}
 
 		// Woo variations fixed
-		if ( isset( $_REQUEST['action'] ) && $_REQUEST['action'] == 'woocommerce_load_variations' ) {
+		if ( isset( $_REQUEST['action'] ) && 'woocommerce_load_variations' == $_REQUEST['action'] ) {
 			return $posts;
 		}
 
 		$setting = wp_fusion()->settings->get( 'hide_archives' );
 
-		if ( $setting === true || $setting == 'standard' ) {
+		// Sometimes we may want to change the mode depending on the post type (for example bbPress topics)
+
+		$setting = apply_filters( 'wpf_query_filtering_mode', $setting, $query );
+
+		if ( true === $setting || 'standard' == $setting ) {
+
+			// Sometimes query filtering just doesn't work. We can quit early if needed
+
+			if ( apply_filters( 'wpf_bypass_query_filtering', false, $query ) ) {
+				return $posts;
+			}
+
+			$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
+
+			if ( ! empty( $allowed_post_types ) && ! in_array( $query->get( 'post_type' ), $allowed_post_types ) ) {
+				return $posts;
+			}
 
 			foreach ( $posts as $index => $post ) {
 

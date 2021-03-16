@@ -10,6 +10,8 @@ abstract class WPF_Integrations_Base {
 
 		$this->init();
 
+		// Make the object globally available
+
 		if ( isset( $this->slug ) ) {
 			wp_fusion()->integrations->{$this->slug} = $this;
 		}
@@ -38,7 +40,7 @@ abstract class WPF_Integrations_Base {
 
 		foreach ( $field_map as $key => $field ) {
 
-			if ( ! empty( $meta_fields[ $key ] ) ) {
+			if ( ! empty( $meta_fields[ $key ] ) && empty( $meta_fields[ $field ] ) ) {
 				$meta_fields[ $field ] = $meta_fields[ $key ];
 			}
 		}

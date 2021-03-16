@@ -74,6 +74,7 @@ class WPF_Salesforce {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
+		add_action( 'wpf_api_fail', array( $this, 'api_success' ), 10, 2 );
 
 	}
 
@@ -91,6 +92,10 @@ class WPF_Salesforce {
 		}
 
 		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
+
+		if ( ! is_object( $xml ) ) {
+			wp_die( 'Invalid XML payload: ' . file_get_contents( 'php://input' ) );
+		}
 
 		$data = $xml->children( 'http://schemas.xmlsoap.org/soap/envelope/' )->Body->children( 'http://soap.sforce.com/2005/09/outbound' )->notifications;
 
@@ -196,7 +201,13 @@ class WPF_Salesforce {
 			echo '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">';
 			echo '<soap:Body>';
 			echo '<notificationsResponse xmlns:ns2="urn:sobject.enterprise.soap.sforce.com" xmlns="http://soap.sforce.com/2005/09/outbound">';
-			echo '<Ack>true</Ack>';
+
+			if ( did_action( 'wpf_api_success' ) ) {
+				echo '<Ack>true</Ack>';
+			} else {
+				echo '<Ack>false</Ack>';
+			}
+
 			echo '</notificationsResponse>';
 			echo '</soap:Body>';
 			echo '</soap:Envelope>';
@@ -216,16 +227,23 @@ class WPF_Salesforce {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' && is_numeric( $value ) ) {
+		if ( in_array( $field, wp_fusion()->settings->get( 'read_only_fields', array() ) ) ) {
+
+			// Don't sync read only fields, they'll just throw an error anyway
+
+			return false;
+
+		} elseif ( ( 'datepicker' == $field_type || 'date' == $field_type ) && is_numeric( $value ) ) {
 
 			// Adjust formatting for date fields
 			$date = date( 'Y-m-d', $value );
 
 			return $date;
 
-		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! empty( $value ) ) {
+		} elseif ( is_array( $value ) ) {
 
-			return str_replace( ',', ';', $value );
+			// Multiselects
+			return implode( ';', array_filter( $value ) );
 
 		} else {
 
@@ -516,7 +534,9 @@ class WPF_Salesforce {
 			$this->get_params();
 		}
 
-		$crm_fields = array();
+		$standard_fields  = array();
+		$custom_fields    = array();
+		$read_only_fields = array();
 
 		$request  = $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/describe/';
 		$response = wp_remote_get( $request, $this->params );
@@ -529,25 +549,33 @@ class WPF_Salesforce {
 
 		foreach ( $response->fields as $field ) {
 
-			if ( 'Full Name' == $field->label ) {
-				$field->label .= ' (read only)';
+			if ( false == $field->updateable ) {
+				$field->label      .= ' (' . __( 'read only', 'wp-fusion-lite' ) . ')';
+				$read_only_fields[] = $field->name;
 			}
 
-			if ( 'addess' == $field->type ) {
-				$field->label .= ' (compound field)';
+			if ( 'address' == $field->type ) {
+				$field->label .= ' (' . __( 'compound field', 'wp-fusion-lite' ) . ')';
 			}
 
-			$crm_fields[ $field->name ] = $field->label;
+			if ( true == $field->custom ) {
+				$custom_fields[ $field->name ] = $field->label;
+			} else {
+				$standard_fields[ $field->name ] = $field->label;
+			}
 		}
 
-		// Clean up system fields
-		unset( $crm_fields['Id'] );
-		unset( $crm_fields['isDeleted'] );
-		unset( $crm_fields['accountId'] );
+		asort( $standard_fields );
+		asort( $custom_fields );
 
-		asort( $crm_fields );
+		$crm_fields = array(
+			'Standard Fields' => $standard_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+
+		wp_fusion()->settings->set( 'read_only_fields', $read_only_fields );
 
 		return $crm_fields;
 	}
@@ -576,7 +604,7 @@ class WPF_Salesforce {
 
 		$query_args = array( "q" => "SELECT Id from {$this->object_type} WHERE {$lookup_field} = '{$email_address}'" );
 
-		$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_contact_id' );
+		$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_contact_id', $email_address );
 
 		$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
 
@@ -618,6 +646,8 @@ class WPF_Salesforce {
 
 			$query_args = array( 'q' => "SELECT TopicId from TopicAssignment WHERE EntityId = '" . $contact_id . "'" );
 
+			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_topics', $contact_id );
+
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
 
 			$response = wp_remote_get( $request, $this->params );
@@ -640,6 +670,8 @@ class WPF_Salesforce {
 		} else {
 
 			$query_args = array( 'q' => "SELECT TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
+
+			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_tags', $contact_id );
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
 
@@ -927,8 +959,14 @@ class WPF_Salesforce {
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
 			if ( $field_data['active'] == true && isset( $body[ $field_data['crm_field'] ] ) ) {
-				$user_meta[ $field_id ] = $body[ $field_data['crm_field'] ];
+
+				if ( 'multiselect' == $field_data['type'] || 'checkboxes' == $field_data['type'] ) {
+					$user_meta[ $field_id ] = explode( ';', $body[ $field_data['crm_field'] ] );
+				} else {
+					$user_meta[ $field_id ] = $body[ $field_data['crm_field'] ];
+				}
 			}
+
 		}
 
 		return $user_meta;
@@ -957,7 +995,9 @@ class WPF_Salesforce {
 		if ( $tag_type == 'Topics' ) {
 
 			$query_args = array( 'q' => "SELECT EntityId from TopicAssignment WHERE TopicId = '" . $tag . "'" );
-			$request    = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
+			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'load_contacts', $tag );
+
+			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
 
 			$response = wp_remote_get( $request, $this->params );
 
@@ -976,6 +1016,7 @@ class WPF_Salesforce {
 		} else {
 
 			$query_args = array( 'q' => "SELECT ItemId, TagDefinitionId from ContactTag where TagDefinitionId = '" . $tag . "'" );
+			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'load_contacts', $tag );
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
 

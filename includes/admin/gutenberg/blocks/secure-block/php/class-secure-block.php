@@ -104,7 +104,7 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 					$can_access = true;
 				}
 			}
-		} elseif ( is_user_logged_in() ) {
+		} elseif ( wpf_is_user_logged_in() ) {
 
 			$can_access = true;
 

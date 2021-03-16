@@ -702,6 +702,12 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		protected function task( $item ) {
 
+			$operation = str_replace( 'wpf_batch_', '', $item[0] );
+
+			if ( ! defined( 'DOING_WPF_BATCH_TASK' ) ) {
+				define( 'DOING_WPF_BATCH_TASK', $item[0] );
+			}
+
 			// Disable turbo for bulk processes
 			wp_fusion()->crm = wp_fusion()->crm_base->crm_no_queue;
 

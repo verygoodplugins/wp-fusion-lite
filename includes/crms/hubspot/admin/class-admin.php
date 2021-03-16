@@ -136,14 +136,16 @@ class WPF_HubSpot_Admin {
 			'section' => 'setup',
 		);
 
-		$admin_url = str_replace( 'http://', 'https://', get_admin_url() );
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // auth URL must be HTTPs, even if the site isn't
 		$auth_url  = 'https://app.hubspot.com/oauth/authorize?redirect_uri=' . urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts%20oauth&optional_scope=automation%20e-commerce';
+		$auth_url  = apply_filters( 'wpf_hubspot_auth_url', $auth_url );
 
 		if ( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['hubspot_header']['desc']  = '<table class="form-table"><tr>';
 			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">' . __( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br /><span class="description">You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">' . __( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br />';
+			$new_settings['hubspot_header']['desc'] .= '<span class="description">' . __( 'You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ) . '</td>';
 			$new_settings['hubspot_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
@@ -161,7 +163,7 @@ class WPF_HubSpot_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'hubspot_token', 'hubspot_refresh_token' ),
-				'desc'        => '<a href="' . $auth_url . '">' . __( 'Re-authorize with HubSpot', 'wp-fusion-lite' ) . '</a>',
+				'desc'        => '<a href="' . $auth_url . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</a>',
 			);
 
 		}

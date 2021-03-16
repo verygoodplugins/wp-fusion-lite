@@ -61,7 +61,7 @@ class WPF_User_Profile {
 
 			$user_meta = wp_fusion()->user->pull_user_meta( $user_id );
 
-			$message = sprintf( __( '<strong>Success:</strong> Loaded metadata from %1$s:' ), wp_fusion()->crm->name, $contact_id );
+			$message = sprintf( __( '<strong>Success:</strong> Loaded metadata from %1$s:' ), wp_fusion()->crm->name );
 
 			$message .= '<br /><pre>' . print_r( $user_meta, true ) . '</pre>';
 
@@ -69,7 +69,7 @@ class WPF_User_Profile {
 
 			wp_fusion()->user->push_user_meta( $user_id );
 
-			$message = sprintf( __( '<strong>Success:</strong> Synced user meta to %1$s.' ), wp_fusion()->crm->name, $contact_id );
+			$message = sprintf( __( '<strong>Success:</strong> Synced user meta to %1$s.' ), wp_fusion()->crm->name );
 
 		} elseif ( 'show_meta' == $_GET['wpf_profile_action'] ) {
 
@@ -93,6 +93,10 @@ class WPF_User_Profile {
 	 */
 
 	public function user_profile_update( $user_id ) {
+
+		if ( ! current_user_can( 'edit_users' ) ) {
+			return;
+		}
 
 		global $pagenow;
 
@@ -275,6 +279,12 @@ class WPF_User_Profile {
 
 							<?php echo $contact_id; ?>
 
+							<?php if ( isset( wp_fusion()->crm->edit_url ) ) : ?>
+
+								- <a href="<?php printf( wp_fusion()->crm->edit_url, $contact_id ); ?>" target="_blank"><?php printf( __( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?> &rarr;</a>
+
+							<?php endif; ?>
+
 							<?php do_action( 'wpf_user_profile_after_contact_id', $user->ID ); ?>
 
 						<?php endif; ?>
@@ -328,15 +338,15 @@ class WPF_User_Profile {
 
 					<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=push"><?php _e( 'Push User Meta', 'wp-fusion-lite' ); ?></a>
 
-					<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="<?php printf( __( 'Extracts any enabled meta fields from the database and syncs them to %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>"></span> | 
+					<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php printf( __( 'Extracts any enabled meta fields from the database and syncs them to %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>"></span> | 
 
 					<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=pull"><?php _e( 'Pull User Meta', 'wp-fusion-lite' ); ?></a>
 
-					<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="<?php printf( __( 'Loads any enabled meta fields from %s and saves them to the user record.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>"></span> | 
+					<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php printf( __( 'Loads any enabled meta fields from %s and saves them to the user record.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?>"></span> | 
 
 					<a href="<?php echo admin_url( 'user-edit.php' ); ?>?user_id=<?php echo $user->ID; ?>&wpf_profile_action=show_meta"><?php _e( 'Show User Meta', 'wp-fusion-lite' ); ?></a>
 
-					<span class="dashicons dashicons-editor-help wpf-tip bottom" data-tip="<?php _e( 'Displays all metadata found in the database for this user.', 'wp-fusion-lite' ); ?>"></span> 
+					<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php _e( 'Displays all metadata found in the database for this user.', 'wp-fusion-lite' ); ?>"></span> 
 
 				</td>
 			</tr>

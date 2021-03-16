@@ -24,7 +24,6 @@ class WPF_HubSpot {
 
 	public $app_id;
 
-
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
 	 *
@@ -110,16 +109,18 @@ class WPF_HubSpot {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
 
-			// Dates are in milliseconds
-			$date = date( 'U', strtotime('today', $value) ) * 1000;
+			// Dates are in milliseconds since the epoch so if the timestamp isn't already in ms we'll multiply x 1000 here
+			if ( $value < 1000000000000 ) {
+				$value = date( 'U', strtotime( 'today', $value ) ) * 1000;
+			}
 
-			return $date;
+			return $value;
 
-		} elseif ( ( $field_type == 'checkboxes' || $field_type == 'multiselect' ) && ! empty( $value ) ) {
+		} elseif ( is_array( $value ) ) {
 
-			return str_replace( ',', ';', $value );
+			return implode( ';', array_filter( $value ) );
 
 		} else {
 
@@ -266,6 +267,12 @@ class WPF_HubSpot {
 			} elseif( isset( $body_json->status ) && $body_json->status == 'error' ) {
 
 				$message = $body_json->message;
+
+				// Contextual help
+
+				if ( 'resource not found' == $message ) {
+					$message .= '.<br /><br />This error usually means that you\'ve deleted or merged a contact record in HubSpot, and then tried to update a contact ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
+				}
 
 				if( isset( $body_json->validationResults ) ) {
 
@@ -707,13 +714,14 @@ class WPF_HubSpot {
 
 				$value = $body_json->properties->{$field_data['crm_field']}->value;
 
-				if( $field_data['type'] == 'multiselect' && ! empty( $value ) ) {
-					$value = explode(';', $value);
+				if ( 'multiselect' == $field_data['type'] && ! empty( $value ) ) {
+					$value = explode( ';', $value );
+				} elseif ( ( 'datepicker' == $field_data['type'] || 'date' == $field_data['type'] ) && is_numeric( $value ) ) {
+					$value /= 1000; // Convert milliseconds back to seconds
 				}
 
 				$user_meta[ $field_id ] = $value;
 			}
-
 		}
 
 		return $user_meta;
@@ -794,7 +802,7 @@ class WPF_HubSpot {
 
 	public function tracking_code_output() {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
 			return;
 		}
 

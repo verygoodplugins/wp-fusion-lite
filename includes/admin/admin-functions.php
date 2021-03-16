@@ -208,6 +208,9 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 						$label = $label['label'];
 					}
 
+					$label = str_replace( '(', '<small>', $label ); // (read only) and (compound field)
+					$label = str_replace( ')', '</small>', $label );
+
 					echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
 				}
 
@@ -217,6 +220,9 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 				$field = $group_header;
 				$label = $fields;
+
+				$label = str_replace( '(', '<small>', $label ); // (read only) and (compound field)
+				$label = str_replace( ')', '</small>', $label );
 
 				echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
 
@@ -282,7 +288,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 		echo '<optgroup label="Tagging">';
 
-			echo '<option ' . selected( esc_attr( $setting ), 'add_tag_' . $field_id ) . ' value="add_tag_' . $field_id . '">+ Create tag(s) from value</option>';
+			echo '<option ' . selected( esc_attr( $setting ), 'add_tag_' . $field_id ) . ' value="add_tag_' . $field_id . '">+ ' . __( 'Create tag(s) from value', 'wp-fusion-lite' ) . '</option>';
 
 		echo '</optgroup>';
 

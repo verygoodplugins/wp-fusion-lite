@@ -260,7 +260,9 @@ class WPF_Intercom {
 		$crm_fields = array(
 			'email'		=> 'Email',
 			'phone'		=> 'Phone',
-			'name'		=> 'Name'
+			'firstname' => 'First Name',
+			'lastname'  => 'Last Name',
+			'name'		=> 'Name',
 		);
 
 		$request  = 'https://api.intercom.io/data_attributes/customer';
@@ -469,6 +471,17 @@ class WPF_Intercom {
 			unset( $data['name'] );
 		}
 
+		// Maybe use the combined name
+
+		if ( isset( $data['firstname'] ) && isset( $data['lastname'] ) ) {
+
+			$body['name'] = $data['firstname'] . ' ' . $data['lastname'];
+
+			unset( $data['firstname'] );
+			unset( $data['lastname'] );
+
+		}
+
 		if( ! empty( $data ) ) {
 
 			// All other custom fields
@@ -505,11 +518,13 @@ class WPF_Intercom {
 			$this->get_params();
 		}
 
+		// Combine the name
+
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
@@ -530,8 +545,19 @@ class WPF_Intercom {
 			$body['name'] = $data['name'];
 			unset( $data['name'] );
 		}
-		
-		if( ! empty( $data ) ) {
+
+		// Maybe use the combined name
+
+		if ( isset( $data['firstname'] ) && isset( $data['lastname'] ) ) {
+
+			$body['name'] = $data['firstname'] . ' ' . $data['lastname'];
+
+			unset( $data['firstname'] );
+			unset( $data['lastname'] );
+
+		}
+
+		if ( ! empty( $data ) ) {
 
 			// All other custom fields
 			$body['custom_attributes'] = $data;
@@ -574,6 +600,17 @@ class WPF_Intercom {
 		$user_meta      = array();
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
+
+		// Break the "name" field into firstname / lastname
+
+		$names                  = explode( ' ', $body_json['name'] );
+		$body_json['firstname'] = $names[0];
+
+		unset( $names[0] );
+
+		if ( ! empty( $names ) ) {
+			$body_json['lastname'] = implode( ' ', $names );
+		}
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
