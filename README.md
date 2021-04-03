@@ -69,6 +69,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * NationBuilder
 * Ontraport
 * Platform.ly
+* PulseTechnologyCRM
 * Quentn
 * Salesflare
 * Salesforce
