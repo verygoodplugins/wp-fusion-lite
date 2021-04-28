@@ -2,70 +2,70 @@
 
 class WPF_PulseTechnologyCRM_Admin {
 
-	/**
-	 * The CRM slug
-	 *
-	 * @var string
-	 * @since 1.0.0
-	 */
+    /**
+     * The CRM slug
+     *
+     * @var string
+     * @since 1.0.0
+     */
 
-	private $slug;
+    private $slug;
 
-	/**
-	 * The CRM name
-	 *
-	 * @var string
-	 * @since 1.0.0
-	 */
+    /**
+     * The CRM name
+     *
+     * @var string
+     * @since 1.0.0
+     */
 
-	private $name;
+    private $name;
 
-	/**
-	 * The CRM object
-	 *
-	 * @var object
-	 * @since 1.0.0
-	 */
+    /**
+     * The CRM object
+     *
+     * @var object
+     * @since 1.0.0
+     */
 
-	private $crm;
+    private $crm;
 
-	/**
-	 * Get things started
-	 *
-	 * @since 1.0.0
-	 */
+    /**
+     * Get things started
+     *
+     * @since 1.0.0
+     */
 
-	public function __construct( $slug, $name, $crm ) {
+    public function __construct( $slug, $name, $crm ) {
 
-		$this->slug = $slug;
-		$this->name = $name;
-		$this->crm  = $crm;
+        $this->slug = $slug;
+        $this->name = $name;
+        $this->crm  = $crm;
 
-		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_pulsetech_header_begin', array( $this, 'show_field_pulsetech_header_begin' ), 10, 2 );
+        add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
+        add_action( 'show_field_pulsetech_header_begin', array( $this, 'show_field_pulsetech_header_begin' ), 10, 2 );
 
-		// AJAX callback to test the connection
-		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
+        // AJAX callback to test the connection
+        add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
-			$this->init();
-		}
+        if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+            $this->init();
+        }
 
         // OAuth
         add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
 
     }
 
-	/**
-	 * Hooks to run when this CRM is selected as active
-	 *
-	 * @since 1.0.0
-	 */
+    /**
+     * Hooks to run when this CRM is selected as active
+     *
+     * @since 1.0.0
+     */
 
-	public function init() {
+    public function init() {
 
-		// Hooks in init() will run on the admin screen when this CRM is active
-	}
+        // Hooks in init() will run on the admin screen when this CRM is active
+    }
 
     /**
      * Hooks to run when this CRM is selected as active
@@ -119,26 +119,26 @@ class WPF_PulseTechnologyCRM_Admin {
     }
 
 
-	/**
-	 * Loads CRM connection information on settings page
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param array $settings The registered settings on the options page.
-	 * @param array $options  The options saved in the database.
-	 * @return array $settings The settings.
-	 */
+    /**
+     * Loads CRM connection information on settings page
+     *
+     * @since 1.0.0
+     *
+     * @param array $settings The registered settings on the options page.
+     * @param array $options  The options saved in the database.
+     * @return array $settings The settings.
+     */
 
-	public function register_connection_settings( $settings, $options ) {
+    public function register_connection_settings( $settings, $options ) {
 
-		$new_settings = array();
+        $new_settings = array();
 
-		$new_settings['pulsetech_header'] = array(
-			'title'   => __( 'Pulse - Connection', 'wp-fusion' ),
-			'type'    => 'heading',
-			'section' => 'setup',
+        $new_settings['pulsetech_header'] = array(
+            'title'   => __( 'Pulse - Connection', 'wp-fusion' ),
+            'type'    => 'heading',
+            'section' => 'setup',
             'desc' => 'Use this URL when create the client on your Pulse application: <br/><strong>'.admin_url('options-general.php?page=wpf-settings&crm=pulsetech').'</strong>'
-		);
+        );
 
         $new_settings['pulsetech_url'] = array(
             'title'   => __( 'URL', 'wp-fusion' ),
@@ -154,12 +154,12 @@ class WPF_PulseTechnologyCRM_Admin {
             'section' => 'setup'
         );
 
-		$new_settings['pulsetech_secret'] = array(
-			'title'       => __( 'Secret', 'wp-fusion' ),
+        $new_settings['pulsetech_secret'] = array(
+            'title'       => __( 'Secret', 'wp-fusion' ),
             'std'         => '',
             'type'        => 'text',
-			'section'     => 'setup',
-		);
+            'section'     => 'setup',
+        );
 
 
         if ( !empty($options['pulsetech_client_id']) && !empty($options['pulsetech_secret']))
@@ -212,40 +212,40 @@ class WPF_PulseTechnologyCRM_Admin {
             }
         }
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
+        $settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
-		return $settings;
+        return $settings;
 
-	}
+    }
 
-	/**
-	 * Puts a div around the CRM configuration section so it can be toggled
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $id    The ID of the field.
-	 * @param array  $field The field properties.
-	 * @return mixed HTML output.
-	 */
+    /**
+     * Puts a div around the CRM configuration section so it can be toggled
+     *
+     * @since 1.0.0
+     *
+     * @param string $id    The ID of the field.
+     * @param array  $field The field properties.
+     * @return mixed HTML output.
+     */
 
-	public function show_field_pulsetech_header_begin( $id, $field ) {
+    public function show_field_pulsetech_header_begin( $id, $field ) {
 
-		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+        echo '</table>';
+        $crm = wp_fusion()->settings->get( 'crm' );
+        echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
 
-	}
+    }
 
 
-	/**
-	 * Verify connection credentials.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @return mixed JSON response.
-	 */
+    /**
+     * Verify connection credentials.
+     *
+     * @since 1.0.0
+     *
+     * @return mixed JSON response.
+     */
 
-	public function test_connection()
+    public function test_connection()
     {
         $access_token = sanitize_text_field( $_POST['pulsetech_token'] );
 
@@ -267,5 +267,5 @@ class WPF_PulseTechnologyCRM_Admin {
             wp_send_json_success();
 
         }
-	}
+    }
 }

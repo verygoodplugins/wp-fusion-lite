@@ -94,13 +94,9 @@ class WPF_PulseTechnologyCRM
 
     public function format_field_value($value, $field_type, $field)
     {
-
-        wpf_log('format_field_value', null, 'params: ' . json_encode(['field_type' => $field_type, 'value' => $value, 'field' => $field]));
-
         if ($field_type == 'multiselect') {
             if (!is_array($value)) {
                 $value = explode(',', $value);
-                wpf_log('format_field_value-multiselect', null, 'params: ' . json_encode($value));
                 return $value;
             }
         }
@@ -436,19 +432,11 @@ class WPF_PulseTechnologyCRM
                 $label = ucwords(str_replace('_', ' ', $fieldKey));
             }
 
-            if ($this->strContains($fieldKey, 'address_')) {
-                $listFields[$fieldKey . '.street_1'] = $label . ' - Address 1';
-                $listFields[$fieldKey . '.street_2'] = $label . ' - Address 2';
-                $listFields[$fieldKey . '.city'] = $label . ' - City';
-                $listFields[$fieldKey . '.state'] = $label . ' - State';
-                $listFields[$fieldKey . '.postal_code'] = $label . ' - Zip';
-                $listFields[$fieldKey . '.contry'] = $label . ' - Country';
-            }elseif ($this->strContains($fieldKey, 'phone_')) {
-                $listFields[$fieldKey . '.phone'] = $label . ' - Phone';
-                $listFields[$fieldKey . '.ext'] = $label . ' - Ext';
-            } else {
-                $listFields[$fieldKey] = $label;
+            if ($this->strContains($fieldKey, 'address_') && $this->strContains($fieldKey, '.country')) {
+                $fieldKey .= '_name';
             }
+
+            $listFields[$fieldKey] = $label;
         }
 
         // Load available fields into $crm_fields like 'field_key' => 'Field Label'dd
