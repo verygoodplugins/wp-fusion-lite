@@ -142,7 +142,7 @@ class WPF_PulseTechnologyCRM_Admin {
 
         $new_settings['pulsetech_url'] = array(
             'title'   => __( 'URL', 'wp-fusion' ),
-            'desc'    => __( 'URL to your Pulse Spot application', 'wp-fusion' ),
+            'desc'    => __( 'URL to your Pulse application', 'wp-fusion' ),
             'type'    => 'text',
             'section' => 'setup',
         );
