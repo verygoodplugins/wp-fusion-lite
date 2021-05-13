@@ -66,7 +66,7 @@ class WPF_PulseTechnologyCRM
         $this->oauth_url_token = $portal_url . 'oauth/token';
 
         // Set up admin options
-        if ( is_admin() ) {
+        if (is_admin()) {
             require_once dirname( __FILE__ ) . '/admin/class-admin.php';
             new WPF_PulseTechnologyCRM_Admin($this->slug, $this->name, $this);
         }
@@ -425,18 +425,25 @@ class WPF_PulseTechnologyCRM
         $fields = $response->data;
         $listFields = [];
 
+        $fieldsToHide = [
+            'lead_source_id'
+            //We can add more fields here to avoid showing them on WPFusion since the api is generic
+        ];
+
         foreach ($fields as $fieldKey => $fieldDetails) {
-            if (isset($fieldDetails->label)) {
-                $label = $fieldDetails->label;
-            } else {
-                $label = ucwords(str_replace('_', ' ', $fieldKey));
-            }
+            if (!in_array($fieldKey, $fieldsToHide)) {
+                if (isset($fieldDetails->label)) {
+                    $label = $fieldDetails->label;
+                } else {
+                    $label = ucwords(str_replace('_', ' ', $fieldKey));
+                }
 
-            if ($this->strContains($fieldKey, 'address_') && $this->strContains($fieldKey, '.country')) {
-                $fieldKey .= '_name';
-            }
+                if ($this->strContains($fieldKey, 'address_') && $this->strContains($fieldKey, '.country')) {
+                    $fieldKey .= '_name';
+                }
 
-            $listFields[$fieldKey] = $label;
+                $listFields[$fieldKey] = $label;
+            }
         }
 
         // Load available fields into $crm_fields like 'field_key' => 'Field Label'dd
@@ -572,28 +579,6 @@ class WPF_PulseTechnologyCRM
 
     }
 
-    private function formatAddressesAndPhonesToPost($contact_data)
-    {
-        foreach ($contact_data as $field => $data)
-        {
-            if (($this->strContains($field, 'address_') || $this->strContains($field, 'phone_')) && $this->strContains($field, '.'))
-            {
-                $field = explode('.', $field);
-
-                $type = $field[0];
-                $field = $field[1];
-
-                if (!isset($contact_data[$type])) {
-                    $contact_data[$type] = [];
-                }
-
-                $contact_data[$type][$field] = $data;
-            }
-        }
-
-        return $contact_data;
-    }
-
     /**
      * Adds a new contact.
      *
@@ -611,7 +596,6 @@ class WPF_PulseTechnologyCRM
             $contact_data = wp_fusion()->crm_base->map_meta_fields($contact_data);
         }
 
-        $contact_data = $this->formatAddressesAndPhonesToPost($contact_data);
         $contact_data['is_marketable'] = true;
 
         wpf_log('info', null, 'Pulse API - add_contact formatted <br/>contact_data:' . json_encode($contact_data));
@@ -648,7 +632,6 @@ class WPF_PulseTechnologyCRM
             $contact_data = wp_fusion()->crm_base->map_meta_fields($contact_data);
         }
 
-        $contact_data = $this->formatAddressesAndPhonesToPost($contact_data);
         $response = $this->pulseApiPut("contacts/$contact_id", $contact_data);
 
         if (is_wp_error($response)) {
