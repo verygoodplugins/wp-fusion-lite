@@ -114,9 +114,7 @@ class WPF_PulseTechnologyCRM
 
     public function format_post_data($post_data)
     {
-
-        wpf_log('info', null, '$post_data: '.json_encode($post_data));
-
+        wpf_log('info', null, 'Data posted: '.json_encode($post_data));
 
         if (isset($post_data['contact_id'])) {
             return $post_data;
@@ -665,12 +663,17 @@ class WPF_PulseTechnologyCRM
         $user_meta = array();
         $contact_fields = wp_fusion()->settings->get('contact_fields');
 
+//        wpf_log('info', null, 'Pulse API - load_contact FIELDS: ' . json_encode($contact_fields));
+
         foreach ($contact_fields as $field_id => $field_data) {
+//            wpf_log('info', null, 'Pulse API - load_contact $field_id: '.$field_id.' data ' . json_encode($field_data).' crm field: '.$field_data['crm_field']);
 
             if ($field_data['active'] && isset($fields[$field_data['crm_field']])) {
                 $user_meta[$field_id] = $fields[$field_data['crm_field']];
             }
         }
+
+//        wpf_log('info', null, 'Pulse API - load_contact READY: ' . json_encode($user_meta));
 
         return $user_meta;
     }
