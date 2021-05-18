@@ -52,7 +52,7 @@ class WPF_EngageBay {
 		$this->name     = 'EngageBay';
 		$this->supports = array( 'add_tags' );
 
-		$this->api_url = 'https://app.engagebay.com/dev/api/';
+		$this->api_url = 'https://api.engagebay.com/dev/api/';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -235,7 +235,7 @@ class WPF_EngageBay {
 				'Authorization' => $api_key,
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
-				'Host'          => 'app.engagebay.com',
+				'Host'          => 'api.engagebay.com',
 			),
 		);
 
@@ -485,6 +485,8 @@ class WPF_EngageBay {
 			$this->get_params();
 		}
 
+		$tags = $this->convert_associative_tags( $tags );
+
 		$params                            = $this->params;
 		$params['body']                    = 'tags=' . json_encode( $tags );
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -519,18 +521,26 @@ class WPF_EngageBay {
 			$this->get_params();
 		}
 
+		if ( $contact_id == '' ) {
+			return false;
+		}
+
+		// convert associative TAGS array to standard array
+		$tags = $this->convert_associative_tags( $tags );
+
+		// convert back to standard array of hashes
+		$tags = $this->convert_to_associative_tag_array( $tags );
+
 		// engageBay is funny: this API currently
 		// accepts URL encoded data - but VERY Specific URL encoded
 		// hopefully this will change over to JSON encoded going forward
-		$data =
-			'contactId=' . $contact_id . '&' .
-			'tags=' . wp_json_encode( $tags );
+		$data = wp_json_encode( $tags );
 
 		$params                            = $this->params;
 		$params['body']                    = $data;
-		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
+		$params['headers']['Content-Type'] = 'application/json';
 
-		$request  = $this->api_url . $this->remove_tags_str;
+		$request  = $this->api_url . $this->remove_tags_str . $contact_id;
 		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
@@ -792,7 +802,7 @@ class WPF_EngageBay {
 			// for now - iterate all engagebay contacts
 			// search for the requested tag
 			if ( ! empty( $contact_object->tags ) ) {
-				$contactTags = $this->convertTagsToArray( $contact_object->tags );
+				$contactTags = $this->convert_tags_to_array( $contact_object->tags );
 				if ( 0 == count( array_diff( $mustHaveTags, $contactTags ) ) ) {
 					$contact_ids[] = $contact_object->id;
 				}
@@ -805,7 +815,34 @@ class WPF_EngageBay {
 		return $contact_ids;
 	}
 
-	private function convertTagsToArray( $tags ) {
+	// convert tag array to SPECIFIC array required by CALL
+	private function convert_to_associative_tag_array( $tags ) {
+		$mytags = array();
+		foreach ( $tags as $val ) {
+			array_push( $mytags, array( 'tag' => $val ) );
+		}
+		return( $mytags );
+	}
+
+	private function convert_associative_tags( $assoc_tags ) {
+		if ( ! $this->is_associative_array( $assoc_tags ) ) {
+			return( $assoc_tags );
+		}
+
+		return( array_values( $assoc_tags ) );
+	}
+
+	private function is_associative_array( $tags ) {
+		// Checking for sequential keys of array arr
+		if ( array_keys( $tags ) !== range( 0, count( $tags ) - 1 ) ) {
+			$result = true;
+		} else {
+			$result = false;
+		}
+		return( $result );
+	}
+
+	private function convert_tags_to_array( $tags ) {
 		if ( empty( $tags ) ) {
 			return array();
 		}

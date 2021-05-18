@@ -44,9 +44,10 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Customerly
 * Drift
 * Drip
+* Emercury
 * EngageBay
 * Flexie
-* FluentCRM
+* FluentCRM (Same site and REST API)
 * GetResponse
 * Gist
 * Groundhogg

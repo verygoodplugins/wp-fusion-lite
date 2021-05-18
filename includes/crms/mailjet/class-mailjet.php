@@ -107,7 +107,7 @@ class WPF_Mailjet {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, 'mailjet' ) !== false && $args['User-Agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'mailjet' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$response_code = wp_remote_retrieve_response_code( $response );
 
@@ -115,7 +115,9 @@ class WPF_Mailjet {
 
 				$response = new WP_Error( 'error', 'Unauthorized. Please confirm your API Key and Secret Key are correct and try again.' );
 
-			} elseif ( $response_code > 201 ) {
+			} elseif ( $response_code > 201 && 404 !== $response_code ) {
+
+				// 404 is when a contact isn't found, so it's fine.
 
 				$response_message = wp_remote_retrieve_response_message( $response );
 
@@ -154,7 +156,7 @@ class WPF_Mailjet {
 		$this->params = array(
 			'timeout'     => 30,
 			'httpversion' => '1.1',
-			'User-Agent'  => 'WP Fusion; ' . home_url(),
+			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'headers'     => array(
 				'Authorization' => 'Basic ' . $auth_key,
 				'Content-Type'  => 'application/json',

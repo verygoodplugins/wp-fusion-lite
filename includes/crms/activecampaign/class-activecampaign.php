@@ -71,6 +71,10 @@ class WPF_ActiveCampaign {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		// Guest site tracking
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+
 		// Add tracking code to footer
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
@@ -196,6 +200,29 @@ class WPF_ActiveCampaign {
 	}
 
 	/**
+	 * Set a cookie to fix tracking for guest checkouts.
+	 *
+	 * @since 3.37.3
+	 *
+	 * @param int    $contact_id The contact ID.
+	 * @param string $email      The email address.
+	 */
+	public function set_tracking_cookie_guest( $contact_id, $email ) {
+
+		if ( wpf_is_user_logged_in() || false == wp_fusion()->settings->get( 'site_tracking' ) ) {
+			return;
+		}
+
+		if ( headers_sent() ) {
+			wpf_log( 'notice', 0, 'Tried and failed to set site tracking cookie for ' . $email . ', because headers have already been sent.' );
+			return;
+		}
+
+		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+
+	}
+
+	/**
 	 * Output tracking code
 	 *
 	 * @access public
@@ -208,11 +235,11 @@ class WPF_ActiveCampaign {
 			return;
 		}
 
-		$cid = get_user_meta( wpf_get_current_user_id(), wp_fusion()->crm->slug . '_contact_id', true );
-
-		if ( ! empty( $cid ) ) {
-			$user  = get_userdata( wpf_get_current_user_id() );
+		if ( wpf_is_user_logged_in() ) {
+			$user  = wpf_get_current_user();
 			$email = $user->user_email;
+		} elseif ( isset( $_COOKIE['wpf_guest'] ) ) {
+			$email = sanitize_email( $_COOKIE['wpf_guest'] );
 		} else {
 			$email = '';
 		}
@@ -618,7 +645,7 @@ class WPF_ActiveCampaign {
 		}
 
 		// Set lists
-		$lists = wp_fusion()->settings->get( 'ac_lists' );
+		$lists = wp_fusion()->settings->get( 'ac_lists', array() );
 
 		// Allow filtering
 		$lists = apply_filters( 'wpf_add_contact_lists', $lists );

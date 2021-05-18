@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return mixed HTML field
  */
 
-function wpf_render_tag_multiselect( $args ) {
+function wpf_render_tag_multiselect( $args = array() ) {
 
 	$defaults = array(
 		'setting'     => array(),
@@ -112,6 +112,12 @@ function wpf_render_tag_multiselect( $args ) {
 			echo '<optgroup label="' . $tag_category . '">';
 
 			foreach ( $available_tags as $id => $field_data ) {
+
+				// (read only) lists with HubSpot
+
+				if ( strpos( $tag_category, 'Read Only' ) !== false ) {
+					$field_data['label'] .= '<small>(' . __( 'read only' ) . ')</small>';
+				}
 
 				if ( $field_data['category'] == $tag_category ) {
 					echo '<option value="' . esc_attr( $id ) . '" ' . selected( true, in_array( $id, $args['setting'] ), false ) . '>' . esc_html( $field_data['label'] ) . '</option>';
@@ -298,7 +304,28 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 }
 
 
+/**
+ * WP Fusion SVG logo.
+ *
+ * Used by WP Simple Pay payment form panel tabs, might be used elsewhere some
+ * day.
+ *
+ * @since  3.37.13
+ *
+ * @param  string $width  The width in px.
+ * @return string The logo.
+ */
+function wpf_logo_svg( $width ) {
 
+	return '<svg width="' . $width . '" viewBox="0 0 38 39" fill="currentColor">
+	    <g id="Page-1" stroke="none" stroke-width="1" fill="currentColor" fill-rule="evenodd">
+	        <g id="Mark-Copy">
+	            <path d="M8,0.5 L38,0.5 L38,0.5 L38,30.5 C38,34.918278 34.418278,38.5 30,38.5 L0,38.5 L0,38.5 L0,8.5 C-5.41083001e-16,4.081722 3.581722,0.5 8,0.5 Z" id="BG"></path>
+	            <path d="M16,13 C16.8284271,13 17.5,13.6715729 17.5,14.5 L17.499,26.5 L29.5,26.5 C30.3284271,26.5 31,27.1715729 31,28 L31,29 C31,29.8284271 30.3284271,30.5 29.5,30.5 L15.5,30.5 C14.9577643,30.5 14.4827278,30.2122862 14.2192253,29.7811934 C13.7877138,29.5172722 13.5,29.0422357 13.5,28.5 L13.5,14.5 C13.5,13.6715729 14.1715729,13 15,13 L16,13 Z" id="Rectangle-Copy-4" fill="#FFFFFF" transform="translate(22.250000, 21.750000) scale(-1, -1) rotate(-450.000000) translate(-22.250000, -21.750000) "></path>
+	            <path d="M10.5,8 C11.3284271,8 12,8.67157288 12,9.5 L11.999,21.5 L24,21.5 C24.8284271,21.5 25.5,22.1715729 25.5,23 L25.5,24 C25.5,24.8284271 24.8284271,25.5 24,25.5 L10,25.5 C9.4577643,25.5 8.98272777,25.2122862 8.71922527,24.7811934 C8.28771383,24.5172722 8,24.0422357 8,23.5 L8,9.5 C8,8.67157288 8.67157288,8 9.5,8 L10.5,8 Z" id="Rectangle-Copy-7" fill="#FFFFFF" transform="translate(16.750000, 16.750000) scale(-1, -1) rotate(-270.000000) translate(-16.750000, -16.750000) "></path>
+	        </g>
+	    </g>
+	</svg>';
 
-
+}
 

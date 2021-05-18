@@ -88,7 +88,7 @@ class WPF_Mautic {
 
 		if ( true == wp_fusion()->settings->get( 'advanced_site_tracking' ) && wpf_is_user_logged_in() ) {
 
-			$user = get_userdata( wpf_get_current_user_id() );
+			$user = wpf_get_current_user();
 
 			// This is required to track against the correct contact record for the current user
 

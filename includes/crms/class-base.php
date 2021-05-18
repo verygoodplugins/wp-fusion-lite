@@ -59,7 +59,7 @@ class WPF_CRM_Base {
 
 				$crm = new $classname();
 
-				if ( wp_fusion()->settings->get( 'crm' ) == $slug ) {
+				if ( true == wp_fusion()->settings->get( 'connection_configured' ) && wp_fusion()->settings->get( 'crm' ) == $slug ) {
 					$this->crm_no_queue = $crm;
 					$this->crm_no_queue->init();
 
@@ -297,13 +297,17 @@ class WPF_CRM_Base {
 
 		foreach ( $this->contact_fields as $field => $field_data ) {
 
+			if ( empty( $field_data['active'] ) || empty( $field_data['crm_field'] ) ) {
+				continue;
+			}
+
 			// Don't send add_tag_ fields to the CRM as fields
 			if ( strpos( $field_data['crm_field'], 'add_tag_' ) !== false ) {
 				continue;
 			}
 
 			// If field exists in form and sync is active
-			if ( isset( $user_meta[ $field ] ) && $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
+			if ( isset( $user_meta[ $field ] ) ) {
 
 				if ( empty( $field_data['type'] ) ) {
 					$field_data['type'] = 'text';
@@ -367,7 +371,7 @@ class WPF_CRM_Base {
 
 	public function is_field_active( $meta_key ) {
 
-		if ( ! empty( $this->contact_fields[ $meta_key ] ) && true == $this->contact_fields[ $meta_key ]['active'] ) {
+		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['active'] ) ) {
 			return true;
 		} else {
 			return false;

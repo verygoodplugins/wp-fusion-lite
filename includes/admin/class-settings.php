@@ -59,6 +59,9 @@ class WPF_Settings {
 		add_action( 'show_field_crm_field', array( $this, 'show_field_crm_field' ), 10, 2 );
 		add_action( 'show_field_webhook_url', array( $this, 'show_field_webhook_url' ), 10, 2 );
 
+		// Default settings
+		add_filter( 'wpf_get_setting_license_key', array( $this, 'get_license_key' ) );
+
 		// CRM setup layouts
 		add_action( 'show_field_api_validate', array( $this, 'show_field_api_validate' ), 10, 2 );
 		add_action( 'show_field_api_validate_end', array( $this, 'show_field_api_validate_end' ), 10, 2 );
@@ -103,9 +106,7 @@ class WPF_Settings {
 			add_action( 'wp_ajax_edd_activate', array( $this, 'edd_activate' ) );
 			add_action( 'wp_ajax_edd_deactivate', array( $this, 'edd_deactivate' ) );
 
-		} else {
-
-			add_action( 'show_field_users_header_begin', array( $this, 'upgrade_notice' ), 10, 2 );
+			add_action( 'admin_init', array( $this, 'maybe_activate_site' ) );
 
 		}
 
@@ -113,46 +114,6 @@ class WPF_Settings {
 
 		// Fire up the options framework
 		new WP_Fusion_Options( $this->get_setup(), $this->get_sections() );
-
-	}
-
-
-	/**
-	 * Display upgrade prompt in free version
-	 *
-	 * @since 1.0
-	 * @return mixed
-	 */
-
-	public function upgrade_notice( $id, $field ) {
-
-		?>
-
-			</table>
-
-			<div id="wpf-pro">
-				<div id="wpf-pro-top">
-					<img src="<?php echo WPF_DIR_URL; ?>assets/img/logo-wide.png" />
-				</div>
-
-				<p>You're running the <strong>Lite</strong> version of WP Fusion. A paid license includes:</p>
-
-				<ul>
-					<li>100+ plugin integrations like <a href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">WooCommerce</a>, <a href="https://wpfusion.com/documentation/page-builders/elementor/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">Elementor</a>, <a href="https://wpfusion.com/documentation/learning-management/learndash/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">LearnDash</a> and more</li>
-					<li>Hundreds of tag triggers</li>
-					<li>Sync data back to WordPress via webhooks</li>
-					<li>Premium support</li>
-				</ul>
-
-				<a class="button-primary" href="https://wpfusion.com/?utm_campaign=free-plugin&utm_source=free-plugin" target="_blank">Learn More</a>
-
-				<hr />
-
-				Happy with the free version? Consider <a href="https://wordpress.org/plugins/wp-fusion-lite/#reviews" target="_blank">leaving us a review</a>.
-
-			</div>
-
-		<?php
 
 	}
 
@@ -196,12 +157,32 @@ class WPF_Settings {
 
 		if ( 'available_tags' == $key && empty( $this->options['available_tags'] ) ) {
 
-			$this->options['available_tags'] = get_option( 'wpf_available_tags', array() );
+			$setting = get_option( 'wpf_available_tags', array() );
 
+			if ( ! empty( $setting ) ) {
+
+				$this->options['available_tags'] = $setting;
+
+			} elseif ( empty( $setting ) && empty( $this->options ) ) {
+
+				// Fallback in case the data hasn't been moved yet (pre 3.37)
+				$this->options = get_option( 'wpf_options', array() );
+
+			}
 		} elseif ( 'crm_fields' == $key && empty( $this->options['crm_fields'] ) ) {
 
-			$this->options['crm_fields'] = get_option( 'wpf_crm_fields', array() );
+			$setting = get_option( 'wpf_crm_fields', array() );
 
+			if ( ! empty( $setting ) ) {
+
+				$this->options['crm_fields'] = $setting;
+
+			} elseif ( empty( $setting ) && empty( $this->options ) ) {
+
+				// Fallback in case the data hasn't been moved yet (pre 3.37)
+				$this->options = get_option( 'wpf_options', array() );
+
+			}
 		} elseif ( empty( $this->options ) ) {
 
 			$this->options = get_option( 'wpf_options', array() );
@@ -273,6 +254,11 @@ class WPF_Settings {
 	 * @return array
 	 */
 	public function get_all() {
+
+		if ( empty( $this->options ) ) {
+			$this->options = get_option( 'wpf_options', array() );
+		}
+
 		return $this->options;
 	}
 
@@ -480,9 +466,11 @@ class WPF_Settings {
 		wp_enqueue_script( 'jquery-tiptip', WPF_DIR_URL . 'assets/js/jquery-tiptip/jquery.tipTip.min.js', array( 'jquery' ), '4.0.1' );
 
 		$localize = array(
-			'ajaxurl'  => admin_url( 'admin-ajax.php' ),
-			'tag_type' => $this->get( 'crm_tag_type' ),
-			'strings'  => array(
+			'ajaxurl'    => admin_url( 'admin-ajax.php' ),
+			'optionsurl' => admin_url( 'options-general.php?page=wpf-settings' ),
+			'sitetitle'  => urlencode( get_bloginfo( 'name' ) ),
+			'tag_type'   => $this->get( 'crm_tag_type' ),
+			'strings'    => array(
 				'deleteImportGroup'       => __( 'WARNING: All users from this import will be deleted, and any user content will be reassigned to your account.', 'wp-fusion-lite' ),
 				'batchErrorsEncountered'  => __( 'errors encountered. Check the logs for more details.', 'wp-fusion-lite' ),
 				'batchOperationComplete'  => sprintf(
@@ -767,6 +755,70 @@ class WPF_Settings {
 
 	}
 
+	/**
+	 * Get active integrations for license check.
+	 *
+	 * @since  3.37.8
+	 *
+	 * @return array The active integrations.
+	 */
+	public function get_active_integrations() {
+
+		$integrations = array();
+
+		if ( ! empty( wp_fusion()->integrations ) ) {
+
+			foreach ( wp_fusion()->integrations as $slug => $object ) {
+				$integrations[] = $slug;
+			}
+		}
+
+		// Addons
+		$addons = array(
+			'WP_Fusion_Ecommerce',
+			'WP_Fusion_Abandoned_Cart',
+			'WP_Fusion_Logins',
+			'WP_Fusion_Downloads',
+			'WP_Fusion_Webhooks',
+			'WP_Fusion_Media_Tools',
+		);
+
+		foreach ( $addons as $class ) {
+
+			if ( class_exists( $class ) ) {
+
+				$slug = str_replace( 'WP_Fusion_', '', $class );
+				$slug = str_replace( '_', '-', $slug );
+
+				$integrations[] = strtolower( $slug );
+
+			}
+		}
+
+		return $integrations;
+
+	}
+
+
+	/**
+	 * Allows overriding the license key via wp-config.php
+	 *
+	 * @since  3.37.8
+	 *
+	 * @param  string|bool $license_key The license key or false.
+	 * @return string|bool The license key.
+	 */
+	public function get_license_key( $license_key ) {
+
+		// Allow setting license key via wp-config.php
+
+		if ( empty( $license_key ) && defined( 'WPF_LICENSE_KEY' ) ) {
+			$license_key = WPF_LICENSE_KEY;
+		}
+
+		return $license_key;
+
+	}
 
 	/**
 	 * Check EDD license
@@ -785,37 +837,6 @@ class WPF_Settings {
 
 			update_option( 'wpf_license_check', time() );
 
-			$integrations = array();
-
-			if ( ! empty( wp_fusion()->integrations ) ) {
-
-				foreach ( wp_fusion()->integrations as $slug => $object ) {
-					$integrations[] = $slug;
-				}
-			}
-
-			// Addons
-			$addons = array(
-				'WP_Fusion_Ecommerce',
-				'WP_Fusion_Abandoned_Cart',
-				'WP_Fusion_Logins',
-				'WP_Fusion_Downloads',
-				'WP_Fusion_Webhooks',
-				'WP_Fusion_Media_Tools',
-			);
-
-			foreach ( $addons as $class ) {
-
-				if ( class_exists( $class ) ) {
-
-					$slug = str_replace( 'WP_Fusion_', '', $class );
-					$slug = str_replace( '_', '-', $slug );
-
-					$integrations[] = strtolower( $slug );
-
-				}
-			}
-
 			// data to send in our API request
 			$api_params = array(
 				'edd_action'   => 'check_license',
@@ -824,7 +845,7 @@ class WPF_Settings {
 				'author'       => 'Very Good Plugins',
 				'url'          => home_url(),
 				'crm'          => wp_fusion()->crm->name,
-				'integrations' => $integrations,
+				'integrations' => $this->get_active_integrations(),
 				'version'      => WP_FUSION_VERSION,
 			);
 
@@ -865,9 +886,11 @@ class WPF_Settings {
 	 * @return bool
 	 */
 
-	public function edd_activate() {
+	public function edd_activate( $license_key = false ) {
 
-		$license_key = trim( $_POST['key'] );
+		if ( false == $license_key && isset( $_POST['key'] ) ) {
+			$license_key = trim( $_POST['key'] );
+		}
 
 		// data to send in our API request
 		$api_params = array(
@@ -880,14 +903,8 @@ class WPF_Settings {
 
 		if ( wp_fusion()->settings->get( 'connection_configured' ) == true ) {
 
-			$integrations = array();
-
-			foreach ( wp_fusion()->integrations as $slug => $object ) {
-				$integrations[] = $slug;
-			}
-
 			$api_params['crm']          = wp_fusion()->crm->name;
-			$api_params['integrations'] = $integrations;
+			$api_params['integrations'] = $this->get_active_integrations();
 
 		}
 
@@ -900,31 +917,51 @@ class WPF_Settings {
 			)
 		);
 
-		if ( wp_remote_retrieve_response_code( $response ) == 403 ) {
-			wp_send_json_error( '403 response. Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a>. IP address: ' . $_SERVER['SERVER_ADDR'] );
-		}
+		if ( wp_doing_ajax() ) {
 
-		// make sure the response came back okay
-		if ( is_wp_error( $response ) ) {
-			wp_send_json_error( $response->get_error_message() . '&ndash; Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a> for further assistance.' );
-			die();
-		}
+			// If we're doing this in an AJAX request (via the Activate button)
 
-		// decode the license data
-		$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( wp_remote_retrieve_response_code( $response ) == 403 ) {
+				wp_send_json_error( '403 response. Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a>. IP address: ' . $_SERVER['SERVER_ADDR'] );
+			}
 
-		// $license_data->license will be either "valid" or "invalid"
-		// Store the options locally
-		$this->set( 'license_status', $license_data->license );
-		$this->set( 'license_key', $license_key );
+			// make sure the response came back okay
+			if ( is_wp_error( $response ) ) {
+				wp_send_json_error( $response->get_error_message() . '&ndash; Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a> for further assistance.' );
+			}
 
-		if ( $license_data->license == 'valid' ) {
-			wp_send_json_success( 'activated' );
+			// decode the license data
+			$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+
+			// $license_data->license will be either "valid" or "invalid"
+			// Store the options locally
+			$this->set( 'license_status', $license_data->license );
+			$this->set( 'license_key', $license_key );
+
+			if ( 'valid' == $license_data->license ) {
+				wp_send_json_success( 'activated' );
+			} else {
+				wp_send_json_error( '<pre>' . print_r( $license_data, true ) . '</pre>' );
+			}
 		} else {
-			wp_send_json_error( '<pre>' . print_r( $license_data, true ) . '</pre>' );
+
+			// If we're calling this in PHP
+
+			if ( ! is_wp_error( $response ) ) {
+
+				$license_data = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( is_object( $license_data ) ) {
+
+					$this->set( 'license_status', $license_data->license );
+					$this->set( 'license_key', $license_key );
+
+					return true;
+
+				}
+			}
 		}
 
-		die();
 	}
 
 
@@ -974,6 +1011,19 @@ class WPF_Settings {
 		}
 
 		wp_die();
+	}
+
+	/**
+	 * Maybe activate the license key if it's defined in wp-config.php
+	 *
+	 * @since 3.37.8
+	 */
+	public function maybe_activate_site() {
+
+		if ( ( empty( $this->get( 'license_status' ) ) || 'site_inactive' == $this->get( 'license_status' ) ) && defined( 'WPF_LICENSE_KEY' ) ) {
+			$this->edd_activate( WPF_LICENSE_KEY );
+		}
+
 	}
 
 	/**
@@ -1060,15 +1110,10 @@ class WPF_Settings {
 		}
 
 		// These fields should be turned on by default
-		if ( ! isset( $options['contact_fields']['first_name']['active'] ) ) {
-			$options['contact_fields']['first_name']['active'] = true;
-		}
-
-		if ( ! isset( $options['contact_fields']['last_name']['active'] ) ) {
-			$options['contact_fields']['last_name']['active'] = true;
-		}
 
 		if ( ! isset( $options['contact_fields']['user_email']['active'] ) ) {
+			$options['contact_fields']['first_name']['active'] = true;
+			$options['contact_fields']['last_name']['active'] = true;
 			$options['contact_fields']['user_email']['active'] = true;
 		}
 
@@ -1304,7 +1349,7 @@ class WPF_Settings {
 
 		$settings['lockout_redirect'] = array(
 			'title'   => __( 'Lockout Redirect', 'wp-fusion-lite' ),
-			'desc'    => __( 'URL to redirect to when lockout is active.', 'wp-fusion-lite' ),
+			'desc'    => __( 'URL to redirect to when lockout is active. (Must be a full URL)', 'wp-fusion-lite' ),
 			'std'     => wp_login_url(),
 			'type'    => 'text',
 			'section' => 'main',
@@ -1354,44 +1399,32 @@ class WPF_Settings {
 			'section' => 'main',
 		);
 
-		if ( wp_fusion()->is_full_version() ) {
+		$settings['access_key_desc'] = array(
+			'type'    => 'paragraph',
+			'section' => 'main',
+			'desc'    => sprintf( __( 'Webhooks allow you to send data from %s back to your website. See <a href="http://wpfusion.com/documentation/#webhooks" target="_blank">our documentation</a> for more information on creating webhooks.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+		);
 
-			$settings['access_key_desc'] = array(
-				'type'    => 'paragraph',
-				'section' => 'main',
-				'desc'    => sprintf( __( 'Webhooks allow you to send data from %s back to your website. See <a href="http://wpfusion.com/documentation/#webhooks" target="_blank">our documentation</a> for more information on creating webhooks.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
-			);
+		$settings['access_key'] = array(
+			'title'   => __( 'Access Key', 'wp-fusion-lite' ),
+			'desc'    => __( 'Use this key when sending data back to WP Fusion via a webhook or ThriveCart.', 'wp-fusion-lite' ),
+			'type'    => 'text',
+			'section' => 'main',
+		);
 
-			$settings['access_key'] = array(
-				'title'   => __( 'Access Key', 'wp-fusion-lite' ),
-				'desc'    => __( 'Use this key when sending data back to WP Fusion via a webhook or ThriveCart.', 'wp-fusion-lite' ),
-				'type'    => 'text',
-				'section' => 'main',
-			);
+		$settings['webhook_url'] = array(
+			'title'   => __( 'Webhook Base URL', 'wp-fusion-lite' ),
+			'desc'    => sprintf( __( 'This is the base URL for sending webhooks back to your site. <a href="http://wpfusion.com/documentation/#webhooks" target="_blank">See the documentation</a> for more information on how to structure the URL.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+			'type'    => 'webhook_url',
+			'section' => 'main',
+		);
 
-			$settings['webhook_url'] = array(
-				'title'   => __( 'Webhook Base URL', 'wp-fusion-lite' ),
-				'desc'    => sprintf( __( 'This is the base URL for sending webhooks back to your site. <a href="http://wpfusion.com/documentation/#webhooks" target="_blank">See the documentation</a> for more information on how to structure the URL.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
-				'type'    => 'webhook_url',
-				'section' => 'main',
-			);
-
-			$settings['test_webhooks'] = array(
-				'title'   => __( 'Test Webhooks', 'wp-fusion-lite' ),
-				'desc'    => __( 'Click this button to test your site\'s ability to receive incoming webhooks.', 'wp-fusion-lite' ),
-				'type'    => 'text',
-				'section' => 'main',
-			);
-
-		} else {
-
-			$settings['webhooks_lite_notice'] = array(
-				'type'    => 'paragraph',
-				'desc'    => '<span style="display:inline-block; background: #fff; padding: 10px 15px; font-weight: bold;">' . sprintf( __( 'To sync data bi-directionally with WordPress using %s webhooks please <a href="https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=free-plugin">upgrade to the full version</a> of WP Fusion.', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</span>',
-				'section' => 'main',
-			);
-
-		}
+		$settings['test_webhooks'] = array(
+			'title'   => __( 'Test Webhooks', 'wp-fusion-lite' ),
+			'desc'    => __( 'Click this button to test your site\'s ability to receive incoming webhooks.', 'wp-fusion-lite' ),
+			'type'    => 'text',
+			'section' => 'main',
+		);
 
 		$settings['return_password_header'] = array(
 			'title'   => __( 'Imported Users', 'wp-fusion-lite' ),
@@ -1498,28 +1531,23 @@ class WPF_Settings {
 			'section' => 'setup',
 		);
 
-		if ( wp_fusion()->is_full_version() ) {
+		$settings['license_heading'] = array(
+			'title'   => __( 'WP Fusion License', 'wp-fusion-lite' ),
+			'section' => 'setup',
+			'type'    => 'heading',
+		);
 
-			$settings['license_heading'] = array(
-				'title'   => __( 'WP Fusion License', 'wp-fusion-lite' ),
-				'section' => 'setup',
-				'type'    => 'heading',
-			);
+		$settings['license_key'] = array(
+			'title'          => __( 'License Key', 'wp-fusion-lite' ),
+			'type'           => 'edd_license',
+			'section'        => 'setup',
+			'license_status' => 'invalid',
+		);
 
-			$settings['license_key'] = array(
-				'title'          => __( 'License Key', 'wp-fusion-lite' ),
-				'type'           => 'edd_license',
-				'section'        => 'setup',
-				'license_status' => 'invalid',
-			);
-
-			$settings['license_status'] = array(
-				'type'    => 'hidden',
-				'section' => 'setup',
-				'std'     => 'invalid',
-			);
-
-		}
+		$settings['license_status'] = array(
+			'type'    => 'hidden',
+			'section' => 'setup',
+		);
 
 		/*
 		// ADVANCED
@@ -1553,40 +1581,6 @@ class WPF_Settings {
 		$settings['link_click_tracking'] = array(
 			'title'   => __( 'Link Tracking', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enqueue the scripts to handle link click tracking. See <a href="https://wpfusion.com/documentation/tutorials/link-click-tracking/" target="_blank">this tutorial</a> for more info.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'section' => 'advanced',
-		);
-
-		$settings['auto_login_header'] = array(
-			'title'   => __( 'Auto Login / Tracking Links', 'wp-fusion-lite' ),
-			'type'    => 'heading',
-			'section' => 'advanced',
-		);
-
-		$settings['auto_login'] = array(
-			'title'   => __( 'Allow URL Login', 'wp-fusion-lite' ),
-			'desc'    => __( 'Track user activity and unlock content by passing a Contact ID in a URL. See <a href="https://wpfusion.com/documentation/tutorials/auto-login-links/" target="_blank">this tutorial</a> for more info.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'section' => 'advanced',
-		);
-
-		$settings['auto_login_forms'] = array(
-			'title'   => __( 'Form Auto Login', 'wp-fusion-lite' ),
-			'desc'    => __( 'Start an auto-login session whenever a visitor submits a form configured with WP Fusion.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'section' => 'advanced',
-		);
-
-		$settings['auto_login_thrivecart'] = array(
-			'title'   => __( 'ThriveCart Auto Login', 'wp-fusion-lite' ),
-			'desc'    => __( 'Automatically log in new users with a ThriveCart success URL. See <a href="https://wpfusion.com/documentation/tutorials/thrivecart/" target="_blank">this tutorial</a> for more info.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'section' => 'advanced',
-		);
-
-		$settings['auto_login_current_user'] = array(
-			'title'   => __( 'Set Current User', 'wp-fusion-lite' ),
-			'desc'    => __( 'Set\'s the <code>$current_user</code> global for the auto-login user. Makes auto-login work better with form plugins, but may cause other plugins to crash.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'advanced',
 		);
@@ -1918,26 +1912,20 @@ class WPF_Settings {
 
 	public function show_field_edd_license( $id, $field ) {
 
-		// We'll show the key in the settings as well so people know it's working
-		if ( false == $this->license_key && defined( 'WPF_LICENSE_KEY' ) ) {
-			$this->set( 'license_key', WPF_LICENSE_KEY );
-			$field['license_status'] = 'valid';
-		}
-
-		if ( 'invalid' == $field['license_status'] ) {
-			$type = 'text';
-		} else {
+		if ( 'valid' == $this->license_status ) {
 			$type = 'password';
-		}
-
-		echo '<input id="' . $id . '" class="form-control" ' . ( $field['license_status'] == 'valid' ? 'disabled' : '' ) . ' type="' . $type . '" name="wpf_options[' . $id . ']" placeholder="' . $field['std'] . '" value="' . esc_attr( $this->{ $id } ) . '">';
-
-		if ( 'invalid' == $field['license_status'] ) {
-			echo '<a id="edd-license" data-action="edd_activate" class="button">Activate License</a>';
 		} else {
-			echo '<a id="edd-license" data-action="edd_deactivate" class="button">Deactivate License</a>';
+			$type = 'text';
 		}
-		echo '<span class="description">Enter your license key for automatic updates and support.</span>';
+
+		echo '<input id="' . $id . '" class="form-control" ' . ( $this->license_status == 'valid' ? 'disabled' : '' ) . ' type="' . $type . '" name="wpf_options[' . $id . ']" placeholder="' . $field['std'] . '" value="' . esc_attr( $this->{ $id } ) . '">';
+
+		if ( 'valid' == $this->license_status ) {
+			echo '<a id="edd-license" data-action="edd_deactivate" class="button">' . __( 'Deactivate License', 'wp-fusion-lite' ) . '</a>';
+		} else {
+			echo '<a id="edd-license" data-action="edd_activate" class="button">' . __( 'Activate License', 'wp-fusion-lite' ) . '</a>';
+		}
+		echo '<span class="description">' . __( 'Enter your license key for automatic updates and support.', 'wp-fusion-lite' ) . '</span>';
 		echo '<div id="connection-output-edd"></div>';
 	}
 
@@ -2099,10 +2087,16 @@ class WPF_Settings {
 
 		$field_groups = apply_filters( 'wpf_meta_field_groups', $field_groups );
 
+		$field_groups['custom'] = array(
+			'title'  => __( 'Custom Field Keys (Added Manually)', 'wp-fusion-lite' ),
+			'fields' => array(),
+		);
+
 		// Append ungrouped fields
 		$field_groups['extra'] = array(
 			'title'  => __( 'Additional <code>wp_usermeta</code> Table Fields (For Developers)', 'wp-fusion-lite' ),
 			'fields' => array(),
+			'url'    => 'https://wpfusion.com/documentation/getting-started/syncing-contact-fields/#additional-fields',
 		);
 
 		$field['choices'] = apply_filters( 'wpf_meta_fields', $field['choices'] );
@@ -2117,7 +2111,11 @@ class WPF_Settings {
 		// Rebuild fields array into group structure
 		foreach ( $field['choices'] as $meta_key => $data ) {
 
-			if ( isset( $data['group'] ) && isset( $field_groups[ $data['group'] ] ) ) {
+			if ( ! empty( $this->options['custom_metafields'] ) && in_array( $meta_key, $this->options['custom_metafields'] ) ) {
+
+				$field_groups['custom']['fields'][ $meta_key ] = $data;
+
+			} elseif ( isset( $data['group'] ) && isset( $field_groups[ $data['group'] ] ) ) {
 
 				$field_groups[ $data['group'] ]['fields'][ $meta_key ] = $data;
 
@@ -2158,6 +2156,10 @@ class WPF_Settings {
 		echo '</tr>';
 		echo '</thead>';
 
+		if ( empty( $this->options['table_headers'] ) ) {
+			$this->options['table_headers'] = array();
+		}
+
 		foreach ( $field_groups as $group => $group_data ) {
 
 			if ( empty( $group_data['fields'] ) && $group != 'extra' ) {
@@ -2192,7 +2194,17 @@ class WPF_Settings {
 
 			}
 
-			echo '<tbody class="table-collapse ' . ( $this->options['table_headers'][ $group_slug ] == true ? 'hide' : '' ) . '">';
+			$table_class = 'table-collapse';
+
+			if ( $this->options['table_headers'][ $group_slug ] == true ) {
+				$table_class .= ' hide';
+			}
+
+			if ( ! empty( $group_data['disabled'] ) ) {
+				$table_class .= ' disabled';
+			}
+
+			echo '<tbody class="' . $table_class . '">';
 
 			foreach ( $group_data['fields'] as $user_meta => $data ) {
 
@@ -2213,7 +2225,7 @@ class WPF_Settings {
 				}
 
 				echo '<tr' . ( $this->options[ $id ][ $user_meta ]['active'] == true ? ' class="success" ' : '' ) . '>';
-				echo '<td><input class="checkbox contact-fields-checkbox"' . ( empty( $this->options[ $id ][ $user_meta ]['crm_field'] ) ? ' disabled' : '' ) . ' type="checkbox" id="wpf_cb_' . $user_meta . '" name="wpf_options[' . $id . '][' . $user_meta . '][active]" value="1" ' . checked( $this->options[ $id ][ $user_meta ]['active'], 1, false ) . '/></td>';
+				echo '<td><input class="checkbox contact-fields-checkbox"' . ( empty( $this->options[ $id ][ $user_meta ]['crm_field'] ) || 'user_email' == $user_meta ? ' disabled' : '' ) . ' type="checkbox" id="wpf_cb_' . $user_meta . '" name="wpf_options[' . $id . '][' . $user_meta . '][active]" value="1" ' . checked( $this->options[ $id ][ $user_meta ]['active'], 1, false ) . '/></td>';
 				echo '<td class="wp_field_label">' . ( isset( $data['label'] ) ? $data['label'] : '' );
 
 				if ( 'user_pass' == $user_meta ) {
@@ -2298,6 +2310,7 @@ class WPF_Settings {
 		echo '</tbody>';
 
 		echo '</table>';
+
 	}
 
 

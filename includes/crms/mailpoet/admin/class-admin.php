@@ -59,7 +59,6 @@ class WPF_MailPoet_Admin {
 
 		$new_settings['mailpoet_header'] = array(
 			'title'   => __( 'MailPoet Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -88,9 +87,10 @@ class WPF_MailPoet_Admin {
 
 	public function register_settings( $settings, $options ) {
 
+		$new_settings = array();
+
 		$new_settings['mailpoet_header_2'] = array(
 			'title'   => __( 'MailPoet Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'main',
 		);

@@ -155,6 +155,10 @@ class WP_Fusion_Options {
 
 	public function init() {
 
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
 		if ( isset( $_GET['page'] ) && 'wpf-settings' == $_GET['page'] ) {
 
 			// Remove all notices from other plugins
@@ -702,6 +706,8 @@ class WP_Fusion_Options {
 		<?php $page = $this->get_page_by_screen( get_current_screen() ); ?>
 		<?php $page = apply_filters( $this->setup['project_slug'] . '_configure_sections', $page, $this->options ); ?>
 
+		<?php do_action( 'wpf_settings_page_before_wrap' ); ?>
+
 		<div class="wrap wpf-settings-wrap">
 		<img id="wpf-settings-logo" src="<?php echo WPF_DIR_URL; ?>/assets/img/logo-sm-trans.png">
 		<h2 class="wp-heading-inline" id="wpf-settings-header"><?php echo $page['page_title']; ?></h2>
@@ -1138,7 +1144,8 @@ class WP_Fusion_Options {
 		if ( isset( $field['title'] ) ) {
 			echo '<h3 class="title">' . $field['title'] . '</h3>';
 		}
-		echo '<p>' . $field['desc'] . '</p>';
+
+		echo '<p' . ( $field['class'] ? ' class="' . $field['class'] . '"' : '' ) . '>' . $field['desc'] . '</p>';
 	}
 
 	/**

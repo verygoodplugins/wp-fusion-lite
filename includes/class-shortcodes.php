@@ -169,7 +169,7 @@ class WPF_Shortcodes {
 			$can_access = true;
 		}
 
-		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $post->ID );
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), false );
 
 		if ( $can_access == true ) {
 
@@ -283,7 +283,7 @@ class WPF_Shortcodes {
 		// Prevent array-to-string conversion warnings when this value is an array
 
 		if ( is_array( $value ) ) {
-			$value = reset( $value );
+			$value = implode( ', ', $value );
 		}
 
 		if ( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {

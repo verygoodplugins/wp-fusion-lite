@@ -686,6 +686,10 @@ class WPF_Infusionsoft_iSDK {
 		if ( isset( $data['Email'] ) ) {
 
 			// Opt-in the email since email address changes cause opt-outs
+
+			// "You can opt them from a new state, but once they opt out you can't change it via API. They have to go through an IS web form."
+			// i.e. if they've opted out this won't opt them back in again.
+
 			$this->app->optIn( $data['Email'] );
 
 		}

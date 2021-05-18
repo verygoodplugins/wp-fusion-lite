@@ -578,6 +578,28 @@ jQuery(document).ready(function($){
 		});
 
 		//
+		// Fill URL into link (FluentCRM)
+		//
+
+		$('#fluentcrm_rest_url').on('input', function(event) {
+			
+			if( $(this).val().length && $(this).val().includes( 'https://' ) ) {
+
+				var url = $(this).val() + '/wp-admin/authorize-application.php?app_name=WP+Fusion+-+' + wpf_ajax.sitetitle + '&success_url=' + wpf_ajax.optionsurl + '%26crm=fluentcrm';
+
+				$("a#fluentcrm_rest-auth-btn").attr('href', url);
+
+				$("a#fluentcrm_rest-auth-btn").removeClass('button-disabled').addClass('button-primary');
+
+			} else {
+
+				$("a#fluentcrm_rest-auth-btn").removeClass('button-primary').addClass('button-disabled');
+
+			}
+
+		});
+
+		//
 		// Activate / deactivate license
 		//
 
@@ -738,6 +760,31 @@ jQuery(document).ready(function($){
 		$('form').on('submit', function() {
 	    	$(this).find(':input').removeAttr('disabled');
 	    });
+
+	    // Lite upgrade on Contact Fields
+
+	    function setProUpgradePosition() {
+
+	    	var position = $('tbody.disabled').first().position();
+	    	var lastPosition = $('tbody.disabled').last().position();
+
+	    	$( '#contact-fields-pro-notice' ).css({
+	    		top: position.top + 44,
+	    		height: lastPosition.top - position.top + $('tbody.disabled').last().height() - 2,
+	    	});
+
+	    }
+
+	    if ( $( '#contact-fields-pro-notice' ).length && $('tbody.disabled').length ) {
+
+	    	setProUpgradePosition();
+
+	    	$('#tab-contact-fields').on('shown.bs.tab', function (e) {
+	    		setProUpgradePosition();
+	    	});
+
+
+	    }
 
 	} // end WPF settings page listeners
 
