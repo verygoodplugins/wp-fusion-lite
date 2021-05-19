@@ -58,7 +58,6 @@ class WPF_FluentCRM_Admin {
 
 		$new_settings['fluentcrm_header'] = array(
 			'title'   => __( 'FluentCRM Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -94,8 +93,8 @@ class WPF_FluentCRM_Admin {
 		}
 
 		$new_settings['fluentcrm_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion-lite' ),
-			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion-lite' ),
+			'title'       => __( 'Default Lists', 'wp-fusion-lite' ),
+			'desc'        => __( 'All contacts synced to FluentCRM by WP Fusion will be added to the selected lists.', 'wp-fusion-lite' ),
 			'type'        => 'multi_select',
 			'placeholder' => 'Select lists',
 			'section'     => 'main',
@@ -253,6 +252,11 @@ class WPF_FluentCRM_Admin {
 		$fields[] = array(
 			'crm_label' => 'Date of Birth',
 			'crm_field' => 'date_of_birth',
+		);
+
+		$fields[] = array(
+			'crm_label' => 'Status',
+			'crm_field' => 'status',
 		);
 
 		return $fields;

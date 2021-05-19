@@ -92,7 +92,7 @@ class Main {
 	public function includes() {
 
 		// Load Classes
-		require_once 'blocks/secure-block/php/class-secure-block.php';
+		require_once plugin_dir_path( __FILE__ ) . 'blocks/secure-block/php/class-secure-block.php';
 		$secure_block = new Secure_Block();
 		$secure_block->run();
 

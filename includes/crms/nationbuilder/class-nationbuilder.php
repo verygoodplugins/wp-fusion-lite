@@ -152,7 +152,7 @@ class WPF_NationBuilder {
 
 				} else {
 
-					$response = new WP_Error( 'error', wp_remote_retrieve_response_message() );
+					$response = new WP_Error( 'error', wp_remote_retrieve_response_message( $response ) );
 
 				}
 			}

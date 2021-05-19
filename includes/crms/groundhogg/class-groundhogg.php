@@ -9,6 +9,15 @@ class WPF_Groundhogg {
 
 	public $supports;
 
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @var string
+	 * @since 3.37.3
+	 */
+
+	public $edit_url = '';
+
 
 	/**
 	 * Get things started
@@ -50,6 +59,13 @@ class WPF_Groundhogg {
 		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || ! class_exists( '\Groundhogg\Contact' ) ) {
 			return;
 		}
+
+		// Contact edit URL on the admin profile
+		$this->edit_url = admin_url( 'admin.php?page=gh_contacts&action=edit&contact=%d' );
+
+		// Disable the API queue
+
+		add_filter( 'wpf_get_setting_enable_queue', '__return_false' );
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );

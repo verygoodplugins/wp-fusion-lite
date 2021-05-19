@@ -33,8 +33,8 @@ class WPF_AJAX {
 
 		$tags = $_POST['tags'];
 
-		if( ! is_array( $tags ) ) {
-			$tags = explode(',', $tags);
+		if ( ! is_array( $tags ) ) {
+			$tags = explode( ',', $tags );
 		}
 
 		$tags = array_map( 'sanitize_text_field', $tags );

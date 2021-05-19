@@ -285,6 +285,8 @@ class WPF_Batch {
 
 	public function batch_status() {
 
+		$key = false;
+
 		if ( isset( $_POST['key'] ) ) {
 			$key = sanitize_key( $_POST['key'] );
 		} else {
@@ -636,7 +638,7 @@ class WPF_Batch {
 
 	public function users_register_step( $user_id ) {
 
-		wp_fusion()->user->user_register( $user_id, null, true );
+		wp_fusion()->user->user_register( $user_id );
 
 	}
 

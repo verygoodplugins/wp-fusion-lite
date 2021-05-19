@@ -4,13 +4,10 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.37.0
+ * Version: 3.37.18
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
- * Text Domain: wp-fusion
- *
- * WC requires at least: 3.0
- * WC tested up to: 5.1.0
+ * Text Domain: wp-fusion-lite
  */
 
 /**
@@ -31,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.37.0' );
+define( 'WP_FUSION_VERSION', '3.37.18' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -185,6 +182,11 @@ final class WP_Fusion_Lite {
 			self::$instance->settings = new WPF_Settings();
 			self::$instance->logger   = new WPF_Log_Handler();
 
+			// Integration modules are stored here for easy access, for
+			// example wp_fusion()->integrations->{'woocommerce'}->process_order( $order_id );
+
+			self::$instance->integrations = new stdClass();
+
 			// Load the CRM modules
 			add_action( 'plugins_loaded', array( self::$instance, 'init_crm' ) );
 
@@ -207,11 +209,15 @@ final class WP_Fusion_Lite {
 				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
 				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
 
-				if ( self::$instance->is_full_version() ) {
-					add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
-					add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
-				}
 			}
+
+			if ( self::$instance->is_full_version() ) {
+				add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
+				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
+			}
+
+			add_action( 'init', array( self::$instance, 'init' ), 0 );
+
 		}
 
 		return self::$instance;
@@ -280,6 +286,21 @@ final class WP_Fusion_Lite {
 
 	}
 
+
+	/**
+	 * Fires when WP Fusion has loaded.
+	 *
+	 * When developing addons, use this hook to initialize any functionality
+	 * that depends on WP Fusion.
+	 *
+	 * @since 3.37.14
+	 *
+	 * @link  https://wpfusion.com/documentation/actions/wp_fusion_init/
+	 */
+	public function init() {
+		do_action( 'wp_fusion_init' );
+	}
+
 	/**
 	 * Check min PHP version
 	 *
@@ -316,7 +337,9 @@ final class WP_Fusion_Lite {
 
 	public function get_integrations() {
 
-		return apply_filters( 'wpf_integrations', array() );
+		return apply_filters(
+			'wpf_integrations', array()
+		);
 
 	}
 
@@ -329,7 +352,9 @@ final class WP_Fusion_Lite {
 
 	public function get_integrations_theme() {
 
-		return apply_filters( 'wpf_integrations_theme', array() );
+		return apply_filters(
+			'wpf_integrations_theme', array()
+		);
 
 	}
 
@@ -393,8 +418,9 @@ final class WP_Fusion_Lite {
 				'fluentcrm'      => 'WPF_FluentCRM',
 				'growmatik'      => 'WPF_Growmatik',
 				'highlevel'      => 'WPF_HighLevel',
-                'pulsetech'      => 'WPF_PulseTechnologyCRM'
-
+        'pulsetech'      => 'WPF_PulseTechnologyCRM'
+				'emercury'       => 'WPF_Emercury',
+				'fluentcrm-rest' => 'WPF_FluentCRM_REST',
 			)
 		);
 
@@ -424,6 +450,15 @@ final class WP_Fusion_Lite {
 			require_once WPF_DIR_PATH . 'includes/admin/class-notices.php';
 			require_once WPF_DIR_PATH . 'includes/admin/admin-functions.php';
 
+			if ( ! $this->is_full_version() ) {
+				require_once WPF_DIR_PATH . 'includes/admin/class-lite-helper.php';
+			}
+		}
+
+		// Plugin updater
+
+		if ( is_admin() && $this->is_full_version() ) {
+			require_once WPF_DIR_PATH . 'includes/admin/class-updater.php';
 		}
 
 	}
@@ -446,13 +481,8 @@ final class WP_Fusion_Lite {
 		require_once WPF_DIR_PATH . 'includes/admin/gutenberg/class-gutenberg.php';
 		require_once WPF_DIR_PATH . 'includes/admin/class-admin-interfaces.php';
 
-		// Plugin updater
-		if ( is_admin() && $this->is_full_version() ) {
-			require_once WPF_DIR_PATH . 'includes/admin/class-updater.php';
-		}
-
 		// Shortcodes
-		if ( ! is_admin() ) {
+		if ( ! is_admin() && self::$instance->settings->get( 'connection_configured' ) ) {
 			require_once WPF_DIR_PATH . 'includes/class-shortcodes.php';
 		}
 
@@ -463,6 +493,7 @@ final class WP_Fusion_Lite {
 
 		// Incoming webhooks handler
 		if ( $this->is_full_version() ) {
+			require_once WPF_DIR_PATH . 'includes/integrations/class-forms-helper.php';
 			require_once WPF_DIR_PATH . 'includes/class-api.php';
 		}
 
@@ -480,6 +511,19 @@ final class WP_Fusion_Lite {
 		self::$instance->crm_base = new WPF_CRM_Base();
 		self::$instance->crm      = self::$instance->crm_base->crm;
 
+		/**
+		 * Init CRM.
+		 *
+		 * Indicates that the CRM has been set up and allows accessing the CRM
+		 * or modifying it by reference.
+		 *
+		 * @since 3.37.14
+		 *
+		 * @param WPF_* object  The CRM class.
+		 */
+
+		do_action( 'wp_fusion_init_crm', self::$instance->crm );
+
 		return self::$instance->crm;
 
 	}
@@ -495,9 +539,6 @@ final class WP_Fusion_Lite {
 
 		// Integrations base
 		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
-
-		// Store integrations for public access
-		self::$instance->integrations = new stdClass();
 
 		// Integrations autoloader
 		foreach ( wp_fusion()->get_integrations() as $filename => $dependency_class ) {
@@ -556,7 +597,6 @@ final class WP_Fusion_Lite {
 		}
 
 	}
-
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

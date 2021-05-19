@@ -26,7 +26,7 @@ class WPF_Admin_Notices {
 
 		if ( ! wp_fusion()->settings->get( 'connection_configured' ) && 'settings_page_wpf-settings' !== get_current_screen()->id ) {
 
-			$out  = '<div id="wpf-needs-setup" class="updated">';
+			$out  = '<div id="wpf-needs-setup" data-notice="wpf-needs-setup" class="notice notice-warning wpf-notice is-dismissible">';
 			$out .= '<p>';
 			$out .= sprintf( __( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s</a>.', 'wp-fusion-lite' ), '<a href="' . get_admin_url() . '/options-general.php?page=wpf-settings#setup">', '</a>' );
 			$out .= '</p>';

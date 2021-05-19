@@ -467,10 +467,13 @@ class WPF_Zoho {
 
 		$available_layouts = array();
 
-		foreach ( $body_json->layouts as $layout ) {
+		if ( ! empty( $body_json->layouts ) ) {
 
-			$available_layouts[ $layout->id ] = $layout->name;
+			foreach ( $body_json->layouts as $layout ) {
 
+				$available_layouts[ $layout->id ] = $layout->name;
+
+			}
 		}
 
 		wp_fusion()->settings->set( 'zoho_layouts', $available_layouts );

@@ -218,7 +218,7 @@ class WPF_Capsule {
 
 		$available_tags = array();
 
-		$request  = "https://api.capsulecrm.com/api/v2/parties/tags";
+		$request  = "https://api.capsulecrm.com/api/v2/parties/tags?perPage=100";
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {

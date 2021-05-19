@@ -32,7 +32,7 @@ class WPF_HubSpot_Admin {
 		}
 
 		// OAuth
-		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
+		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ), 1 );
 
 	}
 
@@ -131,7 +131,6 @@ class WPF_HubSpot_Admin {
 
 		$new_settings['hubspot_header'] = array(
 			'title'   => __( 'HubSpot Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -143,10 +142,16 @@ class WPF_HubSpot_Admin {
 		if ( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['hubspot_header']['desc']  = '<table class="form-table"><tr>';
-			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
+			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>' . __( 'Authorize', 'wp-fusion-lite' ) . '</label></th>';
 			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">' . __( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br />';
 			$new_settings['hubspot_header']['desc'] .= '<span class="description">' . __( 'You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ) . '</td>';
-			$new_settings['hubspot_header']['desc'] .= '</tr></table></div><table class="form-table">';
+			$new_settings['hubspot_header']['desc'] .= '</tr></table>';
+
+			if ( ! is_ssl() ) {
+				$new_settings['hubspot_header']['desc'] .= '<p class="wpf-notice notice notice-error">' . __( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the HubSpot API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ) . '</p>';
+			}
+
+			$new_settings['hubspot_header']['desc'] .= '</div><table class="form-table">';
 
 		} else {
 
@@ -163,7 +168,7 @@ class WPF_HubSpot_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'hubspot_token', 'hubspot_refresh_token' ),
-				'desc'        => '<a href="' . $auth_url . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</a>',
+				'desc'        => '<a href="' . $auth_url . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
 			);
 
 		}

@@ -264,7 +264,7 @@ class WPF_HubSpot {
 
 				}
 
-			} elseif( isset( $body_json->status ) && $body_json->status == 'error' ) {
+			} elseif( ( isset( $body_json->status ) && $body_json->status == 'error' ) || isset( $body_json->errorType ) ) {
 
 				$message = $body_json->message;
 
@@ -272,6 +272,8 @@ class WPF_HubSpot {
 
 				if ( 'resource not found' == $message ) {
 					$message .= '.<br /><br />This error usually means that you\'ve deleted or merged a contact record in HubSpot, and then tried to update a contact ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
+				} elseif ( 'Can not operate manually on a dynamic list' == $message ){
+					$message .= '.<br /><br />' . __( 'This error means you tried to apply an Active list over the API. Only Static lists can be assigned over the API. For an overview of HubSpot lists, see <a href="https://knowledge.hubspot.com/lists/create-active-or-static-lists#types-of-lists" target="_blank">this documentation page</a>.', 'wp-fusion-lite' );
 				}
 
 				if( isset( $body_json->validationResults ) ) {
@@ -366,7 +368,7 @@ class WPF_HubSpot {
 		$available_tags = array();
 
 		$continue = true;
-		$offset = 0;
+		$offset   = 0;
 
 		while ( $continue ) {
 
@@ -386,12 +388,13 @@ class WPF_HubSpot {
 					if( $list->listType == 'STATIC' ) {
 						$category = 'Static Lists';
 					} else {
-						$category = 'Active Lists (Read Only)';
+						$category    = 'Active Lists (Read Only)';
+						//$list->name .= ' (read only)';
 					}
 
 					$available_tags[ $list->listId ] = array(
 						'label'    => $list->name,
-						'category' => $category
+						'category' => $category,
 					);
 
 				}
@@ -785,6 +788,11 @@ class WPF_HubSpot {
 	public function guest_checkout_complete( $contact_id, $customer_email ) {
 
 		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+			return;
+		}
+
+		if ( headers_sent() ) {
+			wpf_log( 'notice', 0, 'Tried and failed to set site tracking cookie for ' . $customer_email . ', because headers have already been sent.' );
 			return;
 		}
 

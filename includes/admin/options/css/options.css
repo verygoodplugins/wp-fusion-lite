@@ -118,6 +118,10 @@
 	height:130px;
 	width:200px;
 }
+
+.wrap.wpf-settings-wrap {
+    position: relative;
+}
 /* panel style */
 /*.wrap { background:none repeat scroll 0 0 #EAEEF3; border:1px solid #CCCCCC; box-shadow:0 1px 3px rgba(0, 0, 0, 0.2); margin:17px 0 40px 10px; width:800px; border-radius:6px 6px 6px 6px; }*/
 /*.header_wrap { border-radius:6px 6px 6px 6px; background:-moz-linear-gradient(center top, #FEFEFE, #E9EAEE) repeat scroll 0 0 transparent; padding:5px 20px 10px; }*/

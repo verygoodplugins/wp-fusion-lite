@@ -125,8 +125,6 @@ class WPF_ActiveCampaign_Admin {
 
 		$new_settings['site_tracking_header'] = array(
 			'title'   => __( 'ActiveCampaign Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => '',
-			'std'     => '',
 			'type'    => 'heading',
 			'section' => 'main'
 		);
@@ -134,15 +132,13 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enable <a target="_blank" href="https://help.activecampaign.com/hc/en-us/articles/221493708-How-to-set-up-Site-Tracking">ActiveCampaign site tracking</a>.', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
 		);
 
 		$new_settings['site_tracking_id'] = array(
-			'std'     => '',
 			'type'    => 'hidden',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $new_settings );
@@ -150,8 +146,9 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings = array();
 
 		$new_settings['ac_import_p'] = array(
-			'desc'    => '<div class="alert alert-info">' . __( '<strong>Note:</strong> Contacts cannot be imported from ActiveCampaign unless they are on at least one list.' ) . '</div>',
+			'desc'    => __( '<strong>Note:</strong> Contacts cannot be imported from ActiveCampaign unless they are on at least one list.' ),
 			'type'    => 'paragraph',
+			'class'   => 'wpf-notice notice notice-info',
 			'section' => 'import',
 		);
 
