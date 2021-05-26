@@ -233,7 +233,7 @@ class WPF_PulseTechnologyCRM
 
     public function handle_http_response($response, $args, $url)
     {
-        if (strpos($url, $this->url) !== false && 'WP Fusion; ' . home_url() == $args['user-agent']) {
+        if (strpos($url, strval($this->oauth_url_token)) !== false && 'WP Fusion; ' . home_url() == $args['user-agent']) {
 
             $body_json = json_decode(wp_remote_retrieve_body($response));
 

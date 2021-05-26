@@ -43,6 +43,7 @@ class WPF_PulseTechnologyCRM_Admin {
 
         add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
         add_action( 'show_field_pulsetech_header_begin', array( $this, 'show_field_pulsetech_header_begin' ), 10, 2 );
+        add_action( 'show_field_pulsetech_footer_end', array( $this, 'show_field_pulsetech_footer_end' ), 10, 2 );
 
         // AJAX callback to test the connection
         add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -161,7 +162,6 @@ class WPF_PulseTechnologyCRM_Admin {
             'section'     => 'setup',
         );
 
-
         if ( !empty($options['pulsetech_client_id']) && !empty($options['pulsetech_secret']))
         {
             if (empty($options['pulsetech_refresh_token']))
@@ -188,6 +188,12 @@ class WPF_PulseTechnologyCRM_Admin {
                     'section' => 'setup',
                     'desc' => '<a class="button" href="' . $buttonUrl . '?' . $query . '">Click here to Authorize</a><br /><span class="description">You\'ll be taken to Pulse to authorize WP Fusion and generate access keys for this site.'
                 );
+
+                $new_settings['pulsetech_footer'] = array(
+                    'title'   => __( '', 'wp-fusion' ),
+                    'type'    => 'heading',
+                    'section' => 'setup',
+                );
             } else {
                 $new_settings['pulsetech_connected'] = array(
                     'title'   => __( 'Pulse - Already Connected', 'wp-fusion' ),
@@ -210,6 +216,12 @@ class WPF_PulseTechnologyCRM_Admin {
                     'post_fields' => array( 'pulsetech_token', 'pulsetech_refresh_token' ),
                 );
             }
+        }else{
+            $new_settings['pulsetech_footer'] = array(
+                'title'   => __( '', 'wp-fusion' ),
+                'type'    => 'heading',
+                'section' => 'setup',
+            );
         }
 
         $settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -236,6 +248,10 @@ class WPF_PulseTechnologyCRM_Admin {
 
     }
 
+    public function show_field_pulsetech_footer_end($id, $field){
+        echo '</table>';
+        echo '</div>';
+    }
 
     /**
      * Verify connection credentials.
