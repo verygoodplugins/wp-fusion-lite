@@ -46,6 +46,13 @@ body > .select4-container--open {
 	margin-bottom: 10px;
 }
 
+/* Notices */
+
+.wrap p.wpf-notice {
+	padding: 12px 14px;
+	margin-left: -12px;
+}
+
 /* Tooltips */
 
 span.wpf-tip {
@@ -195,6 +202,7 @@ body.term-php .wpf-page-redirect-select label {
 
 #post-body #postbox-container-2 .select4-container, #wpf-learndash-meta .select4-container, .cp-box-content .select4-container, #affwp_edit_affiliate .select4-container, #wpf-center-meta .select4-container {
 	min-width: 400px;
+	max-width: 100%;
 }
 
 #wpf-coursewre-levels-table .select4-container {
@@ -568,6 +576,33 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	line-height: 1.5;
 }
 
+.edd-price-option-fields label {
+	display: block;
+	margin-bottom: 5px;
+}
+
+.wp-core-ui a.wpf-action-button {
+	position: relative;
+	padding-right: 22px;
+}
+
+.wp-core-ui a.wpf-action-button:after {
+	font-family: Dashicons;
+    font-weight: 400;
+    text-transform: none;
+    -webkit-font-smoothing: antialiased;
+    text-indent: 0px;
+    position: absolute;
+    top: 0px;
+    right: 5px;
+    height: 100%;
+    text-align: center;
+    content: "";
+    line-height: 28px;
+    font-variant: normal;
+    margin: 0px;
+}
+
 /* Popup Maker */
 
 .pum-field-select.select4-wpf-tags-wrapper input.select4-search__field {
@@ -593,7 +628,15 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	text-align: left;
 }
 
-/* WC addons */
+/* WooCommerce and addons */
+
+ul.wc-tabs li.wp-fusion-settings-tab a:before {
+	display: none;
+}
+
+ul.wc-tabs li.wp-fusion-settings-tab a svg {
+	vertical-align: middle;
+}
 
 #post-body #postbox-container-2 .woocommerce_product_addon .select4-container {
 	min-width: 250px;
@@ -656,6 +699,12 @@ body.memberships_page_pmpro-discountcodes .select4-container {
     margin-bottom: 5px;
 }
 
+/* WooFunnels */
+
+.wfocu_forms_offer_settings .form-group.field-label {
+	max-width: 140px;
+}
+
 /* Elementor */
 
 #elementor-popup__timing-controls-group--wp_fusion .elementor-control-wp_fusion_popup_tags .elementor-control-input-wrapper {
@@ -698,4 +747,91 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	display: block;
 	width: 100% !important;
 	margin-top: 5px;
+}
+
+/* Lite upgrade nags */
+
+.wpf-upgrade-nag-container {
+	max-width: 975px;
+    background: #fff;
+    position: relative;
+    padding: 30px;
+    font-size: 14px;
+    line-height: 1.5;
+    box-shadow: 0 1px 5px rgb(0 0 0 / 20%);
+}
+
+.wpf-upgrade-nag-container svg {
+	width: 250px;
+    max-width: 30%;
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    margin-top: -100px;
+}
+
+.wpf-upgrade-nag-container .innercontent {
+	position: relative;
+    z-index: 2;
+    margin-left: 30%;
+}
+
+.wpf-upgrade-nag-container ul {
+	list-style: disc;
+    padding-left: 20px;
+}
+
+.wpf-upgrade-nag-container .innercontent h3 {
+	font-size: 22px;
+	margin-bottom: 5px;
+}
+
+.wpf-upgrade-nag-container .innercontent p {
+	font-size: 13px;
+	padding: 0px;
+	line-height: 1.7;
+}
+
+.wpf-upgrade-nag-container .buttonwrapper {
+	margin: 15px 0;
+}
+
+.wpf-upgrade-nag-container a.button-primary {
+	margin: 0 15px;
+    margin-top: 5px;
+    background-color: #E55B10;
+    border-color: #E55B10;
+}
+
+.wpf-upgrade-nag-container a.button-primary:hover {
+	background-color: #d45510;
+	border-color: #d45510;
+}
+
+.wpf-upgrade-nag-container span.orange {
+	color: #E55B11;
+    font-style: italic;
+}
+
+.wpf-panel-disabled {
+	position: relative;
+}
+
+.wpf-panel-disabled .wpf-upgrade-nag-container {
+	position: absolute;
+    z-index: 100;
+    top: 50%;
+    margin-top: -120px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.wpf-panel-disabled:before {
+	content: '';
+	background: radial-gradient(circle, rgba(255,255,255,0.95) 35%, rgba(255,255,255,0.35) 100%);
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 100%;
+	z-index: 99;
 }

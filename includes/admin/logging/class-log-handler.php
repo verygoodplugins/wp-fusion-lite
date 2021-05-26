@@ -54,6 +54,15 @@ class WPF_Log_Handler {
 	);
 
 	/**
+	 * This allows other classes to manually prepend a source
+	 * for an event that's about to be logged.
+	 *
+	 * @var array
+	 */
+
+	public $event_sources = array();
+
+	/**
 	 * Constructor for the logger.
 	 */
 	public function __construct() {
@@ -98,6 +107,23 @@ class WPF_Log_Handler {
 
 			$this->create_update_table();
 
+		}
+
+	}
+
+
+	/**
+	 * This allows us to manually prepend an event source to the log entry.
+	 *
+	 * @since 3.37.3
+	 *
+	 * @param string $source The source.
+	 */
+
+	public function add_source( $source ) {
+
+		if ( ! in_array( $source, $this->event_sources ) ) {
+			$this->event_sources[] = $source;
 		}
 
 	}
@@ -433,7 +459,7 @@ class WPF_Log_Handler {
 
 			foreach ( $context['meta_array'] as $key => $data ) {
 
-				if ( ! isset( $contact_fields[ $key ] ) || $contact_fields[ $key ]['active'] == false ) {
+				if ( ! isset( $contact_fields[ $key ] ) || empty( $contact_fields[ $key ]['active'] ) ) {
 					unset( $context['meta_array'][ $key ] );
 					continue;
 				}
@@ -590,9 +616,7 @@ class WPF_Log_Handler {
 	 * @return string Text to use as log source. "" (empty string) if none is found.
 	 */
 
-	protected static function get_log_source() {
-
-		static $ignore_files = array( 'class-log-handler' );
+	public function get_log_source() {
 
 		/**
 		 * PHP < 5.3.6 correct behavior
@@ -606,15 +630,34 @@ class WPF_Log_Handler {
 			$debug_backtrace_arg = false;
 		}
 
-		$full_trace = debug_backtrace( $debug_backtrace_arg );
+		// Get the available files that are valid as a log source
 
-		$slugs = array( 'user-profile', 'class-api', 'access-control', 'class-auto-login', 'class-ajax', 'class-shortcodes' );
+		$slugs = array( 'user-profile', 'api', 'access-control', 'auto-login', 'ajax', 'shortcodes' );
 
 		foreach ( wp_fusion()->get_integrations() as $slug => $integration ) {
 			$slugs[] = $slug;
 		}
 
 		$found_integrations = array();
+
+		// If we're doing a batch operation it's good to know which one,
+		// we'll prepend that here
+
+		if ( defined( 'DOING_WPF_BATCH_TASK' ) ) {
+
+			$found_integrations[] = 'batch-process';
+
+			$found_integrations[] = str_replace( '_', '-', DOING_WPF_BATCH_TASK );
+
+		}
+
+		// This allows us to preprend a source manually
+
+		if ( ! empty( $this->event_sources ) ) {
+			$found_integrations = array_merge( $found_integrations, $this->event_sources );
+		}
+
+		$full_trace = array_reverse( debug_backtrace( $debug_backtrace_arg ) );
 
 		foreach ( $full_trace as $i => $trace ) {
 
@@ -626,7 +669,7 @@ class WPF_Log_Handler {
 						continue;
 					}
 
-					if ( strpos( $trace['file'], $slug ) !== false ) {
+					if ( strpos( $trace['file'], 'class-' . $slug ) !== false ) {
 
 						// Remove the "class"
 
@@ -638,21 +681,10 @@ class WPF_Log_Handler {
 			}
 		}
 
-		// If we're doing a batch operation it's good to know which one
-
-		if ( defined( 'DOING_WPF_BATCH_TASK' ) ) {
-
-			if ( ! empty( DOING_WPF_BATCH_TASK ) ) {
-				$found_integrations[] = str_replace( '_', '-', DOING_WPF_BATCH_TASK );
-			}
-
-			$found_integrations[] = 'batch-process';
-		}
-
 		// Figure out most likely integration
 		if ( ! empty( $found_integrations ) ) {
 
-			$source = serialize( array_reverse( array_unique( $found_integrations ) ) );
+			$source = serialize( array_unique( $found_integrations ) );
 
 		} else {
 			$source = 'unknown';

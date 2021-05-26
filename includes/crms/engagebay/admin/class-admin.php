@@ -59,7 +59,6 @@ class WPF_EngageBay_Admin {
 
 		$new_settings['engagebay_header'] = array(
 			'title'   => __( 'EngageBay Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);

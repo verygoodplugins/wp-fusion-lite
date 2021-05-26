@@ -83,6 +83,23 @@ if ( ! function_exists( 'wpf_get_current_user_id' ) ) {
 }
 
 /**
+ * Gets the current user, with support for auto-logged-in users
+ *
+ * @since 3.37.3
+ *
+ * @return bool|WP_User The current user.
+ */
+
+if ( ! function_exists( 'wpf_get_current_user' ) ) {
+
+	function wpf_get_current_user() {
+
+		return wp_fusion()->user->get_current_user();
+
+	}
+}
+
+/**
  * Gets the WordPress user ID from a contact ID.
  *
  * @since 3.35.17

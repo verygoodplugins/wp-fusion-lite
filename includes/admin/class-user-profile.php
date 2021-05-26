@@ -55,8 +55,21 @@ class WPF_User_Profile {
 
 			$contact_id = wp_fusion()->user->user_register( $user_id, null, true );
 
-			$message = sprintf( __( '<strong>Success:</strong> User was added to %1$s with contact ID %2$s.' ), wp_fusion()->crm->name, $contact_id );
+			if ( $contact_id ) {
 
+				$edit_url = wp_fusion()->user->get_contact_edit_url( $user_id );
+
+				if ( false !== $edit_url ) {
+					$contact_id = '<a href="' . $edit_url . '" target="_blank">' . $contact_id . '</a>';
+				}
+
+				$message = sprintf( __( '<strong>Success:</strong> User was added to %1$s with contact ID %2$s.' ), wp_fusion()->crm->name, $contact_id );
+
+			} else {
+
+				$message = sprintf( __( '<strong>Error:</strong> Unable to create contact in %1$s, see the %2$sactivity logs%3$s for more information.' ), wp_fusion()->crm->name, '<a href="' . admin_url( 'tools.php?page=wpf-settings-logs' ) . '">', '</a>' );
+
+			}
 		} elseif ( 'pull' == $_GET['wpf_profile_action'] ) {
 
 			$user_meta = wp_fusion()->user->pull_user_meta( $user_id );
@@ -279,9 +292,11 @@ class WPF_User_Profile {
 
 							<?php echo $contact_id; ?>
 
-							<?php if ( isset( wp_fusion()->crm->edit_url ) ) : ?>
+							<?php $edit_url = wp_fusion()->user->get_contact_edit_url( $user->ID ); ?>
 
-								- <a href="<?php printf( wp_fusion()->crm->edit_url, $contact_id ); ?>" target="_blank"><?php printf( __( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?> &rarr;</a>
+							<?php if ( false !== $edit_url ) : ?>
+
+								- <a href="<?php echo $edit_url ?>" target="_blank"><?php printf( __( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?> &rarr;</a>
 
 							<?php endif; ?>
 

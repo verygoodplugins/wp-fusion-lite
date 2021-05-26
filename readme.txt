@@ -1,10 +1,10 @@
-=== WP Fusion Lite ===
+=== WP Fusion Lite - Marketing Automation for WordPress ===
 Contributors: verygoodplugins
-Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, drip, crm, marketing automation, wpfusion, wp-fusion
+Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 5.7
-Stable tag: 3.37.0
+Tested up to: 5.7.2
+Stable tag: 3.37.18
 
 WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
@@ -14,13 +14,17 @@ WP Fusion Lite synchronizes your WordPress users with leading CRMs and marketing
 
 = Features =
 
-* Automaticaly create new contacts in your CRM when users register in WordPress
-* Restrict access to site content using tags or lists in your CRM
-* Synchronize any WordPress user data with custom fields in your CRM
-* Apply tags when users register
-* Import contacts from your CRM as new WordPress users and generate passwords for them
-* Export site users to your CRM as contact records
-* Track visitor activity using your CRM's tracking scripts (with supported CRMs)
+* Automatically [create new contacts in your CRM](https://wpfusion.com/documentation/getting-started/general-settings/?utm_campaign=free-plugin&utm_source=wp-org#automatically-create-contact-records-for-new-users) when users register in WordPress
+* [Restrict access to site content](https://wpfusion.com/documentation/getting-started/access-control/?utm_campaign=free-plugin&utm_source=wp-org) using tags and lists in your CRM
+* [Synchronize any WordPress user data]((https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_campaign=free-plugin&utm_source=wp-org)) with custom fields in your CRM
+* [Apply tags when users register](https://wpfusion.com/documentation/getting-started/general-settings/?utm_campaign=free-plugin&utm_source=wp-org#assign-tags)
+* [Import contacts from your CRM](https://wpfusion.com/documentation/tutorials/import-users/?utm_campaign=free-plugin&utm_source=wp-org) as new WordPress users and generate passwords for them
+* [Export WordPress users](https://wpfusion.com/documentation/tutorials/batch-operations/?utm_campaign=free-plugin&utm_source=wp-org) to your CRM as contact records
+* [Track visitor activity](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/?utm_campaign=free-plugin&utm_source=wp-org) using your CRM's tracking scripts (with supported CRMs)
+
+> WP Fusion is a critical tool in our toolkit for our clients, and we VERY strongly encourage our clients to use WP Fusion if they have any kind of CRM. The software is top notch, and the support team is fast and friendly. Nothing but love for WP Fusion from my team here at House Trevethan.
+
+> Allen Trevethan - House Trevethan
 
 = Lite Version =
 
@@ -30,7 +34,42 @@ It does not apply tags based on purchases or course activity, sync form entries,
 
 For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 100 other popular WordPress plugins](https://wpfusion.com/documentation/integrations/?utm_campaign=free-plugin&utm_source=wp-org), check out [one of our paid licenses](https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=wp-org).
 
-= Supported CRMs =
+[youtube https://www.youtube.com/watch?v=wzRajxCUxNI] 
+
+= Benefits =
+
+* ⚡ Replace Zapier, Integromat, and other integration tools. WP Fusion gives you an direct data sync direct between your site and your CRM, with no delays or limits.
+
+* 🔒 Create easy to manage membership sites with drip-released content using timers and logic in your CRM.
+
+* 💎 Personalize your site by displaying data from CRM contact records, and showing / hiding content based on a user's CRM tags or lists.
+
+> WP Fusion allows us to provide tailored customer experiences in WordPress that wow every time.
+
+> Hundreds of plugins that used to be one size fits all, can now perform differently for each Ontraport contact. For example, a low scoring Ontraport contact can be presented with a winback customer journey in WordPress.
+
+> This has allowed our clients to increase customer engagement and retention. It's the only solution that should be considered for any WordPress integration.
+
+> Josh Schleifer - Triple Canopy
+
+= Docs and Tutorials =
+
+ * 📦 [Installation Guide](https://wpfusion.com/documentation/getting-started/installation-guide/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 🔒 [Controlling access to content with CRM tags](https://wpfusion.com/documentation/getting-started/access-control/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 📝 [Shortcodes](https://wpfusion.com/documentation/getting-started/shortcodes/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 👀 [Displaying CRM data in WordPress](https://wpfusion.com/documentation/tutorials/displaying-crm-data-in-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 🔥 [Sync WordPress users with CRM contact records](https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 🔑 [Import users from your CRM and generate passwords](https://wpfusion.com/documentation/tutorials/import-users/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 📤 [Export users and metadata to your CRM](https://wpfusion.com/documentation/tutorials/batch-operations/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 📈 [Sync Google Analytics and other leadsource variables with your CRM](https://wpfusion.com/documentation/tutorials/lead-source-tracking/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 🏷️ [Track user activity using tags](https://wpfusion.com/documentation/getting-started/tracking-user-activity/?utm_campaign=free-plugin&utm_source=wp-org)
+ * 🔮 [Auto login links](https://wpfusion.com/documentation/tutorials/auto-login-links/?utm_campaign=free-plugin&utm_source=wp-org)
+
+> WP Fusion builds a critical bridge between our WooCommerce powered ecommerce site and LifterLMS powered training site to our CRM ActiveCampaign. It was easy to set up. The technical support is above and beyond anything I've ever seen. What it does is clearly intelligently designed and well built.
+
+> Chris Badgett - LifterLMS
+
+= Supported CRMs and marketing automation platforms =
 
 * ActiveCampaign
 * AgileCRM
@@ -44,7 +83,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Drip
 * EngageBay
 * Flexie
-* FluentCRM
+* FluentCRM (same site or REST API)
 * GetResponse
 * Gist
 * Groundhogg
@@ -79,6 +118,14 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * ZeroBS CRM
 * Zoho
 
+For more info on CRM compatibility, [check out the compatibility table](https://wpfusion.com/documentation/faq/crm-compatibility-table/?utm_campaign=free-plugin&utm_source=wp-org).
+
+> WP Fusion is one of my secret weapons for getting WordPress to keep our member's data synced with our CRM. This makes everything work so much better when you don't have to worry about your members having issues logging into the member's area.
+
+> If you have or are considering having a membership website using WordPress this plugin is a must-have. It will save you hours of time and frustration.
+
+> Greg Russell - SuccessTeam Marketing
+
 == Screenshots ==
 
 1. Sync any WordPress user fields with contact records in your CRM
@@ -88,13 +135,127 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 
 == Installation ==
 
-Upload and activate the plugin, then go to Settings >> WP Fusion. Select your desired CRM, enter your API credentials and click "Test Connection" to verify the connection. See our [Getting Started Guide](https://wpfusion.com/documentation/#getting-started-guide) for more information on setting up your application.
+Upload and activate the plugin, then go to Settings >> WP Fusion. Select your desired CRM, enter your API credentials and click "Connect" to verify the connection.
+
+For CRM-specific setup information, see our [Installation Guide](https://wpfusion.com/documentation/getting-started/installation-guide/?utm_campaign=free-plugin&utm_source=wp-org).
 
 == Frequently Asked Questions ==
 
-See our [FAQ](https://wpfusion.com/documentation/).
+= Who is it for? =
+
+WP Fusion is built for anyone using a [CRM or marketing automation platform](https://wpfusion.com/documentation/faq/crm-compatibility-table/?utm_campaign=free-plugin&utm_source=wp-org), and running their website with WordPress.
+
+CRMs empower businesses to track leads, send email broadcasts, manage contact data, track sales, delegate client relationships between employees, and more.
+
+WordPress handles the public facing side of your business: your sales pages, ecommerce platform, support forums, photos and videos, and anything else you want the world to see.
+
+**But your CRM and WordPress don’t talk to each other.**
+
+**This is where WP Fusion comes in.**
+
+WP Fusion acts as a bridge between your WordPress data and CRM data— it allows you to use data from WordPress to power your marketing campaigns, and data from your CRM to personalize the customer experience in WordPress.
+
+= How is it different from Zapier? =
+
+While WP Fusion and Zapier are both integration tools, they work quite differently.
+
+Zapier is a SaaS (Software as a Service) solution that acts as a middleman between your site and your CRM (as well as many other platforms).
+
+When something is updated in WordPress, it is synced to Zapier’s website, and then Zapier syncs the data on to your desired platform. Depending on your plan there is a delay before the data is synced, and/or limit on how many “tasks” you can run each month.
+
+**WP Fusion connects your site directly to your CRM or marketing automation platform** over the API (nothing goes through our website). Because of this the sync of data is instant, secure, and there are no monthly limits.
+
+In addition to syncing data with your CRM, WP Fusion also includes many options for [protecting your WordPress content based on CRM tags](https://wpfusion.com/documentation/getting-started/access-control/?utm_campaign=free-plugin&utm_source=wp-org), and triggering changes in membership level or course enrollments based on CRM automations. This generally isn’t possible with Zapier because Zapier is configured via zapier.com, not inside your WordPress dashboard.
+
+= Can I disable the upgrade nags? =
+
+WP Fusion Lite has a few banners on the settings pages with additional info about the features available in the Pro version.
+
+If you'd prefer not to see these you can disable them with the filter:
+
+`add_filter( 'wp_fusion_hide_upgrade_nags', '__return_true' );`
+
+= Do you have more FAQs? = 
+
+Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.37.18 - 5/18/2021 =
+
+##### New CRMs
+
+* Emercury
+* [FluentCRM (REST API)](https://wpfusion.com/plugin-updates/introducing-fluentcrm-rest-api/?utm_campaign=free-plugin&utm_source=wp-org)
+
+
+##### New Features
+
+* Added [Auto Login debug mode](https://wpfusion.com/documentation/tutorials/auto-login-links/#debug-mode)
+* Added View in CRM links to admin user profile for FluentCRM and Groundhogg
+
+
+##### Improvements
+
+* Added notice to the logs when Filter Queries is running on more than 200 posts of a post type in a single request
+* Added warning during HubSpot setup if site isn't SSL secured
+* Added additional context to the "Can not operate manually on a dynamic list." error with HubSpot
+* Improved performance with taxonomy term access rules
+* Improved - Active HubSpot lists will now show as "read only" when selected
+* Improved - User-entered fields on the Contact Fields list will now show under their own heading
+* Improved support for syncing phone numbers with HighLevel
+* Improved - user_email and user_pass will no longer be loaded from the CRM during login if Login Meta Sync is enabled
+* Improved error handing with HubSpot
+* Improved Filter Queries performance
+* Improved - Filter Queries / Advanced will now limit the post query to the first 200 posts of each post type (for improved performance)
+* Improved - Filter Queries will be bypassed while WP Fusion is processing a webhook
+* Improved - user_registered will now be synced back to the CRM after a user is imported via webhook (if enabled)
+* Improved - Edits to fields on contact records in FluentCRM will now be synced back to the user record automatically
+* Improved - Disabled the "API Queue" with FluentCRM and Groundhogg
+* Improved upgrade nags with WP Fusion Lite
+
+
+##### Bug Fixes
+
+* Fixed Resync Tags batch operation getting hung up with Ontraport trying to load the tags from a deleted contact
+* EngageBay bugfixes
+* Fixed Filter Queries - Standard not working on search results
+* Fixed Export Users batch operation not respecting Limit User Roles setting
+* Fixed fatal error error handling error-level HTTP response code with NationBuilder
+* Fixed Capsule not loading more than 50 tags
+* Fixed an empty last_name field at registration defaulting to last_updated (with FluentCRM)
+* Fixed unwanted user meta getting synced back to the CRM when importing users if Push All was enabled
+* Fixed PHP warning trying to apply tags on view for deleted taxonomy terms
+* Fixed fatal error trying to apply tags to a deleted FluentCRM contact
+* Fixed HTTP API logging not working with MailJet
+* Fixed MailJet treating Contact Not Found errors as irrecoverable
+* Fixed duplicate State field with HighLevel
+* Fixed tag changes not being synced back properly from FluentCRM
+* Fixed being unable to disable First Name and Last Name fields from sync
+* Fixed fatal error on frontend if you selected Mautic as the CRM in the initial setup and saved the settings without entering API credentials
+* Fixed PHP warning 'WPF_Lead_Source_Tracking' does not have a method 'prepare_meta_fields' warning saving the settings
+* Fixed "Warning: Illegal string offset 'crm_field'"
+
+
+##### Developer
+
+* Added action [wp_fusion_init](https://wpfusion.com/documentation/actions/wp_fusion_init/)
+* Added action wp_fusion_init_crm
+* Added wp_fusion_hide_upgrade_nags filter
+* Added wpf_query_filter_get_posts_args filter
+* Added wpf_is_post_type_eligible_for_query_filtering filter
+* Added wpf_should_filter_query filter
+* Added filter wpf_get_user_id
+* Added filter wpf_restricted_content_message
+* Added wpf_leadsource_cookie_name filter
+* Added wpf_referral_cookie_name filter
+* Added wpf_get_current_user() function
+* Added wp_fusion()->access->can_access_posts cache
+* Added wp_fusion()->access->can_access_terms cache
+* Added "wpf_filtering_query" property to WP_Query objects that are being affected by Filter Queries - Advanced
+* Improved - Third parameter ($post_id) to wpf_user_can_access filter will now be false if the item being checked is not a post
+
+
 
 = 3.37 - 3/16/2021 =
 

@@ -48,7 +48,7 @@ $highlevel_fields['billing_country'] = array(
 );
 
 $highlevel_fields['billing_postcode'] = array(
-	'crm_label' => 'State',
+	'crm_label' => 'Postal Code',
 	'crm_field' => 'postalCode',
 );
 

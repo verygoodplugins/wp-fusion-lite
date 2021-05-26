@@ -9,6 +9,15 @@ class WPF_FluentCRM {
 	public $supports;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @var string
+	 * @since 3.37.3
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -17,9 +26,10 @@ class WPF_FluentCRM {
 
 	public function __construct() {
 
-		$this->slug     = 'fluentcrm';
-		$this->name     = 'FluentCRM';
-		$this->supports = array( 'add_lists' );
+		$this->slug      = 'fluentcrm';
+		$this->name      = 'FluentCRM';
+		$this->menu_name = 'FluentCRM (This Site)';
+		$this->supports  = array( 'add_lists' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -47,23 +57,32 @@ class WPF_FluentCRM {
 			return;
 		}
 
-		/*
-		 * Global Tag and List Actions
-		 */
+		// Disable the API queue
+
+		add_filter( 'wpf_get_setting_enable_queue', '__return_false' );
+
+		// Sync global tag and list changes
+
 		add_action( 'fluentcrm_list_created', array( $this, 'sync_lists' ), 10, 0 );
 		add_action( 'fluentcrm_list_deleted', array( $this, 'sync_lists' ), 10, 0 );
 		add_action( 'fluentcrm_tag_created', array( $this, 'sync_tags' ), 10, 0 );
 		add_action( 'fluentcrm_tag_deleted', array( $this, 'sync_tags' ), 10, 0 );
 
-		/*
-		 * Contact Specific Tag & List Actions
-		 */
+		// Sync contact tags when modified
+
 		add_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
 		add_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
 
+		// Sync contact fields when modified
+		add_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
+		add_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
+
+		// Contact edit URL on the admin profile
+		$this->edit_url = admin_url( 'admin.php?page=fluentcrm-admin#/subscribers/%d/' );
+
 		/*
 		 * List added to removed hook
-		 * WPFusion May implement this in future
+		 * WP Fusion may implement this in future
 		 *
 		add_action( 'fluentcrm_contact_added_to_lists', array($this,'contact_lists_added_removed' ), 10, 2);
 		add_action( 'fluentcrm_contact_removed_from_lists', array($this,'contact_lists_added_removed' ), 10, 2);
@@ -268,6 +287,11 @@ class WPF_FluentCRM {
 		remove_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
+
+		if ( ! $contact ) {
+			return new WP_Error( 'error', 'No contact ID #' . $contact_id . ' found in FluentCRM.' );
+		}
+
 		$contact->attachTags( $tags );
 
 		add_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
@@ -289,6 +313,11 @@ class WPF_FluentCRM {
 		remove_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
+
+		if ( ! $contact ) {
+			return new WP_Error( 'error', 'No contact ID #' . $contact_id . ' found in FluentCRM.' );
+		}
+
 		$contact->detachTags( $tags );
 
 		add_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
@@ -305,6 +334,7 @@ class WPF_FluentCRM {
 	 */
 
 	public function add_contact( $data, $map_meta_fields = true ) {
+
 		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
@@ -355,6 +385,10 @@ class WPF_FluentCRM {
 		$custom_data   = array_filter( \FluentCrm\Includes\Helpers\Arr::only( $data, array_keys( $custom_fields ) ) );
 
 		$model = FluentCrmApi( 'contacts' )->getContact( $contact_id );
+
+		if ( ! $model ) {
+			return new WP_Error( 'error', 'No contact ID #' . $contact_id . ' found in FluentCRM.' );
+		}
 
 		$model->fill( $data )->save();
 		if ( $custom_data ) {
@@ -423,14 +457,22 @@ class WPF_FluentCRM {
 	 */
 	public function contact_tags_added_removed( $tags, $subscriber ) {
 
+		// We need all the tags, not just the ones that were added / removed
+		$tags = array();
+
+		foreach ( $subscriber->tags as $tag ) {
+			$tags[] = $tag->id;
+		}
+
 		$user_id = $subscriber->user_id;
 
 		if ( ! $user_id ) {
 			// find the user ID from contact ID
-			$user_id = wp_fusion()->user->get_user_id( $subscriber->id );
+			$user_id = wpf_get_user_id( $subscriber->id );
 		}
 
 		if ( $user_id ) {
+			wp_fusion()->logger->add_source( 'fluentcrm' );
 			wp_fusion()->user->set_tags( $tags, $user_id );
 		}
 
@@ -455,6 +497,57 @@ class WPF_FluentCRM {
 		}
 	}
 
+	/**
+	 * Loads fields from FluentCRM back to WordPress when a contact is updated.
+	 *
+	 * @since 3.37.3
+	 *
+	 * @param FluentCrm\App\Models\Subscriber $subscriber The subscriber.
+	 */
+	public function contact_updated( $subscriber ) {
+
+		$user_id = $subscriber->user_id;
+
+		if ( ! $user_id ) {
+			$user_id = wp_fusion()->user->get_user_id( $subscriber->id );
+		}
+
+		if ( $user_id ) {
+
+			// Set the log source
+			wp_fusion()->logger->add_source( 'fluentcrm' );
+
+			wp_fusion()->user->pull_user_meta( $user_id );
+		}
+
+	}
+
+	/**
+	 * Loads custom fields from FluentCRM back to WordPress when a contact is
+	 * updated.
+	 *
+	 * @since 3.37.14
+	 *
+	 * @param array                           $new_values The new field values.
+	 * @param FluentCrm\App\Models\Subscriber $subscriber The subscriber.
+	 */
+	public function contact_custom_data_updated( $new_values, $subscriber ) {
+
+		if ( did_action( 'fluentcrm_contact_updated' ) ) {
+			return;
+		}
+
+		$this->contact_updated( $subscriber );
+
+	}
+
+	/**
+	 * Gets the custom fields.
+	 *
+	 * @since  3.37.3
+	 *
+	 * @return array The custom fields.
+	 */
 	private function get_custom_fields() {
 		$all_custom_fields = fluentcrm_get_option( 'contact_custom_fields', [] );
 		$custom_fields     = [];

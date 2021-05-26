@@ -61,6 +61,7 @@ class WPF_HighLevel {
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 	}
 
@@ -86,6 +87,88 @@ class WPF_HighLevel {
 		$post_data['contact_id'] = $payload->contact_id;
 
 		return $post_data;
+
+	}
+
+
+	/**
+	 * Format field values to match HighLevel formats.
+	 *
+	 * @since  3.37.11
+	 *
+	 * @param  string $value      The value.
+	 * @param  string $field_type The field type.
+	 * @param  string $field      The CRM field.
+	 * @return mixed  The formatted value.
+	 */
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( 'date' == $field_type || 'datepicker' == $field_type ) {
+
+			// Adjust formatting for date fields
+			$date = date( 'Y-m-d', $value );
+
+			return $date;
+
+		} elseif ( 'checkbox' == $field_type && $value == null ) {
+
+			// Sendinblue only treats false as a No for checkboxes
+			return false;
+
+		} elseif ( 'checkbox' == $field_type && ! empty( $value ) ) {
+
+			// Sendinblue only treats true as a Yes for checkboxes
+			return true;
+
+		} elseif ( 'tel' == $field_type ) {
+
+			// Format phone. Sendinblue requires a country code and + for phone numbers. With or without dashes is fine
+
+			if ( strpos( $value, '+' ) !== 0 ) {
+
+				// Default to US if no country code is provided
+
+				if ( strpos( $value, '1' ) === 0 ) {
+
+					$value = '+' . $value;
+
+				} else {
+
+					$value = '+1' . $value;
+
+				}
+
+			}
+
+			return $value;
+
+		} elseif ( is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
+
+			$length = strlen( trim( str_replace( array( '-', ' ' ), '', $value ) ) );
+
+			// Maybe another phone number
+
+			if ( 10 == $length ) {
+
+				// Let's assume this is a US phone number and needs a +1
+
+				$value = '+1' . $value;
+
+			} elseif ( $length >= 11 && $length <= 13 && strpos( $value, '+' ) === false ) {
+
+				// Let's assume this is a phone number and needs a plus??
+
+				$value = '+' . $value;
+
+			}
+
+			return $value;
+
+		} else {
+
+			return $value;
+
+		}
 
 	}
 

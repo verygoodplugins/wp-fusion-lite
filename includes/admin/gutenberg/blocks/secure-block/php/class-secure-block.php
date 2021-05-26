@@ -153,7 +153,7 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 	$can_access = apply_filters( 'wpf_user_can_access_gutenberg', $can_access, $attributes );
 
-	$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), $post->ID );
+	$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), false );
 
 	if ( wpf_is_user_logged_in() && $can_access ) {
 		return $secure_content;

@@ -221,12 +221,12 @@ class WPF_MailPoet {
 
 		$this->connect();
 
-		$send_confirmation = wp_fusion()->settings->get( 'mailpoet_send_confirmation', false );
+		$send_confirmation = wp_fusion()->settings->get( 'mailpoet_send_confirmation', true );
 
 		try {
 
 			$options = array(
-				'send_confirmation_email'      => true,
+				'send_confirmation_email'      => $send_confirmation,
 				'schedule_welcome_email'       => true,
 				'skip_subscriber_notification' => true,
 			);

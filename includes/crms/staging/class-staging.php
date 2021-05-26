@@ -30,16 +30,29 @@ class WPF_Staging {
 	}
 
 	/**
+	 * Catchall for unknown methods.
+	 *
+	 * @since 3.37.3
+	 *
+	 * @param string $method The method.
+	 * @param array  $args   The arguments.
+	 */
+
+	public function __call( $method, $args ) {
+
+		wpf_log( 'notice', wpf_get_current_user_id(), 'Staging mode enabled, method ' . $method . '.' );
+		return false;
+
+	}
+
+	/**
 	 * Sets up hooks specific to this CRM
 	 *
 	 * @access public
 	 * @return void
 	 */
 
-	public function init() {
-		
-
-	}
+	public function init() {}
 
 	/**
 	 * Set connection configured to true if staging is in use

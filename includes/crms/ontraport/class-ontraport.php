@@ -301,7 +301,7 @@ class WPF_Ontraport {
 
 			if ( 200 != $response_code ) {
 
-				if ( 'Object not found' == $body ) {
+				if ( 'Object not found' == $body && ! empty( $args['body'] ) ) {
 
 					$data = json_decode( $args['body'], true );
 
@@ -311,14 +311,14 @@ class WPF_Ontraport {
 
 						$data['id'] = wp_fusion()->user->get_contact_id( $user_id, true );
 
-						if ( $data['id'] ) {
+						if ( ! empty( $data['id'] ) ) {
 
 							$args['body'] = json_encode( $data );
 
 							return wp_remote_request( $url, $args );
 						}
 					}
-				} elseif ( 'Invalid Contact ID' == $body ) {
+				} elseif ( 'Invalid Contact ID' == $body && ! empty( $args['body'] ) ) {
 
 					// Ecom addon
 
@@ -330,7 +330,7 @@ class WPF_Ontraport {
 
 						$data['contact_id'] = wp_fusion()->user->get_contact_id( $user_id, true );
 
-						if ( $data['contact_id'] ) {
+						if ( ! empty( $data['contact_id'] ) ) {
 
 							$args['body'] = json_encode( $data );
 

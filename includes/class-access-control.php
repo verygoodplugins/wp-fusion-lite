@@ -6,6 +6,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WPF_Access_Control {
 
+	/**
+	 * Cache of post IDs the user can or can't access
+	 *
+	 * @since 3.37.4
+	 * @var can_access_posts
+	 */
+
+	public $can_access_posts = array();
+
+	/**
+	 * Cache of term IDs the user can or can't access
+	 *
+	 * @since 3.37.4
+	 * @var can_access_terms
+	 */
+
+	public $can_access_terms = array();
+
 
 	/**
 	 * Get things started
@@ -25,6 +43,9 @@ class WPF_Access_Control {
 
 		// Protect pseudo-pages
 		add_filter( 'wpf_redirect_post_id', array( $this, 'protect_blog_index' ) );
+
+		// Cache the access
+		add_filter( 'wpf_user_can_access', array( $this, 'cache_can_access' ), 100, 3 );
 
 		// Protect post types
 		add_filter( 'wpf_post_access_meta', array( $this, 'check_post_type' ), 10, 2 );
@@ -64,7 +85,7 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		if ( $user_id == false ) {
+		if ( false == $user_id ) {
 			$user_id = wpf_get_current_user_id();
 		}
 
@@ -77,22 +98,34 @@ class WPF_Access_Control {
 
 		$post_id = apply_filters( 'wpf_user_can_access_post_id', $post_id );
 
+		// Use the cache if we're checking for the current user
+
+		if ( wpf_get_current_user_id() == $user_id ) {
+
+			if ( isset( $this->can_access_posts[ $post_id ] ) ) {
+				return $this->can_access_posts[ $post_id ];
+			}
+		}
+
 		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
 		$post_restrictions = wp_parse_args( $post_restrictions, WPF_Admin_Interfaces::$meta_box_defaults );
 		$post_restrictions = apply_filters( 'wpf_post_access_meta', $post_restrictions, $post_id );
 
 		// See if taxonomy restrictions are in effect
 		if ( ! $this->user_can_access_term( $post_id, $user_id ) ) {
+			$this->cache_can_access( $post_id, false ); // This could be better but it'll work for now
 			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
 		}
 
 		// See if post type restrictions are in effect
 		if ( ! $this->user_can_access_post_type( get_post_type( $post_id ), $user_id ) ) {
+			$this->cache_can_access( $post_id, false );
 			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
 		}
 
 		// If no settings are set
 		if ( empty( $post_restrictions ) ) {
+			$this->cache_can_access( $post_id, true );
 			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
 		}
 
@@ -104,22 +137,26 @@ class WPF_Access_Control {
 			$result = array_intersect( (array) $post_restrictions['allow_tags_not'], $user_tags );
 
 			if ( ! empty( $result ) ) {
+				$this->cache_can_access( $post_id, false );
 				return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
 			}
 		}
 
 		// If content isn't locked
 		if ( ! isset( $post_restrictions['lock_content'] ) || $post_restrictions['lock_content'] != true ) {
+			$this->cache_can_access( $post_id, true );
 			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
 		}
 
 		// If not logged in
 		if ( ! wpf_is_user_logged_in() && empty( $user_id ) ) {
+			$this->cache_can_access( $post_id, false );
 			return apply_filters( 'wpf_user_can_access', false, false, $post_id );
 		}
 
 		// If no tags specified for restriction, but user is logged in, allow access
 		if ( empty( $post_restrictions['allow_tags'] ) && empty( $post_restrictions['allow_tags_all'] ) ) {
+			$this->cache_can_access( $post_id, true );
 			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
 		}
 
@@ -127,6 +164,7 @@ class WPF_Access_Control {
 
 		// If user has no valid tags
 		if ( empty( $user_tags ) ) {
+			$this->cache_can_access( $post_id, false );
 			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
 		}
 
@@ -157,7 +195,11 @@ class WPF_Access_Control {
 			}
 		}
 
-		return apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id );
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id );
+
+		$this->cache_can_access( $post_id, $can_access );
+
+		return $can_access;
 
 	}
 
@@ -250,34 +292,62 @@ class WPF_Access_Control {
 		// We need to un-hide hidden terms to see if the post is accessible
 		remove_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
 
-		$taxonomies = get_object_taxonomies( get_post_type( $post_id ) );
-
-		$terms = wp_get_post_terms( $post_id, $taxonomies, array( 'fields' => 'ids' ) );
-
 		$user_tags = wp_fusion()->user->get_tags( $user_id );
 
 		$can_access = true;
 
-		$term_id = false;
+		foreach ( $taxonomy_rules as $term_id => $settings ) {
 
-		foreach ( $terms as $term_id ) {
-
-			if ( empty( $taxonomy_rules[ $term_id ] ) || ! isset( $taxonomy_rules[ $term_id ]['lock_posts'] ) ) {
+			if ( empty( $settings['lock_posts'] ) ) {
 				continue;
+			}
+
+			// Check the cache
+
+			if ( isset( $this->can_access_terms[ $term_id ] ) && wpf_get_current_user_id() == $user_id ) {
+
+				$can_access = $this->can_access_terms[ $term_id ];
+
+				if ( true == $can_access ) {
+					continue; // Granted, check the next term
+				} else {
+					break; // Access was denied from the cache
+				}
 			}
 
 			if ( ! wpf_is_user_logged_in() ) {
 				$can_access = false;
-				break;
+			} else {
+
+				if ( ! empty( $settings['allow_tags'] ) ) {
+
+					$result = array_intersect( $settings['allow_tags'], $user_tags );
+
+					if ( empty( $result ) ) {
+						$can_access = false;
+					}
+				}
 			}
 
-			if ( ! empty( $taxonomy_rules[ $term_id ]['allow_tags'] ) ) {
+			if ( false === $can_access ) {
 
-				$result = array_intersect( $taxonomy_rules[ $term_id ]['allow_tags'], $user_tags );
+				// Now we've determined the user can't access the term. Let's see if this post has that term.
+				// This is better for performance than getting all the terms first and checking them.
 
-				if ( empty( $result ) ) {
-					$can_access = false;
+				$term = get_term( $term_id );
+
+				if ( ! empty( $term ) && ! is_wp_error( $term ) && is_object_in_term( $post_id, $term->taxonomy, $term_id ) ) {
+
+					// is_wp_error(); check in case the term was deleted
+
+					$this->can_access_terms[ $term_id ] = false; // set the cache
 					break;
+
+				} else {
+
+					$can_access                         = true;
+					$this->can_access_terms[ $term_id ] = true; // set the cache
+
 				}
 			}
 		}
@@ -677,13 +747,15 @@ class WPF_Access_Control {
 			}
 		}
 
-		if ( $message == false ) {
+		if ( false === $message ) {
 
 			$message = wp_fusion()->settings->get( 'restricted_message' );
 
 		}
 
 		$content = do_shortcode( stripslashes( $message ) );
+
+		$content = apply_filters( 'wpf_restricted_content_message', $content, $post_id );
 
 		return $content;
 
@@ -748,7 +820,7 @@ class WPF_Access_Control {
 
 			$lockout_url = wp_fusion()->settings->get( 'lockout_redirect' );
 
-			if ( empty( $lockout_url ) ) {
+			if ( empty( $lockout_url ) || ! wp_http_validate_url( $lockout_url ) ) {
 				$lockout_url = wp_login_url();
 			}
 
@@ -893,7 +965,7 @@ class WPF_Access_Control {
 
 		// General menu item hiding
 
-		if ( wp_fusion()->settings->get( 'hide_restricted' ) == true ) {
+		if ( wp_fusion()->settings->get( 'hide_restricted' ) ) {
 
 			foreach ( $items as $key => $item ) {
 
@@ -907,6 +979,13 @@ class WPF_Access_Control {
 
 				} elseif ( $item->type == 'custom' ) {
 
+					/*
+					 * Removed for 3.37.5
+
+					if ( class_exists( 'SitePress' ) ) {
+						continue; // WPML sometimes crashes out running url_to_postid() here and we don't know why
+					}
+
 					// If it's a post, try and get the ID
 
 					$post_id = url_to_postid( $item->url );
@@ -914,6 +993,8 @@ class WPF_Access_Control {
 					if ( 0 !== $post_id && false === $this->user_can_access( $post_id ) ) {
 						unset( $items[ $key ] );
 					}
+
+					*/
 				}
 			}
 		}
@@ -1025,7 +1106,219 @@ class WPF_Access_Control {
 	}
 
 	/**
-	 * Sets "suppress_filters" to false when query filtering is enabled
+	 * Is a post type eligible for query filtering?
+	 *
+	 * @since  3.37.6
+	 *
+	 * @param  array|string $post_types The post types to check.
+	 * @return bool         Whether or not the post type is eligible.
+	 */
+	public function is_post_type_eligible_for_query_filtering( $post_types = array() ) {
+
+		$is_eligible = true;
+
+		// Some queries use multiple post types
+
+		if ( ! empty( $post_types ) && ! is_array( $post_types ) ) {
+			$post_types = array( $post_types );
+		} elseif ( empty( $post_types ) ) {
+			$post_types = array();
+		}
+
+		// Don't run on non-public post types
+
+		$public_post_types = array_values( get_post_types( array( 'public' => true ) ) );
+
+		// We'll also consider "any" to be a valid post type, during searches
+
+		$public_post_types[] = 'any';
+
+		if ( ! empty( $post_types ) && empty( array_intersect( $post_types, $public_post_types ) ) ) {
+			$is_eligible = false;
+		}
+
+		// See if the post type is enabled in the WPF settings
+
+		if ( $is_eligible ) {
+
+			$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
+
+			if ( ! empty( $allowed_post_types ) ) {
+
+				// We'll also consider "any" to be a valid post type, during searches
+
+				$allowed_post_types[] = 'any';
+
+				if ( empty( array_intersect( $post_types, $allowed_post_types ) ) ) {
+					$is_eligible = false;
+				}
+			}
+		}
+
+		/**
+		 * Is post type eligible for query filtering?
+		 *
+		 * @since 3.37.6
+		 *
+		 * @param bool  $is_eligible Whether or not the post types are eligible.
+		 * @param array $post_types  The post types.
+		 */
+
+		return apply_filters( 'is_post_type_eligible_for_query_filtering', $is_eligible, $post_types );
+
+	}
+
+	/**
+	 * Is a query eligible for query filtering?
+	 *
+	 * @since 3.37.6
+	 *
+	 * @param WP_Query $query  The query.
+	 * @return bool  To filter the query or not.
+	 */
+	public function should_filter_query( $query ) {
+
+		if ( empty( $query ) || ! is_object( $query ) ) {
+			return false;
+		}
+
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return false;
+		}
+
+		if ( $query->is_main_query() && ! $query->is_archive() && ! $query->is_search() && ! $query->is_home() ) {
+			return false;
+		}
+
+		if ( doing_wpf_webhook() ) {
+			return false; // Don't want to hide any auto-enrollment content during a webhook
+		}
+
+		// If the setting isn't enabled
+
+		if ( ! wp_fusion()->settings->get( 'hide_archives' ) ) {
+			return false;
+		}
+
+		// Don't bother doing anything if we're not restricting access to admins anyway
+
+		if ( wp_fusion()->settings->get( 'exclude_admins' ) && current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
+		// See if the post type is eligible
+
+		$post_type = $query->get( 'post_type' );
+
+		if ( ! $this->is_post_type_eligible_for_query_filtering( $post_type ) ) {
+			return false;
+		}
+
+		/**
+		 * Should filter query?
+		 *
+		 * Sometimes query filtering just doesn't work. We can quit early if
+		 * needed.
+		 *
+		 * @since 3.37.6
+		 *
+		 * @link  https://wpfusion.com/documentation/filters/wpf_should_filter_query/
+		 *
+		 * @param bool     $should_filter Whether or not to filter the query.
+		 * @param WP_Query $query         The query.
+		 */
+
+		return apply_filters( 'wpf_should_filter_query', true, $query );
+
+	}
+
+	/**
+	 * Gets the restricted posts for a post type.
+	 *
+	 * Used with Filter Queries - Advanced to pass an array of post IDs into
+	 * post__not_in.
+	 *
+	 * @since  3.37.6
+	 *
+	 * @param  array  $post_types The post types.
+	 * @return array The restricted post IDs.
+	 */
+	public function get_restricted_posts( $post_types ) {
+
+		if ( ! is_array( $post_types ) ) {
+			$post_types = array( $post_types );
+		}
+
+		// Save a query if the user is an admin and admins are excluded.
+
+		if ( wp_fusion()->settings->get( 'exclude_admins' ) && current_user_can( 'manage_options' ) ) {
+			return array();
+		}
+
+		$user_id = wpf_get_current_user_id();
+
+		$not_in = wp_cache_get( "wpf_query_filter_{$user_id}_{$post_types[0]}" );
+
+		if ( false === $not_in ) {
+
+			$args = array(
+				'post_type'      => $post_types,
+				'posts_per_page' => 200, // 200 sounds like a safe place for performance?
+				'fields'         => 'ids',
+				'meta_query'     => array(
+					array(
+						'key'     => 'wpf-settings',
+						'compare' => 'EXISTS',
+					),
+				),
+			);
+
+			/**
+			 * Query get post args.
+			 *
+			 * In case you need to change a parameter with the pre-query to find
+			 * the restricted posts.
+			 *
+			 * @since 3.37.6
+			 *
+			 * @param array $args   Array of WP_Query args.
+			 */
+
+			$args = apply_filters( 'wpf_query_filter_get_posts_args', $args );
+
+			// Don't loop back on this or it will be bad
+
+			remove_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
+
+			$post_ids = get_posts( $args );
+
+			add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
+
+			if ( count( $post_ids ) == $args['posts_per_page'] ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Filter Queries is running on the <strong>' . $post_types[0] . '</strong> post type, but more than ' . $args['posts_per_page'] . ' posts were found with WP Fusion access rules. To protect the stability of your site, additional posts beyond the first ' . $args['posts_per_page'] . ' will not be filtered. This can be modified with the <code>wpf_query_filter_get_posts_args</code> filter.' );
+			}
+
+			$not_in = array();
+
+			foreach ( $post_ids as $post_id ) {
+
+				if ( ! $this->user_can_access( $post_id ) ) {
+
+					$not_in[] = $post_id;
+
+				}
+			}
+
+			wp_cache_set( "wpf_query_filter_{$user_id}_{$post_types[0]}", $not_in, '', MINUTE_IN_SECONDS );
+
+		}
+
+		return $not_in;
+
+	}
+
+	/**
+	 * Handles Filter Queries.
 	 *
 	 * @access  public
 	 * @return  void
@@ -1033,38 +1326,23 @@ class WPF_Access_Control {
 
 	public function filter_queries( $query ) {
 
-		if ( empty( $query ) || ! is_object( $query ) ) {
-			return;
-		}
-
-		if ( ( ! is_admin() || defined( 'DOING_AJAX' ) ) && ( ! $query->is_main_query() || $query->is_search() || $query->is_archive() || $query->is_home() ) ) {
+		if ( $this->should_filter_query( $query ) ) {
 
 			$setting = wp_fusion()->settings->get( 'hide_archives' );
 
-			if ( false == $setting ) {
-				return;
-			}
-
-			// See if the post type is eligible
-
-			$post_types = $query->get( 'post_type' );
-
-			// Some queries use an array of post types so we'll standardize that here
-
-			if ( ! is_array( $post_types ) ) {
-				$post_types = array( $post_types );
-			}
-
-			$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
-
-			if ( ! empty( $allowed_post_types ) && empty( array_intersect( $post_types, $allowed_post_types ) ) ) {
-
-				// Post type not allowed
-				return;
-
-			}
-
-			// Sometimes we may want to change the mode depending on the post type (for example bbPress topics)
+			/**
+			 * Query filtering mode.
+			 *
+			 * Lets you change the query filtering mode between standard /
+			 * advanced / off depending on the query object. For example
+			 * disabling query filtering on bbPress topics in favor of the
+			 * parent forum.
+			 *
+			 * @since 3.37.0
+			 *
+			 * @param string   $setting The seting.
+			 * @param WP_Query $query   The query.
+			 */
 
 			$setting = apply_filters( 'wpf_query_filtering_mode', $setting, $query );
 
@@ -1074,6 +1352,9 @@ class WPF_Access_Control {
 
 			} elseif ( 'advanced' == $setting ) {
 
+				$post_types         = $query->get( 'post_type' );
+				$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
+
 				if ( empty( $post_types ) && $query->is_search() ) {
 
 					if ( empty( $allowed_post_types ) ) {
@@ -1081,84 +1362,40 @@ class WPF_Access_Control {
 						$post_types = 'any'; // This will be slower but allows filtering to work on search results
 
 					} else {
-
 						$post_types = $allowed_post_types;
-
 					}
-
 				} elseif ( empty( $post_types ) ) {
 					return;
 				}
 
-				// Sometimes query filtering just doesn't work. We can quit early if needed
+				$not_in = $this->get_restricted_posts( $post_types );
 
-				if ( apply_filters( 'wpf_bypass_query_filtering', false, $query ) ) {
-					return;
-				}
+				if ( ! empty( $not_in ) ) {
 
-				// Don't loop back on this or it will be bad
+					// Maybe merge existing
 
-				remove_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
-
-				$post_ids = wp_cache_get( 'wpf_query_filter_' . $post_types[0] );
-
-				if ( false === $post_ids ) {
-
-					$args = array(
-						'post_type'  => $post_types,
-						'nopaging'   => true,
-						'fields'     => 'ids',
-						'meta_query' => array(
-							array(
-								'key'     => 'wpf-settings',
-								'compare' => 'EXISTS',
-							),
-						),
-					);
-
-					$post_ids = get_posts( $args );
-
-					wp_cache_set( 'wpf_query_filter_' . $post_types[0], $post_ids, '', MINUTE_IN_SECONDS );
-
-				}
-
-				if ( ! empty( $post_ids ) ) {
-
-					$not_in = $query->get( 'post__not_in' );
-
-					foreach ( $post_ids as $post_id ) {
-
-						if ( ! $this->user_can_access( $post_id ) ) {
-
-							$not_in[] = $post_id;
-
-						}
+					if ( ! empty( $query->get( 'post__not_in' ) ) ) {
+						$not_in = array_merge( $query->get( 'post__not_in' ), $not_in );
 					}
 
-					if ( ! empty( $not_in ) ) {
+					$query->set( 'post__not_in', $not_in );
 
-						$query->set( 'post__not_in', $not_in );
+					$query->set( 'wpf_filtering_query', true );
 
-						// If the query has a post__in, that will take priority, so we'll adjust for that here
+					// If the query has a post__in, that will take priority, so we'll adjust for that here
 
-						$in = $query->get( 'post__in' );
-
-						if ( ! empty( $in ) ) {
-							$in = array_diff( $in, $not_in );
-							$query->set( 'post__in', $in );
-						}
+					if ( ! empty( $query->get( 'post__in' ) ) ) {
+						$in = array_diff( $query->get( 'post__in' ), $not_in );
+						$query->set( 'post__in', $in );
 					}
 				}
-
-				add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
-
 			}
 		}
 
 	}
 
 	/**
-	 * Removes restricted posts if Filter Queries is on
+	 * Removes restricted posts if Filter Queries is on (standard mode)
 	 *
 	 * @access  public
 	 * @return  array Posts
@@ -1170,34 +1407,36 @@ class WPF_Access_Control {
 			return $posts;
 		}
 
-		if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ( $query->is_main_query() && ! $query->is_archive() && ! $query->is_search() && ! $query->is_home() ) ) {
+		if ( ! $this->should_filter_query( $query ) ) {
 			return $posts;
 		}
 
-		// Woo variations fixed
+		// Woo variations bug fixed
 		if ( isset( $_REQUEST['action'] ) && 'woocommerce_load_variations' == $_REQUEST['action'] ) {
 			return $posts;
 		}
 
+		// Sometimes we may want to change the mode depending on the post type (for example bbPress topics)
+
 		$setting = wp_fusion()->settings->get( 'hide_archives' );
 
-		// Sometimes we may want to change the mode depending on the post type (for example bbPress topics)
+		/**
+		 * Query filtering mode.
+		 *
+		 * Lets you change the query filtering mode between standard /
+		 * advanced / off depending on the query object. For example
+		 * disabling query filtering on bbPress topics in favor of the
+		 * parent forum.
+		 *
+		 * @since 3.37.0
+		 *
+		 * @param string   $setting The seting.
+		 * @param WP_Query $query   The query.
+		 */
 
 		$setting = apply_filters( 'wpf_query_filtering_mode', $setting, $query );
 
-		if ( true === $setting || 'standard' == $setting ) {
-
-			// Sometimes query filtering just doesn't work. We can quit early if needed
-
-			if ( apply_filters( 'wpf_bypass_query_filtering', false, $query ) ) {
-				return $posts;
-			}
-
-			$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
-
-			if ( ! empty( $allowed_post_types ) && ! in_array( $query->get( 'post_type' ), $allowed_post_types ) ) {
-				return $posts;
-			}
+		if ( 'standard' == $setting ) {
 
 			foreach ( $posts as $index => $post ) {
 
@@ -1258,6 +1497,28 @@ class WPF_Access_Control {
 
 
 	/**
+	 * Cache the user_can_access check in memory so we don't have to hit the
+	 * database twice for the same post.
+	 *
+	 * @since 3.37.4
+	 *
+	 * @param bool     $can_access Indicates if user can access.
+	 * @param int      $user_id    The user ID.
+	 * @param int|bool $post_id    The post ID.
+	 * @return bool  Whether or not the user can access.
+	 */
+	public function cache_can_access( $can_access, $user_id, $post_id = false ) {
+
+		if ( false !== $post_id && ! isset( $this->can_access_posts[ $post_id ] ) ) { // Don't set it twice for the same post ID
+			$this->can_access_posts[ $post_id ] = $can_access;
+		}
+
+		return $can_access;
+
+	}
+
+
+	/**
 	 * Redirect back to restricted content after login
 	 *
 	 * @access public
@@ -1273,8 +1534,7 @@ class WPF_Access_Control {
 		if ( isset( $_COOKIE['wpf_return_to_override'] ) ) {
 
 			$post_id = intval( $_COOKIE['wpf_return_to_override'] );
-
-			$url = get_permalink( $post_id );
+			$url     = get_permalink( $post_id );
 
 			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
 
@@ -1291,8 +1551,7 @@ class WPF_Access_Control {
 		if ( isset( $_COOKIE['wpf_return_to'] ) ) {
 
 			$post_id = intval( $_COOKIE['wpf_return_to'] );
-
-			$url = get_permalink( $post_id );
+			$url     = get_permalink( $post_id );
 
 			setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
 
@@ -1373,7 +1632,7 @@ class WPF_Access_Control {
 			$can_access = true;
 		}
 
-		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), null );
+		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), false );
 
 		// Widget filter
 		$can_access = apply_filters( 'wpf_user_can_access_widget', $can_access, $instance, $widget );
@@ -1428,25 +1687,27 @@ class WPF_Access_Control {
 
 		if ( ! empty( $taxonomy_rules ) ) {
 
-			// We need to un-hide hidden terms to see if the post is accessible
-			remove_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
+			foreach ( $taxonomy_rules as $term_id => $term_settings ) {
 
-			$taxonomies = get_object_taxonomies( get_post_type( $post->ID ) );
-
-			$terms = wp_get_post_terms( $post->ID, $taxonomies, array( 'fields' => 'ids' ) );
-
-			foreach ( $terms as $term_id ) {
-
-				if ( empty( $taxonomy_rules[ $term_id ] ) || empty( $taxonomy_rules[ $term_id ]['apply_tags'] ) ) {
+				if ( empty( $term_settings['apply_tags'] ) ) {
 					continue;
 				}
 
-				$settings['apply_tags'] = array_merge( $settings['apply_tags'], $taxonomy_rules[ $term_id ]['apply_tags'] );
+				// We need to un-hide hidden terms to see if the post is accessible
+				remove_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
+
+				// Now we've determined the term should apply tags when viewed. Let's see if this post has that term
+				// This is better for performance than checking every term the post has
+
+				$term = get_term( $term_id );
+
+				if ( is_a( $term, 'WP_Term' ) && is_object_in_term( $post->ID, $term->taxonomy, $term_id ) ) {
+					$settings['apply_tags'] = array_merge( $settings['apply_tags'], $term_settings['apply_tags'] );
+				}
+
+				add_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
 
 			}
-
-			add_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
-
 		}
 
 		if ( ! empty( $settings['apply_tags'] ) || ! empty( $settings['remove_tags'] ) ) {
