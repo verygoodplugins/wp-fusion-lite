@@ -418,7 +418,7 @@ final class WP_Fusion_Lite {
 				'fluentcrm'      => 'WPF_FluentCRM',
 				'growmatik'      => 'WPF_Growmatik',
 				'highlevel'      => 'WPF_HighLevel',
-        'pulsetech'      => 'WPF_PulseTechnologyCRM'
+				'pulsetech'      => 'WPF_PulseTechnologyCRM'
 				'emercury'       => 'WPF_Emercury',
 				'fluentcrm-rest' => 'WPF_FluentCRM_REST',
 			)

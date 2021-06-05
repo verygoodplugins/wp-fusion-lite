@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * Pulsetech CRM integtation (admin).
+ *
+ * Thanks to @devguar.
+ *
+ * @link https://github.com/verygoodplugins/wp-fusion-lite/pull/16
+ *
+ * @package WP Fusion
+ * @since 3.37.21
+ */
+
 class WPF_PulseTechnologyCRM_Admin {
 
 	/**
@@ -42,10 +53,7 @@ class WPF_PulseTechnologyCRM_Admin {
 		$this->crm  = $crm;
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_pulsetech_header_begin', array(
-			$this,
-			'show_field_pulsetech_header_begin'
-		), 10, 2 );
+		add_action( 'show_field_pulsetech_header_begin', array( $this, 'show_field_pulsetech_header_begin' ), 10, 2 );
 		add_action( 'show_field_pulsetech_footer_end', array( $this, 'show_field_pulsetech_footer_end' ), 10, 2 );
 
 		// AJAX callback to test the connection
@@ -140,7 +148,7 @@ class WPF_PulseTechnologyCRM_Admin {
 			'title'   => __( 'Pulse - Connection', 'wp-fusion' ),
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'    => 'Use this URL when create the client on your Pulse application: <br/><strong>' . admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ) . '</strong>'
+			'desc'    => 'Use this URL when creating the client on your Pulse application: <br/><strong>' . admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ) . '</strong>',
 		);
 
 		$new_settings['pulsetech_url'] = array(
@@ -154,7 +162,7 @@ class WPF_PulseTechnologyCRM_Admin {
 			'title'   => __( 'Client ID', 'wp-fusion' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['pulsetech_secret'] = array(
@@ -166,27 +174,29 @@ class WPF_PulseTechnologyCRM_Admin {
 
 		if ( ! empty( $options['pulsetech_client_id'] ) && ! empty( $options['pulsetech_secret'] ) ) {
 			if ( empty( $options['pulsetech_refresh_token'] ) ) {
-				$query = http_build_query( [
-					'client_id'     => $options['pulsetech_client_id'],
-					'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ),
-					'response_type' => 'code',
-					'scope'         => '',
-					'state'         => '123',
-				] );
+				$query = http_build_query(
+					[
+						'client_id'     => $options['pulsetech_client_id'],
+						'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ),
+						'response_type' => 'code',
+						'scope'         => '',
+						'state'         => '123',
+					]
+				);
 
-				$buttonUrl = $options['pulsetech_url'];
+				$button_url = $options['pulsetech_url'];
 
-				if ( strpos( $buttonUrl, '.dev.thepulsespot.com' ) !== false ) {
-					$buttonUrl = str_replace( '/app.', '/portal.', $buttonUrl ) . 'oauth/authorize';
+				if ( strpos( $button_url, '.dev.thepulsespot.com' ) !== false ) {
+					$button_url = str_replace( '/app.', '/portal.', $button_url ) . 'oauth/authorize';
 				} else {
-					$buttonUrl = $this->crm->oauth_url_authorize;
+					$button_url = $this->crm->oauth_url_authorize;
 				}
 
 				$new_settings['pulsetech_authorize'] = array(
 					'title'   => __( 'Authorize', 'wp-fusion' ),
 					'type'    => 'heading',
 					'section' => 'setup',
-					'desc'    => '<a class="button" href="' . $buttonUrl . '?' . $query . '">Click here to Authorize</a><br /><span class="description">You\'ll be taken to Pulse to authorize WP Fusion and generate access keys for this site.'
+					'desc'    => '<a class="button" href="' . $button_url . '?' . $query . '">Click here to Authorize</a><br /><span class="description">You\'ll be taken to Pulse to authorize WP Fusion and generate access keys for this site.',
 				);
 
 				$new_settings['pulsetech_footer'] = array(
@@ -212,13 +222,13 @@ class WPF_PulseTechnologyCRM_Admin {
 					'type'        => 'api_validate',
 					'section'     => 'setup',
 					'class'       => 'api_key',
-					'desc'        => sprintf( __( 'If your connection with %s is broken you can erase the refresh token and save the settings page to re-authorize with %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
+					'desc'        => sprintf( __( 'If your connection with %1$s is broken you can erase the refresh token and save the settings page to re-authorize with %2$s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
 					'post_fields' => array( 'pulsetech_token', 'pulsetech_refresh_token' ),
 				);
 			}
 		} else {
 			$new_settings['pulsetech_footer'] = array(
-				'title'   => __( '', 'wp-fusion' ),
+				'title'   => '',
 				'type'    => 'heading',
 				'section' => 'setup',
 			);
