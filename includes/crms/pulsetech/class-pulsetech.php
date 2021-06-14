@@ -170,7 +170,9 @@ class WPF_PulseTechnologyCRM {
 			$token = null;
 		}
 
-		$this->url           = $api_url;
+        $api_url = rtrim($api_url, '/') . '/';
+
+        $this->url           = $api_url;
 		$this->client_secret = $client_secret;
 		$this->client_id     = $client_id;
 		$this->token         = $token;
