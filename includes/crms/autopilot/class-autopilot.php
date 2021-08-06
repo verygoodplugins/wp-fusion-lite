@@ -14,6 +14,16 @@ class WPF_Autopilot {
 
 	public $params;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.autopilothq.com/#contacts/profile/%s';
+
 	/**
 	 * Get things started
 	 *
@@ -26,7 +36,6 @@ class WPF_Autopilot {
 		$this->slug     = 'autopilot';
 		$this->name     = 'Autopilot';
 		$this->supports = array();
-
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -245,7 +254,7 @@ class WPF_Autopilot {
 
 		$request  = 'https://api2.autopilothq.com/v1/contacts';
 		$response = wp_remote_get( $request, $this->params );
-
+		
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}

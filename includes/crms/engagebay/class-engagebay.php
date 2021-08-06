@@ -39,6 +39,16 @@ class WPF_EngageBay {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -81,6 +91,36 @@ class WPF_EngageBay {
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
+		$domain = wp_fusion()->settings->get( 'engagebay_domain' );
+
+		if ( ! empty( $domain ) ) {
+			$this->edit_url = 'https://' . $domain . '.engagebay.com/home#list/0/subscriber/%d';
+		}
+	}
+
+	/**
+	 * Set a cookie to fix tracking for guest checkouts.
+	 *
+	 * @since 3.37.19
+	 *
+	 * @param int    $contact_id The contact ID.
+	 * @param string $email      The email address.
+	 */
+	public function set_tracking_cookie_guest( $contact_id, $email ) {
+
+		if ( wpf_is_user_logged_in() || false == wp_fusion()->settings->get( 'site_tracking' ) ) {
+			return;
+		}
+
+		if ( headers_sent() ) {
+			wpf_log( 'notice', 0, 'Tried and failed to set site tracking cookie for ' . $email . ', because headers have already been sent.' );
+			return;
+		}
+
+		wpf_log( 'info', 0, 'Starting site tracking session for contact ID ' . $contact_id . ' with email ' . $email . '.' );
+
+		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+
 	}
 
 	/**
@@ -105,13 +145,22 @@ class WPF_EngageBay {
 		$domain = wp_fusion()->settings->get( 'engagebay_domain' );
 
 		if ( wpf_is_user_logged_in() ) {
-			$user  = get_userdata( wpf_get_current_user_id() );
+			$user  = wpf_get_current_user();
 			$email = $user->user_email;
+		} elseif ( isset( $_COOKIE['wpf_guest'] ) ) {
+			$email = sanitize_email( $_COOKIE['wpf_guest'] );
+		} else {
+			$email = '';
 		}
 
 		echo '<script type="text/javascript" >';
 		echo 'var EhAPI = EhAPI || {}; EhAPI.after_load = function(){';
 		echo 'EhAPI.set_account("' . $tracking_id . '", "' . $domain . '");';
+
+		if ( ! empty( $email ) ) {
+			echo 'EhAPI.push(["setEmail", "' . $email . '"]);';
+		}
+
 		echo "EhAPI.execute('rules');};(function(d,s,f) {";
 		echo "var sc=document.createElement(s);sc.type='text/javascript';";
 		echo 'sc.async=true;sc.src=f;var m=document.getElementsByTagName(s)[0];';

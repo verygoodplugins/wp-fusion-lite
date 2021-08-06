@@ -42,6 +42,14 @@ class WPF_Zoho {
 
 	public $override_filters;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -89,6 +97,22 @@ class WPF_Zoho {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		$org_id = wp_fusion()->settings->get( 'zoho_org_id' );
+
+		if ( ! empty( $org_id ) ) {
+
+			$location = wp_fusion()->settings->get( 'zoho_location' );
+
+			if ( 'us' == $location ) {
+				$domain = 'com';
+			} elseif ( 'au' == $location ) {
+				$domain = 'com.au';
+			} else {
+				$domain = $location;
+			}
+
+			$this->edit_url = 'https://crm.zoho.' . $location . '/crm/' . $org_id . '/tab/Contacts/%d';
+		}
 	}
 
 
@@ -338,6 +362,7 @@ class WPF_Zoho {
 
 		$this->connect();
 
+		$this->sync_org();
 		$this->sync_tags();
 		$this->sync_crm_fields();
 		$this->sync_layouts();
@@ -664,17 +689,17 @@ class WPF_Zoho {
 
 		// Set layout
 
-		$layout = wp_fusion()->settings->get( 'zoho_layout', false );
+		$layout = wp_fusion()->settings->get( 'zoho_layout' );
 
-		if ( ! empty( $layout ) ) {
+		if ( ! empty( $layout ) && empty( $data['Layout'] ) ) {
 			$data['Layout'] = $layout;
 		}
 
 		// Set owner
 
-		$owner = wp_fusion()->settings->get( 'zoho_owner', false );
+		$owner = wp_fusion()->settings->get( 'zoho_owner' );
 
-		if ( ! empty( $owner ) ) {
+		if ( ! empty( $owner ) && empty( $data['Owner'] ) ) {
 			$data['Owner'] = $owner;
 		}
 
@@ -825,5 +850,33 @@ class WPF_Zoho {
 
 	}
 
+	/**
+	 * Get organization ID to use for edit URL.
+	 *
+	 * @since  3.37.30
+	 *
+	 * @return int Organization ID.
+	 */
+	public function sync_org() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request  = $this->api_domain . '/crm/v2/org';
+		$response = wp_remote_get( $request, $this->params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json   = json_decode( wp_remote_retrieve_body( $response ) );
+		$zoho_org_id = $body_json->org[0]->domain_name;
+
+		wp_fusion()->settings->set( 'zoho_org_id', $zoho_org_id );
+
+		return $zoho_org_id;
+
+	}
 
 }

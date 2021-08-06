@@ -39,6 +39,14 @@ class WPF_Sendlane {
 
 	public $list;
 
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.sendlane.com/contacts/%d';
 
 	/**
 	 * Get things started
@@ -366,8 +374,8 @@ class WPF_Sendlane {
 		if( ! isset( $body->subscribe_id ) ) {
 			return false;
 		}
-
-		return $email_address;
+		
+		return $body->subscribe_id;
 	}
 
 
@@ -497,7 +505,6 @@ class WPF_Sendlane {
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/list-subscriber-add' );
 		$response = wp_remote_post( $request, $this->params );
-
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}

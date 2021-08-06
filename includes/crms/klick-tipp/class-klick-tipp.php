@@ -14,6 +14,15 @@ class WPF_KlickTipp {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * No trials only paid plans.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *
@@ -69,7 +78,9 @@ class WPF_KlickTipp {
 
 			// Try an API call
 
-			$this->connect();
+			if ( is_wp_error( $this->connect() ) ) {
+				return new WP_Error( 'error', $this->app->get_last_error() );
+			}
 
 			$result = $this->app->subscriber_get( $contact_id );
 
@@ -104,19 +115,14 @@ class WPF_KlickTipp {
 
 		require_once dirname( __FILE__ ) . '/includes/klicktipp.api.inc';
 
-		$app    = new WPF_KlicktippConnector();
-		$result = $app->login( $username, $password );
+		$this->app = new WPF_KlicktippConnector();
+		$result    = $this->app->login( $username, $password );
 
 		if ( true !== $result ) {
-
-			return new WP_Error( 'error', $app->get_last_error() );
-
+			return new WP_Error( 'error', $this->app->get_last_error() );
 		}
 
-		// Connection was a success
-		$this->app = $app;
-
-		return $app;
+		return $this->app;
 
 	}
 
@@ -130,7 +136,9 @@ class WPF_KlickTipp {
 
 	public function sync() {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$this->sync_tags();
 		$this->sync_crm_fields();
@@ -151,7 +159,9 @@ class WPF_KlickTipp {
 
 	public function sync_tags() {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$available_tags = $this->app->tag_index();
 
@@ -173,7 +183,9 @@ class WPF_KlickTipp {
 
 	public function sync_crm_fields() {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$crm_fields = array( 'email' => 'Email' );
 
@@ -195,7 +207,9 @@ class WPF_KlickTipp {
 
 	public function get_contact_id( $email_address ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$result = $this->app->subscriber_search( $email_address );
 
@@ -217,7 +231,9 @@ class WPF_KlickTipp {
 
 	public function get_tags( $contact_id ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$result = $this->app->subscriber_get( $contact_id );
 
@@ -238,7 +254,9 @@ class WPF_KlickTipp {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$email = $this->get_email_from_cid( $contact_id );
 
@@ -270,7 +288,9 @@ class WPF_KlickTipp {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$email = $this->get_email_from_cid( $contact_id );
 
@@ -302,7 +322,9 @@ class WPF_KlickTipp {
 
 	public function add_contact( $data, $map_meta_fields = true ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -331,7 +353,9 @@ class WPF_KlickTipp {
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -367,7 +391,9 @@ class WPF_KlickTipp {
 
 	public function load_contact( $contact_id ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$result = $this->app->subscriber_get( $contact_id );
 
@@ -399,7 +425,9 @@ class WPF_KlickTipp {
 
 	public function load_contacts( $tag ) {
 
-		$this->connect();
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
 
 		$contact_ids = array();
 

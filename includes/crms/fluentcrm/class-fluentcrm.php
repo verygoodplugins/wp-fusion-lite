@@ -11,8 +11,8 @@ class WPF_FluentCRM {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 *
-	 * @var string
 	 * @since 3.37.3
+	 * @var  string
 	 */
 
 	public $edit_url = '';

@@ -46,7 +46,7 @@ class WPF_HubSpot_Admin {
 	public function init() {
 
 		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}

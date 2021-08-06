@@ -15,6 +15,16 @@ class WPF_Customerly {
 	public $params;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 * Every user has a unique id other than the account id.
+	 *
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -49,7 +59,6 @@ class WPF_Customerly {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -129,6 +138,40 @@ class WPF_Customerly {
 		return $this->params;
 	}
 
+	/**
+	 * Get user edit url
+	 *
+	 * @param string $access_key
+	 * @param string $email
+	 * @param integer $user_id
+	 * @return string
+	 */
+	public function get_user_edit_url($access_key=null,$email,$user_id){
+		if(empty($email)){
+			return;
+		}
+
+		if ( ! $this->params ) {
+			$this->get_params( $access_key );
+		}
+
+		$edit_url = get_user_meta($user_id,'wpf_customerly_edit_url',true);
+		if(!empty($edit_url)){
+			return $edit_url;
+		}
+
+		$request  = 'https://api.customerly.io/v1/users?email='.$email;
+		$response = wp_remote_get( $request, $this->params );
+		
+		if( is_wp_error( $response ) ) {
+			return;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+		$edit_url =  'https://app.customerly.io/apps/'.$body_json->data->app_id.'/contact/'.$body_json->data->crmhero_user_id.'';
+		update_user_meta($user_id,'wpf_customerly_edit_url',$edit_url);
+		return $edit_url;
+	}
 
 	/**
 	 * Initialize connection
@@ -142,7 +185,7 @@ class WPF_Customerly {
 		if ( ! $this->params ) {
 			$this->get_params( $access_key );
 		}
-
+		
 		if ( $test == false ) {
 			return true;
 		}

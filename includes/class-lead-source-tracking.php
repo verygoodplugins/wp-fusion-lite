@@ -23,6 +23,7 @@ class WPF_Lead_Source_Tracking {
 		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 
 		add_filter( 'wpf_meta_field_groups', array( $this, 'add_meta_field_group' ), 5 );
+		add_filter( 'wpf_meta_fields', array( $this, 'add_meta_fields' ) );
 
 	}
 
@@ -53,6 +54,29 @@ class WPF_Lead_Source_Tracking {
 	}
 
 	/**
+	 * Gets the leadsource variables for tracking and syncing.
+	 *
+	 * @since  3.37.25
+	 *
+	 * @return array The leadsource variables.
+	 */
+	public function get_leadsource_vars() {
+
+		$leadsource_vars = array(
+			'leadsource',
+			'utm_campaign',
+			'utm_medium',
+			'utm_source',
+			'utm_term',
+			'utm_content',
+			'gclid',
+		);
+
+		return apply_filters( 'wpf_leadsource_vars', $leadsource_vars );
+
+	}
+
+	/**
 	 * Tries to detect a leadsource for new visitors and makes the data available to integrations
 	 *
 	 * @access  public
@@ -65,17 +89,7 @@ class WPF_Lead_Source_Tracking {
 			return;
 		}
 
-		$leadsource_vars = array(
-			'leadsource',
-			'utm_campaign',
-			'utm_medium',
-			'utm_source',
-			'utm_term',
-			'utm_content',
-			'gclid',
-		);
-
-		$leadsource_vars = apply_filters( 'wpf_leadsource_vars', $leadsource_vars );
+		$leadsource_vars = $this->get_leadsource_vars();
 
 		$alt_vars = array(
 			'original_ref',
@@ -260,6 +274,96 @@ class WPF_Lead_Source_Tracking {
 		);
 
 		return $field_groups;
+
+	}
+
+	/**
+	 * Add Lead Source Tracking field group to Contact Fields list
+	 *
+	 * @since 3.37.25
+	 *
+	 * @param array $meta_fields The meta fields.
+	 * @return array The meta fields.
+	 */
+
+	public function add_meta_fields( $meta_fields ) {
+
+		$meta_fields['leadsource'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Lead Source', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['utm_campaign'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Google Analytics Campaign', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['utm_source'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Google Analytics Source', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['utm_medium'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Google Analytics Medium', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['utm_term'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Google Analytics Term', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['utm_content'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Google Analytics Content', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['gclid'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Google Click Identifier', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['original_ref'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Original Referrer', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['landing_page'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Landing Page', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		foreach ( $this->get_leadsource_vars() as $var ) {
+
+			if ( ! isset( $meta_fields[ $var ] ) ) {
+				$meta_fields[ $var ] = array(
+					'type'   => 'text',
+					'label'  => $var . ' (custom)',
+					'group'  => 'leadsource',
+					'pseudo' => true,
+				);
+			}
+		}
+
+		return $meta_fields;
 
 	}
 

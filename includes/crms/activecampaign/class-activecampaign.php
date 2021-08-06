@@ -119,7 +119,7 @@ class WPF_ActiveCampaign {
 		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields
-			$date = date( 'm/d/Y h:i:s', $value );
+			$date = date( 'm/d/Y H:i:s', $value );
 
 			return $date;
 
@@ -217,6 +217,8 @@ class WPF_ActiveCampaign {
 			wpf_log( 'notice', 0, 'Tried and failed to set site tracking cookie for ' . $email . ', because headers have already been sent.' );
 			return;
 		}
+
+		wpf_log( 'info', 0, 'Starting site tracking session for contact ID ' . $contact_id . ' with email ' . $email . '.' );
 
 		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
 
@@ -1161,7 +1163,7 @@ class WPF_ActiveCampaign {
 			),
 		);
 
-		wpf_log( 'info', wpf_get_current_user_id(), 'Tracking event: ' . $event . ' ' . $event_data );
+		wpf_log( 'info', wpf_get_current_user_id(), 'Tracking event: ' . $event . ' - ' . $event_data );
 
 		$params                            = $this->get_params();
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';

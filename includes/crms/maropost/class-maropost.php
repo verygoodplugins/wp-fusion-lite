@@ -15,6 +15,15 @@ class WPF_Maropost {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * Each contact has a unique id other than his account id.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *
@@ -564,7 +573,7 @@ class WPF_Maropost {
 		);
 
 		if ( ! empty( $custom_data ) ) {
-			$field_data['custom_field'] = $custom_data;
+			$field_data['contact']['custom_field'] = $custom_data;
 		}
 
 		$url            = 'http://api.maropost.com/accounts/' . $this->account_id . '/lists/' . $mp_list . '/contacts.json?auth_token=' . $this->api_key;
@@ -594,10 +603,6 @@ class WPF_Maropost {
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
@@ -624,16 +629,20 @@ class WPF_Maropost {
 		$standard_data = array_intersect_key( $data, $standard_fields );
 
 		$field_data = array(
-			'contact'      => $standard_data,
-			'custom_field' => $custom_data,
+			'contact' => $standard_data,
 		);
+
+		if ( ! empty( $custom_data ) ) {
+			$field_data['contact']['custom_field'] = $custom_data;
+		}
 
 		if ( $send == true ) {
 
-			$url                               = 'http://api.maropost.com/accounts/' . $this->account_id . '/contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
-			$params['body']                    = json_encode( $field_data );
-			$params['headers']['Content-Type'] = 'application/json';
-			$params['method']                  = 'PUT';
+			$params = $this->get_params();
+
+			$url              = 'http://api.maropost.com/accounts/' . $this->account_id . '/contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
+			$params['body']   = json_encode( $field_data );
+			$params['method'] = 'PUT';
 
 			$response = wp_remote_post( $url, $params );
 

@@ -25,7 +25,6 @@ class WPF_User_Profile {
 		add_action( 'wp_ajax_resync_contact', array( $this, 'resync_contact' ) );
 
 		// Updates
-		add_action( 'user_register', array( $this, 'user_profile_update' ), 5 );
 		add_action( 'profile_update', array( $this, 'user_profile_update' ), 5 );
 
 		// Filters for posted data from internal forms

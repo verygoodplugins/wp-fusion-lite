@@ -40,7 +40,7 @@ class WPF_Ontraport_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_filter( 'wpf_initialize_options', array( $this, 'get_tracking_id' ), 10 );
 

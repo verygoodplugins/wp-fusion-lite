@@ -40,7 +40,7 @@ class WPF_WP_ERP_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 
 	}
 

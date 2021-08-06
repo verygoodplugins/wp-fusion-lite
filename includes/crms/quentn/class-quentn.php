@@ -22,6 +22,14 @@ class WPF_Quentn {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -54,6 +62,14 @@ class WPF_Quentn {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+		$api_url = wp_fusion()->settings->get( 'quentn_url' );
+
+		if ( ! empty( $api_url ) ) {
+			$host_url       = parse_url( $api_url, PHP_URL_HOST );
+			$api_url        = trailingslashit( $host_url );
+			$this->edit_url = 'https://' . $api_url . 'adm/contacts/%d/edit/nojs';
+		}
 
 	}
 

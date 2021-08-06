@@ -27,6 +27,15 @@ class WPF_Kartra {
 	public $api_url;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 * No edit page, only through ajax.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public

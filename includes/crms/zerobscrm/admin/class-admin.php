@@ -41,7 +41,8 @@ class WPF_ZeroBSCRM_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ), 10, 2 );
 
 	}
 
@@ -58,9 +59,8 @@ class WPF_ZeroBSCRM_Admin {
 
 		$new_settings['zerobscrm_header'] = array(
 			'title'   => __( 'ZeroBSCRM Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['zerobscrm_connect'] = array(
@@ -68,7 +68,7 @@ class WPF_ZeroBSCRM_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'zerobscrm_connect' )
+			'post_fields' => array( 'zerobscrm_connect' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -95,12 +95,54 @@ class WPF_ZeroBSCRM_Admin {
 				if ( isset( $zerobscrm_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $zerobscrm_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
+
+	}
+
+
+	/**
+	 * Remove some settings that don't apply when connected to Jetpack on the
+	 * same site.
+	 *
+	 * @since  3.37.31
+	 *
+	 * @param  array $settings The settings.
+	 * @param  array $options  The options in the database.
+	 * @return array The settings.
+	 */
+	public function configure_settings( $settings, $options ) {
+
+		unset( $settings['login_sync'] );
+		unset( $settings['login_meta_sync'] );
+		unset( $settings['access_key_header'] );
+		unset( $settings['access_key_desc'] );
+		unset( $settings['access_key'] );
+		unset( $settings['webhook_url'] );
+		unset( $settings['test_webhooks'] );
+		unset( $settings['login_meta_sync'] );
+
+		$new_settings = array();
+
+		$new_settings['automatic_imports_header'] = array(
+			'title'   => __( 'Bidirectional Sync with Jetpack CRM', 'wp-fusion-lite' ),
+			'type'    => 'heading',
+			'section' => 'main',
+			'desc'    => __( 'Changes to contacts and contact tags in Jetpack CRM are automatically synced back to the contact\'s corresponding WordPress user record.', 'wp-fusion-lite' ),
+		);
+
+		$new_settings['jetpack_import_tag'] = array(
+			'title'   => __( 'Import Trigger', 'wp-fusion-lite' ),
+			'desc'    => __( 'When any of these tags are applied to a contact in Jetpack CRM, they will be imported as a new WordPres user.', 'wp-fusion-lite' ),
+			'type'    => 'assign_tags',
+			'section' => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_before( 'return_password_header', $settings, $new_settings );
+
+		return $settings;
 
 	}
 

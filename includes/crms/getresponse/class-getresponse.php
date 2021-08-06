@@ -15,6 +15,16 @@ class WPF_GetResponse {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * The edit page id is not available to get through the API.
+	 *
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *

@@ -631,6 +631,7 @@ jQuery(document).ready(function($){
 
 				} else {
 
+					$('#license_key').removeAttr('disabled');
 					button.html('Retry').addClass('btn-danger').removeAttr('disabled');
 					$('#connection-output-edd').html('<div class="error validation-error"><p>' + wpf_ajax.strings.licenseError + '</p></div><br/>' + response.data);
 

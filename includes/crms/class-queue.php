@@ -21,7 +21,7 @@ class WPF_CRM_Queue {
 		$this->buffer = array();
 
 		// Run shutdown at PHP shutdown
-		register_shutdown_function( array( $this, 'shutdown' ) );
+		add_action( 'shutdown', array( $this, 'shutdown' ), 1 );
 
 	}
 

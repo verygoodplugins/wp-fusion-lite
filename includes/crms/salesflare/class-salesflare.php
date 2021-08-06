@@ -16,6 +16,15 @@ class WPF_Salesflare {
 	public $supports;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.salesflare.com/#/contacts/customers/%d';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public

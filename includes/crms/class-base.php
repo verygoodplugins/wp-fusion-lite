@@ -346,6 +346,23 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Gets the CRM field ID of the primary field used for contact record
+	 * lookups (usually email).
+	 *
+	 * @since  3.37.29
+	 *
+	 * @return string The field name in the CRM.
+	 */
+
+	public function get_lookup_field() {
+
+		$field = ! empty( $this->contact_fields['user_email']['crm_field'] ) ? $this->contact_fields['user_email']['crm_field'] : 'email';
+
+		return $field;
+
+	}
+
+	/**
 	 * Get the CRM field for a single key
 	 *
 	 * @access public
@@ -419,6 +436,26 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Gets the URL to edit the contact in the CRM.
+	 *
+	 * @access public
+	 *
+	 * @since  3.37.29
+	 *
+	 * @param  string $contact_id The contact ID.
+	 * @return bool|string The URL to edit the contact, or false.
+	 */
+	public function get_contact_edit_url( $contact_id ) {
+
+		if ( isset( $this->crm->edit_url ) && ! empty( $this->crm->edit_url ) ) {
+			return sprintf( $this->crm->edit_url, $contact_id );
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
 	 * Formats user entered data to match CRM field formats
 	 *
 	 * @access public
@@ -444,11 +481,41 @@ class WPF_CRM_Base {
 
 			return $value;
 
-		} elseif ( ( $field_type == 'multiselect' && is_array( $value ) ) || is_array( $value ) ) {
+		} elseif ( is_array( $value ) || 'multiselect' == $field_type ) {
 
-			// Removed in v3.36.5 since it causes problems with HubSpot, Salesforce, and others (this could cause problems)
+			// Mulitselects
 
-			// $value = implode( ',', array_filter( $value ) );
+			if ( 'multiselect' == $field_type ) {
+
+				// Removed in v3.36.5 since it causes problems with HubSpot, Salesforce, and others (this could cause problems):
+
+				// $value = implode( ',', array_filter( $value ) );
+
+				// So any formatting of arrays is now handled in the CRM integration class.
+
+				// If it's being synced as multiselect but it's not an array:
+
+				if ( ! is_array( $value ) ) {
+					$value = array( $value );
+				}
+
+				// Don't sync multidimensional arrays:
+
+				if ( count( $value ) !== count( $value, COUNT_RECURSIVE ) ) {
+
+					foreach ( $value as $i => $x ) {
+						if ( is_array( $x ) ) {
+							unset( $value[ $i ] );
+						}
+					}
+				}
+			} elseif ( 'text' == $field_type && is_array( $value ) ) {
+
+				// If it's explicitly supposed to be text
+
+				$value = implode( ', ', array_filter( $value ) );
+
+			}
 
 			return $value;
 

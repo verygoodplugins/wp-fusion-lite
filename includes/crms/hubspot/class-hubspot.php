@@ -34,6 +34,15 @@ class WPF_HubSpot {
 
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -83,6 +92,16 @@ class WPF_HubSpot {
 
 		add_action( 'wpf_guest_contact_updated', array( $this, 'guest_checkout_complete' ), 10, 2 );
 		add_action( 'wpf_guest_contact_created', array( $this, 'guest_checkout_complete' ), 10, 2 );
+
+		$trackid = wp_fusion()->settings->get( 'site_tracking_id' );
+
+		if ( empty( $trackid ) ) {
+			$trackid = $this->get_tracking_id();
+		}
+
+		if ( ! empty( $trackid ) ) {
+			$this->edit_url = 'https://app.hubspot.com/contacts/' . $trackid . '/contact/%d/';
+		}
 
 	}
 
@@ -319,12 +338,18 @@ class WPF_HubSpot {
 			return true;
 		}
 
-		$request  = 'https://api.hubapi.com/contacts/v1/lists/all/contacts/all?count=1';
+		$request  = 'https://api.hubapi.com/integrations/v1/me';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
+
+		// Save tracking ID for later
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		wp_fusion()->settings->set( 'site_tracking_id', $body_json->{'portalId'} );
 
 		return true;
 
@@ -532,14 +557,16 @@ class WPF_HubSpot {
 			return $tags;
 		}
 
-		// This can return the IDs of lists that have been deleted, for some reason
+		// This can return the IDs of lists that have been deleted, for some reason, so
+		// we'll only load the lists that we already know the IDs for.
 
 		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
 
-		foreach( $body_json->{'list-memberships'} as $list ) {
+		foreach ( $body_json->{'list-memberships'} as $list ) {
 
-			$tags[] = $list->{'static-list-id'};
-
+			if ( isset( $available_tags[ $list->{'static-list-id'} ] ) ) {
+				$tags[] = $list->{'static-list-id'};
+			}
 		}
 
 		return $tags;
@@ -713,7 +740,7 @@ class WPF_HubSpot {
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if ( $field_data['active'] == true && isset( $body_json->properties->{$field_data['crm_field']} ) ) {
+			if ( ! empty( $field_data['active'] ) && isset( $body_json->properties->{$field_data['crm_field']} ) ) {
 
 				$value = $body_json->properties->{$field_data['crm_field']}->value;
 
@@ -796,6 +823,8 @@ class WPF_HubSpot {
 			return;
 		}
 
+		wpf_log( 'info', 0, 'Starting site tracking session for contact ID ' . $contact_id . ' with email ' . $customer_email . '.' );
+
 		setcookie( 'wpf_guest', $customer_email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
@@ -820,7 +849,7 @@ class WPF_HubSpot {
 			$trackid = $this->get_tracking_id();
 		}
 
-		echo '<!-- Start of HubSpot Embed Code -->';
+		echo '<!-- Start of HubSpot Embed Code via WP Fusion -->';
 		echo '<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/' . $trackid . '.js"></script>';
 
 		if ( wpf_is_user_logged_in() || isset( $_COOKIE['wpf_guest'] ) ) {
@@ -828,7 +857,7 @@ class WPF_HubSpot {
 			// This will also merge historical tracking data that was accumulated before a visitor registered
 
 			if ( isset( $_COOKIE['wpf_guest'] ) ) {
-				$email = $_COOKIE['wpf_guest'];
+				$email = sanitize_email( $_COOKIE['wpf_guest'] );
 			} else {
 				$user  = wp_get_current_user();
 				$email = $user->user_email;
@@ -841,7 +870,7 @@ class WPF_HubSpot {
 
 		}
 
-		echo '<!-- End of HubSpot Embed Code -->';
+		echo '<!-- End of HubSpot Embed Code via WP Fusion -->';
 
 	}
 

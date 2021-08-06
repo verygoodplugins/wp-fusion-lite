@@ -17,6 +17,11 @@ $capsule_fields['last_name'] = array(
 	'crm_field' => 'lastName'
 );
 
+$capsule_fields[] = array(
+	'crm_label' => 'Job Title',
+	'crm_field' => 'jobTitle'
+);
+
 $capsule_fields['user_email'] = array(
 	'crm_label' => 'Email',
 	'crm_field' => 'email+'
@@ -40,6 +45,11 @@ $capsule_fields[] = array(
 $capsule_fields[] = array(
 	'crm_label' => 'Organisation',
 	'crm_field' => 'organisation'
+);
+
+$capsule_fields[] = array(
+	'crm_label' => 'Picture URL',
+	'crm_field' => 'pictureURL',
 );
 
 

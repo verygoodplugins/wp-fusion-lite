@@ -23,6 +23,15 @@ class WPF_Mailjet {
 
 	public $tag_type = 'List';
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * Edit page has a unique id that is not found in the API.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *

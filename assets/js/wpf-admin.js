@@ -7,11 +7,15 @@
 
 function initializeTagsSelect(target) {
 
+	if ( '#' === target ) {
+		return; // Fixes the widgets editor
+	}
+
 	if( typeof(wpf_admin) === 'undefined' ) {
 		return;
 	}
 
-	if( jQuery( target + " select.select4-wpf-tags").length ) {
+	if( jQuery( target + " select.select4-wpf-tags").length && wpf_admin.tagSelect4 == 1 ) {
 
 		jQuery( target + " select.select4-wpf-tags").each(function(index, el) {
 
@@ -42,85 +46,101 @@ function initializeTagsSelect(target) {
 				}
 			}
 
+			var limit = jQuery(this).attr('data-limit');
 
-			if(jQuery.inArray('add_tags', wpf_admin.crm_supports) > -1) {
+			if( ! limit || limit.length == 0) {
+				limit = -1;
+			}
+
+			// Start building up the select args
+
+			var selectArgs = {
+				multiple : true,
+				minimumResultsForSearch: -1,
+				maximumSelectionLength: limit,
+				language: {
+					maximumSelected: function (a) {
+						var b = wpf_admin.strings.maxSelected.replace( 'MAX', a.maximum );
+						return 1 != a.maximum && (b += "s"), b;
+					},
+				},
+				escapeMarkup: function (markup) {
+					return markup;
+				},
+			}
+
+
+			if( jQuery.inArray('add_tags', wpf_admin.crm_supports) > -1 ) {
 
 				// For CRMs that support adding new tags via API
 
-				var limit = jQuery(this).attr('data-limit');
+				selectArgs.tags = true;
 
-				if(!limit || limit.length == 0)
-					limit = -1;
-
-				jQuery(this).select4({
-					multiple : true,
-					minimumResultsForSearch: -1,
-					tags : true,
-					maximumSelectionLength: limit,
-					insertTag: function(data, tag){
-						tag.text = tag.text + " (" + wpf_admin.strings.addNew + ")"
-						data.push(tag);
-					},
-					language: {
-						maximumSelected: function (a) {
-							var b = wpf_admin.strings.maxSelected.replace( 'MAX', a.maximum );
-							return 1 != a.maximum && (b += "s"), b;
-						},
-					}
-				});
+				selectArgs.insertTag = function(data, tag){
+					tag.text = tag.text + " (" + wpf_admin.strings.addNew + ")"
+					data.push(tag);
+				};
 
 			} else {
 
 				// From CRMs that need to resync
 
-				// Initialize selects
+				selectArgs.language.noResults = function() {
 
-				var limit = jQuery(this).attr('data-limit');
+					var jQueryresync = jQuery("<a id='wpf-select4-tags-resync'>" + wpf_admin.strings.noResults + "</a>");
 
-				if(!limit || limit == 0)
-					var limit = -1;
+					jQueryresync.on('mouseup', function (evt) {
+						evt.stopPropagation();
+						jQuery(this).hide();
+						jQuery(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> ' + wpf_admin.strings.loadingTags + '</span>');
 
-				jQuery(el).select4({
-					multiple : true,
-					minimumResultsForSearch: -1,
-					maximumSelectionLength: limit,
-					language: {
-						noResults: function() {
-							var jQueryresync = jQuery("<a id='wpf-select4-tags-resync'>" + wpf_admin.strings.noResults + "</a>");
+						var data = {
+							'action'	: 'sync_tags'
+						}
 
-							jQueryresync.on('mouseup', function (evt) {
-								evt.stopPropagation();
-								jQuery(this).hide();
-								jQuery(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> ' + wpf_admin.strings.loadingTags + '</span>');
+						jQuery.post(ajaxurl, data, function(response) {
 
-								var data = {
-									'action'	: 'sync_tags'
-								}
+							jQuery('#wpf-select4-tags-loading').remove();
+							jQueryresync.after('<span>' + wpf_admin.strings.resyncComplete + '</span>');
 
-								jQuery.post(ajaxurl, data, function(response) {
+							jQuery(el).append(response);
+							jQuery(el).trigger('change');
 
-									jQuery('#wpf-select4-tags-loading').remove();
-									jQueryresync.after('<span>' + wpf_admin.strings.resyncComplete + '</span>');
+						});
 
-									jQuery(el).append(response);
-									jQuery(el).trigger('change');
+					});
 
-								});
+					return jQueryresync;
+				};
 
-							});
-
-							return jQueryresync;
-						},
-						maximumSelected: function (a) {
-							var b = wpf_admin.strings.maxSelected.replace( 'MAX', a.maximum );
-							return 1 != a.maximum && (b += "s"), b;
-						},
-					},
-					escapeMarkup: function (markup) {
-						return markup;
-					},
-				});
 			}
+
+			if ( typeof jQuery(this).attr('data-lazy-load') !== 'undefined' ) {
+
+				// Lazy loading if more than 1000 tags
+
+				selectArgs.minimumInputLength = 3;
+
+				selectArgs.ajax = {
+	    			url: ajaxurl,
+	    			dataType: 'json',
+	    			type: 'POST',
+	    			delay: 250,
+	    			cache: true,
+	    			data: function( params ) {
+	    				var query = {
+							search: params.term,
+							action: 'wpf_search_available_tags'
+						}
+
+						return query;
+	    			}
+	    		}
+	    	}
+
+			// Initialize the select4!
+
+			jQuery(this).select4( selectArgs );
 
 			// Prevent same tag in multiple selects if specified
 
@@ -238,7 +258,7 @@ jQuery(document).ready(function($){
 
 	function initializeCRMFieldSelect() {
 
-		if( $("select.select4-crm-field").length && $("select.select4-crm-field").length <= 300 ) {
+		if( $("select.select4-crm-field").length && $("select.select4-crm-field").length <= 300 && wpf_admin.fieldSelect4 == 1 ) {
 
 			function matcher (params, data) {
 				// Always return the object if there is nothing to compare
@@ -869,27 +889,25 @@ jQuery(document).ready(function($){
 
 	}
 
+	// Upsell
+
+	if ( $( '.wpf-upsell-tags-select' ).length ) {
+
+		$( '.wpf-upsell-tags-select select' ).each(function(index, el) {
+			$(el).addClass( 'select4-wpf-tags' );
+		});
+
+		$( '.wpf-upsell-tags-select span.select2' ).each(function(index, el) {
+			$(el).remove();
+		});
+
+		initializeTagsSelect( 'div.acf-postbox' );
+
+	}
+
 });
 
-// Tribe Tickets
-
-function initializeTicketTable( ticketID ) {
-
+// Fix tribe tickets select2 issued
+jQuery(document).on('click','#ticket_form_toggle,#rsvp_form_toggle',function(){
 	initializeTagsSelect( '#ticket_form_table' );
-
-	jQuery('#ticket_form_table #ticket_wpf_settings-apply_tags').on( 'change', function(event) {
-		
-		var items = [];
-		jQuery(this).find('option:selected').each(function(){ items.push(jQuery(this).val()); });
-
-		var data = {
-			'action'	: 'wpf_tribe_tickets_save',
-			'data'		: items.join(','),
-			'id'		: ticketID
-		}
-
-		jQuery.post(ajaxurl, data);
-
-	});
-
-}
+});

@@ -21,6 +21,16 @@ class WPF_UserEngage {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -56,6 +66,11 @@ class WPF_UserEngage {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		$domain = wp_fusion()->settings->get( 'userengage_domain' );
+
+		if ( ! empty( $domain ) ) {
+			$this->edit_url = 'https://' . $domain . '.user.com/user/%d/';
+		}
 	}
 
 

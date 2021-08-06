@@ -22,6 +22,14 @@ class WPF_Drift {
 
 	public $client_secret;
 
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.drift.com/contacts/details/%d';
 
 	/**
 	 * Get things started
@@ -48,19 +56,6 @@ class WPF_Drift {
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
-	}
-
-	/**
-	 * Sets up hooks specific to this CRM
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function init() {
-
-
 
 	}
 

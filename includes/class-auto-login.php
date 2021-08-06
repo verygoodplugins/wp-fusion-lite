@@ -165,9 +165,9 @@ class WPF_Auto_Login {
 
 			// If data already exists, make sure the user hasn't expired
 
-			$contact_id = get_user_meta( $contact_data['user_id'], wp_fusion()->crm->slug . '_contact_id', true );
+			$contact_id_from_db = get_user_meta( $contact_data['user_id'], wp_fusion()->crm->slug . '_contact_id', true );
 
-			if ( empty( $contact_id ) || $contact_id != $contact_data['contact_id'] ) {
+			if ( empty( $contact_id_from_db ) || $contact_id_from_db != $contact_data['contact_id'] ) {
 
 				$user_id = $this->create_temp_user( $contact_data['contact_id'] );
 
@@ -177,7 +177,7 @@ class WPF_Auto_Login {
 
 				$contact_data['user_id'] = $user_id;
 
-			} else {
+			} elseif ( false !== $contact_id ) {
 
 				// If the temp user already exists but ?cid= is in the URL, update their tags anyway
 
@@ -211,8 +211,10 @@ class WPF_Auto_Login {
 		// Hide admin bar
 		add_filter( 'show_admin_bar', '__return_false' );
 
-		// Disable comments
-		add_filter( 'comments_open', array( wp_fusion()->access, 'turn_off_comments' ), 10, 2 );
+		// Disable comments (removed in v3.37.27)
+		// add_filter( 'comments_open', array( wp_fusion()->access, 'turn_off_comments' ), 10, 2 );
+
+		add_filter( 'wp_get_current_commenter', array( $this, 'get_current_commenter' ) );
 
 		do_action( 'wpf_started_auto_login', $contact_data['user_id'], $contact_id );
 
@@ -310,7 +312,9 @@ class WPF_Auto_Login {
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
 
-		// We'll set this to true, so that when data is pulled from the CRM it's saved to the temporary user cache and not treated as a real user.
+		wpf_log( 'info', $user_id, 'Starting auto-login session for contact ID ' . $contact_id . ' with tags:', array( 'tag_array' => $user_tags ) );
+
+		// Allow other integrations to quickly access the auto login user ID
 
 		$this->auto_login_user['user_id'] = $user_id;
 
@@ -336,6 +340,28 @@ class WPF_Auto_Login {
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
 
 		return $user_id;
+
+	}
+
+	/**
+	 * Sets the current commenter based on the auto-login user data.
+	 *
+	 * @since  3.37.27
+	 *
+	 * @param  array $comment_author_data The comment author data.
+	 * @return array The comment author data.
+	 */
+	public function get_current_commenter( $comment_author_data ) {
+
+		if ( empty( array_filter( $comment_author_data ) ) ) {
+			$comment_author_data = array(
+				'comment_author'       => get_user_meta( $this->auto_login_user['user_id'], 'first_name', true ),
+				'comment_author_email' => get_user_meta( $this->auto_login_user['user_id'], 'user_email', true ),
+				'comment_author_url'   => get_user_meta( $this->auto_login_user['user_id'], 'user_url', true ),
+			);
+		}
+
+		return $comment_author_data;
 
 	}
 

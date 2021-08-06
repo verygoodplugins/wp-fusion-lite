@@ -41,7 +41,7 @@ class WPF_Mautic_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
@@ -70,7 +70,7 @@ class WPF_Mautic_Admin {
 
 		$new_settings['mautic_url'] = array(
 			'title'   => __( 'URL', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter the URL for your Mautic account (like http://app.mautic.net/).', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the URL for your Mautic account (like https://app.mautic.net/).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'

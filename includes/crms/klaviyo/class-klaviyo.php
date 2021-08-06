@@ -28,6 +28,15 @@ class WPF_Klaviyo {
 
 	public $tag_type = 'List';
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * Each contact has a unique id other than his account id.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+	
 	/**
 	 * Get things started
 	 *

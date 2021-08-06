@@ -29,6 +29,15 @@ class WPF_HighLevel {
 
 	public $params = array();
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * Each contact has a unique id other than his account id.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *
@@ -62,7 +71,45 @@ class WPF_HighLevel {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+	}
 
+	/**
+	 * Get user edit url
+	 *
+	 * @param string $email_address
+	 * @param integer $user_id
+	 * @return string
+	 */
+	public function get_user_edit_url($email_address,$user_id){
+		if(empty($email_address)){
+			return;
+		}
+
+		$edit_url = get_user_meta($user_id,'wpf_highlevel_edit_url',true);
+		if(!empty($edit_url)){
+			return $edit_url;
+		}
+
+		$request  = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
+		$response = wp_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) && 'email: The email address is invalid.' == $response->get_error_message() ) {
+
+			// Contact not found
+			return false;
+
+		} elseif ( is_wp_error( $response ) ) {
+
+			// Generic error
+			return false;
+
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+		$contact = $response->contacts[0];
+		$edit_url =  'https://app.gohighlevel.com/location/'.$contact->locationId.'/customers/detail/'.$contact->id.'';
+		update_user_meta($user_id,'wpf_highlevel_edit_url',$edit_url);
+		return $edit_url;
 	}
 
 	/**
@@ -142,7 +189,7 @@ class WPF_HighLevel {
 
 			return $value;
 
-		} elseif ( is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
+		} elseif ( ! is_array( $value ) && is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
 
 			$length = strlen( trim( str_replace( array( '-', ' ' ), '', $value ) ) );
 

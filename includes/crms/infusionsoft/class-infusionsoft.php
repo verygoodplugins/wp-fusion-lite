@@ -23,8 +23,8 @@ class WPF_Infusionsoft_iSDK {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 *
-	 * @var string
 	 * @since 3.36.10
+	 * @var  string
 	 */
 
 	public $edit_url = '';
@@ -419,6 +419,8 @@ class WPF_Infusionsoft_iSDK {
 		$result = $this->app->dsQuery( 'DataFormField', 1000, 0, $query, $fields );
 
 		if ( is_wp_error( $result ) ) {
+
+			wpf_log( 'error', 0, $result->get_error_message() );
 			return $result;
 		}
 

@@ -41,7 +41,7 @@ class WPF_ActiveCampaign_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_action( 'wpf_resync_contact', array( $this, 'resync_lists' ) );
 
@@ -195,16 +195,20 @@ class WPF_ActiveCampaign_Admin {
 
 	public function validate_site_tracking( $input, $setting ) {
 
-		$previous = wp_fusion()->settings->get('site_tracking', false);
+		$previous = wp_fusion()->settings->get( 'site_tracking' );
 
 		// Activate site tracking
-		if( $input == true && $previous == false ) {
+		if ( true == $input && false == $previous ) {
 
 			wp_fusion()->crm->connect();
-			wp_fusion()->crm->app->version(2);
-			wp_fusion()->crm->app->api( 'tracking/site/status', array( 'status' => 'enable' ) );
-			wp_fusion()->crm->app->api( 'tracking/whitelist', array( 'domain' => home_url() ) );
 
+			if ( is_object( wp_fusion()->crm->app ) ) {
+				wp_fusion()->crm->app->version( 2 );
+				wp_fusion()->crm->app->api( 'tracking/site/status', array( 'status' => 'enable' ) );
+				wp_fusion()->crm->app->api( 'tracking/whitelist', array( 'domain' => home_url() ) );
+			} else {
+				$input = new WP_Error( 'error', 'Unable to enable site tracking, couldn\'t connect to ActiveCampaign.' );
+			}
 		}
 
 		return $input;

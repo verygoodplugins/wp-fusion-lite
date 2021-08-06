@@ -84,6 +84,7 @@ class WPF_Admin_Interfaces {
 		add_action( 'wpf_meta_box_content', array( $this, 'apply_tags_select' ), 30, 2 );
 		add_action( 'wpf_meta_box_content', array( $this, 'apply_to_children' ), 40, 2 );
 
+		add_action( 'wp_ajax_wpf_search_available_tags', array( $this, 'search_available_tags' ) );
 		add_action( 'wp_ajax_wpf_get_redirect_options', array( $this, 'get_redirect_options' ) );
 
 		// Saving metabox
@@ -135,6 +136,8 @@ class WPF_Admin_Interfaces {
 
 		$localize = array(
 			'crm_supports'  => wp_fusion()->crm->supports,
+			'tagSelect4'    => false == apply_filters( 'wpf_disable_tag_select4', false ) ? true : false,
+			'fieldSelect4'  => false == apply_filters( 'wpf_disable_crm_field_select4', false ) ? true : false,
 			'settings_page' => admin_url( 'options-general.php?page=wpf-settings' ),
 			'strings'       => array(
 				'addNew'           => __( 'add new', 'wp-fusion-lite' ),
@@ -543,6 +546,10 @@ class WPF_Admin_Interfaces {
 
 	public function admin_table_post_states( $post_states, $post ) {
 
+		if ( ! is_object( $post ) ) {
+			return $post_states;
+		}
+
 		$wpf_settings = get_post_meta( $post->ID, 'wpf-settings', true );
 
 		if ( ! empty( $wpf_settings ) && isset( $wpf_settings['lock_content'] ) && $wpf_settings['lock_content'] == true ) {
@@ -626,38 +633,21 @@ class WPF_Admin_Interfaces {
 
 			$tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
 
-			if ( empty( $tags ) ) {
+			if ( empty( $tags ) && is_array( $tags ) ) {
 
+				// Has a contact record
 				return '-';
+
+			} elseif ( false == $tags ) {
+
+				// No contact record
+
+				return __( '(no contact ID)', 'wp-fusion-lite' );
 
 			} else {
 
-				$available_tags = wp_fusion()->settings->get( 'available_tags' );
+				return implode( ', ', array_map( 'wpf_get_tag_label', $tags ) );
 
-				$tag_labels = array();
-
-				foreach ( $tags as $tag_id ) {
-
-					if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
-
-						$tag_labels[] = $tag_id;
-
-					} elseif ( ! isset( $available_tags[ $tag_id ] ) ) {
-
-						continue;
-
-					} elseif ( is_array( $available_tags[ $tag_id ] ) ) {
-
-						$tag_labels[] = $available_tags[ $tag_id ]['label'];
-
-					} else {
-
-						$tag_labels[] = $available_tags[ $tag_id ];
-
-					}
-				}
-
-				return implode( ', ', $tag_labels );
 			}
 		}
 
@@ -1177,6 +1167,41 @@ class WPF_Admin_Interfaces {
 
 	}
 
+	/**
+	 * Get the available tags via AJAX for sites with more than 2000 tags.
+	 *
+	 * @since  3.37.19
+	 *
+	 * @return array The tags.
+	 */
+	public function search_available_tags() {
+
+		if ( empty( $_POST['search'] ) ) {
+			wp_die();
+		}
+
+		$search = sanitize_text_field( $_POST['search'] );
+		$tags   = wp_fusion()->settings->get_available_tags_flat();
+
+		$return = array(
+			'results' => array(),
+		);
+
+		foreach ( $tags as $id => $tag ) {
+
+			if ( false !== stripos( $tag, $search ) ) {
+				$return['results'][] = array(
+					'id'   => $id,
+					'text' => $tag,
+				);
+			}
+		}
+
+		echo json_encode( $return );
+
+		wp_die();
+
+	}
 
 
 	/**
@@ -1273,8 +1298,17 @@ class WPF_Admin_Interfaces {
 
 		$settings = apply_filters( 'wpf_settings_for_meta_box', $settings, $post );
 
+		if ( ! is_a( $post, 'WP_Post' ) ) {
+
+			// Use a dummy post here to prevent warnings
+			$post = new WP_Post( array() );
+
+		}
+
 		// Outputs the different input fields for the WPF meta box
 		do_action( 'wpf_meta_box_content', $post, $settings );
+
+		do_action( "wpf_meta_box_content_{$post->post_type}", $post, $settings );
 
 	}
 

@@ -16,13 +16,14 @@ class WPF_Access_Control {
 	public $can_access_posts = array();
 
 	/**
-	 * Cache of term IDs the user can or can't access
+	 * Determine if the current post has a content area that's filterable by
+	 * the_content.
 	 *
-	 * @since 3.37.4
-	 * @var can_access_terms
+	 * @since 3.37.30
+	 * @var  can_filter_content
 	 */
 
-	public $can_access_terms = array();
+	public $can_filter_content = false;
 
 
 	/**
@@ -69,8 +70,31 @@ class WPF_Access_Control {
 
 		}
 
+		// Check to see if a page is protected but no redirect is specified, and there's no content area
+		add_filter( 'the_content', array( $this, 'test_the_content' ) );
+		add_action( 'wp_footer', array( $this, 'maybe_doing_it_wrong' ) );
+
 	}
 
+
+	/**
+	 * Gets the post access settings.
+	 *
+	 * @since 3.37.26
+	 *
+	 * @param int $post_id The post ID.
+	 * @return array The access settings.
+	 */
+	public function get_post_access_meta( $post_id ) {
+
+		$settings = wp_parse_args( get_post_meta( $post_id, 'wpf-settings', true ), WPF_Admin_Interfaces::$meta_box_defaults );
+		$settings = apply_filters( 'wpf_post_access_meta', $settings, $post_id );
+
+		// Parse args again in case the filter messed them up.
+
+		return wp_parse_args( $settings, WPF_Admin_Interfaces::$meta_box_defaults );
+
+	}
 
 	/**
 	 * Checks if a user can access a given post
@@ -90,7 +114,7 @@ class WPF_Access_Control {
 		}
 
 		// If admins are excluded from restrictions
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && user_can( $user_id, 'manage_options' ) ) {
+		if ( wpf_admin_override( $user_id ) ) {
 			return true;
 		}
 
@@ -107,91 +131,66 @@ class WPF_Access_Control {
 			}
 		}
 
-		$post_restrictions = get_post_meta( $post_id, 'wpf-settings', true );
-		$post_restrictions = wp_parse_args( $post_restrictions, WPF_Admin_Interfaces::$meta_box_defaults );
-		$post_restrictions = apply_filters( 'wpf_post_access_meta', $post_restrictions, $post_id );
+		$can_access = true;
 
-		// See if taxonomy restrictions are in effect
 		if ( ! $this->user_can_access_term( $post_id, $user_id ) ) {
-			$this->cache_can_access( $post_id, false ); // This could be better but it'll work for now
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
+
+			// See if taxonomy restrictions are in effect
+			$can_access = false;
+
+		} elseif ( ! $this->user_can_access_post_type( get_post_type( $post_id ), $user_id ) ) {
+
+			// See if post type restrictions are in effect
+			$can_access = false;
+
 		}
 
-		// See if post type restrictions are in effect
-		if ( ! $this->user_can_access_post_type( get_post_type( $post_id ), $user_id ) ) {
-			$this->cache_can_access( $post_id, false );
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
-		}
+		if ( true === $can_access ) {
 
-		// If no settings are set
-		if ( empty( $post_restrictions ) ) {
-			$this->cache_can_access( $post_id, true );
-			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
-		}
+			// If we passed for the post type and terms, we can check the setting on the individual post.
 
-		// If user is logged in and a Not tag is specified
-		if ( ! empty( $post_restrictions['allow_tags_not'] ) && ! empty( $user_id ) ) {
+			$settings = $this->get_post_access_meta( $post_id );
 
-			$user_tags = wp_fusion()->user->get_tags( $user_id );
+			if ( empty( $settings ) ) {
 
-			$result = array_intersect( (array) $post_restrictions['allow_tags_not'], $user_tags );
-
-			if ( ! empty( $result ) ) {
-				$this->cache_can_access( $post_id, false );
-				return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
-			}
-		}
-
-		// If content isn't locked
-		if ( ! isset( $post_restrictions['lock_content'] ) || $post_restrictions['lock_content'] != true ) {
-			$this->cache_can_access( $post_id, true );
-			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
-		}
-
-		// If not logged in
-		if ( ! wpf_is_user_logged_in() && empty( $user_id ) ) {
-			$this->cache_can_access( $post_id, false );
-			return apply_filters( 'wpf_user_can_access', false, false, $post_id );
-		}
-
-		// If no tags specified for restriction, but user is logged in, allow access
-		if ( empty( $post_restrictions['allow_tags'] ) && empty( $post_restrictions['allow_tags_all'] ) ) {
-			$this->cache_can_access( $post_id, true );
-			return apply_filters( 'wpf_user_can_access', true, $user_id, $post_id );
-		}
-
-		$user_tags = wp_fusion()->user->get_tags( $user_id );
-
-		// If user has no valid tags
-		if ( empty( $user_tags ) ) {
-			$this->cache_can_access( $post_id, false );
-			return apply_filters( 'wpf_user_can_access', false, $user_id, $post_id );
-		}
-
-		if ( ! empty( $post_restrictions['allow_tags'] ) ) {
-
-			// Check if user has required tags for content
-			$result = array_intersect( (array) $post_restrictions['allow_tags'], $user_tags );
-
-			if ( ! empty( $result ) ) {
+				// If no settings are set
 				$can_access = true;
-			} else {
+
+			} if ( false != $user_id && wpf_has_tag( $settings['allow_tags_not'], $user_id ) ) {
+
+				// If user is logged in and a Not tag is specified
 				$can_access = false;
-			}
-		} else {
 
-			$can_access = true;
+			} elseif ( ! isset( $settings['lock_content'] ) || $settings['lock_content'] != true ) {
 
-		}
-
-		if ( ! empty( $post_restrictions['allow_tags_all'] ) ) {
-
-			$result = array_intersect( (array) $post_restrictions['allow_tags_all'], $user_tags );
-
-			if ( count( $result ) == count( $post_restrictions['allow_tags_all'] ) && $can_access == true ) {
+				// If content isn't locked
 				$can_access = true;
-			} else {
+
+			} elseif ( ! wpf_is_user_logged_in() && empty( $user_id ) ) {
+
+				// If not logged in
 				$can_access = false;
+
+			} elseif ( empty( $settings['allow_tags'] ) && empty( $settings['allow_tags_all'] ) ) {
+
+				// If no tags specified for restriction, but user is logged in, allow access
+				$can_access = true;
+
+			} elseif ( empty( wpf_get_tags( $user_id ) ) ) {
+
+				// If user has no tags
+				$can_access = false;
+
+			} elseif ( ! empty( $settings['allow_tags_all'] ) && count( array_intersect( $settings['allow_tags_all'], wpf_get_tags( $user_id ) ) ) !== count( $settings['allow_tags_all'] ) ) {
+
+				// If Required Tags (all) are specified and the user doesn't have all of them
+				$can_access = false;
+
+			} elseif ( ! empty( $settings['allow_tags'] ) && ! wpf_has_tag( $settings['allow_tags'], $user_id ) ) {
+
+				// If user has at least one of the required tags
+				$can_access = false;
+
 			}
 		}
 
@@ -225,7 +224,7 @@ class WPF_Access_Control {
 		$archive_restrictions = $taxonomy_rules[ $term_id ];
 
 		// If content isn't locked
-		if ( empty( $archive_restrictions ) || ! isset( $archive_restrictions['lock_content'] ) || $archive_restrictions['lock_content'] != true ) {
+		if ( empty( $archive_restrictions ) || empty( $archive_restrictions['lock_content'] ) ) {
 			return true;
 		}
 
@@ -248,7 +247,7 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		$user_tags = wp_fusion()->user->get_tags( $user_id );
+		$user_tags = wpf_get_tags( $user_id );
 
 		// If user has no valid tags
 		if ( empty( $user_tags ) ) {
@@ -292,7 +291,7 @@ class WPF_Access_Control {
 		// We need to un-hide hidden terms to see if the post is accessible
 		remove_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
 
-		$user_tags = wp_fusion()->user->get_tags( $user_id );
+		$user_tags = wpf_get_tags( $user_id );
 
 		$can_access = true;
 
@@ -300,19 +299,6 @@ class WPF_Access_Control {
 
 			if ( empty( $settings['lock_posts'] ) ) {
 				continue;
-			}
-
-			// Check the cache
-
-			if ( isset( $this->can_access_terms[ $term_id ] ) && wpf_get_current_user_id() == $user_id ) {
-
-				$can_access = $this->can_access_terms[ $term_id ];
-
-				if ( true == $can_access ) {
-					continue; // Granted, check the next term
-				} else {
-					break; // Access was denied from the cache
-				}
 			}
 
 			if ( ! wpf_is_user_logged_in() ) {
@@ -336,17 +322,16 @@ class WPF_Access_Control {
 
 				$term = get_term( $term_id );
 
-				if ( ! empty( $term ) && ! is_wp_error( $term ) && is_object_in_term( $post_id, $term->taxonomy, $term_id ) ) {
+				if ( ! empty( $term ) && ! is_wp_error( $term ) && is_object_in_term( $post_id, $term->taxonomy, $term ) ) {
 
 					// is_wp_error(); check in case the term was deleted
 
-					$this->can_access_terms[ $term_id ] = false; // set the cache
+					$can_access = false;
 					break;
 
 				} else {
 
-					$can_access                         = true;
-					$this->can_access_terms[ $term_id ] = true; // set the cache
+					$can_access = true;
 
 				}
 			}
@@ -384,7 +369,7 @@ class WPF_Access_Control {
 
 			} else {
 
-				$user_tags = wp_fusion()->user->get_tags( $user_id );
+				$user_tags = wpf_get_tags( $user_id );
 
 				$result = array_intersect( $settings[ $post_type ]['allow_tags'], $user_tags );
 
@@ -463,7 +448,7 @@ class WPF_Access_Control {
 
 		}
 
-		return $redirect;
+		return apply_filters( 'wpf_redirect_url', $redirect, $post_id );
 
 	}
 
@@ -487,7 +472,7 @@ class WPF_Access_Control {
 
 		$terms = wp_get_post_terms( $post_id, $taxonomies, array( 'fields' => 'ids' ) );
 
-		$user_tags = wp_fusion()->user->get_tags();
+		$user_tags = wpf_get_tags();
 
 		foreach ( $terms as $term_id ) {
 
@@ -529,7 +514,7 @@ class WPF_Access_Control {
 
 		$bypass = apply_filters( 'wpf_begin_redirect', false, wpf_get_current_user_id() );
 
-		if ( $bypass == true ) {
+		if ( $bypass ) {
 			return true;
 		}
 
@@ -624,19 +609,19 @@ class WPF_Access_Control {
 			// Single post redirects
 			global $post;
 
-			if ( empty( $post ) ) {
+			if ( empty( $post ) || ! is_a( $post, 'WP_Post' ) ) {
 				return true;
 			}
 
 			// For inheriting restrictions from another post
 			$post_id = apply_filters( 'wpf_redirect_post_id', $post->ID );
 
-			if ( $post_id == 0 ) {
+			if ( empty( $post_id ) ) {
 				return true;
 			}
 
 			// If user can access, return without doing anything
-			if ( $this->user_can_access( $post_id ) == true ) {
+			if ( $this->user_can_access( $post_id ) ) {
 				return true;
 			}
 
@@ -648,15 +633,13 @@ class WPF_Access_Control {
 
 			}
 
+			// Return after login
+			$this->set_return_after_login( $post_id );
+
 			// Get redirect URL for the post
 			$redirect = $this->get_redirect( $post_id );
 
-			$redirect = apply_filters( 'wpf_redirect_url', $redirect, $post_id );
-
 			if ( ! empty( $redirect ) ) {
-
-				// Return after login
-				$this->set_return_after_login( $post_id );
 
 				wp_redirect( $redirect, 302, 'WP Fusion; Post ID ' . $post_id );
 				exit();
@@ -729,7 +712,7 @@ class WPF_Access_Control {
 
 		$message = false;
 
-		if ( wp_fusion()->settings->get( 'per_post_messages', false ) == true ) {
+		if ( wp_fusion()->settings->get( 'per_post_messages' ) == true ) {
 
 			if ( false == $post_id ) {
 
@@ -812,7 +795,7 @@ class WPF_Access_Control {
 			return;
 		}
 
-		$user_tags = wp_fusion()->user->get_tags();
+		$user_tags = wpf_get_tags();
 
 		$result = array_intersect( $lockout_tags, $user_tags );
 
@@ -841,18 +824,19 @@ class WPF_Access_Control {
 
 			}
 
-			// Check the current post to see if it's allowed
+			// Get the requested URL
 
-			global $post;
+			$requested_url  = is_ssl() ? 'https://' : 'http://';
+			$requested_url .= $_SERVER['HTTP_HOST'];
+			$requested_url .= $_SERVER['REQUEST_URI'];
+
+			// Check the current post to see if it's allowed
 
 			foreach ( $lockout_urls as $url ) {
 
-				$post_id = url_to_postid( $url );
-
-				if ( ! empty( $post_id ) && $post->ID == $post_id ) {
+				if ( fnmatch( $url, $requested_url ) ) {
 					return;
 				}
-
 			}
 
 			wp_redirect( $lockout_url, 302, 'WP Fusion; Lockout' );
@@ -1070,7 +1054,7 @@ class WPF_Access_Control {
 			return $args;
 		}
 
-		$user_tags = wp_fusion()->user->get_tags();
+		$user_tags = wpf_get_tags();
 
 		foreach ( $taxonomy_rules as $term_id => $rule ) {
 
@@ -1260,6 +1244,8 @@ class WPF_Access_Control {
 		$not_in = wp_cache_get( "wpf_query_filter_{$user_id}_{$post_types[0]}" );
 
 		if ( false === $not_in ) {
+
+			// Exclude any restricted terms
 
 			$args = array(
 				'post_type'      => $post_types,
@@ -1489,7 +1475,7 @@ class WPF_Access_Control {
 			return $access_meta;
 		}
 
-		$access_meta = array_merge( $access_meta, $settings[ $post_type ] );
+		$access_meta = array_merge( $access_meta, array_filter( $settings[ $post_type ] ) );
 
 		return $access_meta;
 
@@ -1607,7 +1593,7 @@ class WPF_Access_Control {
 		}
 
 		// See if user has required tags
-		$user_tags = wp_fusion()->user->get_tags();
+		$user_tags = wpf_get_tags();
 
 		if ( ! empty( $widget_tags ) ) {
 
@@ -1757,6 +1743,62 @@ class WPF_Access_Control {
 	}
 
 	/**
+	 * Lets us know if the_content is filterable by WP Fusion for a given page.
+	 *
+	 * @since  3.37.30
+	 *
+	 * @param  string $content The content.
+	 * @return string The content.
+	 */
+
+	public function test_the_content( $content ) {
+
+		if ( in_the_loop() ) {
+			$this->can_filter_content = true;
+		}
+
+		return $content;
+
+	}
+
+	/**
+	 * Display a warning if the page is protected by WP Fusion, but no redirect
+	 * was specified, and no content area is found.
+	 *
+	 * @since 3.37.30
+	 *
+	 * @return mixed HTML message.
+	 */
+
+	public function maybe_doing_it_wrong() {
+
+		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		global $post;
+
+		if ( ! is_a( $post, 'WP_Post' ) ) {
+			return;
+		}
+
+		$access_meta = $this->get_post_access_meta( $post->ID );
+
+		if ( true == $access_meta['lock_content'] && false === $this->can_filter_content && false === $this->get_redirect( $post->ID ) ) {
+
+			echo '<div style="padding: 10px 30px; border: 4px solid #ff0000; text-align: center; position: fixed; top: 32px; background: #fff; width: 100%; z-index: 999;">';
+
+			echo '<p>' . __( '<strong>Warning:</strong> You\'ve protected this content with WP Fusion, but <u>you did not specify a redirect</u> for when access is denied. <strong>This content will be publicly accessible</strong>. For more information, see <em><a href="https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-message-vs-redirect" target="_blank">Restricted Content Message vs Redirect</a></em>.', 'wp-fusion-lite' ) . '</p>';
+
+			echo '<p><em><small>(' . __( 'This message is only shown to admins and won\'t be visible to regular visitors. To remove this message, either specify a redirect, or disable WP Fusion protection on this content.', 'wp-fusion-lite' ) . ')</small></em></p>';
+
+			echo '</div>';
+
+		}
+
+	}
+
+	/**
 	 * //
 	 * // DEPRECATED
 	 * //
@@ -1785,8 +1827,6 @@ class WPF_Access_Control {
 		}
 
 		$redirect = $this->get_redirect( $post );
-
-		$redirect = apply_filters( 'wpf_redirect_url', $redirect, $post );
 
 		if ( ! empty( $redirect ) ) {
 

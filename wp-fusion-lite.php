@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.37.18
+ * Version: 3.37.30
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.37.18' );
+define( 'WP_FUSION_VERSION', '3.37.30' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -181,6 +181,7 @@ final class WP_Fusion_Lite {
 			// Create settings
 			self::$instance->settings = new WPF_Settings();
 			self::$instance->logger   = new WPF_Log_Handler();
+			self::$instance->batch    = new WPF_Batch();
 
 			// Integration modules are stored here for easy access, for
 			// example wp_fusion()->integrations->{'woocommerce'}->process_order( $order_id );
@@ -204,10 +205,11 @@ final class WP_Fusion_Lite {
 				self::$instance->access               = new WPF_Access_Control();
 				self::$instance->auto_login           = new WPF_Auto_Login();
 				self::$instance->ajax                 = new WPF_AJAX();
-				self::$instance->batch                = new WPF_Batch();
 
 				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
 				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
+
+				add_action( 'init', array( self::$instance, 'init' ), 0 );
 
 			}
 
@@ -215,9 +217,6 @@ final class WP_Fusion_Lite {
 				add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
 				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 			}
-
-			add_action( 'init', array( self::$instance, 'init' ), 0 );
-
 		}
 
 		return self::$instance;
@@ -418,9 +417,10 @@ final class WP_Fusion_Lite {
 				'fluentcrm'      => 'WPF_FluentCRM',
 				'growmatik'      => 'WPF_Growmatik',
 				'highlevel'      => 'WPF_HighLevel',
-				'pulsetech'      => 'WPF_PulseTechnologyCRM'
 				'emercury'       => 'WPF_Emercury',
 				'fluentcrm-rest' => 'WPF_FluentCRM_REST',
+				'pulsetech'      => 'WPF_PulseTechnologyCRM',
+				'autonami'       => 'WPF_Autonami',
 			)
 		);
 
@@ -441,6 +441,7 @@ final class WP_Fusion_Lite {
 		// Settings
 		require_once WPF_DIR_PATH . 'includes/admin/class-settings.php';
 		require_once WPF_DIR_PATH . 'includes/admin/logging/class-log-handler.php';
+		require_once WPF_DIR_PATH . 'includes/admin/class-batch.php';
 
 		// CRM base class
 		require_once WPF_DIR_PATH . 'includes/crms/class-base.php';
@@ -477,7 +478,6 @@ final class WP_Fusion_Lite {
 		require_once WPF_DIR_PATH . 'includes/class-ajax.php';
 		require_once WPF_DIR_PATH . 'includes/class-access-control.php';
 		require_once WPF_DIR_PATH . 'includes/class-auto-login.php';
-		require_once WPF_DIR_PATH . 'includes/admin/class-batch.php';
 		require_once WPF_DIR_PATH . 'includes/admin/gutenberg/class-gutenberg.php';
 		require_once WPF_DIR_PATH . 'includes/admin/class-admin-interfaces.php';
 
@@ -541,8 +541,8 @@ final class WP_Fusion_Lite {
 		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
 
 		// Integrations autoloader
-		foreach ( wp_fusion()->get_integrations() as $filename => $dependency_class ) {
 
+		foreach ( wp_fusion()->get_integrations() as $filename => $dependency_class ) {
 			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
@@ -578,7 +578,6 @@ final class WP_Fusion_Lite {
 
 	}
 
-
 	/**
 	 * Check to see if this is WPF Lite or regular
 	 *
@@ -597,6 +596,7 @@ final class WP_Fusion_Lite {
 		}
 
 	}
+
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

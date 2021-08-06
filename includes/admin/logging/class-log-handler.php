@@ -89,6 +89,9 @@ class WPF_Log_Handler {
 		add_action( 'admin_menu', array( $this, 'register_logger_subpage' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
+		// Clear the error count
+		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'clear_errors_count' ) );
+
 		// Screen options
 		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'add_screen_options' ) );
 		add_filter( 'set_screen_option_wpf_status_log_items_per_page', array( $this, 'set_screen_option' ), 10, 3 );
@@ -160,16 +163,54 @@ class WPF_Log_Handler {
 
 	public function register_logger_subpage() {
 
+		$menu_title = __( 'WP Fusion Logs', 'wp-fusion-lite' );
+
+		if ( wp_fusion()->settings->get( 'logging_badge', true ) && ( ! isset( $_GET['page'] ) || 'wpf-settings-logs' !== $_GET['page'] ) ) {
+
+			$errors_count = get_option( 'wpf_logs_unseen_errors' );
+
+			if ( $errors_count ) {
+
+				// Add it to the WPF Logs menu item
+				$menu_title .= ' <span title="' . esc_attr( __( 'New WP Fusion API Errors', 'wp-fusion-lite' ) ) . '" class="awaiting-mod count-' . $errors_count . '">' . $errors_count . '</span>';
+
+				// Add it to Tools
+				global $menu;
+
+				$menu_item = wp_list_filter( $menu, array( 2 => 'tools.php' ) );
+
+				if ( ! empty( $menu_item ) ) {
+					$menu_item_position              = key( $menu_item ); // get the array key (position) of the element
+					$menu[ $menu_item_position ][0] .= ' <span title="' . esc_attr( __( 'New WP Fusion API Errors', 'wp-fusion-lite' ) ) . '" class="awaiting-mod count-' . $errors_count . '">' . $errors_count . '</span>';
+				}
+			}
+		}
+
 		$page = add_submenu_page(
 			'tools.php',
-			'WP Fusion Activity Logs',
-			'WP Fusion Logs',
+			__( 'WP Fusion Activity Logs', 'wp-fusion-lite' ),
+			$menu_title,
 			'manage_options',
 			'wpf-settings-logs',
 			array( $this, 'show_logs_section' )
 		);
 
 	}
+
+
+	/**
+	 * Resets the errors count badge when the logs page is viewed
+	 *
+	 * @since 3.37.23
+	 */
+	public function clear_errors_count() {
+
+		if ( wp_fusion()->settings->get( 'logging_badge', true ) ) {
+			delete_option( 'wpf_logs_unseen_errors' );
+		}
+
+	}
+
 
 	/**
 	 * Enqueues logger styles
@@ -180,9 +221,7 @@ class WPF_Log_Handler {
 
 	public function enqueue_scripts() {
 
-		$screen = get_current_screen();
-
-		if ( 'tools_page_wpf-settings-logs' !== $screen->id ) {
+		if ( 'tools_page_wpf-settings-logs' !== get_current_screen()->id ) {
 			return;
 		}
 
@@ -237,10 +276,24 @@ class WPF_Log_Handler {
 
 	public function configure_sections( $page, $options ) {
 
+		$title = __( 'Logs', 'wp-fusion-lite' );
+
+		if ( wp_fusion()->settings->get( 'logging_badge', true ) ) {
+
+			$errors_count = get_option( 'wpf_logs_unseen_errors' );
+
+			if ( $errors_count ) {
+
+				// Add it to the WPF Logs menu item
+				$title .= ' <span title="' . esc_attr( __( 'New WP Fusion API Errors', 'wp-fusion-lite' ) ) . '" class="awaiting-mod count-' . $errors_count . '">' . $errors_count . '</span>';
+
+			}
+		}
+
 		$page['sections'] = wp_fusion()->settings->insert_setting_after(
 			'advanced', $page['sections'], array(
 				'logs' => array(
-					'title' => __( 'Logs', 'wp-fusion-lite' ) . ' &rarr;',
+					'title' => $title . ' &rarr;',
 					'slug'  => 'wpf-settings-logs',
 				),
 			)
@@ -306,6 +359,10 @@ class WPF_Log_Handler {
 		// Flush
 		if ( ! empty( $_REQUEST['flush-logs'] ) ) {
 
+			if ( empty( $_REQUEST['wpf_logs_submit'] ) || ! wp_verify_nonce( $_REQUEST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) {
+				wp_die( __( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
+			}
+
 			self::flush();
 
 			// Redirect to clear the URL
@@ -328,9 +385,10 @@ class WPF_Log_Handler {
 			<form method="get" id="mainform">
 
 				<h1 class="wp-heading-inline"><?php _e( 'WP Fusion Activity Log', 'wp-fusion-lite' ); ?></h1>
-				<a style="vertical-align: middle;" href="<?php echo admin_url( 'tools.php?page=wpf-settings-logs&flush-logs=true' ) ?>" name="flush-logs" class="button page-title-action"><?php _e( 'Flush all logs', 'wp-fusion-lite' ); ?></a>
 
-				<?php wp_nonce_field( 'wp-fusion-status-logs' ); ?>
+				<?php wp_nonce_field( 'wp-fusion-status-logs', 'wpf_logs_submit', false ); ?>
+
+				<input style="vertical-align: baseline;" type="submit" name="flush-logs" id="flush-logs" class="button delete" value="Flush all logs">
 
 				<hr class="wp-header-end" />
 
@@ -481,6 +539,20 @@ class WPF_Log_Handler {
 					);
 				}
 			}
+		} elseif ( ! empty( $context['meta_array'] ) && did_action( 'wpf_pre_pull_user_meta' ) ) {
+
+			// When loading data, we'll include an indicator on any pseudo fields
+
+			foreach ( $context['meta_array'] as $key => $data ) {
+
+				if ( wpf_is_pseudo_field( $key ) ) {
+
+					$context['meta_array'][ $key ] = array(
+						'original' => $data,
+						'pseudo'   => true,
+					);
+				}
+			}
 		}
 
 		if ( empty( $user ) ) {
@@ -490,6 +562,18 @@ class WPF_Log_Handler {
 		// Don't log meta data pushes where no enabled fields are being synced
 		if ( isset( $context['meta_array'] ) && empty( $context['meta_array'] ) ) {
 			return;
+		}
+
+		// Track errors
+
+		if ( 'error' == $level && wp_fusion()->settings->get( 'logging_badge', true ) ) {
+
+			$count = get_option( 'wpf_logs_unseen_errors', 0 );
+
+			$count++;
+
+			update_option( 'wpf_logs_unseen_errors', $count, false );
+
 		}
 
 		do_action( 'wpf_log_handled', $timestamp, $level, $user, $message, $source, $context );
@@ -570,7 +654,7 @@ class WPF_Log_Handler {
 	 */
 	private function log_table_bulk_actions() {
 
-		if ( empty( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'wp-fusion-status-logs' ) ) {
+		if ( empty( $_REQUEST['wpf_logs_submit'] ) || ! wp_verify_nonce( $_REQUEST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) {
 			wp_die( __( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
 		}
 

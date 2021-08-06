@@ -31,6 +31,14 @@ class WPF_MailChimp {
 
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 * Not working, get_contact_id() returns an id but the edit URL uses variable web_id.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -67,8 +75,9 @@ class WPF_MailChimp {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
 
-	}
+		// $this->edit_url = 'https://'.$this->dc.'.admin.mailchimp.com/lists/members/view?id=%d';
 
+	}
 
 	/**
 	 * Formats POST data received from HTTP Posts into standard format

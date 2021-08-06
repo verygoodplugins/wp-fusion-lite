@@ -44,6 +44,16 @@ class WPF_Emercury {
 
 	public $params = array();
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * No edit page available only through ajax.
+	 *
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *

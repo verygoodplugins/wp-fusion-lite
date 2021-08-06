@@ -21,6 +21,13 @@ class WPF_Mautic {
 	public $supports;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -59,8 +66,13 @@ class WPF_Mautic {
 
 		// Set tracking cookie
 		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
-		add_action( 'wpf_forms_post_submission', array( $this, 'set_tracking_cookie_forms' ), 10, 4 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 
+		$mautic_url = wp_fusion()->settings->get( 'mautic_url' );
+		if(!empty($mautic_url)){
+			$this->edit_url = trailingslashit($mautic_url).'s/contacts/view/%d';
+		}
 	}
 
 
@@ -141,7 +153,7 @@ class WPF_Mautic {
 	 * @return void
 	 */
 
-	public function set_tracking_cookie_forms( $update_data, $user_id, $contact_id, $form_id ) {
+	public function set_tracking_cookie_guest( $contact_id, $email_address ) {
 
 		setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
 
@@ -369,7 +381,7 @@ class WPF_Mautic {
 
 				if( $body->errors[0]->code == 404 ) {
 
-					return new WP_Error( $body->errors[0]->code, '404 error. This sometimes happens when you\'ve just enabled the API, and your cache needs to be rebuilt. See <a href="https://mautic.org/docs/en/tips/troubleshooting.html" target="_blank">here for more info</a>.' );
+					return new WP_Error( $body->errors[0]->code, '404 error. This sometimes happens when you\'ve just enabled the API, and your cache needs to be rebuilt. See <a href="https://mautic.org/docs/en/tips/troubleshooting.html" target="_blank">here for more info</a>. Error message: ' . $body->errors[0]->message );
 
 				} elseif( $body->errors[0]->code == 403 ) {
 

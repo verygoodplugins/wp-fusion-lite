@@ -415,7 +415,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				}
 
 				$status['total_time']     = time() - $this->start_time;
-				$status['memory_percent'] = ( memory_get_usage( true ) / $status['max_memory'] ) * 100;
+				$status['memory_percent'] = ( ( memory_get_usage( true ) / 100000 ) / $status['max_memory'] ) * 100 . '%';
 
 				update_site_option( 'wpfb_status_' . $batch->key, $status );
 

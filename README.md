@@ -36,6 +36,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 
 * ActiveCampaign
 * AgileCRM
+* Autonami
 * Autopilot
 * BirdSend
 * Capsule

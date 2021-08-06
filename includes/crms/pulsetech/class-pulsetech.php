@@ -49,6 +49,16 @@ class WPF_PulseTechnologyCRM {
 	 */
 	public $params = array();
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -92,6 +102,12 @@ class WPF_PulseTechnologyCRM {
 	public function init() {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+
+		$api_url = wp_fusion()->settings->get( 'pulsetech_url' );
+
+		if ( ! empty( $api_url ) ) {
+			$this->edit_url = trailingslashit( $api_url ) . 'crm/contact/%d/edit';
+		}
 	}
 
 	/**
@@ -170,9 +186,7 @@ class WPF_PulseTechnologyCRM {
 			$token = null;
 		}
 
-        $api_url = rtrim($api_url, '/') . '/';
-
-        $this->url           = $api_url;
+		$this->url           = trailingslashit( $api_url );
 		$this->client_secret = $client_secret;
 		$this->client_id     = $client_id;
 		$this->token         = $token;
@@ -245,13 +259,13 @@ class WPF_PulseTechnologyCRM {
 	 */
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, strval( $this->url ) ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
+		if ( ! empty( $this->url ) && strpos( $url, strval( $this->url ) ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
 
 			$response_code = wp_remote_retrieve_response_code( $response );
 
 			if ( 500 == $response_code ) {
 
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion' ) );
+				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
 
 			} elseif ( $response_code > 200 ) {
 

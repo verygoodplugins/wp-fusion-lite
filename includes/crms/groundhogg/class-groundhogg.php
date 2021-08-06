@@ -12,8 +12,8 @@ class WPF_Groundhogg {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 *
-	 * @var string
 	 * @since 3.37.3
+	 * @var  string
 	 */
 
 	public $edit_url = '';
@@ -642,7 +642,7 @@ class WPF_Groundhogg {
 
 		foreach ( $contact_fields as $key => $data ) {
 
-			if ( $data['active'] == true && ! empty( $data['crm_field'] ) ) {
+			if ( ! empty( $data['active'] ) && ! empty( $data['crm_field'] ) ) {
 
 				$value = $contact->{$data['crm_field']};
 

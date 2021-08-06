@@ -28,6 +28,16 @@ class WPF_Ontraport {
 
 	public $object_type;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.ontraport.com/#!/contact/listAll&quickView=%d';
+
 	/**
 	 * Get things started
 	 *
@@ -497,7 +507,10 @@ class WPF_Ontraport {
 			$this->get_params();
 		}
 
-		$crm_fields = array();
+		$crm_fields = array(
+			'unique_id' => 'Unique ID (Read Only)', // adding this manually
+		);
+
 		$request    = "https://api.ontraport.com/1/objects/meta?format=byId&objectID=" . $this->object_type;
 		$response   = wp_remote_get( $request, $this->params );
 

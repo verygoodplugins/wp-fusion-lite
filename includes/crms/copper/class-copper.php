@@ -14,6 +14,16 @@ class WPF_Copper {
 
 	public $params;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -54,7 +64,13 @@ class WPF_Copper {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		$account_id = wp_fusion()->settings->get( 'account_id' );
+
+		if ( ! empty( $account_id ) ) {
+			$this->edit_url = 'https://app.copper.com/companies/' . $account_id . '/app#/contact/%d';
+		}
 	}
+
 
 	/**
 	 * Look for incoming Copper payloads
@@ -64,7 +80,6 @@ class WPF_Copper {
 	 */
 
 	public function get_actions() {
-
 		if( ! empty( file_get_contents( 'php://input' ) ) ) {
 
 			$payload = json_decode( file_get_contents( 'php://input' ) );
@@ -222,7 +237,6 @@ class WPF_Copper {
 	 */
 
 	public function connect( $email = null, $access_key = null, $test = false ) {
-
 		if ( ! $this->params ) {
 			$this->get_params( $email, $access_key );
 		}
@@ -234,9 +248,19 @@ class WPF_Copper {
 		$request  = 'https://api.prosperworks.com/developer_api/v1/account';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
+
+		// Save account ID for later
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( isset( $response->message ) ) {
+			return new WP_Error( 'error', $response->message );
+		}
+
+		wp_fusion()->settings->set( 'account_id', $response->id );
 
 		return true;
 

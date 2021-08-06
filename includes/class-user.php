@@ -27,7 +27,7 @@ class WPF_User {
 		add_action( 'wp_login', array( $this, 'login' ), 10, 2 );
 
 		// Roles
-		add_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3 );
+		add_action( 'set_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'add_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'remove_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 
@@ -501,11 +501,7 @@ class WPF_User {
 			return false;
 		}
 
-		if ( isset( wp_fusion()->crm->edit_url ) ) {
-			return sprintf( wp_fusion()->crm->edit_url, $contact_id );
-		} else {
-			return false;
-		}
+		return wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
 
 	}
 
@@ -616,7 +612,7 @@ class WPF_User {
 
 		} elseif ( empty( $user_meta ) ) {
 
-			wpf_log( 'notice', $user_id, 'No elligible user meta loaded' );
+			wpf_log( 'notice', $user_id, 'No elligible user meta loaded.' );
 			return false;
 
 		}
@@ -950,11 +946,6 @@ class WPF_User {
 			// If nothing changed
 			return;
 
-		} elseif ( empty( $tags ) && empty( $user_tags ) ) {
-
-			// No tags loaded, no tags saved. Just quit
-			return;
-
 		}
 
 		// Check and see if new tags have been pulled, and if so, resync the available tags list
@@ -1051,19 +1042,19 @@ class WPF_User {
 		}
 
 		/**
-		 * Triggers before tags are applied to the user
+		 * Triggers before tags are applied to the user.
 		 *
-		 * @param int   $user_id ID of the user being updated
-		 * @param array $tags    Tags to be applied to the user
+		 * @param int   $user_id ID of the user being updated.
+		 * @param array $tags    Tags to be applied to the user.
 		 */
 
 		do_action( 'wpf_apply_tags_start', $user_id, $tags );
 
 		/**
-		 * Filters the tags to be applied to the user
+		 * Filters the tags to be applied to the user.
 		 *
-		 * @param array $tags    Tags to be applied to the user
-		 * @param int   $user_id ID of the user being updated
+		 * @param array $tags    Tags to be applied to the user.
+		 * @param int   $user_id ID of the user being updated.
 		 */
 
 		$tags = apply_filters( 'wpf_apply_tags', $tags, $user_id );
@@ -1401,19 +1392,6 @@ class WPF_User {
 
 
 	/**
-	 * Triggered when user role updated
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function update_user_role( $user_id, $role, $old_roles ) {
-
-		$this->push_user_meta( $user_id, array( 'role' => $role ) );
-
-	}
-
-	/**
 	 * Triggered when user role added or removed
 	 *
 	 * @access public
@@ -1422,14 +1400,34 @@ class WPF_User {
 
 	public function add_remove_user_role( $user_id, $role ) {
 
+		if ( doing_action( 'user_register' ) || doing_action( 'set_current_user' ) ) {
+			return; // User register will kick in later, and set_current_user sometimes causes errors because the CRM isn't set up yet
+		}
+
 		$user = get_userdata( $user_id );
 
 		if ( ! empty( $user->caps ) && is_array( $user->caps ) ) {
 
 			$roles = array_keys( $user->caps );
 
-			$this->push_user_meta( $user_id, array( 'wp_capabilities' => $roles ) );
+			if ( false == $this->get_contact_id( $user_id ) ) {
 
+				if ( ! empty( array_intersect( wp_fusion()->settings->get( 'user_roles', array() ), $roles ) ) ) {
+
+					// If we're limiting user roles and the user's role was just changed to a valid one
+
+					$this->user_register( $user_id );
+
+				}
+			} else {
+
+				$update_data = array(
+					'wp_capabilities' => $roles,
+					'role'            => $role,
+				);
+
+				$this->push_user_meta( $user_id, $update_data );
+			}
 		}
 
 	}
@@ -1499,6 +1497,7 @@ class WPF_User {
 					'meta_key'   => wp_fusion()->crm->slug . '_contact_id',
 					'meta_value' => $contact_id,
 					'fields'     => array( 'ID' ),
+					'blog_id'    => 0,
 				)
 			);
 
@@ -1511,6 +1510,62 @@ class WPF_User {
 	}
 
 	/**
+	 * Gets all users that have saved contact IDs.
+	 *
+	 * @since 3.37.21
+	 *
+	 * @return array User IDs.
+	 */
+	public function get_users_with_contact_ids() {
+
+		$args = array(
+			'fields'     => 'ID',
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'value'   => false,
+					'compare' => '!=',
+				),
+			),
+		);
+
+		return get_users( $args );
+
+	}
+
+	/**
+	 * Gets all users that have the tag.
+	 *
+	 * @since  3.37.27
+	 *
+	 * @param  string $tag    The tag.
+	 * @return array  User IDs.
+	 */
+	public function get_users_with_tag( $tag ) {
+
+		$tag = $this->get_tag_id( $tag );
+
+		$args = array(
+			'fields'     => 'ID',
+			'meta_query' => array(
+				array(
+					'key'     => wp_fusion()->crm->slug . '_tags',
+					'value'   => '"' . $tag . '"',
+					'compare' => 'LIKE',
+				),
+			),
+		);
+
+		return get_users( $args );
+
+	}
+
+	/**
 	 * Checks to see if a user has a given tag
 	 *
 	 * @access public
@@ -1518,8 +1573,6 @@ class WPF_User {
 	 */
 
 	public function has_tag( $tags, $user_id = false ) {
-
-		$user_tags = $this->get_tags( $user_id );
 
 		// Allow overrides by admin bar
 		if ( wpf_is_user_logged_in() && current_user_can( 'manage_options' ) && get_query_var( 'wpf_tag' ) ) {
@@ -1532,6 +1585,8 @@ class WPF_User {
 				return false;
 			}
 		}
+
+		$user_tags = $this->get_tags( $user_id );
 
 		if ( empty( $user_tags ) ) {
 			return false;
@@ -1915,7 +1970,7 @@ class WPF_User {
 		remove_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3 );
 
 		// Prevent mail from being sent
-		if ( false == $send_notification ) {
+		if ( false == $send_notification && false == wp_fusion()->settings->get( 'send_welcome_email' ) ) {
 			add_filter( 'wp_mail', array( $this, 'suppress_wp_mail' ), 100 );
 		}
 
@@ -1961,9 +2016,12 @@ class WPF_User {
 		$this->get_tags( $user_id, true, false );
 
 		// Send notification. This is after loading tags and meta in case any other plugins have modified the password reset key
-		if ( $send_notification ) {
+		if ( $send_notification || wp_fusion()->settings->get( 'send_welcome_email' ) ) {
 			wp_new_user_notification( $user_id, null, 'user' );
 		}
+
+		// Allow wp_mail to work again now that the user has been imported
+		remove_filter( 'wp_mail', array( $this, 'suppress_wp_mail' ), 100 );
 
 		// Denote user was imported
 		do_action( 'wpf_user_imported', $user_id, $user_meta );

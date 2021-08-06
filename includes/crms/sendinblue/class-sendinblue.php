@@ -1,5 +1,7 @@
 <?php
 
+// Max 6 API requests second / 400 per minute https://developers.sendinblue.com/docs/api-limits
+
 class WPF_SendinBlue {
 
 	/**
@@ -22,6 +24,14 @@ class WPF_SendinBlue {
 	 */
 
 	public $tag_type = 'List';
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * Not working, get_contact_id() returns an email but the edit URL uses a different variable
+	 * @var string
+	 */
+
+	public $edit_url = false;
 
 	/**
 	 * Get things started
@@ -57,6 +67,8 @@ class WPF_SendinBlue {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+
+		// $this->edit_url = 'https://app.sendinblue.com/contact/index/%d';
 
 	}
 

@@ -40,7 +40,7 @@ class WPF_EngageBay_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
@@ -100,16 +100,13 @@ class WPF_EngageBay_Admin {
 
 		$site_tracking['site_tracking_header'] = array(
 			'title'   => __( 'EngageBay Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => '',
-			'std'     => '',
 			'type'    => 'heading',
 			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enable Site Tracking Web scripts.', 'wp-fusion-lite' ),
-			'std'     => 0,
+			'desc'    => __( 'Enable EngageBay site tracking scripts.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);
@@ -117,7 +114,6 @@ class WPF_EngageBay_Admin {
 		$site_tracking['site_tracking_acct'] = array(
 			'title'   => __( 'JavaScript API Key', 'wp-fusion-lite' ),
 			'desc'    => __( 'Your JavaScript API Key ID can be found in the Tracking Code in your EngageBay account, under Admin Settings &raquo; API and Tracking Code. For example: <code>8g8fejferfqbi4g4mradq09373</code>', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
 			'section' => 'main',
 		);

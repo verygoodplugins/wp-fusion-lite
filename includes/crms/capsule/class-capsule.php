@@ -20,6 +20,17 @@ class WPF_Capsule {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
+
 	/**
 	 * Get things started
 	 *
@@ -52,6 +63,12 @@ class WPF_Capsule {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		$subdomain = wp_fusion()->settings->get( 'subdomain' );
+
+		if ( ! empty( $subdomain ) ) {
+			$this->edit_url = 'https://' . $subdomain . '.capsulecrm.com/party/%d';
+		}
 
 	}
 
@@ -163,7 +180,7 @@ class WPF_Capsule {
 			$this->get_params( $api_key );
 		}
 
-		$request  = "https://api.capsulecrm.com/api/v2/parties/tags";
+		$request  = 'https://api.capsulecrm.com/api/v2/site';
 		$response = wp_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
@@ -175,6 +192,9 @@ class WPF_Capsule {
 		if( isset( $body_json->message ) ) {
 			return new WP_Error( 'error', 'Invalid authentication token. Make sure you\'re using a Personal Access Token' );
 		}
+
+		// Save for later
+		wp_fusion()->settings->set( 'subdomain', $body_json->site->subdomain );
 
 		return true;
 	}
@@ -218,21 +238,32 @@ class WPF_Capsule {
 
 		$available_tags = array();
 
-		$request  = "https://api.capsulecrm.com/api/v2/parties/tags?perPage=100";
-		$response = wp_remote_get( $request, $this->params );
+		$page    = 1;
+		$proceed = true;
 
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
+		while ( $proceed ) {
 
-		$body_json = json_decode( $response['body'], true );
+			$request  = 'https://api.capsulecrm.com/api/v2/parties/tags?perPage=100&page=' . $page;
+			$response = wp_remote_get( $request, $this->params );
 
-		if( empty( $body_json['tags'] ) ) {
-			return $available_tags;
-		}
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		foreach ( $body_json['tags'] as $row ) {
-			$available_tags[ $row['id'] ] = $row['name'];
+			$body_json = json_decode( $response['body'], true );
+
+			if ( ! empty( $body_json['tags'] ) ) {
+
+				foreach ( $body_json['tags'] as $row ) {
+					$available_tags[ $row['id'] ] = $row['name'];
+				}
+			}
+
+			if ( count( $body_json['tags'] ) < 100 ) {
+				$proceed = false;
+			} else {
+				$page++;
+			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -868,7 +899,13 @@ class WPF_Capsule {
 
 				// First level fields
 				if( !empty( $body_json['party'][ $field_data['crm_field'] ] ) ) {
+
 					$loaded_meta[ $field_id ] = $body_json['party'][ $field_data['crm_field'] ];
+
+					if ( 'organisation' == $field_data['crm_field'] && is_array( $loaded_meta[ $field_id ] ) ) {
+						$loaded_meta[ $field_id ] = $loaded_meta[ $field_id ]['name']; // Organisation is a relationship field, loads as an array
+					}
+
 				}
 
 

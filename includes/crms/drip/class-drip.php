@@ -31,6 +31,16 @@ class WPF_Drip {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -73,6 +83,11 @@ class WPF_Drip {
 		// Slow down the batch processses to get around the 3600 requests per hour limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
+		$account_id = wp_fusion()->settings->get( 'drip_account' );
+
+		if ( ! empty( $account_id ) ) {
+			$this->edit_url = 'https://www.getdrip.com/' . $account_id . '/subscribers/%s';
+		}
 	}
 
 	/**

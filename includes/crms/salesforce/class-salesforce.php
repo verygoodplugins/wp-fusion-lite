@@ -34,6 +34,15 @@ class WPF_Salesforce {
 
 	public $tag_type = 'Topic';
 
+
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -76,6 +85,10 @@ class WPF_Salesforce {
 		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 		add_action( 'wpf_api_fail', array( $this, 'api_success' ), 10, 2 );
 
+		$instance_url = wp_fusion()->settings->get( 'sf_instance_url' );
+		if ( ! empty( $instance_url ) ) {
+			$this->edit_url = trailingslashit( $instance_url ) . 'lightning/r/Contact/%s/view';
+		}
 	}
 
 	/**
@@ -163,7 +176,6 @@ class WPF_Salesforce {
 						wpf_log( 'notice', 0, 'Update webhook received but no matching user found for contact ID <strong>' . $contact_id . '</strong>', array( 'source' => 'api' ) );
 						continue;
 					}
-
 				}
 
 				wpf_log( 'info', 0, 'Adding contact ID <strong>' . $contact_id . '</strong> to import queue (' . $key . ' of ' . $notifications_count . ').', array( 'source' => 'api' ) );
@@ -394,7 +406,6 @@ class WPF_Salesforce {
 				return new WP_Error( 'error', 'Authentication failure. Double check your credentials. If you\'re trying to connect to a Salesforce sandbox account, <a href="https://wpfusion.com/documentation/crm-specific-docs/salesforce-sandboxes/" target="_blank">see this doc</a>.' );
 
 			}
-
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
@@ -602,7 +613,7 @@ class WPF_Salesforce {
 
 		$email_address = urlencode( $email_address );
 
-		$query_args = array( "q" => "SELECT Id from {$this->object_type} WHERE {$lookup_field} = '{$email_address}'" );
+		$query_args = array( 'q' => "SELECT Id from {$this->object_type} WHERE {$lookup_field} = '{$email_address}'" );
 
 		$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'get_contact_id', $email_address );
 
@@ -966,7 +977,6 @@ class WPF_Salesforce {
 					$user_meta[ $field_id ] = $body[ $field_data['crm_field'] ];
 				}
 			}
-
 		}
 
 		return $user_meta;

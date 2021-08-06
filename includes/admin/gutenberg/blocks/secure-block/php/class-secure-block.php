@@ -151,7 +151,9 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 	global $post;
 
-	$can_access = apply_filters( 'wpf_user_can_access_gutenberg', $can_access, $attributes );
+	$can_access = apply_filters( 'wpf_user_can_access_gutenberg', $can_access, $attributes ); // deprecated
+
+	$can_access = apply_filters( 'wpf_user_can_access_block', $can_access, $attributes );
 
 	$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), false );
 

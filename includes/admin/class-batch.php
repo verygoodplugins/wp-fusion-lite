@@ -24,8 +24,6 @@ class WPF_Batch {
 
 	public function __construct() {
 
-		add_filter( 'wpf_export_options', array( $this, 'export_options' ) );
-
 		// Status monitor
 		add_action( 'wpf_settings_notices', array( $this, 'batch_status_bar' ) );
 
@@ -42,23 +40,23 @@ class WPF_Batch {
 		add_action( 'wpf_batch_users_register', array( $this, 'users_register_step' ) );
 
 		// Tag all users with registration tags
-		add_filter( 'wpf_batch_users_register_tags_init', array( $this, 'users_register_tags_init' ) );
+		add_filter( 'wpf_batch_users_register_tags_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_register_tags', array( $this, 'users_register_tags_step' ) );
 
 		// Push user meta
-		add_filter( 'wpf_batch_users_meta_init', array( $this, 'users_meta_init' ) );
+		add_filter( 'wpf_batch_users_meta_init', 'wpf_get_users_with_contact_ids' );
 		add_action( 'wpf_batch_users_meta', array( $this, 'users_meta_step' ) );
 
 		// Pull user meta
-		add_filter( 'wpf_batch_pull_users_meta_init', array( $this, 'pull_users_meta_init' ) );
+		add_filter( 'wpf_batch_pull_users_meta_init', 'wpf_get_users_with_contact_ids' );
 		add_action( 'wpf_batch_pull_users_meta', array( $this, 'pull_users_meta_step' ) );
 
 		// Sync users (just CIDs)
-		add_filter( 'wpf_batch_users_cid_sync_init', array( $this, 'users_cid_sync_init' ) );
+		add_filter( 'wpf_batch_users_cid_sync_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_cid_sync', array( $this, 'users_cid_sync_step' ) );
 
 		// Sync users (just tags)
-		add_filter( 'wpf_batch_users_tags_sync_init', array( $this, 'users_tags_sync_init' ) );
+		add_filter( 'wpf_batch_users_tags_sync_init', 'wpf_get_users_with_contact_ids' );
 		add_action( 'wpf_batch_users_tags_sync', array( $this, 'users_tags_sync_step' ) );
 
 		// Sync users
@@ -78,50 +76,50 @@ class WPF_Batch {
 	 * Get core batch options
 	 *
 	 * @since 3.33.16
-	 * @return array Options
+	 * @return array Options.
 	 */
 
-	public function export_options( $options ) {
+	public function get_export_options() {
 
-		$core_options = array(
-			'users_cid_sync' => array(
-				'label'     => __( 'Resync contact IDs for every user', 'wp-fusion-lite' ),
-				'title'     => __( 'Users (contact IDs)', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'Looks up every WordPress user by email address in %s, and updates their cached contact ID. Does not modify any tags or trigger any automated enrollments.', 'wp-fusion-lite' ), wp_fusion()->crm->name )
+		$options = array(
+			'users_cid_sync'      => array(
+				'label'   => __( 'Resync contact IDs for every user', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => sprintf( __( 'Looks up every WordPress user by email address in %s, and updates their cached contact ID. Does not modify any tags or trigger any automated enrollments.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
-			'users_tags_sync' => array(
-				'label'     => __( 'Resync tags for every user', 'wp-fusion-lite' ),
-				'title'     => __( 'Users (tags)', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID, and triggers any automated enrollments via linked tags.', 'wp-fusion-lite' ) ),
+			'users_tags_sync'     => array(
+				'label'   => __( 'Resync tags for every user', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => sprintf( __( 'Updates tags for all WordPress users who already have a saved contact ID, and triggers any automated enrollments via linked tags.', 'wp-fusion-lite' ) ),
 			),
-			'users_sync' => array(
-				'label'     => __( 'Resync contact IDs and tags for every user', 'wp-fusion-lite' ),
-				'title'     => __( 'Users (contact IDs and tags)', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'All WordPress users will have their contact IDs checked / updated based on email address and tags will be loaded from their %s contact record. Will trigger automated enrollments based on linked tags.', 'wp-fusion-lite' ), wp_fusion()->crm->name )
+			'users_sync'          => array(
+				'label'   => __( 'Resync contact IDs and tags for every user', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => sprintf( __( 'All WordPress users will have their contact IDs checked / updated based on email address and tags will be loaded from their %s contact record. Will trigger automated enrollments based on linked tags.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
-			'users_register' => array(
-				'label'     => __( 'Export users', 'wp-fusion-lite' ),
-				'title'     => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+			'users_register'      => array(
+				'label'   => __( 'Export users', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 			'users_register_tags' => array(
-				'label'     => __( 'Apply registration tags', 'wp-fusion-lite' ),
-				'title'     => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip'   => __( 'For every registered user on the site, apply the tags configured in the <strong>Assign Tags</strong> setting on the General options tab.<br /><br />Does not create any new contact records.', 'wp-fusion-lite' ),
+				'label'   => __( 'Apply registration tags', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => __( 'For every registered user on the site, apply the tags configured in the <strong>Assign Tags</strong> setting on the General options tab.<br /><br />Does not create any new contact records.', 'wp-fusion-lite' ),
 			),
-			'users_meta'     => array(
-				'label'     => __( 'Push user meta', 'wp-fusion-lite' ),
-				'title'     => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data pushed to %s, overriding any data on the contact record with the values from WordPress.', 'wp-fusion-lite' ), wp_fusion()->crm->name )
+			'users_meta'          => array(
+				'label'   => __( 'Push user meta', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => sprintf( __( 'All WordPress users with a contact record will have their meta data pushed to %s, overriding any data on the contact record with the values from WordPress.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 			'pull_users_meta'     => array(
-				'label'     => __( 'Pull user meta', 'wp-fusion-lite' ),
-				'title'     => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip'   => sprintf( __( 'All WordPress users with a contact record will have their meta data loaded from %s, overriding any data in their user meta with the values from their contact record.', 'wp-fusion-lite' ), wp_fusion()->crm->name )
+				'label'   => __( 'Pull user meta', 'wp-fusion-lite' ),
+				'title'   => __( 'Users', 'wp-fusion-lite' ),
+				'tooltip' => sprintf( __( 'All WordPress users with a contact record will have their meta data loaded from %s, overriding any data in their user meta with the values from their contact record.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 		);
 
-		return array_merge( $options, $core_options );
+		return apply_filters( 'wpf_export_options', $options );
 
 	}
 
@@ -134,7 +132,7 @@ class WPF_Batch {
 
 	public function get_operation_title( $id ) {
 
-		$operations = apply_filters( 'wpf_export_options', array() );
+		$operations = $this->get_export_options();
 
 		if ( isset( $operations[ $id ] ) ) {
 			return $operations[ $id ]['title'];
@@ -232,11 +230,11 @@ class WPF_Batch {
 
 	public function batch_init( $hook = false, $args = array() ) {
 
-		if( isset( $_POST['hook'] ) ) {
+		if ( isset( $_POST['hook'] ) ) {
 			$hook = $_POST['hook'];
 		}
 
-		if(isset($_POST['args']) && is_array($_POST['args'])) {
+		if ( isset( $_POST['args'] ) && is_array( $_POST['args'] ) ) {
 			$args = $_POST['args'];
 		}
 
@@ -248,6 +246,10 @@ class WPF_Batch {
 			wp_send_json_success( json_encode( $objects ) );
 			die();
 		}
+
+		$operations = $this->get_export_options();
+
+		wpf_log( 'info', 0, sprintf( __( 'Beginning %1$s batch operation on %2$d %3$s.', 'wp-fusion-lite' ), '<strong>' . $operations[ $hook ]['label'] . '</strong>', count( $objects ), strtolower( $operations[ $hook ]['title'] ) ), array( 'source' => 'batch-process' ) );
 
 		// Int IDs are smaller in the DB than strings, but sometimes we'll still need to use strings (i.e. Drip subscriber IDs)
 		if ( is_numeric( $objects[0] ) ) {
@@ -334,18 +336,29 @@ class WPF_Batch {
 	 * Quick add a single item for async request
 	 *
 	 * @since 3.24.2
-	 * @return void
+	 * @since 3.37.23 Added $start.
+	 *
+	 * @param string $action The action to perform.
+	 * @param arrat  $args   The arguments.
+	 * @param bool   $start  Whether or not to start it right away.
 	 */
-
-	public function quick_add( $action, $args ) {
+	public function quick_add( $action, $args, $start = true ) {
 
 		if ( empty( $this->process ) ) {
 			$this->includes();
 			$this->init();
 		}
 
-		$this->process->push_to_queue( array( 'action' => $action, 'args' => $args ) );
-		$this->process->save()->dispatch();
+		$this->process->push_to_queue(
+			array(
+				'action' => $action,
+				'args'   => $args,
+			)
+		);
+
+		if ( $start ) {
+			$this->process->save()->dispatch();
+		}
 
 	}
 
@@ -391,9 +404,9 @@ class WPF_Batch {
 	 * @return array Contact IDs
 	 */
 
-	public function import_users_init($args) {
+	public function import_users_init( $args ) {
 
-		$contact_ids = wp_fusion()->crm->load_contacts($args['tag']);
+		$contact_ids = wp_fusion()->crm->load_contacts( $args['tag'] );
 
 		if ( is_wp_error( $contact_ids ) ) {
 
@@ -410,15 +423,14 @@ class WPF_Batch {
 
 		$removed = 0;
 
-		foreach( $contact_ids as $i => $contact_id ) {
+		foreach ( $contact_ids as $i => $contact_id ) {
 
-			if( wp_fusion()->user->get_user_id( $contact_id ) != false ) {
+			if ( wp_fusion()->user->get_user_id( $contact_id ) != false ) {
 
-				unset( $contact_ids[$i] );
+				unset( $contact_ids[ $i ] );
 				$removed++;
 
 			}
-
 		}
 
 		// Logging
@@ -434,13 +446,13 @@ class WPF_Batch {
 		// Keep track of import groups so they can be removed later
 		$import_groups = get_option( 'wpf_import_groups', array() );
 
-		$params = new stdClass;
-		$params->import_users = array($args['tag']);
+		$params               = new stdClass;
+		$params->import_users = array( $args['tag'] );
 
-		$import_groups[current_time( 'timestamp' )] = array(
+		$import_groups[ current_time( 'timestamp' ) ] = array(
 			'params'   => $params,
 			'user_ids' => array(),
-			'role'     => $args['role']
+			'role'     => $args['role'],
 		);
 
 		update_option( 'wpf_import_groups', $import_groups, false );
@@ -488,25 +500,6 @@ class WPF_Batch {
 
 
 	/**
-	 * Users (just contact IDs) sync batch process init
-	 *
-	 * @since 3.33.16
-	 * @return array Users
-	 */
-
-	public function users_cid_sync_init() {
-
-		$args = array( 'fields' => 'ID' );
-
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Resync Contact IDs</strong> batch operation on ' . count( $users ) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
-
-	}
-
-	/**
 	 * Users sync batch process - single step
 	 *
 	 * @since 3.0
@@ -516,39 +509,6 @@ class WPF_Batch {
 	public function users_cid_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_contact_id( $user_id, true );
-
-	}
-
-	/**
-	 * Users (just tags) sync batch process init
-	 *
-	 * @since 3.0
-	 * @return array Users
-	 */
-
-	public function users_tags_sync_init() {
-
-		$args = array(
-			'fields'     => 'ID',
-			'meta_query' => array(
-				'relation'   => 'AND',
-				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'compare' => 'EXISTS'
-				),
-				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'value'   => false,
-					'compare' => '!='
-				)
-			)
-		);
-
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Resync Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
 
 	}
 
@@ -576,11 +536,7 @@ class WPF_Batch {
 
 		$args = array( 'fields' => 'ID' );
 
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Resync Contact IDs and Tags</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
+		return get_users( $args );
 
 	}
 
@@ -609,23 +565,19 @@ class WPF_Batch {
 		$args = array(
 			'fields'     => 'ID',
 			'meta_query' => array(
-				'relation'   => 'OR',
+				'relation' => 'OR',
 				array(
 					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'compare' => 'NOT EXISTS'
+					'compare' => 'NOT EXISTS',
 				),
 				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'value'   => false
-				)
-			)
+					'key'   => wp_fusion()->crm->slug . '_contact_id',
+					'value' => false,
+				),
+			),
 		);
 
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Export Users</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
+		return get_users( $args );
 
 	}
 
@@ -639,28 +591,6 @@ class WPF_Batch {
 	public function users_register_step( $user_id ) {
 
 		wp_fusion()->user->user_register( $user_id );
-
-	}
-
-	/**
-	 * Users register batch process init
-	 *
-	 * @since 3.35.17
-	 *
-	 * @return array Users
-	 */
-
-	public function users_register_tags_init() {
-
-		$args = array(
-			'fields' => 'ID',
-		);
-
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Apply registration tags</strong> batch operation on ' . count( $users ) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
 
 	}
 
@@ -684,39 +614,6 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Users meta batch process init
-	 *
-	 * @since 3.0
-	 * @return array Users
-	 */
-
-	public function users_meta_init() {
-
-		$args = array(
-			'fields'     => 'ID',
-			'meta_query' => array(
-				'relation'   => 'AND',
-				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'compare' => 'EXISTS'
-				),
-				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'value'   => false,
-					'compare' => '!='
-				)
-			)
-		);
-
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Push User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
-
-	}
-
-	/**
 	 * Users meta batch process - single step
 	 *
 	 * @since 3.0
@@ -726,39 +623,6 @@ class WPF_Batch {
 	public function users_meta_step( $user_id ) {
 
 		wp_fusion()->user->push_user_meta( $user_id );
-
-	}
-
-	/**
-	 * Users meta batch process init
-	 *
-	 * @since 3.0
-	 * @return array Users
-	 */
-
-	public function pull_users_meta_init() {
-
-		$args = array(
-			'fields'     => 'ID',
-			'meta_query' => array(
-				'relation'   => 'AND',
-				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'compare' => 'EXISTS'
-				),
-				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
-					'value'   => false,
-					'compare' => '!='
-				)
-			)
-		);
-
-		$users = get_users( $args );
-
-		wpf_log( 'info', 0, 'Beginning <strong>Pull User Meta</strong> batch operation on ' . count($users) . ' users', array( 'source' => 'batch-process' ) );
-
-		return $users;
 
 	}
 

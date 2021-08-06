@@ -23,6 +23,16 @@ class WPF_SendFox {
 
 	public $tag_type = 'List';
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://sendfox.com/dashboard/contacts/%d';
+
 	/**
 	 * Get things started
 	 *
@@ -54,7 +64,6 @@ class WPF_SendFox {
 	public function init() {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 

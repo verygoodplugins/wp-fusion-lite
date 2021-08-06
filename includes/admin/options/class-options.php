@@ -1577,8 +1577,7 @@ class WP_Fusion_Options {
 	 */
 	public function validate_field_number( $input, $setting ) {
 
-		if ( $input < $setting['min'] ) {
-
+		if ( ! empty( $setting['min'] ) && $input < $setting['min'] ) {
 			return new WP_Error( 'error', __( 'Number must be greater than or equal to ' . $setting['min'] . '.' ), $input );
 		} elseif ( $input > $setting['max'] && $setting['max'] != null ) {
 

@@ -32,8 +32,8 @@ class WPF_FluentCRM_REST {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 *
-	 * @var string
 	 * @since 3.37.14
+	 * @var  string
 	 */
 
 	public $edit_url = '';
@@ -93,17 +93,14 @@ class WPF_FluentCRM_REST {
 
 	public function format_post_data( $post_data ) {
 
-		if ( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
-		}
-
-		$payload = json_decode( file_get_contents( 'php://input' ) );
+		$payload = json_decode( stripslashes( file_get_contents( 'php://input' ) ) );
 
 		if ( ! is_object( $payload ) ) {
 			return false;
 		}
 
-		$post_data['contact_id'] = $payload->payload->person->id;
+		$post_data['contact_id'] = $payload->id;
+		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
 
 		return $post_data;
 
@@ -177,7 +174,7 @@ class WPF_FluentCRM_REST {
 
 					if ( 'rest_no_route' == $body->code ) {
 
-						$body->message .= ' <strong>' . __( 'This usually means the FluentCRM plugin isn\'t active.', 'wp-fusion' ) . '</strong> (URL: ' . $url . ')';
+						$body->message .= ' <strong>' . __( 'This usually means the FluentCRM plugin isn\'t active.', 'wp-fusion-lite' ) . '</strong> (URL: ' . $url . ')';
 
 					}
 

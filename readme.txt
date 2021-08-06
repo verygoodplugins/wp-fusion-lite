@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 5.7.2
-Stable tag: 3.37.18
+Tested up to: 5.8
+Stable tag: 3.37.30
 
 WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
@@ -74,6 +74,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * ActiveCampaign
 * AgileCRM
 * Autopilot
+* Autonami
 * BirdSend
 * Capsule
 * ConvertKit
@@ -106,6 +107,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * NationBuilder
 * Ontraport
 * Platform.ly
+* PulseTechnologyCRM
 * Quentn
 * Salesflare
 * Salesforce
@@ -180,6 +182,83 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.37.30 - 8/6/2021 =
+
+##### New CRMs
+
+* [Autonami](https://wpfusion.com/documentation/installation-guides/how-to-connect-autonami-crm/)
+* [PulseTechnologyCRM](https://wpfusion.com/documentation/installation-guides/how-to-connect-pulsetechnologycrm-to-wordpress/)
+
+
+##### New Features
+
+* Added View In CRM links (direct link to the contact record) for all CRMs that support it
+* Added a Send Welcome Email option in the Imported Users settings
+* Added Picture URL field for sync with CapsuleCRM
+* Added Job Title field for sync with Capsule CRM
+* Added unique_id field for sync with Ontraport
+* Added Owner ID field for sync with Intercom
+* Added Google Analytics fields for sync with Intercom
+
+
+##### Improvements
+
+* Improved - Wildcards * can now be used in the Allowed URLs setting for Site Lockout
+* Improved - Added warning for admins when viewing a post that has access rules enabled, but no redirect specified
+* Improved - If the Limit User Roles setting is in use, and a user without a CRM contact record has their role changed to a valid role, a new contact record will be created in the CRM
+* Improved - Return after login cookies will now be set if access is denied and the restricted content message is shown (previously it only worked after a redirect)
+* Improved - Comments forms will be pre-filled with the temporary user's details during an auto-login session
+* Improved - If a field type is set to `text` then arrays will be converted to comma-separated strings for syncing
+* Improved - Stopped "Unknown Lists" from being loaded from HubSpot
+* Improved - Custom leadsource tracking variables registered via the wpf_leadsource_vars filter will show up on the Contact Fields list automatically
+* Improved - Contact fields settings will default to suggested usermeta / CRM field pairings
+* Improved - If you have more than 1,000 tags, they will be loaded in the admin via AJAX when you focus on the dropdown (improves admin performance)
+* Improved site tracking with EngageBay (logged-in users will now be identified to the tracking script by email address)
+* Improved site tracking with Mautic after guest form submission
+* Added indicator in the logs when a pseudo field or read only field (i.e. user_registered) has been loaded from the CRM
+* Added notification badge on WP Fusion Logs admin menu item to indicate when there are unseen API errors in the logs
+* Added logging when a site tracking session has been started for a guest, for ActiveCampaign, HubSpot, and EngageBay
+* Added error message when connecting to FluentCRM (REST API) and pretty permalinks aren't enabled on the CRM site
+
+
+##### Bug Fixes
+
+* Fixed console errors in the Widgets editor since WP 5.8
+* Fixed auto-login loading the user's tags on every page load
+* Fixed fatal error with Drip SDK and PHP 8
+* Added nonce verification to Flush All Logs button (improved security)
+* Fixed custom fields not syncing with Maropost
+* Fixed PHP warning updating contacts with Intercom
+* Fixed Capsule CRM not loading more than 100 tags
+* Fixed undefined index PHP warning loading data from ActiveCampaign
+* Fixed "Invalid email address" error with Mailerlite when Email Changes setting was set to Duplicate
+* Fixed error syncing array formatted data to Intercom
+* Fixed fatal error with Klick-Tip when making API calls using expired credentials
+* Fixed datetime fields being synced to ActiveCampaign in 12h format (fixed to 24h format)
+* Fixed fatal error trying to sync multidimensional arrays to the CRM
+* Fixed default fields not being enabled for sync in the settings after first setting up the plugin
+* Fixed the default owner for new Zoho contacts overriding a custom owner
+* Fixed fatal error when enabling ActiveCampaign site tracking while WP Fusion is in staging mode
+* Fixed PHP warning syncing array values with HighLevel
+* Fixed PHP notices in Groundhogg integration
+
+
+##### Developer
+
+* Added wpf_get_users_with_contact_ids() function
+* Developers: wp_fusion_init action will now only fire if WP Fusion is connected to a CRM
+* Developers: Added `wpf_get_lookup_field()` function for getting the API name of the CRM field used for contact lookups (usually Email)
+* Developers: Added `wpf_infusionsoft_safe_fields` filter (strips out Asian characters loaded over the API in field names to prevent XML parse errors)
+* Developers - added `wpf_get_users_with_tag( $tag )` function
+* Developers - added `wpf_get_datetime_format()` function and `wpf_datetime_format` filter
+* Developers - Added wpf_get_tags() function
+* Developers - Added action wpf_meta_box_content_{$post->post_type}
+* Developers - Refactored user_can_access() function for better performance and readability
+* Developers: Added [wpf_disable_crm_field_select4 and wpf_disable_tag_select4 filters](https://wpfusion.com/documentation/faq/performance/#admin-performance)
+* Developers: removed register_shutdown_function() in API queue in favor of the "shutdown" WordPress action
+
+
 
 = 3.37.18 - 5/18/2021 =
 

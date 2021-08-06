@@ -26,6 +26,16 @@ class WPF_AgileCRM {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
 	/**
 	 * Get things started
 	 *
@@ -65,6 +75,12 @@ class WPF_AgileCRM {
 
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+
+		$domain = wp_fusion()->settings->get( 'agile_domain' );
+
+		if ( ! empty( $domain ) ) {
+			$this->edit_url = 'https://' . $domain . '.agilecrm.com/#contact/%d';
+		}
 
 	}
 

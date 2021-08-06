@@ -21,6 +21,16 @@ class WPF_Intercom {
 	public $supports;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -50,10 +60,41 @@ class WPF_Intercom {
 
 	public function init() {
 
-		//add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'set_country_names' ), 10, 2 );
+
+		$app_id_code = wp_fusion()->settings->get( 'app_id_code' );
+
+		if ( ! empty( $app_id_code ) ) {
+			$this->edit_url = 'https://app.intercom.com/a/apps/' . $app_id_code . '/users/%s/all-conversations';
+		}
+
+	}
+
+
+	/**
+	 * Formats user entered data to match CRM field formats.
+	 *
+	 * @since  3.37.29
+	 *
+	 * @param  mixed  $value      The value.
+	 * @param  string $field_type The field type.
+	 * @param  string $field      The field in the CRM.
+	 * @return mixed
+	 */
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( is_array( $value ) ) {
+
+			return implode( ', ', array_filter( $value ) );
+
+		} else {
+
+			return $value;
+
+		}
 
 	}
 
@@ -66,8 +107,9 @@ class WPF_Intercom {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
@@ -86,16 +128,15 @@ class WPF_Intercom {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'intercom') !== false ) {
+		if ( strpos( $url, 'intercom' ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->errors ) ) {
+			if ( isset( $body_json->errors ) ) {
 
 				$response = new WP_Error( 'error', $body_json->errors['0']->code );
 
 			}
-
 		}
 
 		return $response;
@@ -112,11 +153,11 @@ class WPF_Intercom {
 
 	public function set_country_names( $customer_data, $order ) {
 
-		if( isset( $customer_data['billing_country'] ) ) {
+		if ( isset( $customer_data['billing_country'] ) ) {
 			$customer_data['billing_country'] = WC()->countries->countries[ $customer_data['billing_country'] ];
 		}
 
-		if( isset( $customer_data['shipping_country'] ) ) {
+		if ( isset( $customer_data['shipping_country'] ) ) {
 			$customer_data['shipping_country'] = WC()->countries->countries[ $customer_data['shipping_country'] ];
 		}
 
@@ -142,11 +183,11 @@ class WPF_Intercom {
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 30,
 			'headers'    => array(
-				'Accept' 			=> 'application/json',
-				'Authorization'   	=> 'Bearer ' . $access_key,
-				'Content-Type' 		=> 'application/json',
-				'Intercom-Version'  => '1.4',
-			)
+				'Accept'           => 'application/json',
+				'Authorization'    => 'Bearer ' . $access_key,
+				'Content-Type'     => 'application/json',
+				'Intercom-Version' => '1.4',
+			),
 		);
 
 		return $this->params;
@@ -173,15 +214,19 @@ class WPF_Intercom {
 		$request  = 'https://api.intercom.io/me';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $response->errors ) ) {
+		if ( isset( $response->errors ) ) {
 			return new WP_Error( $response->errors[0]->code, $response->errors[0]->message );
 		}
+
+		// Save this for later
+
+		wp_fusion()->settings->set( 'app_id_code', $response->app->id_code );
 
 		return true;
 	}
@@ -228,14 +273,14 @@ class WPF_Intercom {
 		$request  = 'https://api.intercom.io/tags';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $response->tags as $tag ) {
-			$available_tags[$tag->name] = $tag->name;
+		foreach ( $response->tags as $tag ) {
+			$available_tags[ $tag->name ] = $tag->name;
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -258,27 +303,26 @@ class WPF_Intercom {
 		}
 
 		$crm_fields = array(
-			'email'		=> 'Email',
-			'phone'		=> 'Phone',
+			'email'     => 'Email',
+			'phone'     => 'Phone',
 			'firstname' => 'First Name',
 			'lastname'  => 'Last Name',
-			'name'		=> 'Name',
+			'name'      => 'Name',
 		);
 
 		$request  = 'https://api.intercom.io/data_attributes/customer';
 		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) && $response->get_error_message() == 'intercom_version_invalid' ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'intercom_version_invalid' ) {
 
 			// Try v1.4 API
 			$request  = 'https://api.intercom.io/data_attributes';
 			$response = wp_remote_get( $request, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-			
-		} elseif( is_wp_error( $response ) ) {
+		} elseif ( is_wp_error( $response ) ) {
 
 			return $response;
 
@@ -286,15 +330,14 @@ class WPF_Intercom {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $response->data_attributes as $field ) {
+		foreach ( $response->data_attributes as $field ) {
 
-			if( $field->api_writable == true && 'customer' == $field->model ) {
+			if ( $field->api_writable == true && 'customer' == $field->model ) {
 				$crm_fields[ $field->name ] = $field->label;
 			}
-
 		}
 
-		asort($crm_fields);
+		asort( $crm_fields );
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -315,20 +358,20 @@ class WPF_Intercom {
 			$this->get_params();
 		}
 
-		$request      = 'https://api.intercom.io/users?email=' . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.intercom.io/users?email=' . urlencode( $email_address );
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $response->id ) ) {
+		if ( isset( $response->id ) ) {
 
 			return $response->id;
 
-		} elseif( isset( $response->users ) && ! empty( $response->users ) ) {
+		} elseif ( isset( $response->users ) && ! empty( $response->users ) ) {
 
 			return $response->users[0]->id;
 
@@ -337,7 +380,7 @@ class WPF_Intercom {
 			return false;
 
 		}
-		
+
 	}
 
 
@@ -356,20 +399,20 @@ class WPF_Intercom {
 
 		$user_tags = array();
 
-		$request      = 'https://api.intercom.io/users/' . $contact_id;
-		$response     = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.intercom.io/users/' . $contact_id;
+		$response = wp_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if( empty( $response['tags']['tags'] ) ) {
+		if ( empty( $response['tags']['tags'] ) ) {
 			return false;
 		}
 
-		foreach( $response['tags']['tags'] as $tag ) {
+		foreach ( $response['tags']['tags'] as $tag ) {
 			$user_tags[] = $tag['name'];
 		}
 
@@ -389,19 +432,23 @@ class WPF_Intercom {
 			$this->get_params();
 		}
 
-		$url 		= 'https://api.intercom.io/tags';
-		$params 	= $this->params;
+		$url    = 'https://api.intercom.io/tags';
+		$params = $this->params;
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
-			$params['body'] = json_encode( array( 'name' => $tag, 'users' => array( array( 'id' => $contact_id ) ) ) );
+			$params['body'] = json_encode(
+				array(
+					'name'  => $tag,
+					'users' => array( array( 'id' => $contact_id ) ),
+				)
+			);
 
 			$response = wp_remote_post( $url, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -420,19 +467,28 @@ class WPF_Intercom {
 			$this->get_params();
 		}
 
-		$url 		= 'https://api.intercom.io/tags';
-		$params 	= $this->params;
+		$url    = 'https://api.intercom.io/tags';
+		$params = $this->params;
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
-			$params['body'] = json_encode( array( 'name' => $tag, 'users' => array( array( 'id' => $contact_id, 'untag' => true ) ) ) );
+			$params['body'] = json_encode(
+				array(
+					'name'  => $tag,
+					'users' => array(
+						array(
+							'id'    => $contact_id,
+							'untag' => true,
+						),
+					),
+				)
+			);
 
 			$response = wp_remote_post( $url, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -449,27 +505,13 @@ class WPF_Intercom {
 
 	public function add_contact( $data, $map_meta_fields = true ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
+		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		// General cleanup and restructuring
+
 		$body = array( 'email' => $data['email'] );
-		unset( $data['email'] );
-
-		if( isset( $data['phone'] ) ) {
-			$body['phone'] = $data['phone'];
-			unset( $data['phone'] );
-		}
-
-		if( isset( $data['name'] ) ) {
-			$body['name'] = $data['name'];
-			unset( $data['name'] );
-		}
 
 		// Maybe use the combined name
 
@@ -482,20 +524,31 @@ class WPF_Intercom {
 
 		}
 
-		if( ! empty( $data ) ) {
+		require_once dirname( __FILE__ ) . '/admin/intercom-fields.php';
+
+		// Move core fields up into the body and out of attributes.
+
+		foreach ( $intercom_fields as $field ) {
+			if ( isset( $data[ $field['crm_field'] ] ) ) {
+				$body[ $field['crm_field'] ] = $data[ $field['crm_field'] ];
+				unset( $data[ $field['crm_field'] ] );
+			}
+		}
+
+		if ( ! empty( $data ) ) {
 
 			// All other custom fields
 			$body['custom_attributes'] = $data;
 
 		}
 
-		$url 				= 'https://api.intercom.io/users';
-		$params 			= $this->params;
-		$params['body'] 	= json_encode( $body );
+		$url            = 'https://api.intercom.io/users';
+		$params         = $this->get_params();
+		$params['body'] = json_encode( $body );
 
 		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -514,13 +567,7 @@ class WPF_Intercom {
 
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		// Combine the name
-
-		if ( $map_meta_fields == true ) {
+		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
@@ -529,22 +576,8 @@ class WPF_Intercom {
 		}
 
 		// General cleanup and restructuring
+
 		$body = array( 'id' => $contact_id );
-
-		if( isset( $data['email'] ) ) {
-			$body['email'] = $data['email'];
-			unset( $data['email'] );
-		}
-
-		if( isset( $data['phone'] ) ) {
-			$body['phone'] = $data['phone'];
-			unset( $data['phone'] );
-		}
-
-		if( isset( $data['name'] ) ) {
-			$body['name'] = $data['name'];
-			unset( $data['name'] );
-		}
 
 		// Maybe use the combined name
 
@@ -557,6 +590,17 @@ class WPF_Intercom {
 
 		}
 
+		require dirname( __FILE__ ) . '/admin/intercom-fields.php';
+
+		// Move core fields up into the body and out of attributes.
+
+		foreach ( $intercom_fields as $field ) {
+			if ( isset( $data[ $field['crm_field'] ] ) ) {
+				$body[ $field['crm_field'] ] = $data[ $field['crm_field'] ];
+				unset( $data[ $field['crm_field'] ] );
+			}
+		}
+
 		if ( ! empty( $data ) ) {
 
 			// All other custom fields
@@ -564,13 +608,13 @@ class WPF_Intercom {
 
 		}
 
-		$url 				= 'https://api.intercom.io/users';
-		$params 			= $this->params;
-		$params['body'] 	= json_encode( $body );
+		$url            = 'https://api.intercom.io/users';
+		$params         = $this->get_params();
+		$params['body'] = json_encode( $body );
 
 		$response = wp_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -586,14 +630,10 @@ class WPF_Intercom {
 
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$url      = 'https://api.intercom.io/users/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_remote_get( $url, $this->get_params() );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -623,7 +663,6 @@ class WPF_Intercom {
 			if ( $field_data['active'] == true && isset( $body_json['custom_attributes'][ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $body_json['custom_attributes'][ $field_data['crm_field'] ];
 			}
-
 		}
 
 		return $user_meta;
@@ -675,17 +714,13 @@ class WPF_Intercom {
 							$contact_ids[] = $user->id;
 							break;
 						}
-
 					}
-
 				}
-
 			} else {
 
 				$proceed = false;
 
 			}
-
 		}
 
 		return $contact_ids;

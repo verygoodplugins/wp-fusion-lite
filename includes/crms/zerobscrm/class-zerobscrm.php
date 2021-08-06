@@ -49,6 +49,8 @@ class WPF_ZeroBSCRM {
 		add_action( 'zbs_tag_added_to_objid', array( $this, 'tag_added_removed' ), 10, 3 );
 		add_action( 'zbs_tag_removed_from_objid', array( $this, 'tag_added_removed' ), 10, 3 );
 
+		add_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) );
+
 	}
 
 
@@ -69,11 +71,46 @@ class WPF_ZeroBSCRM {
 
 				wp_fusion()->user->get_tags( $user_id, true, false );
 
+			} else {
+
+				global $zbs;
+
+				$tag = $zbs->DAL->getTag( $tag_id ); //phpcs:ignore
+
+				// Maybe import the user
+
+				if ( in_array( $tag['name'], wp_fusion()->settings->get( 'jetpack_import_tag', array() ) ) ) {
+
+					wp_fusion()->user->import_user( $object_id );
+
+				}
 			}
 		}
 
 	}
 
+	/**
+	 * Load data from the CRM when a contact is edited.
+	 *
+	 * @since 3.37.31
+	 *
+	 * @param int $contact_id The contact ID.
+	 */
+	public function edit_customer( $contact_id ) {
+
+		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+		if ( ! empty( $user_id ) ) {
+
+			$user_meta = $this->load_contact( $contact_id );
+
+			wp_fusion()->user->set_user_meta( $user_id, $user_meta );
+
+		}
+
+		remove_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) ); // this runs twice for some reason, we only need it once
+
+	}
 
 	/**
 	 * Performs initial sync once connection is configured

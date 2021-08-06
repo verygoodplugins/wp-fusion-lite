@@ -267,10 +267,16 @@ class Request {
 		xml_set_character_data_handler( $parser, 'xmlrpc_cd' );
 		xml_set_default_handler( $parser, 'xmlrpc_dh' );
 
-		// See if special characters need to be removed from tags (for Hoang)
+		// See if special characters need to be removed from tags & fields (for Hoang)
 
 		if ( apply_filters( 'wpf_infusionsoft_safe_tags', false ) && strpos( $data, 'GroupCategoryId') !== false ) {
 			$data = preg_replace('/[^A-Za-z0-9\-\<\>\s\"\=\/\?\.\_]/', '', $data);
+		}
+
+		// see https://secure.helpscout.net/conversation/1579921110/16912?folderId=3573248
+
+		if ( apply_filters( 'wpf_infusionsoft_safe_fields', false ) && strpos( $data, '<name>Label</name>') !== false ) {
+			$data = preg_replace('/[^A-Za-z0-9\-\<\>\s\"\=\/\?\.\_]/', '', $data); // strip out special chars
 		}
 
 		// first error check: xml not well formed

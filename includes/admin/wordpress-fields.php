@@ -37,8 +37,9 @@ $wp_fields['user_login'] = array(
 );
 
 $wp_fields['user_id'] = array(
-	'type'  => 'integer',
-	'label' => __( 'User ID', 'wp-fusion-lite' ),
+	'type'   => 'integer',
+	'label'  => __( 'User ID', 'wp-fusion-lite' ),
+	'pseudo' => true,
 );
 
 $wp_fields['locale'] = array(
@@ -62,8 +63,9 @@ $wp_fields['user_pass'] = array(
 );
 
 $wp_fields['user_registered'] = array(
-	'type'  => 'date',
-	'label' => __( 'User Registered', 'wp-fusion-lite' ),
+	'type'   => 'date',
+	'label'  => __( 'User Registered', 'wp-fusion-lite' ),
+	'pseudo' => true,
 );
 
 $wp_fields['description'] = array(
@@ -76,56 +78,3 @@ $wp_fields['user_url'] = array(
 	'label' => __( 'Website (URL)', 'wp-fusion-lite' ),
 );
 
-$wp_fields['leadsource'] = array(
-	'type'  => 'text',
-	'label' => __( 'Lead Source', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['utm_campaign'] = array(
-	'type'  => 'text',
-	'label' => __( 'Google Analytics Campaign', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['utm_source'] = array(
-	'type'  => 'text',
-	'label' => __( 'Google Analytics Source', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['utm_medium'] = array(
-	'type'  => 'text',
-	'label' => __( 'Google Analytics Medium', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['utm_term'] = array(
-	'type'  => 'text',
-	'label' => __( 'Google Analytics Term', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['utm_content'] = array(
-	'type'  => 'text',
-	'label' => __( 'Google Analytics Content', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['gclid'] = array(
-	'type'  => 'text',
-	'label' => __( 'Google Click Identifier', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['original_ref'] = array(
-	'type'  => 'text',
-	'label' => __( 'Original Referrer', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);
-
-$wp_fields['landing_page'] = array(
-	'type'  => 'text',
-	'label' => __( 'Landing Page', 'wp-fusion-lite' ),
-	'group' => 'leadsource',
-);

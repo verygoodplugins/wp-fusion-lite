@@ -27,6 +27,13 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 	$args = wp_parse_args( $args, $defaults );
 
+	// Allow disabling the output if it causes performance problems
+	$bypass = apply_filters( 'wpf_disable_tag_multiselect', false, $args );
+
+	if ( true == $bypass ) {
+		return;
+	}
+
 	if ( 1 == $args['limit'] ) {
 		$args['placeholder'] = __( 'Select a tag', 'wp-fusion-lite' );
 	}
@@ -36,13 +43,6 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		$field_id = sanitize_html_class( $args['meta_name'] );
 	} else {
 		$field_id = sanitize_html_class( $args['meta_name'] ) . '-' . $args['field_id'];
-	}
-
-	// Allow disabling the output if it causes performance problems
-	$bypass = apply_filters( 'wpf_disable_tag_multiselect', false, $args );
-
-	if ( true == $bypass ) {
-		return;
 	}
 
 	$args = apply_filters( 'wpf_render_tag_multiselect_args', $args );
@@ -75,6 +75,24 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		}
 	}
 
+	// If there are more than 1000 total tags, we'll lazy-load them
+
+	$lazy_load = false;
+
+	if ( count( $available_tags ) > 1000 ) {
+
+		// The currently selected options still needs to be preserved
+
+		foreach ( $available_tags as $id => $tag ) {
+			if ( ! in_array( $id, $args['setting'] ) ) {
+				unset( $available_tags[ $id ] );
+			}
+		}
+
+		$lazy_load = true;
+
+	}
+
 	// If we're returning instead of echoing
 	if ( $args['return'] ) {
 		ob_start();
@@ -88,6 +106,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		echo ' multiple="multiple"';
 		echo ' id="' . $field_id . '"';
 		echo ' data-limit="' . $args['limit'] . '"';
+		echo ( true == $lazy_load ? ' data-lazy-load="true"' : '' );
 		echo ' class="select4-wpf-tags ' . $args['class'] . '"';
 		echo ' name="' . $args['meta_name'] . ( ! is_null( $args['field_id'] ) ? '[' . $args['field_id'] . ']' : '' ) . '[]"';
 		echo ( ! empty( $args['no_dupes'] ) ? ' data-no-dupes="' . implode( ',', $args['no_dupes'] ) . '"' : '' );
@@ -315,7 +334,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
  * @param  string $width  The width in px.
  * @return string The logo.
  */
-function wpf_logo_svg( $width ) {
+function wpf_logo_svg( $width = 24 ) {
 
 	return '<svg width="' . $width . '" viewBox="0 0 38 39" fill="currentColor">
 	    <g id="Page-1" stroke="none" stroke-width="1" fill="currentColor" fill-rule="evenodd">

@@ -11,6 +11,15 @@ class WPF_WP_ERP {
 
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -40,6 +49,8 @@ class WPF_WP_ERP {
 	 */
 
 	public function init() {
+
+		$this->edit_url = admin_url( 'admin.php?page=erp-crm&section=contact&sub-section=contacts&action=view&id=%d' );
 
 		// Don't watch for changes if staging mode is active
 		if ( wp_fusion()->settings->get( 'staging_mode' ) == true ) {

@@ -15,6 +15,14 @@ class WPF_Tubular {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * @var string
+	 */
+
+	public $edit_url = 'https://app.tubular.io/#/clients/%d';
+
 	/**
 	 * Get things started
 	 *

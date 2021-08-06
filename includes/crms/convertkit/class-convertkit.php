@@ -26,6 +26,17 @@ class WPF_ConvertKit {
 	 */
 	public $params;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.convertkit.com/subscribers/%d';
+
+
 	/**
 	 * Get things started
 	 *
@@ -112,10 +123,13 @@ class WPF_ConvertKit {
 
 				$tag = wp_fusion()->settings->get( 'ck_update_tag' );
 
-				wpf_log( 'notice', $user_id, 'Removing update tag ' . wpf_get_tag_label( $tag[0] ) . ' so that it can be reapplied later if needed.' );
+				if ( ! empty( $tag ) ) {
 
-				$this->remove_tags( array( $tag ), $post_data['contact_id'] );
+					wpf_log( 'notice', $user_id, 'Removing update tag <strong>' . wpf_get_tag_label( $tag[0] ) . '</strong> in ConvertKit, so that it can be reapplied later if needed.' );
 
+					$this->remove_tags( $tag, $post_data['contact_id'] );
+
+				}
 			}
 		}
 

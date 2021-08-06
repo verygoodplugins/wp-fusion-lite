@@ -15,6 +15,17 @@ class WPF_MailerLite {
 
 	public $supports;
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = 'https://app.mailerlite.com/subscribers/single/%d';
+
+
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
 	 *
@@ -685,12 +696,12 @@ class WPF_MailerLite {
 
 		$send_data = array();
 
-		if ( isset( $data['name'] ) ) {
+		if ( ! empty( $data['name'] ) ) {
 			$send_data['name'] = $data['name'];
 			unset( $data['name'] );
 		}
 
-		if ( isset( $data['email'] ) ) {
+		if ( ! empty( $data['email'] ) ) {
 			$send_data['email'] = $data['email'];
 			unset( $data['email'] );
 		}
@@ -710,11 +721,13 @@ class WPF_MailerLite {
 		}
 
 		// Check for changes in email address if enabled
-		if ( wp_fusion()->settings->get( 'email_changes' ) == 'duplicate' ) {
+		if ( ! empty( $send_data['email'] ) && wp_fusion()->settings->get( 'email_changes' ) == 'duplicate' ) {
 
 			$contact_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( strtolower( $contact_data['email'] ) != strtolower( $send_data['email'] ) ) {
+
+				wpf_log( 'notice', $user_id, 'Email address change detected (from <strong>' . $original_email . '</strong> to <strong>' . $contact_data['email'] . '</strong>). Proceeding to delete subscriber. To disable this, set <strong>Email Address Changes</strong> to <strong>Ignore</strong> in the Advanced settings of WP Fusion.', array( 'source' => 'mailerlite' ) );
 
 				// Add new contact with updated email
 				$original_email = $contact_data['email'];

@@ -32,7 +32,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		// Stop _wp_http_referer getting appended to the logs URL, so it doesn't get too long
 
-		$_SERVER['REQUEST_URI'] = remove_query_arg( '_wp_http_referer', $_SERVER['REQUEST_URI'] );
+		//$_SERVER['REQUEST_URI'] = remove_query_arg( '_wp_http_referer', $_SERVER['REQUEST_URI'] );
 
 	}
 
@@ -180,7 +180,21 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 					$output .= '<li><strong>' . $key . '</strong>: ';
 
-					if ( is_array( $value ) && isset( $value['original'] ) ) {
+					if ( is_array( $value ) && isset( $value['pseudo'] ) ) {
+
+						// Value is a pseudo field and won't be saved
+
+						$text = __( 'This field is a pseudo field or read-only field, and will not be saved to the database.', 'wp-fusion-lite' );
+
+						// print_r arrays / original value
+
+						if ( is_array( $value['original'] ) || is_object( $value['original'] ) ) {
+							$value['original'] = '<pre>' . print_r( $value['original'], true ) . '</pre>';
+						}
+
+						$output .= '<strike>' . $value['original'] . '</strike> <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-right" data-tip="' . $text . '"></span>';
+
+					} elseif ( is_array( $value ) && isset( $value['original'] ) ) {
 
 						// value went through wpf_format_field_value
 
@@ -425,7 +439,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			<label for="start-date" class="screen-reader-text"><?php _e( 'Start date', 'wp-fusion-lite' ); ?></label>
 
 			<?php if ( ! empty( $_GET['startdate'] ) ) : ?>
-				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="date" value="<?php echo $_GET['startdate']; ?>" />
+				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="date" value="<?php echo sanitize_text_field( $_GET['startdate'] ); ?>" />
 			<?php else : ?>
 				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="text" onfocus="(this.type='date')" />
 			<?php endif; ?>
@@ -433,7 +447,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			<label for="end-date" class="screen-reader-text"><?php _e( 'End date', 'wp-fusion-lite' ); ?></label>
 
 			<?php if ( ! empty( $_GET['enddate'] ) ) : ?>
-				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="date" value="<?php echo $_GET['enddate']; ?>" />
+				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="date" value="<?php echo sanitize_text_field( $_GET['enddate'] ); ?>" />
 			<?php else : ?>
 				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="text" onfocus="(this.type='date')" />
 			<?php endif; ?>

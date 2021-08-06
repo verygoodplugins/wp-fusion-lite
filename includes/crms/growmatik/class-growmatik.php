@@ -29,6 +29,15 @@ class WPF_Growmatik {
 
 	public $params = array();
 
+
+	/**
+	 * Lets us link directly to editing a contact record.
+	 * No edit page for contacts.
+	 * @var string
+	 */
+
+	public $edit_url = false;
+
 	/**
 	 * Get things started
 	 *

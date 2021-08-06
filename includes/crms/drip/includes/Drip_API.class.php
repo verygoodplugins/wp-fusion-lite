@@ -76,11 +76,14 @@ class WPF_Drip_Api {
 
 		// here we distinguish errors from no campaigns.
 		// when there's no json that's an error
-		$campaigns = empty( $raw_json )
-			? false
-			: empty( $raw_json['campaigns'] )
-				? array()
-				: $raw_json['campaigns'];
+
+		if ( empty( $raw_json ) ) {
+			$campaigns = false;
+		} elseif ( empty( $raw_json['campaigns'] ) ) {
+			$campaigns = array();
+		} else {
+			$campaigns = $raw_json['campaigns'];
+		}
 
 		return $campaigns;
 	}
@@ -120,11 +123,13 @@ class WPF_Drip_Api {
 
 		// here we distinguish errors from no campaign
 		// when there's no json that's an error
-		$campaigns = empty( $raw_json )
-			? false
-			: empty( $raw_json['campaigns'] )
-				? array()
-				: $raw_json['campaigns'];
+		if ( empty( $raw_json ) ) {
+			$campaigns = false;
+		} elseif ( empty( $raw_json['campaigns'] ) ) {
+			$campaigns = array();
+		} else {
+			$campaigns = $raw_json['campaigns'];
+		}
 
 		return $campaigns;
 	}
@@ -149,11 +154,13 @@ class WPF_Drip_Api {
 			$raw_json = json_decode( $res['buffer'], true );
 		}
 
-		$data = empty( $raw_json )
-			? false
-			: empty( $raw_json['accounts'] )
-				? array()
-				: $raw_json['accounts'];
+		if ( empty( $raw_json ) ) {
+			$data = false;
+		} elseif ( empty( $raw_json['accounts'] ) ) {
+			$data = array();
+		} else {
+			$data = $raw_json['accounts'];
+		}
 
 		return $data;
 	}
@@ -188,11 +195,13 @@ class WPF_Drip_Api {
 			$raw_json = json_decode( $res['buffer'], true );
 		}
 
-		$data = empty( $raw_json )
-			? false
-			: empty( $raw_json['subscribers'] )
-				? array()
-				: $raw_json['subscribers'][0];
+		if ( empty( $raw_json ) ) {
+			$data = false;
+		} elseif ( empty( $raw_json['subscribers'] ) ) {
+			$data = array();
+		} else {
+			$data = $raw_json['subscribers'][0];
+		}
 
 		return $data;
 	}
@@ -236,11 +245,13 @@ class WPF_Drip_Api {
 			$raw_json = json_decode( $res['buffer'], true );
 		}
 
-		$data = empty( $raw_json )
-			? false
-			: empty( $raw_json['subscribers'] )
-				? array()
-				: $raw_json['subscribers'][0];
+		if ( empty( $raw_json ) ) {
+			$data = false;
+		} elseif ( empty( $raw_json['subscribers'] ) ) {
+			$data = array();
+		} else {
+			$data = $raw_json['subscribers'][0];
+		}
 
 		return $data;
 	}
@@ -290,7 +301,13 @@ class WPF_Drip_Api {
 			$raw_json = json_decode( $res['buffer'], true );
 		}
 
-		$data = ( empty( $raw_json ) ? false : empty( $raw_json['subscribers'] ) ) ? array() : $raw_json['subscribers'][0];
+		if ( empty( $raw_json ) ) {
+			$data = false;
+		} elseif ( empty( $raw_json['subscribers'] ) ) {
+			$data = array();
+		} else {
+			$data = $raw_json['subscribers'][0];
+		}
 
 		return $data;
 	}
@@ -332,11 +349,13 @@ class WPF_Drip_Api {
 			$raw_json = json_decode( $res['buffer'], true );
 		}
 
-		$data = empty( $raw_json )
-			? false
-			: empty( $raw_json['subscribers'] )
-				? array()
-				: $raw_json['subscribers'][0];
+		if ( empty( $raw_json ) ) {
+			$data = false;
+		} elseif ( empty( $raw_json['subscribers'] ) ) {
+			$data = array();
+		} else {
+			$data = $raw_json['subscribers'][0];
+		}
 
 		return $data;
 	}

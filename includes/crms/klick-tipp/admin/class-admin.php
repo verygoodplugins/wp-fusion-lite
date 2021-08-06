@@ -42,7 +42,7 @@ class WPF_KlickTipp_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 
 	}
 
@@ -67,7 +67,7 @@ class WPF_KlickTipp_Admin {
 
 		$new_settings['klicktipp_user'] = array(
 			'title'   => __( 'Username', 'wp-fusion-lite' ),
-			'desc'    => __( 'Your Klick-Tipp username', 'wp-fusion-lite' ),
+			'desc'    => __( 'Your Klick-Tipp username.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',

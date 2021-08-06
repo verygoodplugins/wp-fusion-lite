@@ -26,6 +26,14 @@ class WPF_NationBuilder {
 
 	public $url_slug;
 
+	/**
+	 * Lets us link directly to editing a contact record.
+	 *
+	 * @since 3.37.30
+	 * @var  string
+	 */
+
+	public $edit_url = '';
 
 	/**
 	 * Get things started
@@ -65,6 +73,11 @@ class WPF_NationBuilder {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
+		$url_slug = wp_fusion()->settings->get( 'nationbuilder_slug' );
+
+		if ( ! empty( $url_slug ) ) {
+			$this->edit_url = 'https://' . $url_slug . '.nationbuilder.com/admin/signups/%d';
+		}
 	}
 
 

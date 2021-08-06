@@ -77,7 +77,15 @@ if ( ! function_exists( 'wpf_get_current_user_id' ) ) {
 
 	function wpf_get_current_user_id() {
 
-		return wp_fusion()->user->get_current_user_id();
+		if ( wp_fusion()->user ) {
+
+			return wp_fusion()->user->get_current_user_id();
+
+		} else {
+
+			return get_current_user_id();
+
+		}
 
 	}
 }
@@ -129,6 +137,51 @@ function wpf_get_contact_id( $user_id = false ) {
 
 }
 
+/**
+ * Gets the CRM tags from WordPress user ID.
+ *
+ * @since  3.36.26
+ *
+ * @param  int   $user_id The user ID to search by.
+ * @return array The user's tags in the CRM.
+ */
+
+function wpf_get_tags( $user_id = false ) {
+
+	return wp_fusion()->user->get_tags( $user_id );
+
+}
+
+/**
+ * Gets all users that have saved contact IDs.
+ *
+ * @since 3.37.22
+ *
+ * @return array User IDs.
+ */
+function wpf_get_users_with_contact_ids() {
+
+	if ( is_object( wp_fusion()->user ) ) {
+		return wp_fusion()->user->get_users_with_contact_ids();
+	}
+
+}
+
+/**
+ * Gets all users that have the tag.
+ *
+ * @since  3.37.27
+ *
+ * @param  string $tag    The tag.
+ * @return array  User IDs.
+ */
+function wpf_get_users_with_tag( $tag ) {
+
+	if ( is_object( wp_fusion()->user ) ) {
+		return wp_fusion()->user->get_users_with_tag( $tag );
+	}
+
+}
 
 /**
  * Checks if user is logged in, with support for auto-logged-in users
@@ -140,7 +193,17 @@ if ( ! function_exists( 'wpf_is_user_logged_in' ) ) {
 
 	function wpf_is_user_logged_in() {
 
-		return wp_fusion()->user->is_user_logged_in();
+		if ( is_object( wp_fusion()->user ) ) {
+
+			// Avoid errors if WP Fusion isn't connected to a CRM.
+
+			return wp_fusion()->user->is_user_logged_in();
+
+		} else {
+
+			return is_user_logged_in();
+
+		}
 
 	}
 }
@@ -238,6 +301,21 @@ function wpf_is_pseudo_field( $meta_key ) {
 }
 
 /**
+ * Gets the CRM field ID of the primary field used for contact record
+ * lookups (usually email).
+ *
+ * @since  3.37.29
+ *
+ * @return string The field name in the CRM.
+ */
+
+function wpf_get_lookup_field() {
+
+	return wp_fusion()->crm_base->get_lookup_field();
+
+}
+
+/**
  * Are we currently in an auto-login session?
  *
  * @return bool
@@ -268,3 +346,43 @@ function doing_wpf_webhook() {
 	}
 
 }
+
+/**
+ * Gets the default datetime format for syncing with the CRM.
+ *
+ * @since  3.37.27
+ *
+ * @return string The date time format.
+ */
+
+function wpf_get_datetime_format() {
+
+	$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+
+	return apply_filters( 'wpf_datetime_format', $format );
+
+}
+
+/**
+ * Is the current user an admin, and admins are excluded from restrictions?
+ *
+ * @since  3.6.26
+ *
+ * @param  int   $user_id The user ID.
+ * @return bool
+ */
+
+function wpf_admin_override( $user_id = false ) {
+
+	if ( false == $user_id ) {
+		$user_id = get_current_user_id(); // don't use wpf_get_current_user_id() here since auto-login users don't have permissions anyway
+	}
+
+	if ( wp_fusion()->settings->get( 'exclude_admins' ) && user_can( $user_id, 'manage_options' ) ) {
+		return true;
+	} else {
+		return false;
+	}
+
+}
+

@@ -62,7 +62,7 @@ class WPF_Emercury_Admin {
 	public function init() {
 
 		// Hooks in init() will run on the admin screen when this CRM is active
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 	}
 

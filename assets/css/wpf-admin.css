@@ -192,9 +192,9 @@ body.term-php .wpf-page-redirect-select label {
 	display: none;
 }
 
-/* Gutenberg / LearnDash inputs */
+/* Gutenberg / LearnDash inputs / Generic select4 */
 
-#learndash-course-access-settings .select4-container, #learndash-group-access-settings .select4-container {
+#learndash-course-access-settings .select4-container, #learndash-group-access-settings .select4-container, table.form-table .select4-container {
 	min-width: 400px;
 }
 

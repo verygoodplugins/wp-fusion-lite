@@ -16,6 +16,13 @@ class WPF_Platformly {
 	public $supports;
 
 	/**
+	 * Lets us link directly to editing a contact record.
+	 * @var string
+	 */
+
+	public $edit_url = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -47,7 +54,11 @@ class WPF_Platformly {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-
+		
+		$platformly_project_name = wp_fusion()->settings->get( 'platformly_project_name', false );
+		if(!empty($platformly_project_name)){
+			$this->edit_url = 'https://'.strtolower($platformly_project_name).'.platform.ly/index.php?page=contacts.manage&id=%d';
+		}
 	}
 
 
@@ -255,8 +266,10 @@ class WPF_Platformly {
 
 			reset( $projects );
 			$default_project = key( $projects );
+			$platformly_project_name = $projects[$default_project];
 
 			wp_fusion()->settings->set( 'platformly_project', $default_project );
+			wp_fusion()->settings->set( 'platformly_project_name', $platformly_project_name );
 
 		}
 

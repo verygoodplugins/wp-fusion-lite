@@ -45,7 +45,7 @@ class WPF_Drip_Admin {
 		add_filter( 'wpf_users_list_filter_options', array( $this, 'filter_options' ) );
 		add_filter( 'wpf_users_list_meta_query', array( $this, 'users_list_meta_query' ), 10, 2 );
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}

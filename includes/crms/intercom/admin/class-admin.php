@@ -41,7 +41,7 @@ class WPF_Intercom_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 
 	}
 
@@ -61,7 +61,7 @@ class WPF_Intercom_Admin {
 			'title'   => __( 'Intercom Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['intercom_key'] = array(
@@ -70,7 +70,7 @@ class WPF_Intercom_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'intercom_key' )
+			'post_fields' => array( 'intercom_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -98,9 +98,7 @@ class WPF_Intercom_Admin {
 				if ( isset( $intercom_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $intercom_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;

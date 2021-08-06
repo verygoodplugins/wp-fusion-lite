@@ -145,28 +145,28 @@ class WPF_PulseTechnologyCRM_Admin {
 		$new_settings = array();
 
 		$new_settings['pulsetech_header'] = array(
-			'title'   => __( 'Pulse - Connection', 'wp-fusion' ),
+			'title'   => __( 'Pulse - Connection', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
 			'desc'    => 'Use this URL when creating the client on your Pulse application: <br/><strong>' . admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ) . '</strong>',
 		);
 
 		$new_settings['pulsetech_url'] = array(
-			'title'   => __( 'URL', 'wp-fusion' ),
-			'desc'    => __( 'URL to your Pulse application', 'wp-fusion' ),
+			'title'   => __( 'URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'URL to your Pulse application', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
 		$new_settings['pulsetech_client_id'] = array(
-			'title'   => __( 'Client ID', 'wp-fusion' ),
+			'title'   => __( 'Client ID', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
 		$new_settings['pulsetech_secret'] = array(
-			'title'   => __( 'Secret', 'wp-fusion' ),
+			'title'   => __( 'Secret', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
@@ -193,20 +193,20 @@ class WPF_PulseTechnologyCRM_Admin {
 				}
 
 				$new_settings['pulsetech_authorize'] = array(
-					'title'   => __( 'Authorize', 'wp-fusion' ),
+					'title'   => __( 'Authorize', 'wp-fusion-lite' ),
 					'type'    => 'heading',
 					'section' => 'setup',
 					'desc'    => '<a class="button" href="' . $button_url . '?' . $query . '">Click here to Authorize</a><br /><span class="description">You\'ll be taken to Pulse to authorize WP Fusion and generate access keys for this site.',
 				);
 
 				$new_settings['pulsetech_footer'] = array(
-					'title'   => __( '', 'wp-fusion' ),
+					'title'   => __( '', 'wp-fusion-lite' ),
 					'type'    => 'heading',
 					'section' => 'setup',
 				);
 			} else {
 				$new_settings['pulsetech_connected'] = array(
-					'title'   => __( 'Pulse - Already Connected', 'wp-fusion' ),
+					'title'   => __( 'Pulse - Already Connected', 'wp-fusion-lite' ),
 					'type'    => 'heading',
 					'section' => 'setup',
 				);
