@@ -60,13 +60,15 @@ class WPF_Zoho_Admin {
 
 		if ( isset( $_GET['code'] ) && isset( $_GET['location'] ) && isset( $_GET['crm'] ) && 'zoho' == $_GET['crm'] ) {
 
-			if( $_GET['location'] == 'eu' ) {
+			$location = sanitize_text_field( $_GET['location'] );
+
+			if( $location == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
 				$api_domain    = 'https://www.zohoapis.eu';
-			} elseif( $_GET['location'] == 'in' ) {
+			} elseif( $location == 'in' ) {
 				$client_secret = $this->crm->client_secret_in;
 				$api_domain    = 'https://www.zohoapis.in';
-			} elseif( $_GET['location'] == 'au' ) {
+			} elseif( $location == 'au' ) {
 				$client_secret = $this->crm->client_secret_au;
 				$api_domain    = 'https://www.zohoapis.com.au';
 			} else {
@@ -88,7 +90,7 @@ class WPF_Zoho_Admin {
 				return false;
 			}
 
-			wp_fusion()->settings->set( 'zoho_location', $_GET['location'] );
+			wp_fusion()->settings->set( 'zoho_location', $location );
 			wp_fusion()->settings->set( 'zoho_api_domain', $body->api_domain );
 			wp_fusion()->settings->set( 'zoho_token', $body->access_token );
 			wp_fusion()->settings->set( 'zoho_refresh_token', $body->refresh_token );

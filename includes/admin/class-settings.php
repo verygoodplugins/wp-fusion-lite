@@ -1554,23 +1554,26 @@ class WPF_Settings {
 			'section' => 'setup',
 		);
 
-		$settings['license_heading'] = array(
-			'title'   => __( 'WP Fusion License', 'wp-fusion-lite' ),
-			'section' => 'setup',
-			'type'    => 'heading',
-		);
+		if ( wp_fusion()->is_full_version() ) {
 
-		$settings['license_key'] = array(
-			'title'          => __( 'License Key', 'wp-fusion-lite' ),
-			'type'           => 'edd_license',
-			'section'        => 'setup',
-			'license_status' => 'invalid',
-		);
+			$settings['license_heading'] = array(
+				'title'   => __( 'WP Fusion License', 'wp-fusion-lite' ),
+				'section' => 'setup',
+				'type'    => 'heading',
+			);
 
-		$settings['license_status'] = array(
-			'type'    => 'hidden',
-			'section' => 'setup',
-		);
+			$settings['license_key'] = array(
+				'title'          => __( 'License Key', 'wp-fusion-lite' ),
+				'type'           => 'edd_license',
+				'section'        => 'setup',
+				'license_status' => 'invalid',
+			);
+
+			$settings['license_status'] = array(
+				'type'    => 'hidden',
+				'section' => 'setup',
+			);
+		}
 
 		/*
 		// ADVANCED

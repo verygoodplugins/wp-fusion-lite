@@ -439,7 +439,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			<label for="start-date" class="screen-reader-text"><?php _e( 'Start date', 'wp-fusion-lite' ); ?></label>
 
 			<?php if ( ! empty( $_GET['startdate'] ) ) : ?>
-				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="date" value="<?php echo sanitize_text_field( $_GET['startdate'] ); ?>" />
+				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="date" value="<?php echo esc_attr( $_GET['startdate'] ); ?>" />
 			<?php else : ?>
 				<input placeholder="<?php _e( 'Start date', 'wp-fusion-lite' ); ?>" name="startdate" id="start-date" type="text" onfocus="(this.type='date')" />
 			<?php endif; ?>
@@ -447,7 +447,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			<label for="end-date" class="screen-reader-text"><?php _e( 'End date', 'wp-fusion-lite' ); ?></label>
 
 			<?php if ( ! empty( $_GET['enddate'] ) ) : ?>
-				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="date" value="<?php echo sanitize_text_field( $_GET['enddate'] ); ?>" />
+				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="date" value="<?php echo esc_attr( $_GET['enddate'] ); ?>" />
 			<?php else : ?>
 				<input placeholder="<?php _e( 'End date', 'wp-fusion-lite' ); ?>" name="enddate" id="end-date" type="text" onfocus="(this.type='date')" />
 			<?php endif; ?>

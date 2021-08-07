@@ -4,7 +4,7 @@ Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 5.8
-Stable tag: 3.37.30
+Stable tag: 3.37.31
 
 WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
@@ -182,6 +182,10 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.37.31 - 8/7/2021 =
+
+* Fixed XSS vulnerability on logs table in the admin.
 
 = 3.37.30 - 8/6/2021 =
 
