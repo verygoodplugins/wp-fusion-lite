@@ -50,7 +50,7 @@ class WPF_ConvertKit {
 		$this->name     = 'ConvertKit';
 		$this->supports = array();
 
-		$this->api_secret = wp_fusion()->settings->get( 'ck_secret' );
+		$this->api_secret = wpf_get_option( 'ck_secret' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -109,19 +109,19 @@ class WPF_ConvertKit {
 
 		if ( is_object( $payload ) ) {
 
-			$post_data['contact_id'] = $payload->subscriber->id;
+			$post_data['contact_id'] = absint( $payload->subscriber->id );
 
-			if ( true == wp_fusion()->settings->get( 'ck_import_notification' ) ) {
+			if ( wpf_get_option( 'ck_import_notification' ) ) {
 				$post_data['send_notification'] = true;
 			}
 
-			// Remove the update tag so it can be applied again
+			// Remove the update tag so it can be applied again.
 
-			if ( 'update' == $_REQUEST['wpf_action'] ) {
+			if ( 'update' === $post_data['wpf_action'] ) {
 
-				$user_id = wpf_get_user_id( $payload->subscriber->id );
+				$user_id = wpf_get_user_id( absint( $payload->subscriber->id ) );
 
-				$tag = wp_fusion()->settings->get( 'ck_update_tag' );
+				$tag = wpf_get_option( 'ck_update_tag' );
 
 				if ( ! empty( $tag ) ) {
 
@@ -150,13 +150,13 @@ class WPF_ConvertKit {
 
 		if ( is_object( $payload ) ) {
 
-			$contact_id = $payload->subscriber->id;
+			$contact_id = absint( $payload->subscriber->id );
 
 			$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
 			if ( ! empty( $user_id ) ) {
 
-				$email = wp_fusion()->settings->get( 'ck_notify_email' );
+				$email = wpf_get_option( 'ck_notify_email' );
 
 				$user = get_user_by( 'id', $user_id );
 
@@ -261,7 +261,7 @@ class WPF_ConvertKit {
 
 	public function register_webhook( $type, $tag ) {
 
-		$access_key = wp_fusion()->settings->get( 'access_key' );
+		$access_key = wpf_get_option( 'access_key' );
 
 		if ( $type == 'unsubscribe' ) {
 
@@ -284,7 +284,7 @@ class WPF_ConvertKit {
 
 		}
 
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			'https://api.convertkit.com/v3/automations/hooks', array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => json_encode( $data ),
@@ -319,7 +319,7 @@ class WPF_ConvertKit {
 			'api_secret' => $this->api_secret,
 		);
 
-		$result = wp_remote_request(
+		$result = wp_safe_remote_request(
 			'https://api.convertkit.com/v3/automations/hooks/' . $rule_id, array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => json_encode( $data ),
@@ -358,7 +358,7 @@ class WPF_ConvertKit {
 				return false;
 			}
 
-			$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret );
+			$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret );
 
 			if ( is_wp_error( $response ) ) {
 				return false;
@@ -394,13 +394,13 @@ class WPF_ConvertKit {
 			$this->get_params( $api_key );
 		}
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $api_secret, $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $api_secret, $this->get_params() );
 		$result   = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( isset( $result->error ) ) {
 
 			// Handling for users who may mistake API key with API secret
-			$result = json_decode( wp_remote_retrieve_body( wp_remote_get( 'https://api.convertkit.com/v3/forms?api_key=' . $api_secret ) ) );
+			$result = json_decode( wp_remote_retrieve_body( wp_safe_remote_get( 'https://api.convertkit.com/v3/forms?api_key=' . $api_secret ) ) );
 
 			if ( isset( $result->error ) ) {
 				return new WP_Error( 'error', $result->error . ' - ' . $result->message );
@@ -441,7 +441,7 @@ class WPF_ConvertKit {
 
 	public function sync_tags() {
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/tags?api_secret=' . $this->api_secret, $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/tags?api_secret=' . $this->api_secret, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -478,7 +478,7 @@ class WPF_ConvertKit {
 			'email_address' => 'Email',
 		);
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret, $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -508,7 +508,7 @@ class WPF_ConvertKit {
 
 	public function get_contact_id( $email_address ) {
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) . '&status=all', $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) . '&status=all', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -538,7 +538,7 @@ class WPF_ConvertKit {
 
 		$contact_tags = array();
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags?api_secret=' . $this->api_secret, $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags?api_secret=' . $this->api_secret, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -550,7 +550,7 @@ class WPF_ConvertKit {
 			return $contact_tags;
 		}
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body->tags as $tag ) {
 			$contact_tags[] = $tag->id;
@@ -566,8 +566,8 @@ class WPF_ConvertKit {
 
 		if ( isset( $_REQUEST['wpf_action'] ) ) {
 
-			$update_tag = wp_fusion()->settings->get( 'ck_update_tag' );
-			$import_tag = wp_fusion()->settings->get( 'ck_add_tag' );
+			$update_tag = wpf_get_option( 'ck_update_tag' );
+			$import_tag = wpf_get_option( 'ck_add_tag' );
 
 			if ( in_array( $update_tag[0], $contact_tags ) ) {
 
@@ -610,7 +610,7 @@ class WPF_ConvertKit {
 		$params         = $this->get_params();
 		$params['body'] = json_encode( $data );
 
-		$response = wp_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', $params );
+		$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -635,7 +635,7 @@ class WPF_ConvertKit {
 			$params           = $this->get_params();
 			$params['method'] = 'DELETE';
 
-			$response = wp_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags/' . $tag_id . '?api_secret=' . $this->api_secret, $params );
+			$response = wp_safe_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '/tags/' . $tag_id . '?api_secret=' . $this->api_secret, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -672,12 +672,12 @@ class WPF_ConvertKit {
 		}
 
 		// Users can't be added without a tag, form, or sequence. For now we'll use a tag
-		$assign_tags = wp_fusion()->settings->get( 'assign_tags' );
+		$assign_tags = wpf_get_option( 'assign_tags' );
 
 		// If no tags configured, pick the first one in the account so the request doesn't fail
 		if ( empty( $assign_tags ) ) {
 
-			$available_tags = wp_fusion()->settings->get( 'available_tags' );
+			$available_tags = wpf_get_option( 'available_tags' );
 			reset( $available_tags );
 			$assign_tags = array( key( $available_tags ) );
 
@@ -705,7 +705,7 @@ class WPF_ConvertKit {
 		$params         = $this->get_params();
 		$params['body'] = json_encode( $post_data );
 
-		$response = wp_remote_post( 'https://api.convertkit.com/v3/tags/' . $assign_tags[0] . '/subscribe', $params );
+		$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/tags/' . $assign_tags[0] . '/subscribe', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -757,7 +757,7 @@ class WPF_ConvertKit {
 		$params['body']   = json_encode( $post_data );
 		$params['method'] = 'PUT';
 
-		$response = wp_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id, $params );
+		$response = wp_safe_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -777,7 +777,7 @@ class WPF_ConvertKit {
 
 	public function load_contact( $contact_id ) {
 
-		$response = wp_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret . '&status=all', $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret . '&status=all', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -801,7 +801,7 @@ class WPF_ConvertKit {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -829,7 +829,7 @@ class WPF_ConvertKit {
 
 		while ( $proceed == true ) {
 
-			$response = wp_remote_get( 'https://api.convertkit.com/v3/tags/' . $tag . '/subscriptions?api_secret=' . $this->api_secret . '&page=' . $page, $this->get_params() );
+			$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/tags/' . $tag . '/subscriptions?api_secret=' . $this->api_secret . '&page=' . $page, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

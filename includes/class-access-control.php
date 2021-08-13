@@ -63,10 +63,10 @@ class WPF_Access_Control {
 
 		// Return after login
 
-		if ( wp_fusion()->settings->get( 'return_after_login' ) ) {
+		if ( wpf_get_option( 'return_after_login' ) ) {
 
-			$priority = wp_fusion()->settings->get( 'return_after_login_priority', 10 );
-			add_action( 'wp_login', array( $this, 'return_after_login' ), intval( $priority ), 2 );
+			$priority = wpf_get_option( 'return_after_login_priority', 10 );
+			add_action( 'wp_login', array( $this, 'return_after_login' ), absint( $priority ), 2 );
 
 		}
 
@@ -91,40 +91,41 @@ class WPF_Access_Control {
 		$settings = apply_filters( 'wpf_post_access_meta', $settings, $post_id );
 
 		// Parse args again in case the filter messed them up.
-
 		return wp_parse_args( $settings, WPF_Admin_Interfaces::$meta_box_defaults );
 
 	}
 
 	/**
-	 * Checks if a user can access a given post
+	 * Checks if a user can access a given post.
 	 *
-	 * @access public
-	 * @return bool Whether or not a user can access specified content.
+	 * @since  1.0.0
+	 *
+	 * @param  int       $post_id The post ID.
+	 * @param  int|false $user_id The user identifier, or false for current user.
+	 * @return bool      Whether or not a user can access the content.
 	 */
-
 	public function user_can_access( $post_id, $user_id = false ) {
 
 		if ( empty( $post_id ) ) {
 			return true;
 		}
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = wpf_get_current_user_id();
 		}
 
-		// If admins are excluded from restrictions
+		// If admins are excluded from restrictions.
 		if ( wpf_admin_override( $user_id ) ) {
 			return true;
 		}
 
-		// Allow inheriting protections from another post
+		// Allow inheriting protections from another post.
 
 		$post_id = apply_filters( 'wpf_user_can_access_post_id', $post_id );
 
-		// Use the cache if we're checking for the current user
+		// Use the cache if we're checking for the current user.
 
-		if ( wpf_get_current_user_id() == $user_id ) {
+		if ( wpf_get_current_user_id() === $user_id ) {
 
 			if ( isset( $this->can_access_posts[ $post_id ] ) ) {
 				return $this->can_access_posts[ $post_id ];
@@ -135,12 +136,12 @@ class WPF_Access_Control {
 
 		if ( ! $this->user_can_access_term( $post_id, $user_id ) ) {
 
-			// See if taxonomy restrictions are in effect
+			// See if taxonomy restrictions are in effect.
 			$can_access = false;
 
 		} elseif ( ! $this->user_can_access_post_type( get_post_type( $post_id ), $user_id ) ) {
 
-			// See if post type restrictions are in effect
+			// See if post type restrictions are in effect.
 			$can_access = false;
 
 		}
@@ -153,46 +154,58 @@ class WPF_Access_Control {
 
 			if ( empty( $settings ) ) {
 
-				// If no settings are set
+				// If no settings are set.
 				$can_access = true;
 
-			} if ( false != $user_id && wpf_has_tag( $settings['allow_tags_not'], $user_id ) ) {
+			} if ( false !== $user_id && wpf_has_tag( $settings['allow_tags_not'], $user_id ) ) {
 
-				// If user is logged in and a Not tag is specified
+				// If user is logged in and a Not tag is specified.
 				$can_access = false;
 
-			} elseif ( ! isset( $settings['lock_content'] ) || $settings['lock_content'] != true ) {
+			} elseif ( empty( $settings['lock_content'] ) ) {
 
-				// If content isn't locked
+				// If content isn't locked.
 				$can_access = true;
 
 			} elseif ( ! wpf_is_user_logged_in() && empty( $user_id ) ) {
 
-				// If not logged in
+				// If not logged in.
 				$can_access = false;
 
 			} elseif ( empty( $settings['allow_tags'] ) && empty( $settings['allow_tags_all'] ) ) {
 
-				// If no tags specified for restriction, but user is logged in, allow access
+				// If no tags specified for restriction, but user is logged in, allow access.
 				$can_access = true;
 
 			} elseif ( empty( wpf_get_tags( $user_id ) ) ) {
 
-				// If user has no tags
+				// If user has no tags.
 				$can_access = false;
 
 			} elseif ( ! empty( $settings['allow_tags_all'] ) && count( array_intersect( $settings['allow_tags_all'], wpf_get_tags( $user_id ) ) ) !== count( $settings['allow_tags_all'] ) ) {
 
-				// If Required Tags (all) are specified and the user doesn't have all of them
+				// If Required Tags (all) are specified and the user doesn't have all of them.
 				$can_access = false;
 
 			} elseif ( ! empty( $settings['allow_tags'] ) && ! wpf_has_tag( $settings['allow_tags'], $user_id ) ) {
 
-				// If user has at least one of the required tags
+				// If user has at least one of the required tags.
 				$can_access = false;
 
 			}
 		}
+
+		/**
+		 * Determined whether a user can access a post.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @link  https://wpfusion.com/documentation/filters/wpf_user_can_access/
+		 *
+		 * @param bool  $can_access Whether or not the user can access the post.
+		 * @param int   $user_id    The user ID.
+		 * @param int   $post_id    The post ID.
+		 */
 
 		$can_access = apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id );
 
@@ -243,7 +256,7 @@ class WPF_Access_Control {
 		}
 
 		// If admins are excluded from restrictions
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+		if ( wpf_admin_override() ) {
 			return true;
 		}
 
@@ -356,7 +369,7 @@ class WPF_Access_Control {
 			$user_id = wpf_get_current_user_id();
 		}
 
-		$settings = wp_fusion()->settings->get( 'post_type_rules', array() );
+		$settings = wpf_get_option( 'post_type_rules', array() );
 		$settings = apply_filters( 'wpf_post_type_rules', $settings );
 
 		$can_access = true;
@@ -392,15 +405,8 @@ class WPF_Access_Control {
 
 	public function get_redirect( $post_id ) {
 
-		$defaults = array(
-			'redirect_url' => '',
-			'redirect'     => '',
-		);
-
 		// Get settings
-		$post_restrictions = wp_parse_args( get_post_meta( $post_id, 'wpf-settings', true ), $defaults );
-
-		$post_restrictions = apply_filters( 'wpf_post_access_meta', $post_restrictions, $post_id );
+		$post_restrictions = $this->get_post_access_meta( $post_id );
 
 		// If term restrictions are in place, they override the post restrictions
 		$term_restrictions = $this->get_redirect_term( $post_id );
@@ -411,13 +417,13 @@ class WPF_Access_Control {
 
 		// Not logged in redirect
 
-		$redirect = wp_fusion()->settings->get( 'default_not_logged_in_redirect' );
+		$redirect = wpf_get_option( 'default_not_logged_in_redirect' );
 
 		if ( ! wpf_is_user_logged_in() && ! empty( $redirect ) ) {
 			return $redirect;
 		}
 
-		$default_redirect = wp_fusion()->settings->get( 'default_redirect' );
+		$default_redirect = wpf_get_option( 'default_redirect' );
 
 		// Get redirect URL if one is set
 		if ( ! empty( $post_restrictions['redirect_url'] ) ) {
@@ -426,14 +432,14 @@ class WPF_Access_Control {
 
 		} elseif ( ! empty( $post_restrictions['redirect'] ) ) {
 
-			// Don't allow infinite redirect
+			// Don't allow infinite redirect.
 			if ( $post_restrictions['redirect'] == $post_id ) {
 				return false;
 			}
 
-			if ( 'home' == $post_restrictions['redirect'] ) {
+			if ( 'home' === $post_restrictions['redirect'] ) {
 				$redirect = home_url();
-			} elseif ( 'login' == $post_restrictions['redirect'] ) {
+			} elseif ( 'login' === $post_restrictions['redirect'] ) {
 				$redirect = wp_login_url();
 			} else {
 				$redirect = get_permalink( $post_restrictions['redirect'] );
@@ -531,7 +537,7 @@ class WPF_Access_Control {
 				return true;
 			}
 
-			$settings = wp_fusion()->settings->get( 'post_type_rules', array() );
+			$settings = wpf_get_option( 'post_type_rules', array() );
 			$settings = apply_filters( 'wpf_post_type_rules', $settings );
 
 			$redirect = false;
@@ -540,9 +546,9 @@ class WPF_Access_Control {
 
 				$redirect = get_permalink( $settings[ $queried_object->name ]['redirect'] );
 
-			} elseif ( ! empty( wp_fusion()->settings->get( 'default_redirect' ) ) ) {
+			} elseif ( ! empty( wpf_get_option( 'default_redirect' ) ) ) {
 
-				$redirect = wp_fusion()->settings->get( 'default_redirect' );
+				$redirect = wpf_get_option( 'default_redirect' );
 
 			}
 
@@ -575,7 +581,7 @@ class WPF_Access_Control {
 			$archive_restrictions = $taxonomy_rules[ $queried_object->term_id ];
 
 			$redirect         = false;
-			$default_redirect = wp_fusion()->settings->get( 'default_redirect' );
+			$default_redirect = wpf_get_option( 'default_redirect' );
 
 			// Get redirect URL if one is set
 			if ( ! empty( $archive_restrictions['redirect_url'] ) ) {
@@ -601,42 +607,42 @@ class WPF_Access_Control {
 
 			}
 
-			// Don't do anything for archives if no redirect specified
+			// Don't do anything for archives if no redirect specified.
 			return true;
 
 		} else {
 
-			// Single post redirects
+			// Single post redirects.
 			global $post;
 
 			if ( empty( $post ) || ! is_a( $post, 'WP_Post' ) ) {
 				return true;
 			}
 
-			// For inheriting restrictions from another post
+			// For inheriting restrictions from another post.
 			$post_id = apply_filters( 'wpf_redirect_post_id', $post->ID );
 
 			if ( empty( $post_id ) ) {
 				return true;
 			}
 
-			// If user can access, return without doing anything
+			// If user can access, return without doing anything.
 			if ( $this->user_can_access( $post_id ) ) {
 				return true;
 			}
 
-			// Allow search engines to see excerpts
-			if ( wp_fusion()->settings->get( 'seo_enabled' ) == true && $this->verify_bot() ) {
+			// Allow search engines to see excerpts.
+			if ( wpf_get_option( 'seo_enabled' ) && $this->verify_bot() ) {
 
 				add_filter( 'the_content', array( $this, 'seo_content_filter' ) );
 				return true;
 
 			}
 
-			// Return after login
+			// Return after login.
 			$this->set_return_after_login( $post_id );
 
-			// Get redirect URL for the post
+			// Get redirect URL for the post.
 			$redirect = $this->get_redirect( $post_id );
 
 			if ( ! empty( $redirect ) ) {
@@ -670,13 +676,13 @@ class WPF_Access_Control {
 
 	public function set_return_after_login( $post_id ) {
 
-		if ( wpf_is_user_logged_in() || wp_fusion()->settings->get( 'return_after_login' ) != true || empty( $post_id ) ) {
+		if ( wpf_is_user_logged_in() || ! wpf_get_option( 'return_after_login' ) || empty( $post_id ) ) {
 			return;
 		}
 
 		$post_id = apply_filters( 'wpf_return_after_login_post_id', $post_id );
 
-		setcookie( 'wpf_return_to', $post_id, time() + 5 * MINUTE_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
+		setcookie( 'wpf_return_to', absint( $post_id ), time() + 5 * MINUTE_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
 
@@ -689,7 +695,7 @@ class WPF_Access_Control {
 
 	public function restricted_content_filter( $content ) {
 
-		// Remove the filter so the call to do_shortcode() doesn't run another content filter (Reusable Blocks for Gutenberg)
+		// Remove the filter so the call to do_shortcode() doesn't run another content filter (Reusable Blocks for Gutenberg).
 
 		remove_filter( 'the_content', array( $this, 'restricted_content_filter' ) );
 
@@ -697,7 +703,7 @@ class WPF_Access_Control {
 
 		add_filter( 'the_content', array( $this, 'restricted_content_filter' ) );
 
-		return $content;
+		return wp_kses_post( $content );
 
 	}
 
@@ -712,7 +718,7 @@ class WPF_Access_Control {
 
 		$message = false;
 
-		if ( wp_fusion()->settings->get( 'per_post_messages' ) == true ) {
+		if ( wpf_get_option( 'per_post_messages' ) ) {
 
 			if ( false == $post_id ) {
 
@@ -732,7 +738,7 @@ class WPF_Access_Control {
 
 		if ( false === $message ) {
 
-			$message = wp_fusion()->settings->get( 'restricted_message' );
+			$message = wpf_get_option( 'restricted_message' );
 
 		}
 
@@ -740,7 +746,7 @@ class WPF_Access_Control {
 
 		$content = apply_filters( 'wpf_restricted_content_message', $content, $post_id );
 
-		return $content;
+		return wp_kses_post( $content );
 
 	}
 
@@ -789,7 +795,7 @@ class WPF_Access_Control {
 			return;
 		}
 
-		$lockout_tags = wp_fusion()->settings->get( 'lockout_tags', array() );
+		$lockout_tags = wpf_get_option( 'lockout_tags', array() );
 
 		if ( empty( $lockout_tags ) ) {
 			return;
@@ -801,7 +807,7 @@ class WPF_Access_Control {
 
 		if ( ! empty( $result ) ) {
 
-			$lockout_url = wp_fusion()->settings->get( 'lockout_redirect' );
+			$lockout_url = wpf_get_option( 'lockout_redirect' );
 
 			if ( empty( $lockout_url ) || ! wp_http_validate_url( $lockout_url ) ) {
 				$lockout_url = wp_login_url();
@@ -813,7 +819,7 @@ class WPF_Access_Control {
 
 			$lockout_urls = array( $lockout_url );
 
-			$additional_urls = wp_fusion()->settings->get( 'lockout_allowed_urls' );
+			$additional_urls = wpf_get_option( 'lockout_allowed_urls' );
 
 			if ( ! empty( $additional_urls ) ) {
 
@@ -857,45 +863,45 @@ class WPF_Access_Control {
 
 		$agent = 'no-agent-found';
 
-		if ( isset( $_SERVER['HTTP_USER_AGENT'] ) && ! empty( $_SERVER['HTTP_USER_AGENT'] ) ) {
-			$agent = strtolower( $_SERVER['HTTP_USER_AGENT'] );
+		if ( ! empty( $_SERVER['HTTP_USER_AGENT'] ) ) {
+			$agent = strtolower( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) );
 		}
 
 		$known_engines = array( 'google', 'bing', 'msn', 'yahoo', 'ask', 'facebook' );
 
 		foreach ( $known_engines as $engine ) {
 
-			if ( strpos( $agent, $engine ) !== false ) {
+			if ( strpos( $agent, $engine ) !== false && ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
 
 				$ip_to_check = $_SERVER['REMOTE_ADDR'];
 
-				// Lookup the host by this IP address
+				// Lookup the host by this IP address.
 				$hostname = gethostbyaddr( $ip_to_check );
 
-				if ( $engine == 'google' && ! preg_match( '#^.*\.googlebot\.com$#', $hostname ) ) {
+				if ( $engine === 'google' && ! preg_match( '#^.*\.googlebot\.com$#', $hostname ) ) {
 					break;
 				}
 
-				if ( $engine == 'facebook' && ! preg_match( '#^.*\.fbsv\.net$#', $hostname ) ) {
+				if ( $engine === 'facebook' && ! preg_match( '#^.*\.fbsv\.net$#', $hostname ) ) {
 					break;
 				}
 
-				if ( ( $engine == 'bing' || $engine == 'msn' ) && ! preg_match( '#^.*\.search\.msn\.com$#', $hostname ) ) {
+				if ( ( $engine === 'bing' || $engine === 'msn' ) && ! preg_match( '#^.*\.search\.msn\.com$#', $hostname ) ) {
 					break;
 				}
 
-				if ( $engine == 'ask' && ! preg_match( '#^.*\.ask\.com$#', $hostname ) ) {
+				if ( $engine === 'ask' && ! preg_match( '#^.*\.ask\.com$#', $hostname ) ) {
 					break;
 				}
 
 				// Even though yahoo is contracted with bingbot, they do still send out slurp to update some entries etc
-				if ( ( $engine == 'yahoo' || $engine == 'slurp' ) && ! preg_match( '#^.*\.crawl\.yahoo\.net$#', $hostname ) ) {
+				if ( ( $engine === 'yahoo' || $engine === 'slurp' ) && ! preg_match( '#^.*\.crawl\.yahoo\.net$#', $hostname ) ) {
 					break;
 				}
 
-				if ( $hostname !== false && $hostname != $ip_to_check ) {
+				if ( $hostname !== false && $hostname !== $ip_to_check ) {
 
-					// Do the reverse lookup
+					// Do the reverse lookup.
 					$ip_to_verify = gethostbyname( $hostname );
 
 					if ( $ip_to_verify != $hostname && $ip_to_verify == $ip_to_check ) {
@@ -905,7 +911,7 @@ class WPF_Access_Control {
 			}
 		}
 
-		// Otherwise return false
+		// Otherwise return false.
 		return false;
 
 	}
@@ -919,7 +925,7 @@ class WPF_Access_Control {
 
 	public function seo_content_filter( $content ) {
 
-		$length = wp_fusion()->settings->get( 'seo_excerpt_length' );
+		$length = wpf_get_option( 'seo_excerpt_length' );
 
 		if ( ! empty( $length ) ) {
 
@@ -947,9 +953,9 @@ class WPF_Access_Control {
 			return $items;
 		}
 
-		// General menu item hiding
+		// General menu item hiding.
 
-		if ( wp_fusion()->settings->get( 'hide_restricted' ) ) {
+		if ( wpf_get_option( 'hide_restricted' ) ) {
 
 			foreach ( $items as $key => $item ) {
 
@@ -983,7 +989,7 @@ class WPF_Access_Control {
 			}
 		}
 
-		// Specific item access rules
+		// Specific item access rules.
 
 		foreach ( $items as $key => $item ) {
 
@@ -995,7 +1001,7 @@ class WPF_Access_Control {
 
 				$item_id = $item->menu_item_parent;
 
-				// Also hide if parent is hidden
+				// Also hide if parent is hidden.
 				$settings = get_post_meta( $item_id, 'wpf-settings', true );
 
 				if ( empty( $settings ) ) {
@@ -1003,7 +1009,7 @@ class WPF_Access_Control {
 				}
 			}
 
-			// Skip for loggedout setting
+			// Skip for loggedout setting.
 			if ( isset( $settings['loggedout'] ) && ! wpf_is_user_logged_in() ) {
 				continue;
 			}
@@ -1017,7 +1023,6 @@ class WPF_Access_Control {
 				unset( $items[ $key ] );
 
 			}
-
 		}
 
 		return $items;
@@ -1038,13 +1043,13 @@ class WPF_Access_Control {
 			return $args;
 		}
 
-		// Stop this from breaking things if it's called before pluggable.php is loaded
+		// Stop this from breaking things if it's called before pluggable.php is loaded.
 
 		if ( ! function_exists( 'wp_get_current_user' ) ) {
 			return $args;
 		}
 
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+		if ( wpf_admin_override() ) { // if we're currently an admin and Exclude Admins is on.
 			return $args;
 		}
 
@@ -1101,7 +1106,7 @@ class WPF_Access_Control {
 
 		$is_eligible = true;
 
-		// Some queries use multiple post types
+		// Some queries use multiple post types.
 
 		if ( ! empty( $post_types ) && ! is_array( $post_types ) ) {
 			$post_types = array( $post_types );
@@ -1109,11 +1114,11 @@ class WPF_Access_Control {
 			$post_types = array();
 		}
 
-		// Don't run on non-public post types
+		// Don't run on non-public post types.
 
 		$public_post_types = array_values( get_post_types( array( 'public' => true ) ) );
 
-		// We'll also consider "any" to be a valid post type, during searches
+		// We'll also consider "any" to be a valid post type, during searches.
 
 		$public_post_types[] = 'any';
 
@@ -1121,15 +1126,15 @@ class WPF_Access_Control {
 			$is_eligible = false;
 		}
 
-		// See if the post type is enabled in the WPF settings
+		// See if the post type is enabled in the WPF settings.
 
 		if ( $is_eligible ) {
 
-			$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
+			$allowed_post_types = wpf_get_option( 'query_filter_post_types', array() );
 
 			if ( ! empty( $allowed_post_types ) ) {
 
-				// We'll also consider "any" to be a valid post type, during searches
+				// We'll also consider "any" to be a valid post type, during searches.
 
 				$allowed_post_types[] = 'any';
 
@@ -1175,23 +1180,20 @@ class WPF_Access_Control {
 		}
 
 		if ( doing_wpf_webhook() ) {
-			return false; // Don't want to hide any auto-enrollment content during a webhook
+			return false; // Don't want to hide any auto-enrollment content during a webhook.
 		}
 
-		// If the setting isn't enabled
-
-		if ( ! wp_fusion()->settings->get( 'hide_archives' ) ) {
+		// If the setting isn't enabled.
+		if ( ! wpf_get_option( 'hide_archives' ) ) {
 			return false;
 		}
 
-		// Don't bother doing anything if we're not restricting access to admins anyway
-
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) && current_user_can( 'manage_options' ) ) {
+		// Don't bother doing anything if we're not restricting access to admins anyway.
+		if ( wpf_admin_override() ) {
 			return false;
 		}
 
-		// See if the post type is eligible
-
+		// See if the post type is eligible.
 		$post_type = $query->get( 'post_type' );
 
 		if ( ! $this->is_post_type_eligible_for_query_filtering( $post_type ) ) {
@@ -1224,7 +1226,7 @@ class WPF_Access_Control {
 	 *
 	 * @since  3.37.6
 	 *
-	 * @param  array  $post_types The post types.
+	 * @param  array $post_types The post types.
 	 * @return array The restricted post IDs.
 	 */
 	public function get_restricted_posts( $post_types ) {
@@ -1235,7 +1237,7 @@ class WPF_Access_Control {
 
 		// Save a query if the user is an admin and admins are excluded.
 
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) && current_user_can( 'manage_options' ) ) {
+		if ( wpf_admin_override() ) {
 			return array();
 		}
 
@@ -1272,7 +1274,7 @@ class WPF_Access_Control {
 
 			$args = apply_filters( 'wpf_query_filter_get_posts_args', $args );
 
-			// Don't loop back on this or it will be bad
+			// Don't loop back on this or it will be bad.
 
 			remove_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
 
@@ -1280,7 +1282,7 @@ class WPF_Access_Control {
 
 			add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
 
-			if ( count( $post_ids ) == $args['posts_per_page'] ) {
+			if ( count( $post_ids ) === $args['posts_per_page'] ) {
 				wpf_log( 'notice', wpf_get_current_user_id(), 'Filter Queries is running on the <strong>' . $post_types[0] . '</strong> post type, but more than ' . $args['posts_per_page'] . ' posts were found with WP Fusion access rules. To protect the stability of your site, additional posts beyond the first ' . $args['posts_per_page'] . ' will not be filtered. This can be modified with the <code>wpf_query_filter_get_posts_args</code> filter.' );
 			}
 
@@ -1314,7 +1316,7 @@ class WPF_Access_Control {
 
 		if ( $this->should_filter_query( $query ) ) {
 
-			$setting = wp_fusion()->settings->get( 'hide_archives' );
+			$setting = wpf_get_option( 'hide_archives' );
 
 			/**
 			 * Query filtering mode.
@@ -1339,7 +1341,7 @@ class WPF_Access_Control {
 			} elseif ( 'advanced' == $setting ) {
 
 				$post_types         = $query->get( 'post_type' );
-				$allowed_post_types = wp_fusion()->settings->get( 'query_filter_post_types', array() );
+				$allowed_post_types = wpf_get_option( 'query_filter_post_types', array() );
 
 				if ( empty( $post_types ) && $query->is_search() ) {
 
@@ -1358,7 +1360,7 @@ class WPF_Access_Control {
 
 				if ( ! empty( $not_in ) ) {
 
-					// Maybe merge existing
+					// Maybe merge existing.
 
 					if ( ! empty( $query->get( 'post__not_in' ) ) ) {
 						$not_in = array_merge( $query->get( 'post__not_in' ), $not_in );
@@ -1368,7 +1370,7 @@ class WPF_Access_Control {
 
 					$query->set( 'wpf_filtering_query', true );
 
-					// If the query has a post__in, that will take priority, so we'll adjust for that here
+					// If the query has a post__in, that will take priority, so we'll adjust for that here.
 
 					if ( ! empty( $query->get( 'post__in' ) ) ) {
 						$in = array_diff( $query->get( 'post__in' ), $not_in );
@@ -1397,14 +1399,14 @@ class WPF_Access_Control {
 			return $posts;
 		}
 
-		// Woo variations bug fixed
-		if ( isset( $_REQUEST['action'] ) && 'woocommerce_load_variations' == $_REQUEST['action'] ) {
+		// Woo variations bug fixed.
+		if ( isset( $_REQUEST['action'] ) && 'woocommerce_load_variations' === $_REQUEST['action'] ) {
 			return $posts;
 		}
 
-		// Sometimes we may want to change the mode depending on the post type (for example bbPress topics)
+		// Sometimes we may want to change the mode depending on the post type (for example bbPress topics).
 
-		$setting = wp_fusion()->settings->get( 'hide_archives' );
+		$setting = wpf_get_option( 'hide_archives' );
 
 		/**
 		 * Query filtering mode.
@@ -1422,7 +1424,7 @@ class WPF_Access_Control {
 
 		$setting = apply_filters( 'wpf_query_filtering_mode', $setting, $query );
 
-		if ( 'standard' == $setting ) {
+		if ( 'standard' === $setting ) {
 
 			foreach ( $posts as $index => $post ) {
 
@@ -1465,7 +1467,7 @@ class WPF_Access_Control {
 
 	public function check_post_type( $access_meta, $post_id ) {
 
-		$settings = wp_fusion()->settings->get( 'post_type_rules', array() );
+		$settings = wpf_get_option( 'post_type_rules', array() );
 
 		$settings = apply_filters( 'wpf_post_type_rules', $settings );
 
@@ -1495,7 +1497,7 @@ class WPF_Access_Control {
 	 */
 	public function cache_can_access( $can_access, $user_id, $post_id = false ) {
 
-		if ( false !== $post_id && ! isset( $this->can_access_posts[ $post_id ] ) ) { // Don't set it twice for the same post ID
+		if ( false !== $post_id && ! isset( $this->can_access_posts[ $post_id ] ) ) { // Don't set it twice for the same post ID.
 			$this->can_access_posts[ $post_id ] = $can_access;
 		}
 
@@ -1519,7 +1521,7 @@ class WPF_Access_Control {
 
 		if ( isset( $_COOKIE['wpf_return_to_override'] ) ) {
 
-			$post_id = intval( $_COOKIE['wpf_return_to_override'] );
+			$post_id = absint( $_COOKIE['wpf_return_to_override'] );
 			$url     = get_permalink( $post_id );
 
 			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
@@ -1527,8 +1529,7 @@ class WPF_Access_Control {
 				setcookie( 'wpf_return_to_override', '', time() - ( 15 * 60 ) );
 				setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
 
-				wp_redirect( $url, 302, 'WP Fusion; Return after login' );
-				wp_redirect( $url );
+				wp_safe_redirect( $url, 302, 'WP Fusion; Return after login' );
 				exit();
 
 			}
@@ -1536,14 +1537,14 @@ class WPF_Access_Control {
 
 		if ( isset( $_COOKIE['wpf_return_to'] ) ) {
 
-			$post_id = intval( $_COOKIE['wpf_return_to'] );
+			$post_id = absint( $_COOKIE['wpf_return_to'] );
 			$url     = get_permalink( $post_id );
 
 			setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
 
 			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
 
-				wp_redirect( $url, 302, 'WP Fusion; Return after login' );
+				wp_safe_redirect( $url, 302, 'WP Fusion; Return after login' );
 				exit();
 
 			}
@@ -1564,7 +1565,7 @@ class WPF_Access_Control {
 			return $instance;
 		}
 
-		// If not logged in
+		// If not logged in.
 		if ( ! wpf_is_user_logged_in() ) {
 			return false;
 		}
@@ -1613,14 +1614,14 @@ class WPF_Access_Control {
 			}
 		}
 
-		// If admins are excluded from restrictions
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+		// If admins are excluded from restrictions.
+		if ( wpf_admin_override() ) {
 			$can_access = true;
 		}
 
 		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), false );
 
-		// Widget filter
+		// Widget filter.
 		$can_access = apply_filters( 'wpf_user_can_access_widget', $can_access, $instance, $widget );
 
 		if ( $can_access ) {
@@ -1649,12 +1650,12 @@ class WPF_Access_Control {
 
 		global $post;
 
-		// Don't apply tags if restricted
+		// Don't apply tags if restricted.
 		if ( ! wp_fusion()->access->user_can_access( $post->ID ) ) {
 			return;
 		}
 
-		if ( false == apply_filters( 'wpf_apply_tags_on_view', true, $post->ID ) ) {
+		if ( false === apply_filters( 'wpf_apply_tags_on_view', true, $post->ID ) ) {
 			return;
 		}
 
@@ -1667,7 +1668,7 @@ class WPF_Access_Control {
 
 		$settings = wp_parse_args( $settings, $defaults );
 
-		// Get term settings
+		// Get term settings.
 
 		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
 
@@ -1679,11 +1680,11 @@ class WPF_Access_Control {
 					continue;
 				}
 
-				// We need to un-hide hidden terms to see if the post is accessible
+				// We need to un-hide hidden terms to see if the post is accessible.
 				remove_action( 'get_terms_args', array( $this, 'get_terms_args' ), 10, 2 );
 
 				// Now we've determined the term should apply tags when viewed. Let's see if this post has that term
-				// This is better for performance than checking every term the post has
+				// This is better for performance than checking every term the post has.
 
 				$term = get_term( $term_id );
 
@@ -1700,7 +1701,7 @@ class WPF_Access_Control {
 
 			if ( empty( $settings['apply_delay'] ) ) {
 
-				// Won't do any good applying tags if they aren't logged in
+				// Won't do any good applying tags if they aren't logged in.
 
 				if ( ! wpf_is_user_logged_in() ) {
 					return;
@@ -1724,6 +1725,7 @@ class WPF_Access_Control {
 
 				$localize_data = array(
 					'ajaxurl' => admin_url( 'admin-ajax.php' ),
+					'nonce'   => wp_create_nonce( 'wpf_ajax_nonce' ),
 					'delay'   => $settings['apply_delay'],
 				);
 
@@ -1750,7 +1752,6 @@ class WPF_Access_Control {
 	 * @param  string $content The content.
 	 * @return string The content.
 	 */
-
 	public function test_the_content( $content ) {
 
 		if ( in_the_loop() ) {
@@ -1769,7 +1770,6 @@ class WPF_Access_Control {
 	 *
 	 * @return mixed HTML message.
 	 */
-
 	public function maybe_doing_it_wrong() {
 
 		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
@@ -1784,13 +1784,13 @@ class WPF_Access_Control {
 
 		$access_meta = $this->get_post_access_meta( $post->ID );
 
-		if ( true == $access_meta['lock_content'] && false === $this->can_filter_content && false === $this->get_redirect( $post->ID ) ) {
+		if ( true === $access_meta['lock_content'] && false === $this->can_filter_content && false === $this->get_redirect( $post->ID ) ) {
 
 			echo '<div style="padding: 10px 30px; border: 4px solid #ff0000; text-align: center; position: fixed; top: 32px; background: #fff; width: 100%; z-index: 999;">';
 
-			echo '<p>' . __( '<strong>Warning:</strong> You\'ve protected this content with WP Fusion, but <u>you did not specify a redirect</u> for when access is denied. <strong>This content will be publicly accessible</strong>. For more information, see <em><a href="https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-message-vs-redirect" target="_blank">Restricted Content Message vs Redirect</a></em>.', 'wp-fusion-lite' ) . '</p>';
+			echo '<p>' . wp_kses_post( '<strong>Warning:</strong> You\'ve protected this content with WP Fusion, but <u>you did not specify a redirect</u> for when access is denied. <strong>This content will be publicly accessible</strong>. For more information, see <em><a href="https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-message-vs-redirect" target="_blank">Restricted Content Message vs Redirect</a></em>.', 'wp-fusion-lite' ) . '</p>';
 
-			echo '<p><em><small>(' . __( 'This message is only shown to admins and won\'t be visible to regular visitors. To remove this message, either specify a redirect, or disable WP Fusion protection on this content.', 'wp-fusion-lite' ) . ')</small></em></p>';
+			echo '<p><em><small>(' . esc_html__( 'This message is only shown to admins and won\'t be visible to regular visitors. To remove this message, either specify a redirect, or disable WP Fusion protection on this content.', 'wp-fusion-lite' ) . ')</small></em></p>';
 
 			echo '</div>';
 
@@ -1813,7 +1813,7 @@ class WPF_Access_Control {
 
 	public function rewrite_permalinks( $url, $post, $leavename ) {
 
-		// Don't run on admin
+		// Don't run on admin.
 		if ( is_admin() ) {
 			return $url;
 		}
@@ -1822,7 +1822,7 @@ class WPF_Access_Control {
 			$post = $post->ID;
 		}
 
-		if ( $this->user_can_access( $post ) == true ) {
+		if ( $this->user_can_access( $post ) ) {
 			return $url;
 		}
 

@@ -21,12 +21,11 @@ class WPF_Platformly_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_platformly_header_begin', array( $this, 'show_field_platformly_header_begin' ), 10, 2 );
-		add_action( 'show_field_platformly_key_end', array( $this, 'show_field_platformly_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -73,14 +72,14 @@ class WPF_Platformly_Admin {
 			'post_fields' => array( 'platformly_key' )
 		);
 
-		if( $settings['connection_configured'] == true && wp_fusion()->settings->get('crm') == 'platformly' ) {
+		if( $settings['connection_configured'] == true && wpf_get_option('crm') == 'platformly' ) {
 
 			$new_settings['platformly_project'] = array(
 				'title'   => __( 'Project', 'wp-fusion-lite' ),
 				'std'     => false,
 				'type'    => 'select',
 				'section' => 'setup',
-				'choices' => wp_fusion()->settings->get( 'available_projects' ),
+				'choices' => wpf_get_option( 'available_projects' ),
 				'desc'	  => 'After changing projects you will need to Resynchronize (above) to load the tags and fields for that project.'
 			);
 
@@ -132,35 +131,13 @@ class WPF_Platformly_Admin {
 	public function show_field_platformly_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
-
-	}
-
-	/**
-	 * Close out mailerlight section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_platformly_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
+		$crm = wpf_get_option( 'crm' );
 
 		if( wp_fusion()->crm->slug == 'platformly' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 
-		echo '</div>'; // close #platformly div
-		echo '<table class="form-table">';
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -173,6 +150,8 @@ class WPF_Platformly_Admin {
 
 	public function test_connection() {
 
+		check_ajax_referer( 'wpf_settings_nonce' );
+
 		$api_key = sanitize_text_field( $_POST['platformly_key'] );
 
 		$connection = $this->crm->connect( $api_key, true );
@@ -183,11 +162,11 @@ class WPF_Platformly_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['platformly_key']        = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

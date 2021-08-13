@@ -107,7 +107,7 @@ class WPF_Ontraport {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		$options = wp_fusion()->settings->get( 'ontraport_dropdown_options', array() );
+		$options = wpf_get_option( 'ontraport_dropdown_options', array() );
 
 		if ( 'datepicker' == $field_type || 'date' == $field_type && is_numeric( $value ) ) {
 
@@ -210,27 +210,27 @@ class WPF_Ontraport {
 
 	public function create_new_tags( $tags ) {
 
-		foreach( $tags as $i => $tag_id ) {
+		foreach ( $tags as $i => $tag_id ) {
 
-			if( is_numeric( $tag_id ) || empty( $tag_id ) ) {
+			if ( is_numeric( $tag_id ) || empty( $tag_id ) ) {
 				continue;
 			}
 
 			// Remove the tag with a label from the list of IDs
 			unset( $tags[ $i ] );
 
-			$available_tags = wp_fusion()->settings->get( 'available_tags' );
+			$available_tags = wpf_get_option( 'available_tags' );
 
-			if( isset( $available_tags[ $tag_id ] ) ) {
+			if ( isset( $available_tags[ $tag_id ] ) ) {
 				unset( $available_tags[ $tag_id ] );
 			}
 
-			$params = $this->get_params();
+			$params         = $this->get_params();
 			$params['body'] = json_encode( array( 'tag_name' => $tag_id ) );
-			$response = wp_remote_post( 'https://api.ontraport.com/1/Tags', $params );
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$response       = wp_safe_remote_post( 'https://api.ontraport.com/1/Tags', $params );
+			$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $tags;
 			}
 
@@ -255,20 +255,19 @@ class WPF_Ontraport {
 
 	public function set_tracking_cookie() {
 
-		if( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( wpf_get_option( 'site_tracking' ) == false ) {
 			return;
 		}
 
-		if( wpf_is_user_logged_in() && ! isset( $_COOKIE['contact_id'] ) ) {
+		if ( wpf_is_user_logged_in() && ! isset( $_COOKIE['contact_id'] ) ) {
 
 			$contact_id = wp_fusion()->user->get_contact_id();
 
-			if( ! empty( $contact_id ) ) {
+			if ( ! empty( $contact_id ) ) {
 
 				setcookie( 'contact_id', $contact_id, time() + DAY_IN_SECONDS * 180, COOKIEPATH, COOKIE_DOMAIN );
 
 			}
-
 		}
 
 	}
@@ -282,15 +281,15 @@ class WPF_Ontraport {
 
 	public function tracking_code_output() {
 
-		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
-		$account_id = wp_fusion()->settings->get('account_id');
+		$account_id = wpf_get_option( 'account_id' );
 
-		echo "<!-- Ontraport -->";
-		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . wp_fusion()->settings->get('account_id') . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
-		echo "<!-- end Ontraport -->";
+		echo '<!-- Ontraport -->';
+		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . esc_js( wpf_get_option( 'account_id' ) ) . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
+		echo '<!-- end Ontraport -->';
 
 	}
 
@@ -325,7 +324,7 @@ class WPF_Ontraport {
 
 							$args['body'] = json_encode( $data );
 
-							return wp_remote_request( $url, $args );
+							return wp_safe_remote_request( $url, $args );
 						}
 					}
 				} elseif ( 'Invalid Contact ID' == $body && ! empty( $args['body'] ) ) {
@@ -344,7 +343,7 @@ class WPF_Ontraport {
 
 							$args['body'] = json_encode( $data );
 
-							return wp_remote_request( $url, $args );
+							return wp_safe_remote_request( $url, $args );
 						}
 					}
 				}
@@ -374,8 +373,8 @@ class WPF_Ontraport {
 
 		// Get saved data from DB
 		if ( empty( $api_url ) || empty( $api_key ) ) {
-			$api_url = wp_fusion()->settings->get( 'op_url' );
-			$api_key = wp_fusion()->settings->get( 'op_key' );
+			$api_url = wpf_get_option( 'op_url' );
+			$api_key = wpf_get_option( 'op_key' );
 		}
 
 		$this->params = array(
@@ -411,10 +410,10 @@ class WPF_Ontraport {
 			$this->get_params( $api_url, $api_key );
 		}
 
-		$request  = "https://api.ontraport.com/1/objects/meta?format=byId&objectID=" . $this->object_type;
-		$response = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.ontraport.com/1/objects/meta?format=byId&objectID=' . $this->object_type;
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -462,12 +461,12 @@ class WPF_Ontraport {
 		$offset         = 0;
 		$continue       = true;
 
-		while( $continue == true ) {
+		while ( $continue == true ) {
 
 			$request  = 'https://api.ontraport.com/1/objects?objectID=14&start=' . $offset;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -475,10 +474,9 @@ class WPF_Ontraport {
 
 			foreach ( $body_json['data'] as $row ) {
 
-				if( $row['object_type_id'] == $this->object_type ) {
+				if ( $row['object_type_id'] == $this->object_type ) {
 					$available_tags[ $row['tag_id'] ] = $row['tag_name'];
 				}
-
 			}
 
 			if ( count( $body_json['data'] ) < 50 ) {
@@ -511,10 +509,10 @@ class WPF_Ontraport {
 			'unique_id' => 'Unique ID (Read Only)', // adding this manually
 		);
 
-		$request    = "https://api.ontraport.com/1/objects/meta?format=byId&objectID=" . $this->object_type;
-		$response   = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.ontraport.com/1/objects/meta?format=byId&objectID=' . $this->object_type;
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -562,14 +560,14 @@ class WPF_Ontraport {
 		}
 
 		$contact_info = array();
-		$request      = "https://api.ontraport.com/1/object/getByEmail?objectID=" . $this->object_type . "&email=" . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$request      = 'https://api.ontraport.com/1/object/getByEmail?objectID=' . $this->object_type . '&email=' . urlencode( $email_address );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['data'] ) ) {
 			return false;
@@ -593,10 +591,10 @@ class WPF_Ontraport {
 		}
 
 		$contact_info = array();
-		$request      = "https://api.ontraport.com/1/object?objectID=" . $this->object_type . "&id=" . $contact_id;
-		$response     = wp_remote_get( $request, $this->params );
+		$request      = 'https://api.ontraport.com/1/object?objectID=' . $this->object_type . '&id=' . $contact_id;
+		$response     = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -635,7 +633,7 @@ class WPF_Ontraport {
 		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $post_data );
 
-		$response = wp_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
+		$response = wp_safe_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -668,7 +666,7 @@ class WPF_Ontraport {
 		$params['method'] = 'DELETE';
 		$params['body']   = json_encode( $post_data );
 
-		$response = wp_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
+		$response = wp_safe_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -700,28 +698,28 @@ class WPF_Ontraport {
 			return false;
 		}
 
-		// Referral data
+		// Referral data.
 		if ( isset( $_COOKIE['aff_'] ) ) {
-			$data['freferrer'] = $_COOKIE['aff_'];
-			$data['lreferrer'] = $_COOKIE['aff_'];
+			$data['freferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
+			$data['lreferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
 		}
 
-		// To automatically update Campaign / Lead Source / Medium relational fields
+		// To automatically update Campaign / Lead Source / Medium relational fields.
 		$data['use_utm_names'] = true;
 
 		if ( $this->object_type == 0 ) {
 			$url = 'https://api.ontraport.com/1/Contacts/saveorupdate';
 		} else {
-			$url = 'https://api.ontraport.com/1/objects';
+			$url              = 'https://api.ontraport.com/1/objects';
 			$data['objectID'] = $this->object_type;
 		}
 
-		$params           = $this->params;
-		$params['body']   = json_encode( $data );
+		$params         = $this->params;
+		$params['body'] = json_encode( $data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -760,7 +758,7 @@ class WPF_Ontraport {
 
 		// Referral data
 		if ( isset( $_COOKIE['aff_'] ) ) {
-			$data['lreferrer'] = $_COOKIE['aff_'];
+			$data['lreferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
 		}
 
 		$data['objectID'] = $this->object_type;
@@ -775,7 +773,7 @@ class WPF_Ontraport {
 		$params['body']   = json_encode( $data );
 
 		$request  = 'https://api.ontraport.com/1/objects';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -797,16 +795,16 @@ class WPF_Ontraport {
 			$this->get_params();
 		}
 
-		$url      = "https://api.ontraport.com/1/object?objectID=" . $this->object_type . "&id=" . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$url      = 'https://api.ontraport.com/1/object?objectID=' . $this->object_type . '&id=' . $contact_id;
+		$response = wp_safe_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-		$options        = wp_fusion()->settings->get( 'ontraport_dropdown_options', array() );
+		$contact_fields = wpf_get_option( 'contact_fields' );
+		$options        = wpf_get_option( 'ontraport_dropdown_options', array() );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -823,7 +821,6 @@ class WPF_Ontraport {
 
 				$user_meta[ $field_id ] = $value;
 			}
-
 		}
 
 		return $user_meta;
@@ -844,15 +841,15 @@ class WPF_Ontraport {
 		}
 
 		$contact_ids = array();
-		$offset = 0;
-		$proceed = true;
+		$offset      = 0;
+		$proceed     = true;
 
-		while($proceed == true) {
+		while ( $proceed == true ) {
 
-			$url     = "https://api.ontraport.com/1/objects/tag?objectID=" . $this->object_type . "&tag_id=" . $tag . "&range=50&start=" . $offset . "&listFields=object_id";
-			$results = wp_remote_get( $url, $this->params );
+			$url     = 'https://api.ontraport.com/1/objects/tag?objectID=' . $this->object_type . '&tag_id=' . $tag . '&range=50&start=' . $offset . '&listFields=object_id';
+			$results = wp_safe_remote_get( $url, $this->params );
 
-			if( is_wp_error( $results ) ) {
+			if ( is_wp_error( $results ) ) {
 				return $results;
 			}
 
@@ -864,10 +861,9 @@ class WPF_Ontraport {
 
 			$offset = $offset + 50;
 
-			if(count($body_json['data']) < 50) {
+			if ( count( $body_json['data'] ) < 50 ) {
 				$proceed = false;
 			}
-
 		}
 
 		return $contact_ids;

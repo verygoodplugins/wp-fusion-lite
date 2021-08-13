@@ -21,12 +21,11 @@ class WPF_Flexie_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_flexie_header_begin', array( $this, 'show_field_flexie_header_begin' ), 10, 2 );
-		add_action( 'show_field_flexie_key_end', array( $this, 'show_field_flexie_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -62,7 +61,7 @@ class WPF_Flexie_Admin {
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'	  => __( 'Before attempting to connect to Flexie, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' )
+			'desc'    => __( 'Before attempting to connect to Flexie, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' ),
 		);
 
 		$new_settings['flexie_url'] = array(
@@ -70,7 +69,7 @@ class WPF_Flexie_Admin {
 			'desc'    => __( 'Enter the URL for your Flexie account (like http://website.flexie.io/).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['flexie_key'] = array(
@@ -79,7 +78,7 @@ class WPF_Flexie_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'flexie_key', 'flexie_url' )
+			'post_fields' => array( 'flexie_key', 'flexie_url' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -125,8 +124,8 @@ class WPF_Flexie_Admin {
 	public function show_field_flexie_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -140,7 +139,7 @@ class WPF_Flexie_Admin {
 	public function show_field_flexie_key_end( $id, $field ) {
 
 		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
+			echo '<span class="description">' . esc_html( $field['desc'] ) . '</span>';
 		}
 		echo '</td>';
 		echo '</tr>';
@@ -149,7 +148,7 @@ class WPF_Flexie_Admin {
 		echo '</div>'; // close #flexie div
 
 		// Hide Import tab (for now)
-		if( wp_fusion()->crm->slug == 'flexie' ) {
+		if ( wp_fusion()->crm->slug == 'flexie' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 
@@ -166,9 +165,10 @@ class WPF_Flexie_Admin {
 
 	public function test_connection() {
 
-		$flexie_url       = esc_url_raw( $_POST['flexie_url'] );
-		$api_key		  = sanitize_text_field( $_POST['flexie_key'] );
-	
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$flexie_url = isset( $_POST['flexie_url'] ) ? esc_url_raw( wp_unslash( $_POST['flexie_url'] ) ) : false;
+		$api_key    = isset( $_POST['flexie_key'] ) ? sanitize_text_field( wp_unslash( $_POST['flexie_key'] ) ) : false;
 
 		$connection = $this->crm->connect( $flexie_url, $api_key, true );
 
@@ -178,12 +178,12 @@ class WPF_Flexie_Admin {
 
 		} else {
 
-			$options                               = wp_fusion()->settings->get_all();
-			$options['flexie_url']				   = $flexie_url;
-			$options['flexie_key']		           = $api_key;
-			$options['crm']                        = $this->slug;
-			$options['connection_configured']      = true;
-			wp_fusion()->settings->set_all( $options );
+			$options                          = array();
+			$options['flexie_url']            = $flexie_url;
+			$options['flexie_key']            = $api_key;
+			$options['crm']                   = $this->slug;
+			$options['connection_configured'] = true;
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

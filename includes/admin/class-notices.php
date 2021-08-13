@@ -4,8 +4,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
+/**
+ * Handles registering, displaying, and dismissing notices in the admin.
+ *
+ * @since 2.0.0
+ */
 class WPF_Admin_Notices {
 
+	/**
+	 * Constructs a new instance.
+	 *
+	 * @since 2.0.0
+	 */
 	public function __construct() {
 
 		add_action( 'admin_notices', array( $this, 'plugin_activation' ) );
@@ -21,18 +31,15 @@ class WPF_Admin_Notices {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function plugin_activation() {
 
-		if ( ! wp_fusion()->settings->get( 'connection_configured' ) && 'settings_page_wpf-settings' !== get_current_screen()->id ) {
+		if ( ! wpf_get_option( 'connection_configured' ) && 'settings_page_wpf-settings' !== get_current_screen()->id ) {
 
-			$out  = '<div id="wpf-needs-setup" data-notice="wpf-needs-setup" class="notice notice-warning wpf-notice is-dismissible">';
-			$out .= '<p>';
-			$out .= sprintf( __( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s</a>.', 'wp-fusion-lite' ), '<a href="' . get_admin_url() . '/options-general.php?page=wpf-settings#setup">', '</a>' );
-			$out .= '</p>';
-			$out .= '</div>';
-
-			echo $out;
+			echo '<div id="wpf-needs-setup" data-notice="wpf-needs-setup" class="notice notice-warning wpf-notice is-dismissible">';
+			echo '<p>';
+			echo sprintf( esc_html__( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( get_admin_url() . '/options-general.php?page=wpf-settings#setup' ) . '">', '</a>' );
+			echo '</p>';
+			echo '</div>';
 
 		}
 
@@ -44,26 +51,25 @@ class WPF_Admin_Notices {
 	 * @since 3.33.4
 	 * @return mixed HTML output
 	 */
-
 	public function show_compatibility_notices() {
 
 		$notices = apply_filters( 'wpf_compatibility_notices', array() );
 
 		foreach ( $notices as $id => $message ) {
 
-			if ( wp_fusion()->settings->get( "dismissed_{$id}" ) ) {
+			if ( wpf_get_option( "dismissed_{$id}" ) ) {
 				continue;
 			}
 
-			echo '<div id="' . $id . '-notice" data-notice="' . $id . '" class="notice notice-warning wpf-notice is-dismissible"><p>' . $message . '</p></div>';
+			echo '<div id="' . esc_attr( $id ) . '-notice" data-notice="' . esc_attr( $id ) . '" class="notice notice-warning wpf-notice is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 
 		}
 
-		if ( wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( wpf_get_option( 'staging_mode' ) ) {
 
 			echo '<div class="notice notice-warning wpf-notice"><p>';
 
-			printf( __( '<strong>Heads up:</strong> WP Fusion is currently in Staging Mode. No data will be sent to or loaded from %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name );
+			printf( esc_html__( '<strong>Heads up:</strong> WP Fusion is currently in Staging Mode. No data will be sent to or loaded from %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) );
 
 			echo '</p></div>';
 
@@ -77,10 +83,15 @@ class WPF_Admin_Notices {
 	 * @access public
 	 * @return void
 	 */
-
 	public function dismiss_notice() {
 
-		wp_fusion()->settings->set( "dismissed_{$_POST['id']}", true );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		if ( isset( $_POST['id'] ) ) {
+			$id = absint( $_POST['id'] );
+		}
+
+		wp_fusion()->settings->set( "dismissed_{$id}", true );
 
 		wp_die();
 
@@ -88,4 +99,4 @@ class WPF_Admin_Notices {
 
 }
 
-new WPF_Admin_Notices;
+new WPF_Admin_Notices();

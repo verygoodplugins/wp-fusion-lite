@@ -21,12 +21,11 @@ class WPF_ConvertFox_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_convertfox_header_begin', array( $this, 'show_field_convertfox_header_begin' ), 10, 2 );
-		add_action( 'show_field_convertfox_key_end', array( $this, 'show_field_convertfox_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -118,30 +117,8 @@ class WPF_ConvertFox_Admin {
 	public function show_field_convertfox_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
-
-	}
-
-	/**
-	 * Close out Convertfox section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_convertfox_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #capsule div
-		echo '<table class="form-table">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -154,7 +131,9 @@ class WPF_ConvertFox_Admin {
 
 	public function test_connection() {
 
-		$api_key = sanitize_text_field( $_POST['convertfox_key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$api_key = isset( $_POST['convertfox_key'] ) ? sanitize_text_field( wp_unslash( $_POST['convertfox_key'] ) ) : false;
 
 		$connection = $this->crm->connect( $api_key, true );
 
@@ -164,11 +143,11 @@ class WPF_ConvertFox_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['convertfox_key']        = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

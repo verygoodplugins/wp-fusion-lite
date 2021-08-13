@@ -7,8 +7,9 @@ jQuery(document).ready(function($){
 			if( wpf_ajax.hasOwnProperty( 'tags' ) ) {
 
 				var data = {
-					'action'	 : 'apply_tags',
-					'tags'		 : wpf_ajax.tags
+					'action'	  : 'apply_tags',
+					'tags'		  : wpf_ajax.tags,
+					'_ajax_nonce' : wpf_ajax.nonce,
 				};
 
 				$.post(wpf_ajax.ajaxurl, data);
@@ -18,8 +19,9 @@ jQuery(document).ready(function($){
 			if( wpf_ajax.hasOwnProperty( 'remove' ) ) {
 
 				var data = {
-					'action'	 : 'remove_tags',
-					'tags'		 : wpf_ajax.remove
+					'action'	  : 'remove_tags',
+					'tags'		  : wpf_ajax.remove,
+					'_ajax_nonce' : wpf_ajax.nonce,
 				};
 
 				$.post(wpf_ajax.ajaxurl, data);
@@ -37,8 +39,9 @@ jQuery(document).ready(function($){
 			var tags = $(this).attr('data-apply-tags');
 
 			var data = {
-				'action'	 : 'apply_tags',
-				'tags'		 : tags.split(',')
+				'action'	  : 'apply_tags',
+				'tags'		  : tags.split(','),
+				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
 			$.post(wpf_ajax.ajaxurl, data);
@@ -53,8 +56,9 @@ jQuery(document).ready(function($){
 			var tags = $(this).attr('data-remove-tags');
 
 			var data = {
-				'action'	 : 'remove_tags',
-				'tags'		 : tags.split(',')
+				'action'	  : 'remove_tags',
+				'tags'		  : tags.split(','),
+				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
 			$.post(wpf_ajax.ajaxurl, data);

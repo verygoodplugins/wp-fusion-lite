@@ -45,8 +45,9 @@ jQuery(document).ready(function($){
 	    	var button = $(this);
 
 	        var data = {
-				'action'	: 'import_users',
-				'title'		: 'Contacts'
+				'action'	  : 'import_users',
+				'_ajax_nonce' : wpf_ajax.nonce,
+				'title'		  : 'Contacts'
 			};
 
 			var args = {
@@ -68,8 +69,9 @@ jQuery(document).ready(function($){
 			if( confirm( wpf_ajax.strings.deleteImportGroup ) == true) {
 
 		        var data = {
-					'action'	: 'delete_import_group',
-					'group_id'	: button.data('delete')
+					'action'	  : 'delete_import_group',
+					'_ajax_nonce' : wpf_ajax.nonce,
+					'group_id'	  : button.data('delete')
 				};
 
 				$.post(ajaxurl, data, function(response) {
@@ -104,7 +106,8 @@ jQuery(document).ready(function($){
 			console.log( 'Doing alternate batch request with completed ' + completed );
 
 			var data = {
-				'action' : 'wpf_background_process',
+				'action'      : 'wpf_background_process',
+				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
 			$.post(ajaxurl, data, function() {
@@ -148,8 +151,9 @@ jQuery(document).ready(function($){
 			var key = $('#wpf-batch-status').attr( 'data-key' );
 
 			var data = {
-				'action'	: 'wpf_batch_status',
-				'key'       : key,
+				'action'	  : 'wpf_batch_status',
+				'_ajax_nonce' : wpf_ajax.nonce,
+				'key'         : key,
 			};
 
 			$.post(ajaxurl, data, function(response) {
@@ -243,8 +247,9 @@ jQuery(document).ready(function($){
 			button.attr('disabled', 'disabled').html('Cancelling');
 
 			var data = {
-				'action'	: 'wpf_batch_cancel',
-				'key'       : $('#wpf-batch-status').attr( 'data-key' ),
+				'action'	  : 'wpf_batch_cancel',
+				'_ajax_nonce' : wpf_ajax.nonce,
+				'key'         : $('#wpf-batch-status').attr( 'data-key' ),
 			};
 
 			attempts = 0; // stop the alt method
@@ -272,20 +277,19 @@ jQuery(document).ready(function($){
 			button.html('<span class="dashicons dashicons-update-alt wpf-spin"></span>' + wpf_ajax.strings.beginningProcessing.replace( 'ACTIONTITLE', action.title ));
 			 
 			var data = {
-				'action'	: 'wpf_batch_init',
-				'hook'		: action.action,
-				'args'		: args
+				'action'	  : 'wpf_batch_init',
+				'hook'		  : action.action,
+				'args'		  : args,
+				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
 			$.post(ajaxurl, data, function( response ) {
 
-				var items = JSON.parse( response.data );
-
 				console.log('START batch with items:');
-				console.dir( items );
+				console.dir( response.data );
 
 				button.html('Background Task Created');
-				getBatchStatus( $(items).length, action.title );
+				getBatchStatus( $(response.data).length, action.title );
 
 			});
 
@@ -405,7 +409,8 @@ jQuery(document).ready(function($){
 			button.find('span.text').html( wpf_ajax.strings.syncTags );
 
 			var data = {
-				'action'	: 'wpf_sync'
+				'action'	  : 'wpf_sync',
+				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
 			$.post(ajaxurl, data, function(response) {
@@ -424,6 +429,7 @@ jQuery(document).ready(function($){
 
 						var data = {
 							'action'	: 'wpf_batch_init',
+							'_ajax_nonce' : wpf_ajax.nonce,
 							'hook'		: 'users_sync'
 						};
 
@@ -465,7 +471,8 @@ jQuery(document).ready(function($){
 	        var crm = $(crmContainer).attr('data-crm');
 
 	        var data = {
-				'action'	: 'wpf_test_connection_' + crm
+				'action'	  : 'wpf_test_connection_' + crm,
+				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
 			// Add the submitted data
@@ -610,8 +617,9 @@ jQuery(document).ready(function($){
 	        var button = $(this);
 
 	        var data = {
-				'action'	: $(this).attr('data-action'),
-				'key'		: $('#license_key').val()
+				'action'	  : $(this).attr('data-action'),
+				'_ajax_nonce' : wpf_ajax.nonce,
+				'key'		  : $('#license_key').val()
 			};
 
 			$.post(ajaxurl, data, function(response) {
@@ -647,8 +655,9 @@ jQuery(document).ready(function($){
 		$( '.wpf-notice button' ).on( "click", function(event) {
 	
 	        var data = {
-				'action' : 'dismiss_wpf_notice',
-				'id'     : $(this).closest('div').attr('data-notice')
+				'action'      : 'dismiss_wpf_notice',
+				'_ajax_nonce' : wpf_ajax.nonce,
+				'id'          : $(this).closest('div').attr('data-notice')
 			};
 
 			$.post(ajaxurl, data);

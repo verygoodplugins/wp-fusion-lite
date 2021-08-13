@@ -47,15 +47,19 @@ class WPF_Shortcodes {
 				'not'        => '',
 				'method'     => '',
 				'logged_out' => false,
-			), $atts, 'wpf'
+			),
+			$atts,
+			'wpf'
 		);
 
+		$atts = array_map( 'sanitize_text_field', $atts );
+
 		if ( false !== strpos( $atts['tag'], '“' ) || false !== strpos( $atts['not'], '“' ) ) {
-			return '<pre>' . __( '<strong>Oops!</strong> Curly quotes were found in a shortcode parameter of the [wpf] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+			return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [wpf] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
 		}
 
-		// Hide content for non-logged in users
-		if ( ! wpf_is_user_logged_in() && $atts['logged_out'] == false ) {
+		// Hide content for non-logged in users.
+		if ( ! wpf_is_user_logged_in() && false === $atts['logged_out'] ) {
 			return false;
 		}
 
@@ -98,9 +102,9 @@ class WPF_Shortcodes {
 				}
 			}
 
-			// If we're overriding
-			if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
-				if ( in_array( $current_filter, $tags ) ) {
+			// If we're overriding.
+			if ( get_query_var( 'wpf_tag' ) ) {
+				if ( in_array( get_query_var( 'wpf_tag' ), $tags ) ) {
 					$proceed_tag = true;
 				}
 			}
@@ -131,9 +135,9 @@ class WPF_Shortcodes {
 				}
 			}
 
-			// If we're overriding
-			if ( $current_filter = get_query_var( 'wpf_tag' ) ) {
-				if ( in_array( $current_filter, $tags ) ) {
+			// If we're overriding.
+			if ( get_query_var( 'wpf_tag' ) ) {
+				if ( in_array( get_query_var( 'wpf_tag' ), $tags ) ) {
 					return false;
 				}
 			}
@@ -141,16 +145,16 @@ class WPF_Shortcodes {
 			$proceed_not = true;
 		}
 
-		// Check for else condition
+		// Check for else condition.
 
 		if ( false !== strpos( $content, '[else]' ) ) {
 
-			// Clean up old [/else] from pre 3.33.19
+			// Clean up old [/else] from pre 3.33.19.
 			$content = str_replace( '[/else]', '', $content );
 
 			$else_content = explode( '[else]', $content );
 
-			// Remove the else content from the main content
+			// Remove the else content from the main content.
 			$content      = $else_content[0];
 			$else_content = $else_content[1];
 
@@ -164,14 +168,14 @@ class WPF_Shortcodes {
 
 		global $post;
 
-		// If admins are excluded from restrictions
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+		// If admins are excluded from restrictions.
+		if ( wpf_admin_override() ) {
 			$can_access = true;
 		}
 
 		$can_access = apply_filters( 'wpf_user_can_access', $can_access, wpf_get_current_user_id(), false );
 
-		if ( $can_access == true ) {
+		if ( true === $can_access ) {
 
 			return do_shortcode( shortcode_unautop( $content ) );
 
@@ -228,11 +232,14 @@ class WPF_Shortcodes {
 				'field'       => '',
 				'date-format' => '',
 				'format'      => '',
-			), $atts
+			),
+			$atts
 		);
 
+		$atts = array_map( 'sanitize_text_field', $atts );
+
 		if ( false !== strpos( $atts['field'], '“' ) || false !== strpos( $atts['format'], '“' ) ) {
-			return '<pre>' . __( '<strong>Oops!</strong> Curly quotes were found in a shortcode parameter of the [user_meta] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+			return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [user_meta] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
 		}
 
 		if ( empty( $atts['field'] ) ) {
@@ -243,12 +250,11 @@ class WPF_Shortcodes {
 			return do_shortcode( $content );
 		}
 
-		if ( $atts['field'] == 'user_id' ) {
+		if ( 'user_id' === $atts['field'] ) {
 			$atts['field'] = 'ID';
 		}
 
-		$user_id = wpf_get_current_user_id();
-
+		$user_id   = wpf_get_current_user_id();
 		$user_data = get_userdata( $user_id );
 
 		if ( is_object( $user_data ) && property_exists( $user_data->data, $atts['field'] ) ) {
@@ -261,8 +267,7 @@ class WPF_Shortcodes {
 
 		}
 
-		// Maybe refresh the data once from the CRM if the key doesn't exist at all
-
+		// Maybe refresh the data once from the CRM if the key doesn't exist at all.
 		if ( empty( $value ) && wp_fusion()->crm_base->is_field_active( $atts['field'] ) ) {
 
 			if ( ! metadata_exists( 'user', $user_id, $atts['field'] ) ) {
@@ -280,7 +285,7 @@ class WPF_Shortcodes {
 
 		$value = apply_filters( 'wpf_user_meta_shortcode_value', $value, $atts['field'] );
 
-		// Prevent array-to-string conversion warnings when this value is an array
+		// Prevent array-to-string conversion warnings when this value is an array.
 
 		if ( is_array( $value ) ) {
 			$value = implode( ', ', $value );
@@ -290,16 +295,16 @@ class WPF_Shortcodes {
 
 			if ( is_numeric( $value ) ) {
 
-				$value = date( $atts['date-format'], $value );
+				$value = gmdate( $atts['date-format'], $value );
 
 			} else {
 
-				$value = date( $atts['date-format'], strtotime( $value ) );
+				$value = gmdate( $atts['date-format'], strtotime( $value ) );
 
 			}
 		}
 
-		if ( $atts['format'] == 'ucwords' ) {
+		if ( 'ucwords' === $atts['format'] ) {
 			$value = ucwords( $value );
 		}
 
@@ -326,17 +331,18 @@ class WPF_Shortcodes {
 
 		$atts = shortcode_atts( $defaults, $atts, 'wpf_user_can_access' );
 
-		if ( false == $atts['id'] ) {
+		if ( false === $atts['id'] ) {
 			$atts['id'] = get_the_ID();
+		} else {
+			$atts['id'] = absint( $atts['id'] );
 		}
 
-		// Check for else condition
-
+		// Check for else condition.
 		if ( false !== strpos( $content, '[else]' ) ) {
 
 			$else_content = explode( '[else]', $content );
 
-			// Remove the else content from the main content
+			// Remove the else content from the main content.
 			$content      = $else_content[0];
 			$else_content = $else_content[1];
 
@@ -344,8 +350,8 @@ class WPF_Shortcodes {
 
 		$can_access = wp_fusion()->access->user_can_access( $atts['id'] );
 
-		// If admins are excluded from restrictions
-		if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+		// If admins are excluded from restrictions.
+		if ( wpf_admin_override() ) {
 			$can_access = true;
 		}
 
@@ -409,19 +415,23 @@ class WPF_Shortcodes {
 		$atts = shortcode_atts(
 			array(
 				'field'        => '',
-				'field_format' => '', // format for the value from meta
+				'field_format' => '', // format for the value from meta.
 				'value'        => '',
-				'value_format' => 'strval', // format for the value we enter
+				'value_format' => 'strval', // format for the value we enter.
 				'compare'      => '=',
-			), $atts, 'user_meta_if'
+			),
+			$atts,
+			'user_meta_if'
 		);
 
-		// Check for curly quotes
+		$atts = array_map( 'sanitize_text_field', $atts );
+
+		// Check for curly quotes.
 
 		foreach ( $atts as $att ) {
 
 			if ( false !== strpos( $att, '“' ) ) {
-				return '<pre>' . __( '<strong>Oops!</strong> Curly quotes were found in a shortcode parameter of the [usermeta_if] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+				return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [usermeta_if] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
 			}
 		}
 
@@ -447,9 +457,9 @@ class WPF_Shortcodes {
 		$value      = $atts['value_format'] ? call_user_func( $atts['value_format'], $atts['value'] ) : $atts['value'];
 
 		if ( 'strtotime' == $atts['field_format'] && false === $meta_value ) {
-			return sprintf( __( '<strong>Oops!</strong> Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'userfield' );
+			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'userfield' );
 		} elseif ( 'strtotime' == $atts['value_format'] && false === $value ) {
-			return sprintf( __( '<strong>Oops!</strong> Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'value' );
+			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'value' );
 		}
 
 		$atts['compare'] = wp_specialchars_decode( $atts['compare'] );
@@ -483,4 +493,4 @@ class WPF_Shortcodes {
 
 }
 
-new WPF_Shortcodes;
+new WPF_Shortcodes();

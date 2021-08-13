@@ -81,7 +81,7 @@ class WPF_GetResponse {
 			return false;
 		}
 
-		$post_data['contact_id'] = $payload->user->id;
+		$post_data['contact_id'] = absint( $payload->user->id );
 
 		return $post_data;
 
@@ -175,7 +175,7 @@ class WPF_GetResponse {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'getresponse_key' );
+			$api_key = wpf_get_option( 'getresponse_key' );
 		}
 
 		$this->params = array(
@@ -209,7 +209,7 @@ class WPF_GetResponse {
 		}
 
 		$request  = 'https://api.getresponse.com/v3/accounts';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 
@@ -259,7 +259,7 @@ class WPF_GetResponse {
 		$available_tags = array();
 
 		$request  = 'http://api.getresponse.com/v3/tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -291,7 +291,7 @@ class WPF_GetResponse {
 		}
 
 		$request  = 'https://api.getresponse.com/v3/campaigns';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -338,7 +338,7 @@ class WPF_GetResponse {
 
 		$custom_fields = array();
 		$request       = 'http://api.getresponse.com/v3/custom-fields/';
-		$response      = wp_remote_get( $request, $this->params );
+		$response      = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -377,7 +377,7 @@ class WPF_GetResponse {
 
 		$params   = $this->params;
 		$request  = 'https://api.getresponse.com/v3/contacts?query%5Bemail%5D=' . $email_address;
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -407,7 +407,7 @@ class WPF_GetResponse {
 
 		$tags     = array();
 		$request  = 'http://api.getresponse.com/v3/contacts/' . $contact_id . '?fields=tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -449,7 +449,7 @@ class WPF_GetResponse {
 		$params         = $this->params;
 		$params['body'] = json_encode( $apply_tags );
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -492,7 +492,7 @@ class WPF_GetResponse {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$list = wp_fusion()->settings->get( 'getresponse_list' );
+		$list = wpf_get_option( 'getresponse_list' );
 
 		// Allow filtering
 		$list = apply_filters( 'wpf_add_contact_lists', $list );
@@ -509,7 +509,7 @@ class WPF_GetResponse {
 
 			// Get the first list
 			$request   = 'https://api.getresponse.com/v3/campaigns';
-			$response  = wp_remote_get( $request, $this->params );
+			$response  = wp_safe_remote_get( $request, $this->params );
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 			foreach ( $body_json as $list ) {
@@ -554,7 +554,7 @@ class WPF_GetResponse {
 		$params         = $this->params;
 		$params['body'] = json_encode( $contact_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -623,7 +623,7 @@ class WPF_GetResponse {
 		$params         = $this->params;
 		$params['body'] = json_encode( $contact_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -647,14 +647,14 @@ class WPF_GetResponse {
 		}
 
 		$url      = 'https://app.getresponse.com/api/public/users/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		$name                    = $body_json['name'];

@@ -121,7 +121,7 @@ class WPF_Staging {
 
 	public function sync_tags() {
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
@@ -139,7 +139,7 @@ class WPF_Staging {
 
 	public function sync_crm_fields() {
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields', array() );
+		$crm_fields = wpf_get_option( 'crm_fields', array() );
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -233,7 +233,7 @@ class WPF_Staging {
 	public function add_contact( $data, $map_meta_fields = true ) {
 
 		// Generate a random contact ID
-		return 'staging_' . substr( md5( microtime() . rand() ), 0, 10 );
+		return 'staging_' . substr( md5( microtime() . wp_rand() ), 0, 10 );
 
 	}
 

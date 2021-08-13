@@ -85,7 +85,7 @@ class WPF_CRM_Queue {
 
 		$args = apply_filters( 'wpf_api_' . $method . '_args', $args );
 
-		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || defined( 'WPF_STAGING_MODE' ) ) {
+		if ( wpf_get_option( 'staging_mode' ) == true || defined( 'WPF_STAGING_MODE' ) ) {
 
 			wpf_log( 'notice', 0, 'Staging mode enabled. Method ' . $method . ':', array( 'source' => $this->crm->slug, 'args' => $args ) );
 
@@ -114,7 +114,7 @@ class WPF_CRM_Queue {
 			return $error;
 		}
 
-		// If the CRM supports custom objects, bypass the queue and call it
+		// If the CRM supports custom objects, bypass the queue and call it.
 
 		// This routes calls like wp_fusion()->crm->add_object( $data, 'Lead' ) to
 		// wp_fusion()->crm->add_contact( $data, $map_meta_fields = false ), while changing
@@ -149,19 +149,20 @@ class WPF_CRM_Queue {
 
 		if ( 'apply_tags' == $method || 'remove_tags' == $method || 'update_contact' == $method ) {
 
-			// Queue sending data and return true
-
+			// Queue sending data and return true.
 			$this->add_to_buffer( $method, $args );
 
 			return true;
 
 		} else {
 
-			// Can't be queued, execute right away
+			// Can't be queued, execute right away.
 
 			$result = call_user_func_array( array( $this->crm, $method ), $args );
 
 			$result = apply_filters( "wpf_api_{$method}_result", $result, $args );
+
+			$result = wpf_clean( $result ); // sanitize_text_field recursive.
 
 			return $result;
 
@@ -350,14 +351,12 @@ class WPF_CRM_Queue {
 		foreach ( $this->buffer as $method => $contacts ) {
 
 			foreach ( $contacts as $cid => $args ) {
-
+ 
 				// Don't send empty data
 				if ( ! empty( $args[0] ) && ! empty( $args[1] ) || $method == 'combined_update' ) {
 
 					if ( $method == 'combined_update' ) {
-
 						$args = array( $cid, $args );
-
 					}
 
 					$result = call_user_func_array( array( $this->crm, $method ), $args );

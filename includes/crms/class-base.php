@@ -59,11 +59,14 @@ class WPF_CRM_Base {
 
 				$crm = new $classname();
 
-				if ( true == wp_fusion()->settings->get( 'connection_configured' ) && wp_fusion()->settings->get( 'crm' ) == $slug ) {
+				if ( true == wpf_get_option( 'connection_configured' ) && wpf_get_option( 'crm' ) == $slug ) {
 					$this->crm_no_queue = $crm;
-					$this->crm_no_queue->init();
 
-					if( isset( $crm->tag_type ) ) {
+					if ( method_exists( $this->crm_no_queue, 'init' ) ) {
+						$this->crm_no_queue->init();
+					}
+
+					if ( isset( $crm->tag_type ) ) {
 						$this->tag_type = $crm->tag_type;
 					}
 				}
@@ -75,9 +78,7 @@ class WPF_CRM_Base {
 				} else {
 					$this->available_crms[ $slug ]['menu_name'] = $crm->name;
 				}
-
 			}
-
 		}
 
 		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
@@ -94,7 +95,7 @@ class WPF_CRM_Base {
 		add_action( 'wp_ajax_wpf_sync', array( $this, 'sync' ) );
 
 		// Sets up "turbo" mode
-		if ( defined( 'WPF_DISABLE_QUEUE' ) || wp_fusion()->settings->get( 'enable_queue', true ) == false ) {
+		if ( defined( 'WPF_DISABLE_QUEUE' ) || wpf_get_option( 'enable_queue', true ) == false ) {
 
 			$this->crm = $this->crm_no_queue;
 
@@ -104,7 +105,7 @@ class WPF_CRM_Base {
 
 		}
 
-		$this->contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
+		$this->contact_fields = wpf_get_option( 'contact_fields', array() );
 
 	}
 
@@ -178,23 +179,24 @@ class WPF_CRM_Base {
 
 	private function includes() {
 
-		$slug = wp_fusion()->settings->get( 'crm' );
+		$slug = sanitize_file_name( wpf_get_option( 'crm' ) );
 
-		if( wp_fusion()->settings->get('connection_configured') == true && ! empty( $slug ) && false == $this->doing_reset() ) {
+		if ( wpf_get_option( 'connection_configured' ) && ! empty( $slug ) && false == $this->doing_reset() ) {
 
-			if( file_exists( WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php' ) ) {
+			if ( file_exists( WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php' ) ) {
 				require_once WPF_DIR_PATH . 'includes/crms/' . $slug . '/class-' . $slug . '.php';
 			}
-
 		} else {
 
-			// Load available CRM classes
+			// Load available CRM classes.
 			foreach ( wp_fusion()->get_crms() as $filename => $integration ) {
+
+				$filename = sanitize_file_name( $filename );
+
 				if ( file_exists( WPF_DIR_PATH . 'includes/crms/' . $filename . '/class-' . $filename . '.php' ) ) {
 					require_once WPF_DIR_PATH . 'includes/crms/' . $filename . '/class-' . $filename . '.php';
 				}
 			}
-
 		}
 
 	}
@@ -245,7 +247,7 @@ class WPF_CRM_Base {
 			$select_array[ $slug ] = $data['menu_name'];
 		}
 
-		asort($select_array);
+		asort( $select_array );
 
 		return $select_array;
 
@@ -268,7 +270,7 @@ class WPF_CRM_Base {
 
 		} else {
 
-			if( is_wp_error( $result ) ) {
+			if ( is_wp_error( $result ) ) {
 
 				wpf_log( 'error', 0, 'Error performing sync: ' . $result->get_error_message() );
 				wp_send_json_error( $result->get_error_message() );
@@ -301,12 +303,12 @@ class WPF_CRM_Base {
 				continue;
 			}
 
-			// Don't send add_tag_ fields to the CRM as fields
+			// Don't send add_tag_ fields to the CRM as fields.
 			if ( strpos( $field_data['crm_field'], 'add_tag_' ) !== false ) {
 				continue;
 			}
 
-			// If field exists in form and sync is active
+			// If field exists in form and sync is active.
 			if ( isset( $user_meta[ $field ] ) ) {
 
 				if ( empty( $field_data['type'] ) ) {
@@ -315,15 +317,15 @@ class WPF_CRM_Base {
 
 				$value = apply_filters( 'wpf_format_field_value', $user_meta[ $field ], $field_data['type'], $field_data['crm_field'] );
 
-				if ( 'raw' == $field_data['type'] ) {
+				if ( 'raw' === $field_data['type'] ) {
 
-					// Allow overriding the empty() check by setting the field type to raw
+					// Allow overriding the empty() check by setting the field type to raw.
 
 					$update_data[ $field_data['crm_field'] ] = $value;
 
 				} elseif ( is_null( $value ) ) {
 
-					// Allow overriding empty() check by returning null from wpf_format_field_value
+					// Allow overriding empty() check by returning null from wpf_format_field_value.
 
 					$update_data[ $field_data['crm_field'] ] = '';
 
@@ -353,7 +355,6 @@ class WPF_CRM_Base {
 	 *
 	 * @return string The field name in the CRM.
 	 */
-
 	public function get_lookup_field() {
 
 		$field = ! empty( $this->contact_fields['user_email']['crm_field'] ) ? $this->contact_fields['user_email']['crm_field'] : 'email';
@@ -368,7 +369,6 @@ class WPF_CRM_Base {
 	 * @access public
 	 * @return string / false
 	 */
-
 	public function get_crm_field( $meta_key, $default = false ) {
 
 		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['crm_field'] ) ) {
@@ -385,7 +385,6 @@ class WPF_CRM_Base {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function is_field_active( $meta_key ) {
 
 		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['active'] ) ) {
@@ -399,13 +398,12 @@ class WPF_CRM_Base {
 	/**
 	 * Get the field type (set on the Contact Fields list) for a given field
 	 *
-	 * @since 3.35.14
+	 * @since  3.35.14
 	 *
-	 * @param string $meta_key The meta key to look up
-	 * @param string $default  The default value to return if no type is found
-	 * @return string The field type
+	 * @param  string $meta_key The meta key to look up.
+	 * @param  string $default  The default value to return if no type is found.
+	 * @return string The field type.
 	 */
-
 	public function get_field_type( $meta_key, $default = 'text' ) {
 
 		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['type'] ) ) {
@@ -417,14 +415,14 @@ class WPF_CRM_Base {
 	}
 
 	/**
-	 * Is a WordPress meta key a pseudo field and should only be sent to the CRM, not loaded
+	 * Is a WordPress meta key a pseudo field and should only be sent to the
+	 * CRM, not loaded
 	 *
-	 * @since 3.35.16
+	 * @since  3.35.16
 	 *
-	 * @param string $meta_key The meta key to look up
-	 * @return bool Whether or not the field is a pseudo field
+	 * @param  string $meta_key The meta key to look up.
+	 * @return bool   Whether or not the field is a pseudo field.
 	 */
-
 	public function is_pseudo_field( $meta_key ) {
 
 		if ( ! empty( $this->contact_fields[ $meta_key ] ) && isset( $this->contact_fields[ $meta_key ]['pseudo'] ) ) {
@@ -437,8 +435,6 @@ class WPF_CRM_Base {
 
 	/**
 	 * Gets the URL to edit the contact in the CRM.
-	 *
-	 * @access public
 	 *
 	 * @since  3.37.29
 	 *
@@ -461,45 +457,38 @@ class WPF_CRM_Base {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'datepicker' === $field_type || 'date' === $field_type ) {
 
 			if ( ! is_numeric( $value ) && ! empty( $value ) ) {
 				$value = strtotime( $value );
 			}
 
-			// invtal() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning
+			// absint() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning.
 
-			return intval( $value );
+			return absint( $value );
 
 		} elseif ( false !== strpos( $field, 'add_tag_' ) ) {
 
 			// Don't modify it if it's a dynamic tag field
-			// (this needs to stay so that WPF_Forms_Helper can still do dynamic tagging)
+			// (this needs to stay so that WPF_Forms_Helper can still do dynamic tagging).
 
 			return $value;
 
-		} elseif ( is_array( $value ) || 'multiselect' == $field_type ) {
+		} elseif ( is_array( $value ) || 'multiselect' === $field_type ) {
 
-			// Mulitselects
+			// Mulitselects.
 
-			if ( 'multiselect' == $field_type ) {
+			if ( 'multiselect' === $field_type ) {
 
-				// Removed in v3.36.5 since it causes problems with HubSpot, Salesforce, and others (this could cause problems):
+				// Any formatting of arrays is now handled in the CRM integration class.
 
-				// $value = implode( ',', array_filter( $value ) );
-
-				// So any formatting of arrays is now handled in the CRM integration class.
-
-				// If it's being synced as multiselect but it's not an array:
-
-				if ( ! is_array( $value ) ) {
+				if ( ! is_array( $value ) ) { // If it's being synced as multiselect but it's not an array.
 					$value = array( $value );
 				}
 
-				// Don't sync multidimensional arrays:
+				// Don't sync multidimensional arrays.
 
 				if ( count( $value ) !== count( $value, COUNT_RECURSIVE ) ) {
 
@@ -509,9 +498,9 @@ class WPF_CRM_Base {
 						}
 					}
 				}
-			} elseif ( 'text' == $field_type && is_array( $value ) ) {
+			} elseif ( 'text' === $field_type && is_array( $value ) ) {
 
-				// If it's explicitly supposed to be text
+				// If it's explicitly supposed to be text.
 
 				$value = implode( ', ', array_filter( $value ) );
 
@@ -519,27 +508,25 @@ class WPF_CRM_Base {
 
 			return $value;
 
-		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
+		} elseif ( 'checkbox' === $field_type ) {
 
 			if ( empty( $value ) ) {
-				//If checkbox is unselected
+				// If checkbox is unselected.
 				return null;
 			} else {
-				// If checkbox is selected
+				// If checkbox is selected.
 				return 1;
 			}
-
-		} elseif ( $field_type == 'text' || $field_type == 'textarea' ) {
+		} elseif ( 'text' === $field_type || 'textarea' === $field_type ) {
 
 			return strval( $value );
 
-		} elseif ( $field == 'user_pass' ) {
+		} elseif ( 'user_pass' === $field ) {
 
-			// Don't update password if it's empty
+			// Don't update password if it's empty.
 			if ( ! empty( $value ) ) {
 				return $value;
 			}
-
 		} else {
 
 			return $value;

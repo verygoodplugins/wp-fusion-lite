@@ -53,7 +53,7 @@ class WPF_WP_ERP {
 		$this->edit_url = admin_url( 'admin.php?page=erp-crm&section=contact&sub-section=contacts&action=view&id=%d' );
 
 		// Don't watch for changes if staging mode is active
-		if ( wp_fusion()->settings->get( 'staging_mode' ) == true ) {
+		if ( wpf_get_option( 'staging_mode' ) == true ) {
 			return;
 		}
 
@@ -345,7 +345,7 @@ class WPF_WP_ERP {
 	public function load_contact( $contact_id ) {
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		$contact = erp_get_people( $contact_id );
 

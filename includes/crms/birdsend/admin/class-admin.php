@@ -22,12 +22,11 @@ class WPF_BirdSend_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_birdsend_header_begin', array( $this, 'show_field_birdsend_header_begin' ), 10, 2 );
-		add_action( 'show_field_birdsend_refresh_token_end', array( $this, 'show_field_birdsend_token_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -60,9 +59,11 @@ class WPF_BirdSend_Admin {
 
 		if ( isset( $_GET['code'] ) && isset( $_GET['state'] ) && $_GET['state'] == 'wpfbirdsend' ) {
 
+			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+
 			$body = array(
 				'grant_type'    => 'authorization_code',
-				'code'          => $_GET['code'],
+				'code'          => $code,
 				'client_id'     => $this->crm->client_id,
 				'client_secret' => $this->crm->client_secret,
 				'redirect_uri'  => 'https://wpfusion.com/parse-birdsend-oauth.php',
@@ -78,7 +79,7 @@ class WPF_BirdSend_Admin {
 				'body'       => json_encode( $body ),
 			);
 
-			$response = wp_remote_post( 'https://api.birdsend.co/oauth/token', $params );
+			$response = wp_safe_remote_post( 'https://api.birdsend.co/oauth/token', $params );
 
 			if ( is_wp_error( $response ) ) {
 				return false;
@@ -90,7 +91,7 @@ class WPF_BirdSend_Admin {
 			wp_fusion()->settings->set( 'birdsend_token', $response->access_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
 
-			wp_redirect( get_admin_url() . 'options-general.php?page=wpf-settings#setup' );
+			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
 
 		}
@@ -186,26 +187,8 @@ class WPF_BirdSend_Admin {
 	public function show_field_birdsend_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
-
-	}
-
-	/**
-	 * Close out BirdSend section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-	public function show_field_birdsend_token_end( $id, $field ) {
-
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #birdsend div
-		echo '<table class="form-table">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -219,8 +202,10 @@ class WPF_BirdSend_Admin {
 
 	public function test_connection() {
 
-		$access_token  = sanitize_text_field( $_POST['birdsend_token'] );
-		$refresh_token = sanitize_text_field( $_POST['birdsend_refresh_token'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$access_token  = isset( $_POST['birdsend_token'] ) ? sanitize_text_field( wp_unslash( $_POST['birdsend_token'] ) ) : false;
+		$refresh_token = isset( $_POST['birdsend_refresh_token'] ) ? sanitize_text_field( wp_unslash( $_POST['birdsend_refresh_token'] ) ) : false;
 
 		$connection = $this->crm->connect( $access_token, $refresh_token, true );
 
@@ -230,13 +215,13 @@ class WPF_BirdSend_Admin {
 
 		} else {
 
-			$options                           = wp_fusion()->settings->get_all();
+			$options                           = array();
 			$options['birdsend_token']         = $access_token;
 			$options['birdsend_refresh_token'] = $refresh_token;
 			$options['crm']                    = $this->slug;
 			$options['connection_configured']  = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

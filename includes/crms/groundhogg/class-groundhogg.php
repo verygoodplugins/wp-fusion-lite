@@ -56,7 +56,7 @@ class WPF_Groundhogg {
 
 		// Don't watch GH for changes if staging mode is active
 
-		if ( wp_fusion()->settings->get( 'staging_mode' ) == true || ! class_exists( '\Groundhogg\Contact' ) ) {
+		if ( wpf_get_option( 'staging_mode' ) == true || ! class_exists( '\Groundhogg\Contact' ) ) {
 			return;
 		}
 
@@ -187,7 +187,7 @@ class WPF_Groundhogg {
 			// Remove the tag with a label from the list of IDs
 			unset( $tags[ $i ] );
 
-			$available_tags = wp_fusion()->settings->get( 'available_tags' );
+			$available_tags = wpf_get_option( 'available_tags' );
 
 			if ( isset( $available_tags[ $tag ] ) ) {
 				unset( $available_tags[ $tag ] );
@@ -547,7 +547,7 @@ class WPF_Groundhogg {
 		// Set to opted in by default unless otherwise specified
 
 		if ( ! isset( $data['optin_status'] ) ) {
-			$data['optin_status'] = wp_fusion()->settings->get( 'gh_default_status', 2 );
+			$data['optin_status'] = wpf_get_option( 'gh_default_status', 2 );
 		}
 
 		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
@@ -638,7 +638,7 @@ class WPF_Groundhogg {
 		$contact = new \Groundhogg\Contact( $contact_id );
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
+		$contact_fields = wpf_get_option( 'contact_fields', array() );
 
 		foreach ( $contact_fields as $key => $data ) {
 

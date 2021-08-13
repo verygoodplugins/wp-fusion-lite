@@ -80,7 +80,7 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 	$restricted_tags = array();
 
-	if ( wp_fusion()->settings->get( 'exclude_admins' ) == true && current_user_can( 'manage_options' ) ) {
+	if ( wpf_admin_override() ) {
 
 		$can_access = true;
 

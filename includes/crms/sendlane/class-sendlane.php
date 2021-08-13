@@ -98,7 +98,7 @@ class WPF_Sendlane {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = $payload->email;
+		$post_data['contact_id'] = sanitize_email( $payload->email );
 
 		return $post_data;
 
@@ -141,9 +141,9 @@ class WPF_Sendlane {
 
 		if( empty( $api_key ) || empty( $api_hash ) || empty( $api_domain ) ) {
 
-			$api_key = wp_fusion()->settings->get( 'sendlane_key' );
-			$api_hash = wp_fusion()->settings->get( 'sendlane_hash' );
-			$api_domain = wp_fusion()->settings->get( 'sendlane_domain' );
+			$api_key = wpf_get_option( 'sendlane_key' );
+			$api_hash = wpf_get_option( 'sendlane_hash' );
+			$api_domain = wpf_get_option( 'sendlane_domain' );
 
 		}
 
@@ -158,7 +158,7 @@ class WPF_Sendlane {
 		$this->api_key = $api_key;
 		$this->api_hash = $api_hash;
 		$this->api_domain = $api_domain;
-		$this->list = wp_fusion()->settings->get( 'default_list', false );
+		$this->list = wpf_get_option( 'default_list', false );
 
 		return $this->params;
 	}
@@ -187,7 +187,7 @@ class WPF_Sendlane {
 		);
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/lists' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -240,7 +240,7 @@ class WPF_Sendlane {
 		);
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/tags' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -280,7 +280,7 @@ class WPF_Sendlane {
 		);
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/lists' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -296,7 +296,7 @@ class WPF_Sendlane {
 
 		// Set default
 
-		$default_list = wp_fusion()->settings->get( 'default_list', false );
+		$default_list = wpf_get_option( 'default_list', false );
 
 		if( empty( $default_list ) ) {
 
@@ -363,7 +363,7 @@ class WPF_Sendlane {
 		);
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/subscriber-exists' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -427,7 +427,7 @@ class WPF_Sendlane {
 		);
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/tag-subscriber-add' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -459,7 +459,7 @@ class WPF_Sendlane {
 		);
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/tag-subscriber-remove' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -504,7 +504,7 @@ class WPF_Sendlane {
 		$args = array_merge( $args, $data );
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/list-subscriber-add' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -547,7 +547,7 @@ class WPF_Sendlane {
 		$args = array_merge( $args, $data );
 
 		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/list-subscriber-add' );
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

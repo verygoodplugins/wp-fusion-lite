@@ -25,7 +25,7 @@ class WPF_Ontraport_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -170,8 +170,8 @@ class WPF_Ontraport_Admin {
 		if( ! empty( $options['site_tracking'] ) && empty( $options['account_id'] ) ) {
 
 			// Get site tracking ID
-			$request  = "https://api.ontraport.com/1/objects/meta?format=byId&objectID=0";
-			$response = wp_remote_get( $request, wp_fusion()->crm->get_params() );
+			$request  = 'https://api.ontraport.com/1/objects/meta?format=byId&objectID=0';
+			$response = wp_safe_remote_get( $request, wp_fusion()->crm->get_params() );
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -195,8 +195,8 @@ class WPF_Ontraport_Admin {
 	public function show_field_ontraport_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -209,8 +209,10 @@ class WPF_Ontraport_Admin {
 
 	public function test_connection() {
 
-		$api_url = sanitize_text_field( $_POST['op_url'] );
-		$api_key = sanitize_text_field( $_POST['op_key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$api_url = sanitize_text_field( wp_unslash( $_POST['op_url'] ) );
+		$api_key = sanitize_text_field( wp_unslash( $_POST['op_key'] ) );
 
 		$connection = $this->crm->connect( $api_url, $api_key, true );
 
@@ -220,12 +222,12 @@ class WPF_Ontraport_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['op_url']                = $api_url;
 			$options['op_key']                = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

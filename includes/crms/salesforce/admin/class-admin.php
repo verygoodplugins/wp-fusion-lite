@@ -21,12 +21,11 @@ class WPF_Salesforce_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_salesforce_header_begin', array( $this, 'show_field_salesforce_header_begin' ), 10, 2 );
-		add_action( 'show_field_sf_token_end', array( $this, 'show_field_sf_token_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -62,7 +61,7 @@ class WPF_Salesforce_Admin {
 			'title'   => __( 'Salesforce Configuration', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['sf_username'] = array(
@@ -70,14 +69,14 @@ class WPF_Salesforce_Admin {
 			'desc'    => __( 'Enter the username for the administrator of your Salesforce account (usually an email address).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['sf_pass'] = array(
 			'title'   => __( 'Password', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'password',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['sf_token'] = array(
@@ -86,10 +85,10 @@ class WPF_Salesforce_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'sf_username', 'sf_pass', 'sf_token' )
+			'post_fields' => array( 'sf_username', 'sf_pass', 'sf_token' ),
 		);
 
-		if($settings['connection_configured'] == true && wp_fusion()->settings->get('crm') == 'salesforce') {
+		if ( $settings['connection_configured'] == true && wpf_get_option( 'crm' ) == 'salesforce' ) {
 
 			$new_settings['sf_tag_type'] = array(
 				'title'   => __( 'Salesforce Tag Type', 'wp-fusion-lite' ),
@@ -97,11 +96,11 @@ class WPF_Salesforce_Admin {
 				'type'    => 'radio',
 				'section' => 'setup',
 				'choices' => array(
-					'Topics'	=> 'Topics',
-					'Personal'	=> 'Personal tags',
-					'Public'	=> 'Public tags'
-					),
-				'desc'	  => __( 'After changing the tag type, save the settings page and click Refresh above.', 'wp-fusion-lite' ),
+					'Topics'   => 'Topics',
+					'Personal' => 'Personal tags',
+					'Public'   => 'Public tags',
+				),
+				'desc'    => __( 'After changing the tag type, save the settings page and click Refresh above.', 'wp-fusion-lite' ),
 			);
 
 		}
@@ -172,9 +171,7 @@ class WPF_Salesforce_Admin {
 				if ( isset( $salesforce_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $salesforce_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
@@ -192,31 +189,11 @@ class WPF_Salesforce_Admin {
 	public function show_field_salesforce_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
-	/**
-	 * Close out Salesforce API section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-	public function show_field_sf_token_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #salesforce div
-		echo '<table class="form-table">';
-
-	}
 
 	/**
 	 * Verify connection credentials
@@ -227,8 +204,10 @@ class WPF_Salesforce_Admin {
 
 	public function test_connection() {
 
-		$username 		= sanitize_text_field( $_POST['sf_username'] );
-		$token 			= sanitize_text_field( $_POST['sf_token'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$username       = sanitize_text_field( $_POST['sf_username'] );
+		$token          = sanitize_text_field( $_POST['sf_token'] );
 		$combined_token = stripslashes( $_POST['sf_pass'] ) . $token;
 
 		$connection = $this->crm->connect( $username, $combined_token, true );
@@ -239,15 +218,15 @@ class WPF_Salesforce_Admin {
 
 		} else {
 
-			$options = wp_fusion()->settings->get_all();
+			$options = array();
 
-			$options['sf_username'] 			= $username;
-			$options['sf_token']   				= $token;
-			$options['sf_combined_token']   	= $combined_token;
-			$options['crm']             		= $this->slug;
-			$options['connection_configured'] 	= true;
+			$options['sf_username']           = $username;
+			$options['sf_token']              = $token;
+			$options['sf_combined_token']     = $combined_token;
+			$options['crm']                   = $this->slug;
+			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

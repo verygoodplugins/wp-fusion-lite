@@ -10,7 +10,7 @@ class WPF_AJAX {
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_link_click_script' ) );
 
-		// AJAX handlers
+		// AJAX handlers.
 		add_action( 'wp_ajax_apply_tags', array( $this, 'apply_tags' ) );
 		add_action( 'wp_ajax_nopriv_apply_tags', array( $this, 'apply_tags' ) );
 
@@ -18,7 +18,6 @@ class WPF_AJAX {
 		add_action( 'wp_ajax_nopriv_remove_tags', array( $this, 'remove_tags' ) );
 
 		add_action( 'wp_ajax_update_user', array( $this, 'update_user' ) );
-		//add_action( 'wp_ajax_nopriv_update_user', array( $this, 'update_user' ) );
 
 	}
 
@@ -31,13 +30,17 @@ class WPF_AJAX {
 
 	public function apply_tags() {
 
-		$tags = $_POST['tags'];
+		check_ajax_referer( 'wpf_ajax_nonce' );
 
-		if ( ! is_array( $tags ) ) {
-			$tags = explode( ',', $tags );
+		if ( ! isset( $_POST['tags'] ) ) {
+			wp_die();
 		}
 
-		$tags = array_map( 'sanitize_text_field', $tags );
+		if ( is_array( $_POST['tags'] ) ) {
+			$tags = array_map( 'sanitize_text_field', wp_unslash( $_POST['tags'] ) );
+		} else {
+			$tags = explode( ',', sanitize_text_field( wp_unslash( $_POST['tags'] ) ) );
+		}
 
 		$tags_to_apply = array();
 
@@ -61,7 +64,7 @@ class WPF_AJAX {
 
 		}
 
-		die();
+		wp_die();
 
 	}
 
@@ -74,13 +77,17 @@ class WPF_AJAX {
 
 	public function remove_tags() {
 
-		$tags = $_POST['tags'];
+		check_ajax_referer( 'wpf_ajax_nonce' );
 
-		if( ! is_array( $tags ) ) {
-			$tags = explode(',', $tags);
+		if ( ! isset( $_POST['tags'] ) ) {
+			wp_die();
 		}
 
-		$tags = array_map('sanitize_text_field', $tags);
+		if ( is_array( $_POST['tags'] ) ) {
+			$tags = array_map( 'sanitize_text_field', wp_unslash( $_POST['tags'] ) );
+		} else {
+			$tags = explode( ',', sanitize_text_field( wp_unslash( $_POST['tags'] ) ) );
+		}
 
 		$tags_to_remove = array();
 
@@ -117,76 +124,57 @@ class WPF_AJAX {
 
 	public function update_user() {
 
-		$update_data = json_decode( stripslashes( $_POST['data'] ), true );
+		check_ajax_referer( 'wpf_ajax_nonce' );
 
-		$user_id = wpf_get_current_user_id();
+		if ( ! isset( $_POST['data'] ) ) {
+			wp_die();
+		}
+
+		$update_data = json_decode( wp_unslash( $_POST['data'] ), true );
+		$user_id     = wpf_get_current_user_id();
 
 		if ( is_array( $update_data ) ) {
 
 			$update_data = array_map( 'sanitize_text_field', $update_data );
 
-			// Figure out how we're doing the update
+			// Figure out how we're doing the update.
 
-			$contact_fields = wp_fusion()->settings->get( 'contact_fields', array() );
-			$crm_fields     = wp_fusion()->settings->get( 'crm_fields', array() );
-
-			// CRMs with field groupings
-
-			if( is_array( reset( $crm_fields ) ) ) {
-
-				$crm_fields_tmp = array();
-
-				foreach( $crm_fields as $field_group ) {
-
-					foreach( $field_group as $field => $label ) {
-
-						$crm_fields_tmp[ $field ] = $label;
-
-					}
-
-				}
-
-				$crm_fields = $crm_fields_tmp;
-
-			}
+			$contact_fields = wpf_get_option( 'contact_fields', array() );
+			$crm_fields     = wp_fusion()->settings->get_crm_fields_flat();
 
 			$user_meta_data = array();
-			$crm_data = array();
+			$crm_data       = array();
 
-			foreach( $update_data as $key => $value ) {
+			foreach ( $update_data as $key => $value ) {
 
-				if( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
+				if ( isset( $contact_fields[ $key ] ) && ! empty( $contact_fields[ $key ]['active'] ) ) {
 
 					$user_meta_data[ $key ] = $value;
 
 				} else {
 
-					foreach( $crm_fields as $field => $label ) {
+					foreach ( $crm_fields as $field => $label ) {
 
-						if( $key == $field || $key == $label ) {
+						if ( $key === $field || $key === $label ) {
 
 							$crm_data[ $field ] = $value;
 
 						}
-
 					}
-
 				}
-
 			}
 
-			if( ! empty( $user_meta_data ) ) {
+			if ( ! empty( $user_meta_data ) ) {
 				wp_fusion()->user->push_user_meta( $user_id, $user_meta_data );
 			}
 
-			if( ! empty( $crm_data ) ) {
+			if ( ! empty( $crm_data ) ) {
 				$contact_id = wp_fusion()->user->get_contact_id( $user_id );
 				wp_fusion()->crm->update_contact( $contact_id, $crm_data, false );
 			}
-
 		}
 
-		die();
+		wp_die();
 
 	}
 
@@ -196,13 +184,18 @@ class WPF_AJAX {
 	 * @access public
 	 * @return void
 	 */
-
 	public function enqueue_link_click_script() {
 
-		if ( ! wp_script_is( 'wpf-apply-tags' ) && wp_fusion()->settings->get( 'link_click_tracking' ) == true ) {
+		if ( ! wp_script_is( 'wpf-apply-tags' ) && wpf_get_option( 'link_click_tracking' ) ) {
 
 			wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . 'assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
-			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', array( 'ajaxurl' => admin_url( 'admin-ajax.php' ) ) );
+
+			$localize_data = array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'wpf_ajax_nonce' ),
+			);
+
+			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', $localize_data );
 
 		}
 

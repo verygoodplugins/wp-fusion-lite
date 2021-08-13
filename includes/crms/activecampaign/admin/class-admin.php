@@ -26,7 +26,7 @@ class WPF_ActiveCampaign_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -118,7 +118,7 @@ class WPF_ActiveCampaign_Admin {
 			$settings['create_users']['unlock'][] = 'ac_lists';
 		}
 
-		$settings['ac_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
+		$settings['ac_lists']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
 
 		// Add site tracking option
 		$new_settings = array();
@@ -195,7 +195,7 @@ class WPF_ActiveCampaign_Admin {
 
 	public function validate_site_tracking( $input, $setting ) {
 
-		$previous = wp_fusion()->settings->get( 'site_tracking' );
+		$previous = wpf_get_option( 'site_tracking' );
 
 		// Activate site tracking
 		if ( true == $input && false == $previous ) {
@@ -253,8 +253,8 @@ class WPF_ActiveCampaign_Admin {
 	public function show_field_activecampaign_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -267,8 +267,10 @@ class WPF_ActiveCampaign_Admin {
 
 	public function test_connection() {
 
-		$api_url = esc_url_raw( $_POST['ac_url'] );
-		$api_key = sanitize_text_field( $_POST['ac_key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$api_url = isset( $_POST['ac_url'] ) ? esc_url_raw( wp_unslash( $_POST['ac_url'] ) ) : false;
+		$api_key = isset( $_POST['ac_key'] ) ? sanitize_text_field( wp_unslash( $_POST['ac_key'] ) ) : false;
 
 		$connection = $this->crm->connect( $api_url, $api_key, true );
 
@@ -278,12 +280,12 @@ class WPF_ActiveCampaign_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['ac_url']                = $api_url;
 			$options['ac_key']                = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

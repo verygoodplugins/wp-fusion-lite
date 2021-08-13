@@ -65,7 +65,7 @@ class API {
 	
 	public function get_available_tags() {
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 		$tags_for_select = array();
 
 		foreach ( $available_tags as $tag_id => $tag ) {

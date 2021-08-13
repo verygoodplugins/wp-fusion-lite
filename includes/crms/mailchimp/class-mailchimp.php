@@ -93,7 +93,7 @@ class WPF_MailChimp {
 		}
 
 		if ( isset( $post_data['data'] ) && isset( $post_data['data']['email'] ) ) {
-			$post_data['contact_id'] = md5( $post_data['data']['email'] );
+			$post_data['contact_id'] = md5( sanitize_email( $post_data['data']['email'] ) );
 		}
 
 		return $post_data;
@@ -221,7 +221,7 @@ class WPF_MailChimp {
 		} else {
 
 			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-			$response = wp_remote_get( $url, $this->get_params() );
+			$response = wp_safe_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -250,8 +250,8 @@ class WPF_MailChimp {
 
 		// Get saved data from DB
 		if ( empty( $dc ) || empty( $api_key ) ) {
-			$dc      = wp_fusion()->settings->get( 'mailchimp_dc' );
-			$api_key = wp_fusion()->settings->get( 'mailchimp_key' );
+			$dc      = wpf_get_option( 'mailchimp_dc' );
+			$api_key = wpf_get_option( 'mailchimp_key' );
 		}
 
 		// Get data server from key
@@ -270,7 +270,7 @@ class WPF_MailChimp {
 		);
 
 		$this->dc   = $dc;
-		$this->list = wp_fusion()->settings->get( 'mc_default_list', false );
+		$this->list = wpf_get_option( 'mc_default_list', false );
 
 		return $this->params;
 	}
@@ -294,7 +294,7 @@ class WPF_MailChimp {
 		}
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -338,7 +338,7 @@ class WPF_MailChimp {
 		$available_lists = array();
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/?count=1000';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -353,7 +353,7 @@ class WPF_MailChimp {
 		wp_fusion()->settings->set( 'mc_lists', $available_lists );
 
 		// Set default
-		$default_list = wp_fusion()->settings->get( 'mc_default_list', false );
+		$default_list = wpf_get_option( 'mc_default_list', false );
 
 		if ( empty( $default_list ) ) {
 
@@ -380,7 +380,7 @@ class WPF_MailChimp {
 		$available_tags = array();
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=1000';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -426,7 +426,7 @@ class WPF_MailChimp {
 		}
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/merge-fields/?count=100';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -487,7 +487,7 @@ class WPF_MailChimp {
 
 		$contact_info = array();
 		$request      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/search-members/?query=' . $email_address;
-		$response     = wp_remote_get( $request, $this->get_params() );
+		$response     = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -534,7 +534,7 @@ class WPF_MailChimp {
 
 		$tags     = array();
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/?count=1000';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -570,7 +570,7 @@ class WPF_MailChimp {
 			$params         = $this->get_params();
 			$params['body'] = json_encode( array( 'email_address' => $email_address ) );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -599,7 +599,7 @@ class WPF_MailChimp {
 			$params           = $this->get_params();
 			$params['method'] = 'DELETE';
 
-			$response = wp_remote_request( $request, $params );
+			$response = wp_safe_remote_request( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -658,7 +658,7 @@ class WPF_MailChimp {
 			'merge_fields'  => $data,
 		);
 
-		if ( true == wp_fusion()->settings->get( 'mc_optin' ) ) {
+		if ( true == wpf_get_option( 'mc_optin' ) ) {
 			$payload['status'] = 'pending';
 		}
 
@@ -673,7 +673,7 @@ class WPF_MailChimp {
 		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $payload );
 
-		$response = wp_remote_request( $url, $params );
+		$response = wp_safe_remote_request( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -750,7 +750,7 @@ class WPF_MailChimp {
 			)
 		);
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -780,14 +780,14 @@ class WPF_MailChimp {
 	public function load_contact( $contact_id ) {
 
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-		$response = wp_remote_get( $url, $this->get_params() );
+		$response = wp_safe_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body           = json_decode( wp_remote_retrieve_body( $response ) );
 
 		$loaded_meta                  = array();
@@ -831,7 +831,7 @@ class WPF_MailChimp {
 		$contact_ids = array();
 
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members?count=1000';
-		$response = wp_remote_get( $url, $this->get_params() );
+		$response = wp_safe_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

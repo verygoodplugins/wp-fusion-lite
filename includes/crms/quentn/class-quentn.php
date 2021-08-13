@@ -63,7 +63,7 @@ class WPF_Quentn {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
-		$api_url = wp_fusion()->settings->get( 'quentn_url' );
+		$api_url = wpf_get_option( 'quentn_url' );
 
 		if ( ! empty( $api_url ) ) {
 			$host_url       = parse_url( $api_url, PHP_URL_HOST );
@@ -128,11 +128,11 @@ class WPF_Quentn {
 
 		// Get saved data from DB
 		if ( empty( $api_url ) ) {
-			$api_url = wp_fusion()->settings->get( 'quentn_url' );
+			$api_url = wpf_get_option( 'quentn_url' );
 		}
 
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'quentn_key' );
+			$api_key = wpf_get_option( 'quentn_key' );
 		}
 
 		$this->params = array(
@@ -168,7 +168,7 @@ class WPF_Quentn {
 		}
 
 		$request  = $this->api_url . 'terms';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -215,7 +215,7 @@ class WPF_Quentn {
 		$available_tags = array();
 
 		$request  = $this->api_url . 'terms';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -259,7 +259,7 @@ class WPF_Quentn {
 		$custom_fields = array();
 
 		$request  = $this->api_url . 'custom-fields';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -295,7 +295,7 @@ class WPF_Quentn {
 		}
 
 		$request  = $this->api_url . 'contact/' . urlencode( $email_address ) . '?fields=id';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -326,7 +326,7 @@ class WPF_Quentn {
 		$tags = array();
 
 		$request  = $this->api_url . 'contact/' . $contact_id . '/terms/';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -343,7 +343,7 @@ class WPF_Quentn {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body as $tag ) {
 			if ( ! isset( $available_tags[ $tag->id ] ) ) {
@@ -376,7 +376,7 @@ class WPF_Quentn {
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_url . 'contact/' . $contact_id . '/terms';
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -405,7 +405,7 @@ class WPF_Quentn {
 		$params['method'] = 'DELETE';
 
 		$request  = $this->api_url . 'contact/' . $contact_id . '/terms';
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -437,7 +437,7 @@ class WPF_Quentn {
 		$params['body'] = json_encode( array( 'contact' => $data ) );
 
 		$request  = $this->api_url . 'contact';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -475,7 +475,7 @@ class WPF_Quentn {
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_url . 'contact/' . $contact_id;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -500,7 +500,7 @@ class WPF_Quentn {
 		// Build up list of fields to load
 		$load_fields = array();
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -512,7 +512,7 @@ class WPF_Quentn {
 		}
 
 		$request  = $this->api_url . 'contact/' . $contact_id . '?fields=' . implode( ',', $load_fields );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

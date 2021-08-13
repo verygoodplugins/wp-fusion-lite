@@ -9,6 +9,8 @@ class WPF_ZeroBSCRM {
 
 	public $supports;
 
+	public $edit_url = '';
+
 
 	/**
 	 * Get things started
@@ -42,7 +44,7 @@ class WPF_ZeroBSCRM {
 	public function init() {
 
 		// Don't watch ZBS for changes if staging mode is active
-		if ( wp_fusion()->settings->get( 'staging_mode' ) == true ) {
+		if ( wpf_get_option( 'staging_mode' ) == true ) {
 			return;
 		}
 
@@ -50,6 +52,8 @@ class WPF_ZeroBSCRM {
 		add_action( 'zbs_tag_removed_from_objid', array( $this, 'tag_added_removed' ), 10, 3 );
 
 		add_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) );
+
+		$this->edit_url = admin_url( 'admin.php?page=zbs-add-edit&action=view&zbstype=contact&zbsid=%s' );
 
 	}
 
@@ -79,7 +83,7 @@ class WPF_ZeroBSCRM {
 
 				// Maybe import the user
 
-				if ( in_array( $tag['name'], wp_fusion()->settings->get( 'jetpack_import_tag', array() ) ) ) {
+				if ( in_array( $tag['name'], wpf_get_option( 'jetpack_import_tag', array() ) ) ) {
 
 					wp_fusion()->user->import_user( $object_id );
 
@@ -356,9 +360,26 @@ class WPF_ZeroBSCRM {
 
 		global $zbs;
 
+		$custom_fields = $zbs->DAL->getActiveCustomFields( array( 'objtypeid' => ZBS_TYPE_CONTACT ) );
+
+		$fields = array();
+
+		foreach ( $data as $key => $value ) {
+
+			if ( ! isset( $custom_fields[ $key ] ) ) {
+				$key = 'zbsc_' . $key; // when using limitedFields, standard field keys have to be prefixed with zbsc_
+			}
+
+			$fields[] = array(
+				'key'  => $key,
+				'val'  => $value,
+				'type' => '%s',
+			);
+		}
+
 		$args = array(
-			'id'   => $contact_id,
-			'data' => $data,
+			'id'            => $contact_id,
+			'limitedFields' => $fields, // only update, don't erase existing.
 		);
 
 		$result = $zbs->DAL->contacts->addUpdateContact( $args );
@@ -381,7 +402,7 @@ class WPF_ZeroBSCRM {
 		$contact = $zbs->DAL->contacts->getContact( $contact_id );
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $key => $data ) {
 

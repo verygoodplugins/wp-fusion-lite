@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.37.31
+ * Version: 3.38.0
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.37.31' );
+define( 'WP_FUSION_VERSION', '3.38.0' );
 
 // deny direct access
 if ( ! function_exists( 'add_action' ) ) {
@@ -38,12 +38,12 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 
-final class WP_Fusion_Lite {
+final class WP_Fusion {
 
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
+	 * @var WP_Fusion The one true WP_Fusion
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -157,22 +157,22 @@ final class WP_Fusion_Lite {
 
 
 	/**
-	 * Main WP_Fusion_Lite Instance
+	 * Main WP_Fusion Instance
 	 *
-	 * Ensures that only one instance of WP_Fusion_Lite exists in memory at any one
+	 * Ensures that only one instance of WP_Fusion exists in memory at any one
 	 * time. Also prevents needing to define globals all over the place.
 	 *
 	 * @since 1.0
 	 *
 	 * @static var array $instance
-	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
+	 * @return WP_Fusion The one true WP_Fusion
 	 */
 
 	public static function instance() {
 
-		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion_Lite ) ) {
+		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion ) ) {
 
-			self::$instance = new WP_Fusion_Lite();
+			self::$instance = new WP_Fusion();
 
 			self::$instance->setup_constants();
 			self::$instance->check_install();
@@ -235,7 +235,7 @@ final class WP_Fusion_Lite {
 
 	public function __clone() {
 		// Cloning instances of the class is forbidden
-		_doing_it_wrong( __FUNCTION__, __( 'Cheatin&#8217; huh?', 'wp-fusion-lite' ), WP_FUSION_VERSION );
+		_doing_it_wrong( __FUNCTION__, esc_html__( 'Cheatin&#8217; huh?', 'wp-fusion-lite' ), WP_FUSION_VERSION );
 	}
 
 	/**
@@ -247,7 +247,7 @@ final class WP_Fusion_Lite {
 
 	public function __wakeup() {
 		// Unserializing instances of the class is forbidden
-		_doing_it_wrong( __FUNCTION__, __( 'Cheatin&#8217; huh?', 'wp-fusion-lite' ), WP_FUSION_VERSION );
+		_doing_it_wrong( __FUNCTION__, esc_html__( 'Cheatin&#8217; huh?', 'wp-fusion-lite' ), WP_FUSION_VERSION );
 	}
 
 	/**
@@ -537,12 +537,15 @@ final class WP_Fusion_Lite {
 
 	public function integrations_includes() {
 
-		// Integrations base
+		// Integrations base.
 		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
 
-		// Integrations autoloader
+		// Integrations autoloader.
 
 		foreach ( wp_fusion()->get_integrations() as $filename => $dependency_class ) {
+
+			$filename = sanitize_file_name( $filename );
+
 			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
@@ -562,11 +565,13 @@ final class WP_Fusion_Lite {
 
 	public function integrations_includes_theme() {
 
-		// Integrations base
+		// Integrations base.
 		require_once WPF_DIR_PATH . 'includes/integrations/class-base.php';
 
-		// Integrations autoloader
+		// Integrations autoloader.
 		foreach ( wp_fusion()->get_integrations_theme() as $filename => $dependency_class ) {
+
+			$filename = sanitize_file_name( $filename );
 
 			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
 
@@ -577,6 +582,20 @@ final class WP_Fusion_Lite {
 		}
 
 	}
+
+	/**
+	 * Load internationalization files
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function load_textdomain() {
+
+		load_plugin_textdomain( 'wp-fusion-lite', false, 'wp-fusion/languages' );
+
+	}
+
 
 	/**
 	 * Check to see if this is WPF Lite or regular
@@ -597,7 +616,6 @@ final class WP_Fusion_Lite {
 
 	}
 
-
 	/**
 	 * Returns error message and deactivates plugin when error returned.
 	 *
@@ -608,7 +626,9 @@ final class WP_Fusion_Lite {
 	public function php_version_notice() {
 
 		echo '<div class="notice notice-error">';
-		echo '<p><strong>Warning:</strong> WP Fusion requires at least PHP version ' . WPF_MIN_PHP_VERSION . ' in order to function properly. You are currently using PHP version ' . phpversion() . '. Please update your version of PHP, or contact your web host for assistance.</p>';
+		echo '<p>';
+		printf( esc_html__( 'Heads up! WP Fusion requires at least PHP version %1$s in order to function properly. You are currently using PHP version %2$s. Please update your version of PHP, or contact your web host for assistance.', 'wp-fusion-lite' ), esc_html( WPF_MIN_PHP_VERSION ), esc_html( phpversion() ) );
+		echo '</p>';
 		echo '</div>';
 
 	}
@@ -620,11 +640,12 @@ final class WP_Fusion_Lite {
 	 * @access public
 	 * @return mixed error message.
 	 */
-
 	public function full_version_notice() {
 
 		echo '<div class="notice notice-error">';
-		echo '<p><strong>Warning:</strong> It looks like the full version of WP Fusion has been installed. Please deactivate the <strong>WP Fusion Lite</strong> plugin.</p>';
+		echo '<p>';
+		esc_html_e( 'Warning: It looks like the full version of WP Fusion has been installed. Please deactivate the WP Fusion Lite plugin.', 'wp-fusion-lite' );
+		echo '</p>';
 		echo '</div>';
 
 	}
@@ -649,10 +670,10 @@ final class WP_Fusion_Lite {
 if ( ! function_exists( 'wp_fusion' ) ) {
 
 	function wp_fusion() {
-		return WP_Fusion_Lite::instance();
+		return WP_Fusion::instance();
 	}
 
-	// Get WP Fusion Running
+	// Get WP Fusion running.
 	wp_fusion();
 
 }

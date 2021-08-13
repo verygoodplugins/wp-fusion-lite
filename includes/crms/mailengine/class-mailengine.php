@@ -71,10 +71,10 @@ class WPF_MailEngine {
 
 		// Get saved data from DB
 		if ( empty( $wsdl_url ) || empty( $client_id ) || empty( $subscribe_id ) ) {
-			$wsdl_url     = wp_fusion()->settings->get( 'mailengine_wsdl_url' );
-			$client_id    = wp_fusion()->settings->get( 'mailengine_client_id' );
-			$subscribe_id = wp_fusion()->settings->get( 'mailengine_subscribe_id' );
-			$affiliate    = wp_fusion()->settings->get( 'mailengine_affiliate' );
+			$wsdl_url     = wpf_get_option( 'mailengine_wsdl_url' );
+			$client_id    = wpf_get_option( 'mailengine_client_id' );
+			$subscribe_id = wpf_get_option( 'mailengine_subscribe_id' );
+			$affiliate    = wpf_get_option( 'mailengine_affiliate' );
 		}
 
 		$this->subscribe_service = new \SoapClient(
@@ -305,7 +305,7 @@ class WPF_MailEngine {
 		}
 
 		$found_new      = false;
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = wpf_get_option( 'available_tags' );
 
 		foreach ( $result['taglist'] as $ŧag_id => $tag ) {
 			$contact_tags[] = $tag;
@@ -346,7 +346,7 @@ class WPF_MailEngine {
 			array( 'activate-unsubscribed', 'no' ),
 		);
 
-		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'id', 'yes', intval( $this->params['affiliate'] ), array(), $userdata, $tags );
+		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'id', 'yes', absint( $this->params['affiliate'] ), array(), $userdata, $tags );
 
 		if ( is_soap_fault( $result ) ) {
 			return new WP_Error( $result->faultcode, "SOAP Fault: (faultcode: {$result->faultcode}, faultstring: {$result->faultstring})" );
@@ -386,7 +386,7 @@ class WPF_MailEngine {
 			array( 'activate-unsubscribed', 'no' ),
 		);
 
-		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'id', 'yes', intval( $this->params['affiliate'] ), array(), $userdata, $tags );
+		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'id', 'yes', absint( $this->params['affiliate'] ), array(), $userdata, $tags );
 
 		if ( is_soap_fault( $result ) ) {
 			return new WP_Error( $result->faultcode, "SOAP Fault: (faultcode: {$result->faultcode}, faultstring: {$result->faultstring})" );
@@ -409,7 +409,7 @@ class WPF_MailEngine {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		$crm_fields_multiselect_mapping = wp_fusion()->settings->get( 'crm_fields_multiselect_mapping' );
+		$crm_fields_multiselect_mapping = wpf_get_option( 'crm_fields_multiselect_mapping' );
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 			if ( ! empty( $value ) ) {
@@ -493,7 +493,7 @@ class WPF_MailEngine {
 		}
 
 		$userdata = array(
-			array( 'activate-unsubscribed', ( wp_fusion()->settings->get( 'mailengine_activate_unsubscribed' ) ? 'yes' : 'no' ) ),
+			array( 'activate-unsubscribed', ( wpf_get_option( 'mailengine_activate_unsubscribed' ) ? 'yes' : 'no' ) ),
 		);
 		foreach ( $contact_data as $field => $value ) {
 			if ( is_array( $value ) ) {
@@ -505,7 +505,7 @@ class WPF_MailEngine {
 			}
 		}
 
-		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'email', ( wp_fusion()->settings->get( 'mailengine_hidden_subscribe' ) ? 'yes' : 'no' ), intval( $this->params['affiliate'] ), array(), $userdata, array() );
+		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'email', ( wpf_get_option( 'mailengine_hidden_subscribe' ) ? 'yes' : 'no' ), absint( $this->params['affiliate'] ), array(), $userdata, array() );
 
 		if ( is_soap_fault( $result ) ) {
 			return new WP_Error( $result->faultcode, "SOAP Fault: (faultcode: {$result->faultcode}, faultstring: {$result->faultstring})" );
@@ -555,7 +555,7 @@ class WPF_MailEngine {
 			}
 		}
 
-		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'id', 'yes', intval( $this->params['affiliate'] ), array(), $userdata, $tags );
+		$result = $this->subscribe_service->Subscribe( $this->params['client_id'], $this->params['subscribe_id'], 'id', 'yes', absint( $this->params['affiliate'] ), array(), $userdata, $tags );
 
 		if ( is_soap_fault( $result ) ) {
 			return new WP_Error( $result->faultcode, "SOAP Fault: (faultcode: {$result->faultcode}, faultstring: {$result->faultstring})" );
@@ -590,8 +590,8 @@ class WPF_MailEngine {
 		if ( is_array( $result ) ) {
 			// var_dump($result);
 			$user_meta                     = array();
-			$contact_fields                = wp_fusion()->settings->get( 'contact_fields' );
-			$crm_fields_multiselect_values = wp_fusion()->settings->get( 'crm_fields_multiselect_values' );
+			$contact_fields                = wpf_get_option( 'contact_fields' );
+			$crm_fields_multiselect_values = wpf_get_option( 'crm_fields_multiselect_values' );
 			// var_dump($contact_fields, $crm_fields_multiselect_values);
 			foreach ( $contact_fields as $field_id => $field_data ) {
 				if ( $field_data['active'] == true && isset( $result[ $field_data['crm_field'] ] ) ) {
@@ -660,7 +660,7 @@ class WPF_MailEngine {
 			return new WP_Error( 'no tags found', 'SOAP warning! No id found for tag <strong>' . $tag . '</strong>' );
 		}
 
-		if ( ! empty( $tag_id ) && intval( $tag_id ) ) {
+		if ( ! empty( $tag_id ) && absint( $tag_id ) ) {
 			$filter = '[spec_tag_' . $tag_id . ']';
 		} else {
 			$filter = '';

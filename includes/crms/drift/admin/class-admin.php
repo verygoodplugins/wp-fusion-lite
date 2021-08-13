@@ -22,12 +22,11 @@ class WPF_Drift_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_drift_header_begin', array( $this, 'show_field_drift_header_begin' ), 10, 2 );
-		add_action( 'show_field_drift_refresh_token_end', array( $this, 'show_field_drift_refresh_token_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -60,6 +59,8 @@ class WPF_Drift_Admin {
 
 		if( isset( $_GET['code'] ) && isset( $_GET['state'] ) && $_GET['state'] == 'wpfdrift' )  {
 
+			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+
 			$params = array(
 				'headers'	=> array(
 					'Content-type' => 'application/x-www-form-urlencoded'
@@ -67,13 +68,13 @@ class WPF_Drift_Admin {
 				'body'		=> array(
 					'client_id'		=> $this->crm->client_id,
 					'client_secret'	=> $this->crm->client_secret,
-					'code'			=> $_GET['code'],
+					'code'			=> $code,
 					'grant_type'	=> 'authorization_code'
 
 				)
 			);
 
-			$response = wp_remote_post( 'https://driftapi.com/oauth2/token', $params );
+			$response = wp_safe_remote_post( 'https://driftapi.com/oauth2/token', $params );
 
 			if( is_wp_error( $response ) ) {
 				return false;
@@ -84,12 +85,12 @@ class WPF_Drift_Admin {
 			if( isset( $body->error ) ) {
 				return false;
 			}
-			
+
 			wp_fusion()->settings->set( 'drift_token', $body->access_token );
 			wp_fusion()->settings->set( 'drift_refresh_token', $body->refresh_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
 
-			wp_redirect( get_admin_url() . 'options-general.php?page=wpf-settings#setup' );
+			wp_safe_redirect( get_admin_url() . 'options-general.php?page=wpf-settings#setup' );
 			exit;
 
 		}
@@ -187,8 +188,8 @@ class WPF_Drift_Admin {
 	public function show_field_drift_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -203,7 +204,7 @@ class WPF_Drift_Admin {
 	public function show_field_drift_refresh_token_end( $id, $field ) {
 
 		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
+			echo '<span class="description">' . esc_html( $field['desc'] ) . '</span>';
 		}
 		echo '</td>';
 		echo '</tr>';
@@ -227,8 +228,10 @@ class WPF_Drift_Admin {
 
 	public function test_connection() {
 
-		$access_token = sanitize_text_field( $_POST['drift_token'] );
-		$refresh_token = sanitize_text_field( $_POST['drift_refresh_token'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$access_token  = isset( $_POST['drift_token'] ) ? sanitize_text_field( wp_unslash( $_POST['drift_token'] ) ) : false;
+		$refresh_token = isset( $_POST['drift_refresh_token'] ) ? sanitize_text_field( wp_unslash( $_POST['drift_refresh_token'] ) ) : false;
 
 		$connection = $this->crm->connect( $access_token, $refresh_token, true );
 
@@ -238,13 +241,13 @@ class WPF_Drift_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['drift_token']           = $access_token;
 			$options['drift_refresh_token']   = $refresh_token;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

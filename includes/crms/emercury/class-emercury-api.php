@@ -232,7 +232,7 @@ class WPF_Emercury_API {
 	* @return array
 	*/
 	private function sendRequest( $xml ) {
-		$res = wp_remote_request(
+		$res = wp_safe_remote_request(
 			self::API_URL,
 			$this->parameters( $xml )
 		);

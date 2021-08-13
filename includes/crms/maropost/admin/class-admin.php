@@ -22,12 +22,11 @@ class WPF_Maropost_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_maropost_header_begin', array( $this, 'show_field_maropost_header_begin' ), 10, 2 );
-		add_action( 'show_field_maropost_key_end', array( $this, 'show_field_maropost_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -85,14 +84,14 @@ class WPF_Maropost_Admin {
 		);
 
 
-		if( $settings['connection_configured'] == true && wp_fusion()->settings->get('crm') == 'maropost') {
+		if( $settings['connection_configured'] == true && wpf_get_option('crm') == 'maropost') {
 
 			$is_config['mp_list'] = array(
 				'title'   => __( 'Maropost Default List', 'wp-fusion-lite' ),
 				'std'     => 'Personal',
 				'type'    => 'select',
 				'section' => 'setup',
-				'choices' => wp_fusion()->settings->get( 'maropost_lists' )
+				'choices' => wpf_get_option( 'maropost_lists' )
 
 			);
 		}
@@ -143,35 +142,13 @@ class WPF_Maropost_Admin {
 	public function show_field_maropost_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
 
-	}
-
-	/**
-	 * Close out maropost section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_maropost_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
 		if( wp_fusion()->crm->slug == 'maropost' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
-		echo '</div>'; // close #Maropost div
-		echo '<table class="form-table">';
 
-
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -184,10 +161,11 @@ class WPF_Maropost_Admin {
 
 	public function test_connection() {
 
+		check_ajax_referer( 'wpf_settings_nonce' );
+
 		$account_id = sanitize_text_field( $_POST['account_id'] );
 		$api_key 	= sanitize_text_field( $_POST['maropost_key'] );
 		$mp_list    = sanitize_text_field( $_POST['mp_list'] );
-
 
 		$connection = $this->crm->connect( $account_id, $api_key, true );
 
@@ -197,14 +175,14 @@ class WPF_Maropost_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['account_id']            = $account_id;
 			$options['mp_list']               = $mp_list;
 			$options['maropost_key']          = $api_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			
-			wp_fusion()->settings->set_all( $options );
+
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

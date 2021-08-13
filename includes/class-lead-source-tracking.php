@@ -96,7 +96,7 @@ class WPF_Lead_Source_Tracking {
 			'landing_page',
 		);
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		$leadsource_cookie_name = $this->get_leadsource_cookie_name();
 		$ref_cookie_name        = $this->get_referral_cookie_name();
@@ -104,18 +104,18 @@ class WPF_Lead_Source_Tracking {
 		foreach ( $leadsource_vars as $var ) {
 
 			if ( isset( $_GET[ $var ] ) && wpf_is_field_active( $var ) ) {
-				setcookie( "{$leadsource_cookie_name}[{$var}]", $_GET[ $var ], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( "{$leadsource_cookie_name}[{$var}]", sanitize_text_field( wp_unslash( $_GET[ $var ] ) ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
 
 		if ( ! is_admin() && empty( $_COOKIE[ $ref_cookie_name ] ) ) {
 
 			if ( wpf_is_field_active( 'original_ref' ) && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-				setcookie( "{$ref_cookie_name}[original_ref]", $_SERVER['HTTP_REFERER'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( "{$ref_cookie_name}[original_ref]", esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 
-			if ( wpf_is_field_active( 'landing_page' ) ) {
-				setcookie( "{$ref_cookie_name}[landing_page]", $_SERVER['REQUEST_URI'], time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+			if ( wpf_is_field_active( 'landing_page' ) && ! empty( $_SERVER['REQUEST_URI'] ) ) {
+				setcookie( "{$ref_cookie_name}[landing_page]", esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
 
@@ -130,18 +130,23 @@ class WPF_Lead_Source_Tracking {
 
 	public function merge_lead_source( $user_meta, $user_id ) {
 
-		// No need to run this when a user registers
+		// No need to run this when a user registers.
 		remove_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
 
 		$leadsource_cookie_name = $this->get_leadsource_cookie_name();
 		$ref_cookie_name        = $this->get_referral_cookie_name();
 
 		if ( ! empty( $_COOKIE[ $leadsource_cookie_name ] ) ) {
-			$user_meta = array_merge( $user_meta, $_COOKIE[ $leadsource_cookie_name ] );
+
+			$data      = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $leadsource_cookie_name ] ) );
+			$user_meta = array_merge( $user_meta, $data );
 		}
 
 		if ( ! empty( $_COOKIE[ $ref_cookie_name ] ) ) {
-			$user_meta = array_merge( $user_meta, $_COOKIE[ $ref_cookie_name ] );
+
+			$data      = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $ref_cookie_name ] ) );
+			$user_meta = array_merge( $user_meta, $data );
+
 		}
 
 		return $user_meta;
@@ -173,24 +178,32 @@ class WPF_Lead_Source_Tracking {
 
 		$merged_data = array();
 
-		if ( isset( $_COOKIE[ $leadsource_cookie_name ] ) && is_array( $_COOKIE[ $leadsource_cookie_name ] ) ) {
-			$merged_data = array_merge( $merged_data, $_COOKIE[ $leadsource_cookie_name ] );
+		if ( ! empty( $_COOKIE[ $leadsource_cookie_name ] ) ) {
+
+			$data        = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $leadsource_cookie_name ] ) );
+			$merged_data = array_merge( $merged_data, $data );
 		}
 
-		if ( isset( $_COOKIE[ $ref_cookie_name ] ) && is_array( $_COOKIE[ $ref_cookie_name ] ) ) {
-			$merged_data = array_merge( $merged_data, $_COOKIE[ $ref_cookie_name ] );
+		if ( ! empty( $_COOKIE[ $ref_cookie_name ] ) ) {
+
+			$data        = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $ref_cookie_name ] ) );
+			$merged_data = array_merge( $merged_data, $data );
+
 		}
 
 		if ( ! empty( $merged_data ) ) {
 
 			wpf_log(
-				'info', 0, 'Syncing lead source data for guest:', array(
+				'info',
+				0,
+				'Syncing lead source data for guest:',
+				array(
 					'meta_array' => $merged_data,
 					'source'     => 'lead-source-tracking',
 				)
 			);
 
-			$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+			$contact_fields = wpf_get_option( 'contact_fields' );
 
 			foreach ( $merged_data as $key => $value ) {
 

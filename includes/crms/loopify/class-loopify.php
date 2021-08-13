@@ -71,7 +71,7 @@ class WPF_Loopify {
 
 	public function refresh_token() {
 
-		$refresh_token = wp_fusion()->settings->get( 'loopify_refresh_token' );
+		$refresh_token = wpf_get_option( 'loopify_refresh_token' );
 
 		$params = array(
 			'headers' => array(
@@ -85,7 +85,7 @@ class WPF_Loopify {
 			),
 		);
 
-		$response = wp_remote_post( 'https://auth.loopify.com/token', $params );
+		$response = wp_safe_remote_post( 'https://auth.loopify.com/token', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -116,7 +116,7 @@ class WPF_Loopify {
 
 		// Get saved data from DB
 		if ( empty( $access_token ) ) {
-			$access_token = wp_fusion()->settings->get( 'loopify_token' );
+			$access_token = wpf_get_option( 'loopify_token' );
 		}
 
 		$this->params = array(
@@ -161,7 +161,7 @@ class WPF_Loopify {
 
 				sleep( 1 ); // It seems to take a second for the new token to stick?
 
-				$response = wp_remote_request( $url, $args );
+				$response = wp_safe_remote_request( $url, $args );
 
 			} elseif ( wp_remote_retrieve_response_code( $response ) > 204 ) {
 
@@ -203,7 +203,7 @@ class WPF_Loopify {
 		}
 
 		$request  = 'https://api.loopify.com/me';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -251,7 +251,7 @@ class WPF_Loopify {
 		$available_tags = array();
 
 		$request  = 'https://api.loopify.com/contacts/tag-groups';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -310,7 +310,7 @@ class WPF_Loopify {
 		$custom_fields = array();
 
 		$request  = 'https://api.loopify.com/contacts/custom-fields';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -348,7 +348,7 @@ class WPF_Loopify {
 		}
 
 		$request  = 'https://api.loopify.com/contacts?search=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -379,7 +379,7 @@ class WPF_Loopify {
 		}
 
 		$request  = 'https://api.loopify.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -415,7 +415,7 @@ class WPF_Loopify {
 			$this->get_params();
 		}
 
-		$tag_group = wp_fusion()->settings->get( 'loopify_tag_group' );
+		$tag_group = wpf_get_option( 'loopify_tag_group' );
 
 		$body = array(
 			'contactIds' => array( $contact_id ),
@@ -431,7 +431,7 @@ class WPF_Loopify {
 		$params['body'] = json_encode( $body );
 
 		$request  = 'https://api.loopify.com/contacts/tag-groups/bulk-insert';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -454,7 +454,7 @@ class WPF_Loopify {
 			$this->get_params();
 		}
 
-		$tag_group = wp_fusion()->settings->get( 'loopify_tag_group' );
+		$tag_group = wpf_get_option( 'loopify_tag_group' );
 
 		$body = array(
 			'contactIds' => array( $contact_id ),
@@ -470,7 +470,7 @@ class WPF_Loopify {
 		$params['body'] = json_encode( $body );
 
 		$request  = 'https://api.loopify.com/contacts/tag-groups/bulk-delete';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -500,7 +500,7 @@ class WPF_Loopify {
 
 		$custom_fields = array();
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		// Move custom fields into customFields
 		foreach ( $data as $key => $value ) {
@@ -531,7 +531,7 @@ class WPF_Loopify {
 		$params['body'] = json_encode( $data );
 
 		$request  = 'https://api.loopify.com/contacts';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -562,7 +562,7 @@ class WPF_Loopify {
 
 		$custom_fields = array();
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		// Move custom fields into customFields
 		foreach ( $data as $key => $value ) {
@@ -594,7 +594,7 @@ class WPF_Loopify {
 		$params['method'] = 'PUT';
 
 		$request  = 'https://api.loopify.com/contacts/' . $contact_id;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -618,14 +618,14 @@ class WPF_Loopify {
 		}
 
 		$request  = 'https://api.loopify.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -679,7 +679,7 @@ class WPF_Loopify {
 		while ( $proceed ) {
 
 			$request  = 'https://api.loopify.com/contacts/?selectedTags=' . urlencode( json_encode( array( $query ) ) ) . '&pageSize=100';
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

@@ -21,12 +21,11 @@ class WPF_Drip_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_drip_header_begin', array( $this, 'show_field_drip_header_begin' ), 10, 2 );
-		add_action( 'show_field_drip_token_end', array( $this, 'show_field_drip_token_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -226,32 +225,11 @@ class WPF_Drip_Admin {
 	public function show_field_drip_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
-	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_drip_token_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #drip div
-		echo '<table class="form-table">';
-
-	}
 
 	/**
 	 * Verify connection credentials
@@ -262,8 +240,10 @@ class WPF_Drip_Admin {
 
 	public function test_connection() {
 
-		$api_token  = sanitize_text_field( $_POST['drip_token'] );
-		$account_id = intval( $_POST['drip_account'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$api_token  = isset( $_POST['drip_token'] ) ? sanitize_text_field( wp_unslash( $_POST['drip_token'] ) ) : false;
+		$account_id = isset( $_POST['drip_account'] ) ? absint( wp_unslash( $_POST['drip_account'] ) ) : false;
 
 		$connection = $this->crm->connect( $api_token, $account_id, true );
 
@@ -273,12 +253,12 @@ class WPF_Drip_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['drip_token']            = $api_token;
 			$options['drip_account']          = $account_id;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

@@ -371,14 +371,13 @@ function wpf_get_datetime_format() {
  * @param  int   $user_id The user ID.
  * @return bool
  */
-
 function wpf_admin_override( $user_id = false ) {
 
-	if ( false == $user_id ) {
-		$user_id = get_current_user_id(); // don't use wpf_get_current_user_id() here since auto-login users don't have permissions anyway
+	if ( false === $user_id ) {
+		$user_id = get_current_user_id(); // don't use wpf_get_current_user_id() here since auto-login users don't have permissions anyway.
 	}
 
-	if ( wp_fusion()->settings->get( 'exclude_admins' ) && user_can( $user_id, 'manage_options' ) ) {
+	if ( wpf_get_option( 'exclude_admins' ) && user_can( $user_id, 'manage_options' ) ) {
 		return true;
 	} else {
 		return false;
@@ -386,3 +385,87 @@ function wpf_admin_override( $user_id = false ) {
 
 }
 
+/**
+ * Gets an option from the WP Fusion settings.
+ *
+ * @since 3.38.0
+ *
+ * @param string $key     The settings key.
+ * @param mixed  $default The default value to return if not set.
+ * @return mixed The option value.
+ */
+function wpf_get_option( $key, $default = false ) {
+
+	return wp_fusion()->settings->get( $key, $default );
+
+}
+
+/**
+ * Clean variables using sanitize_text_field. Arrays are cleaned
+ * recursively. Non-scalar values are ignored.
+ *
+ * @since  3.38.0
+ *
+ * @param  string|array $var    Data to sanitize.
+ * @return string|array
+ */
+function wpf_clean( $var ) {
+	if ( is_array( $var ) ) {
+		return array_map( 'wpf_clean', $var );
+	} else {
+		return is_scalar( $var ) ? sanitize_text_field( $var ) : $var;
+	}
+}
+
+
+/**
+ * Prints human-readable information about a variable.
+ *
+ * Some server environments block some debugging functions. This function provides a safe way to
+ * turn an expression into a printable, readable form without calling blocked functions.
+ *
+ * @since 3.38.0
+ *
+ * @see wc_print_r() https://woocommerce.github.io/code-reference/namespaces/default.html#function_wc_print_r
+ *
+ * @param mixed $expression The expression to be printed.
+ * @param bool  $return     Optional. Default false. Set to true to return the human-readable string.
+ * @return string|bool False if expression could not be printed. True if the expression was printed.
+ *     If $return is true, a string representation will be returned.
+ */
+function wpf_print_r( $expression, $return = false ) {
+	$alternatives = array(
+		array(
+			'func' => 'print_r',
+			'args' => array( $expression, true ),
+		),
+		array(
+			'func' => 'var_export',
+			'args' => array( $expression, true ),
+		),
+		array(
+			'func' => 'json_encode',
+			'args' => array( $expression ),
+		),
+		array(
+			'func' => 'serialize',
+			'args' => array( $expression ),
+		),
+	);
+
+	$alternatives = apply_filters( 'wp_fusion_print_r_alternatives', $alternatives, $expression );
+
+	foreach ( $alternatives as $alternative ) {
+		if ( function_exists( $alternative['func'] ) ) {
+			$res = $alternative['func']( ...$alternative['args'] );
+			if ( $return ) {
+				return $res;
+			}
+
+			echo $res; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			return true;
+		}
+	}
+
+	return false;
+}

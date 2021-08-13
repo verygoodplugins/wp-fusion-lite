@@ -26,7 +26,6 @@ class Main {
 		add_action( 'enqueue_block_editor_assets', array( $this, 'editor_assets' ) ); // Load Editor Assets
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );        // Load Admin Assets
 
-
 		// Load Classes
 		add_action( 'init', array( $this, 'includes' ) );
 
@@ -48,7 +47,7 @@ class Main {
 		wp_enqueue_script(
 			'wpf-secure-blocks-for-gutenberg-editor-js',
 			plugins_url( $scripts, __FILE__ ),
-			[ 'wp-i18n', 'wp-element', 'wp-blocks', 'wp-components', 'wp-api', 'wp-editor' ],
+			array( 'wp-i18n', 'wp-element', 'wp-blocks', 'wp-components', 'wp-api', 'wp-editor' ),
 			filemtime( plugin_dir_path( __FILE__ ) . $scripts )
 		);
 

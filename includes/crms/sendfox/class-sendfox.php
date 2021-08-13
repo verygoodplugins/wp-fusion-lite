@@ -106,7 +106,7 @@ class WPF_SendFox {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'sendfox_key' );
+			$api_key = wpf_get_option( 'sendfox_key' );
 		}
 
 		$this->params = array(
@@ -140,7 +140,7 @@ class WPF_SendFox {
 		}
 
 		$request  = 'https://api.sendfox.com/me';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -187,7 +187,7 @@ class WPF_SendFox {
 		$available_tags = array();
 
 		$request  = 'https://api.sendfox.com/lists';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -246,7 +246,7 @@ class WPF_SendFox {
 		}
 
 		$request  = 'https://api.sendfox.com/contacts?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -276,7 +276,7 @@ class WPF_SendFox {
 
 		$tags     = array();
 		$request  = 'https://api.sendfox.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -286,7 +286,7 @@ class WPF_SendFox {
 
 		// This is super dumb, the contact lookup doesn't return lists, so we have to do it again by email
 		$request  = 'https://api.sendfox.com/contacts?email=' . urlencode( $body->email );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -295,7 +295,7 @@ class WPF_SendFox {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body->data[0]->lists as $list ) {
 			if ( ! isset( $available_tags[ $list->id ] ) ) {
@@ -325,7 +325,7 @@ class WPF_SendFox {
 		// This is so dumb.... we need to load the contact before we can "add" the contact with the lists
 
 		$request  = 'https://api.sendfox.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -343,7 +343,7 @@ class WPF_SendFox {
 		$params         = $this->params;
 		$params['body'] = json_encode( $contact_data );
 
-		$response = wp_remote_post( 'https://api.sendfox.com/contacts', $params );
+		$response = wp_safe_remote_post( 'https://api.sendfox.com/contacts', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -373,7 +373,7 @@ class WPF_SendFox {
 			$params           = $this->params;
 			$params['method'] = 'DELETE';
 
-			$response = wp_remote_request( $request, $params );
+			$response = wp_safe_remote_request( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -405,7 +405,7 @@ class WPF_SendFox {
 		$params         = $this->params;
 		$params['body'] = json_encode( $data );
 
-		$response = wp_remote_post( 'https://api.sendfox.com/contacts', $params );
+		$response = wp_safe_remote_post( 'https://api.sendfox.com/contacts', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -441,7 +441,7 @@ class WPF_SendFox {
 		$params         = $this->params;
 		$params['body'] = json_encode( $data );
 
-		$response = wp_remote_post( 'https://api.sendfox.com/contacts', $params );
+		$response = wp_safe_remote_post( 'https://api.sendfox.com/contacts', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -464,7 +464,7 @@ class WPF_SendFox {
 		}
 
 		$request  = 'https://api.sendfox.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -473,7 +473,7 @@ class WPF_SendFox {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 

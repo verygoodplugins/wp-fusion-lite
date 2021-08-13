@@ -104,14 +104,14 @@ class WPF_Autopilot {
 
 			if ( ! empty( $contact_id ) ) {
 
-				$user = wp_get_current_user();
+				$user  = wp_get_current_user();
 				$email = $user->user_email;
 
 			}
 
 		} elseif ( ! empty( $_COOKIE['autopilot_id'] ) ) {
 
-			$email = $_COOKIE['autopilot_id'];
+			$email = sanitize_email( wp_unslash( $_COOKIE['autopilot_id'] ) );
 
 		}
 
@@ -122,7 +122,7 @@ class WPF_Autopilot {
 
 				Autopilot.run("associate", {
 					_simpleAssociate: true,  
-					Email: "' . $email . '"
+					Email: "' . esc_js( $email ) . '"
 				});
 
 			}
@@ -165,15 +165,15 @@ class WPF_Autopilot {
 
 		if( $post_data['wpf_action'] == 'update' ) {
 
-			$post_data['contact_id'] = $payload->contact_id;
+			$post_data['contact_id'] = sanitize_key( $payload->contact_id );
 			return $post_data;
 
 		} elseif( $post_data['wpf_action'] == 'add' ) {
 
-			$tag = wp_fusion()->settings->get('autopilot_add_tag');
+			$tag = wpf_get_option('autopilot_add_tag');
 
 			if( $payload->list_id == $tag[0] ) {
-				$post_data['contact_id'] = $payload->contact_id;
+				$post_data['contact_id'] = sanitize_key( $payload->contact_id );
 				return $post_data;
 			} else {
 				return false;
@@ -219,7 +219,7 @@ class WPF_Autopilot {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) ) {
-			$access_key = wp_fusion()->settings->get( 'autopilot_key' );
+			$access_key = wpf_get_option( 'autopilot_key' );
 		}
 
 		$this->params = array(
@@ -253,7 +253,7 @@ class WPF_Autopilot {
 		}
 
 		$request  = 'https://api2.autopilothq.com/v1/contacts';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 		
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -301,7 +301,7 @@ class WPF_Autopilot {
 		$available_tags = array();
 
 		$request    = 'https://api2.autopilothq.com/v1/lists';
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -349,7 +349,7 @@ class WPF_Autopilot {
 		}
 
 		$request  = 'https://api2.autopilothq.com/v1/contacts/custom_fields';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -390,7 +390,7 @@ class WPF_Autopilot {
 		}
 
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -421,7 +421,7 @@ class WPF_Autopilot {
 		}
 
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -461,7 +461,7 @@ class WPF_Autopilot {
 			$params = $this->params;;
 
 			$request  = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contact/' . $contact_id;
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -492,7 +492,7 @@ class WPF_Autopilot {
 			$params['method'] = 'DELETE';
 
 			$request  = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contact/' . $contact_id;
-			$response = wp_remote_request( $request, $params );
+			$response = wp_safe_remote_request( $request, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -570,7 +570,7 @@ class WPF_Autopilot {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api2.autopilothq.com/v1/contact';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -660,7 +660,7 @@ class WPF_Autopilot {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api2.autopilothq.com/v1/contact';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -680,14 +680,14 @@ class WPF_Autopilot {
 	public function load_contact( $contact_id ) {
 
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . $contact_id;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( empty( $response ) ) {
@@ -732,7 +732,7 @@ class WPF_Autopilot {
 		$contact_ids = array();
 
 		$url     = 'https://api2.autopilothq.com/v1/list/'. $tag . '/contacts';
-		$results = wp_remote_get( $url, $this->params );
+		$results = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $results ) ) {
 			return $results;
@@ -742,7 +742,7 @@ class WPF_Autopilot {
 
 		if ($body_json['total_contacts'] == 100) {
 			$url     = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contacts/'. $body_json['contacts'][100]['contact_id'];
-			$results = wp_remote_get( $url, $this->params );
+			$results = wp_safe_remote_get( $url, $this->params );
 		}
 
 		foreach ( $body_json['contacts'] as $row => $contact ) {
@@ -773,7 +773,7 @@ class WPF_Autopilot {
 			$event_type = 'updated';
 		}
 
-		$access_key = wp_fusion()->settings->get('access_key');
+		$access_key = wpf_get_option('access_key');
 
 		$data = array(
 			'target_url'    => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
@@ -785,7 +785,7 @@ class WPF_Autopilot {
 		$params['method'] 	= 'POST';
 		$params['body']  	= json_encode($data,JSON_UNESCAPED_SLASHES);
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -818,7 +818,7 @@ class WPF_Autopilot {
 		$params           		= $this->params;
 		$params['method'] 		= 'DELETE';
 
-		$response     		    = wp_remote_post( $request, $params );
+		$response     		    = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

@@ -103,9 +103,23 @@ abstract class WPF_Integrations_Base {
 		$contact_id  = wp_fusion()->crm->get_contact_id( $email_address );
 		$update_data = apply_filters( "wpf_{$this->slug}_guest_registration_data", $update_data, $email_address, $contact_id );
 
-		wpf_log( 'info', 0, $this->name . ' guest registration:', array( 'meta_array' => $update_data ) );
+		// Log whether we're creating or updating a contact, with edit link.
+		if ( false !== $contact_id ) {
 
-		if ( false == $contact_id ) {
+			$url = wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
+
+			if ( false !== $url ) {
+				$log_text .= ' Updating existing contact <a href="' . $url . '" target="_blank">#' . $contact_id . '</a>: ';
+			} else {
+				$log_text .= ' Updating existing contact #' . $contact_id . ': ';
+			}
+		} else {
+			$log_text .= ' Creating new contact: ';
+		}
+
+		wpf_log( 'info', 0, $this->name . ' guest registration.' . $log_text, array( 'meta_array' => $update_data ) );
+
+		if ( false === $contact_id ) {
 
 			$contact_id = wp_fusion()->crm->add_contact( $update_data );
 

@@ -53,27 +53,11 @@ class WPF_Tubular {
 
 	public function init() {
 
-		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 	}
 
-
-	/**
-	 * Formats POST data received from HTTP Posts into standard format
-	 *
-	 * @access public
-	 * @return array
-	 */
-
-	public function format_post_data( $post_data ) {
-
-		if(isset($post_data['contact_id'])) {
-			return $post_data;
-		}
-
-	}
 
 	/**
 	 * Formats user entered data to match Tubular field formats
@@ -141,7 +125,7 @@ class WPF_Tubular {
 
 		// Get saved data from DB
 		if ( empty( $api_key )) {
-			$api_key = wp_fusion()->settings->get( 'tubular_key' );
+			$api_key = wpf_get_option( 'tubular_key' );
 		}
 
 		$this->params = array(
@@ -176,7 +160,7 @@ class WPF_Tubular {
 		}
 
 		$request  = 'https://app.tubular.io/api/company/tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -223,7 +207,7 @@ class WPF_Tubular {
 		$available_tags = array();
 
 		$request  = 'https://app.tubular.io/api/company/tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -273,7 +257,7 @@ class WPF_Tubular {
 		$custom_fields = array();
 
 		$request    = 'https://app.tubular.io/api/company/company_settings/current';
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -316,7 +300,7 @@ class WPF_Tubular {
 		}
 
 		$request    	= 'https://app.tubular.io/api/company/clients?leads=false&paginate=1&per_page=1&q=' . urlencode( $email_address );
-		$response     	= wp_remote_get( $request, $this->params );
+		$response     	= wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -346,7 +330,7 @@ class WPF_Tubular {
 
 		$tags 		= array();
 		$request    = 'https://app.tubular.io/api/company/clients/' . $contact_id;
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -363,7 +347,7 @@ class WPF_Tubular {
 		}
 
 		// Check if we need to update the available tags list
-		// $available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		// $available_tags = wpf_get_option( 'available_tags', array() );
 
 		// foreach( $body_json['tags'] as $tag ) {
 
@@ -404,7 +388,7 @@ class WPF_Tubular {
 			$params           	= $this->params;
 			$params['body']  	= json_encode( $body );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -436,7 +420,7 @@ class WPF_Tubular {
 			$params           		= $this->params;
 			$params['method'] 		= 'DELETE';
 			
-			$response     		    = wp_remote_request( $request, $params );
+			$response     		    = wp_safe_remote_request( $request, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -470,7 +454,7 @@ class WPF_Tubular {
 		$params           = $this->params;
 		$params['body']   = json_encode( $data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -504,7 +488,7 @@ class WPF_Tubular {
 		}
 
 		// Move custom fields into custom attributes
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields', array() );
+		$crm_fields = wpf_get_option( 'crm_fields', array() );
 
 		foreach( $data as $field => $value ) {
 
@@ -525,7 +509,7 @@ class WPF_Tubular {
 		$params['method']   = 'PUT';
 		$params['body']   	= json_encode( $data );
 
-		$response = wp_remote_request( $url, $params );
+		$response = wp_safe_remote_request( $url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -549,14 +533,14 @@ class WPF_Tubular {
 		}
 
 		$url      = 'https://app.tubular.io/api/company/clients/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $body_json as $field => $value ) {
@@ -609,7 +593,7 @@ class WPF_Tubular {
 		$contact_ids = array();
 
 		$request    	= 'https://app.tubular.io/api/company/clients?leads=false&paginate=1&per_page=1&tags_name_filter=' . urlencode( json_encode( array( $tag ) ) );
-		$response     	= wp_remote_get( $request, $this->params );
+		$response     	= wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

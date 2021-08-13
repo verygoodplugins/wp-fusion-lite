@@ -60,7 +60,7 @@ class WPF_Admin_Bar {
 	public function user_tags( $user_tags, $user_id ) {
 
 		if ( ! empty( $_GET['wpf_tag'] ) ) {
-			$user_tags[] = urldecode( $_GET['wpf_tag'] );
+			$user_tags[] = sanitize_text_field( urldecode( $_GET['wpf_tag'] ) );
 		}
 
 		return $user_tags;
@@ -168,15 +168,15 @@ class WPF_Admin_Bar {
 		$current_url = home_url( $wp->request ) . '/';
 
 		// Add the parent admin bar container
-		$wp_admin_bar->add_menu( array( 'id' => $menu_id, 'title' => $label ) );
+		$wp_admin_bar->add_menu( array( 'id' => $menu_id, 'title' => esc_html( $label ) ) );
 
-		// If theres'a filter currently set, show the option to remove filters
+		// If theres'a filter currently set, show the option to remove filters.
 		if ( isset( $_GET['wpf_tag'] ) ) {
 			$wp_admin_bar->add_menu( array(
 				'parent' => $menu_id,
 				'title'  => 'Remove Filters',
 				'id'     => 'remove-filters',
-				'href'   => $current_url
+				'href'   => esc_url( $current_url ),
 			) );
 		}
 
@@ -184,17 +184,17 @@ class WPF_Admin_Bar {
 			'parent' => $menu_id,
 			'title'  => 'Unlock All',
 			'id'     => 'unlock-all',
-			'href'   => $current_url . '?wpf_tag=unlock-all'
+			'href'   => esc_url( $current_url . '?wpf_tag=unlock-all' ),
 		) );
 		$wp_admin_bar->add_menu( array(
 			'parent' => $menu_id,
 			'title'  => 'Lock All',
 			'id'     => 'lock-all',
-			'href'   => $current_url . '?wpf_tag=lock-all'
+			'href'   => esc_url( $current_url . '?wpf_tag=lock-all' ),
 		) );
 
 		$tag_categories = array();
-		$available_tags = (array) wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = (array) wpf_get_option( 'available_tags' );
 
 		if ( is_array( reset( $available_tags ) ) ) {
 
@@ -210,23 +210,23 @@ class WPF_Admin_Bar {
 				$sub_menu_id = 'wpf-cat-' . sanitize_title_with_dashes( $tag_category );
 				$wp_admin_bar->add_menu( array(
 					'parent' => $menu_id,
-					'title'  => $tag_category,
-					'id'     => $sub_menu_id,
+					'title'  => esc_html( $tag_category ),
+					'id'     => esc_attr( $sub_menu_id ),
 					'meta'   => array( 'class' => 'wpf-category-header' )
 				) );
 			}
 
 			$without_category_id = null;
 
-			// Sort by label
+			// Sort by label.
 			$available_tags = $this->subval_sort( $available_tags, 'label' );
 
-			// Add the submenu links
+			// Add the submenu links.
 			foreach ( $available_tags as $tag_id => $tag_data ) {
 
 				$parent_id = 'wpf-cat-' . sanitize_title_with_dashes( $tag_data['category'] );
 
-				// If no category specified
+				// If no category specified.
 				if ( sanitize_title_with_dashes( $tag_data['category'] ) == '0' ) {
 
 					if ( $without_category_id == null ) {
@@ -234,7 +234,7 @@ class WPF_Admin_Bar {
 						$wp_admin_bar->add_menu( array(
 							'parent' => $menu_id,
 							'title'  => 'Without Category',
-							'id'     => $without_category_id,
+							'id'     => esc_attr( $without_category_id ),
 							'meta'   => array( 'class' => 'wpf-category-header' )
 						) );
 					}
@@ -244,9 +244,9 @@ class WPF_Admin_Bar {
 
 				$wp_admin_bar->add_menu( array(
 					'parent' => $parent_id,
-					'title'  => $tag_data['label'],
-					'id'     => 'wpf-tag-' . $tag_id,
-					'href'   => $current_url . '?wpf_tag=' . $tag_id
+					'title'  => esc_html( $tag_data['label'] ),
+					'id'     => esc_attr( 'wpf-tag-' . $tag_id ),
+					'href'   => esc_url( $current_url . '?wpf_tag=' . $tag_id ),
 				) );
 
 			}
@@ -259,9 +259,9 @@ class WPF_Admin_Bar {
 
 				$wp_admin_bar->add_menu( array(
 					'parent' => $menu_id,
-					'title'  => $tag,
-					'id'     => $id,
-					'href'   => $current_url . '?wpf_tag=' . urlencode( $id )
+					'title'  => esc_html( $tag ),
+					'id'     => esc_attr( $id ),
+					'href'   => esc_url( $current_url . '?wpf_tag=' . rawurlencode( $id ) ),
 				) );
 
 			}

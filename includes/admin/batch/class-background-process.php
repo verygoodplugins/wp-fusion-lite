@@ -202,7 +202,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return string
 		 */
 		protected function generate_key( $length = 24 ) {
-			$unique  = md5( microtime() . rand() );
+			$unique  = md5( microtime() . wp_rand() );
 			$prepend = $this->identifier . '_';
 
 			return substr( $prepend . $unique, 0, $length );
@@ -530,12 +530,12 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				$memory_limit = '128M';
 			}
 
-			if ( ! $memory_limit || -1 === intval( $memory_limit ) ) {
+			if ( ! $memory_limit || -1 === absint( $memory_limit ) ) {
 				// Unlimited, set to 512M.
 				$memory_limit = '512M';
 			}
 
-			return intval( $memory_limit ) * 1024 * 1024;
+			return absint( $memory_limit ) * 1024 * 1024;
 		}
 
 		/**

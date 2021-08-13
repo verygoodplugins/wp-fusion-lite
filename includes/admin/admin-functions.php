@@ -27,19 +27,19 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 	$args = wp_parse_args( $args, $defaults );
 
-	// Allow disabling the output if it causes performance problems
+	// Allow disabling the output if it causes performance problems.
 	$bypass = apply_filters( 'wpf_disable_tag_multiselect', false, $args );
 
-	if ( true == $bypass ) {
+	if ( true === $bypass ) {
 		return;
 	}
 
-	if ( 1 == $args['limit'] ) {
+	if ( 1 === $args['limit'] ) {
 		$args['placeholder'] = __( 'Select a tag', 'wp-fusion-lite' );
 	}
 
 	// Get the field ID
-	if ( false == $args['field_id'] ) {
+	if ( false === $args['field_id'] ) {
 		$field_id = sanitize_html_class( $args['meta_name'] );
 	} else {
 		$field_id = sanitize_html_class( $args['meta_name'] ) . '-' . $args['field_id'];
@@ -47,15 +47,14 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 	$args = apply_filters( 'wpf_render_tag_multiselect_args', $args );
 
-	$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+	$available_tags = wpf_get_option( 'available_tags', array() );
 
-	// Let's make sure this is an array so we don't get "second parameter is not an array" warnings
+	// Let's make sure this is an array so we don't get "second parameter is not an array" warnings.
 	if ( ! is_array( $args['setting'] ) ) {
 		$args['setting'] = (array) $args['setting'];
 	}
 
-	// Maybe convert setting from tag names to IDs if CRM has been switched
-
+	// Maybe convert setting from tag names to IDs if CRM has been switched.
 	if ( ! empty( $args['setting'] ) && is_array( wp_fusion()->crm->supports ) && ! in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 		foreach ( $args['setting'] as $i => $value ) {
@@ -76,13 +75,11 @@ function wpf_render_tag_multiselect( $args = array() ) {
 	}
 
 	// If there are more than 1000 total tags, we'll lazy-load them
-
 	$lazy_load = false;
 
 	if ( count( $available_tags ) > 1000 ) {
 
-		// The currently selected options still needs to be preserved
-
+		// The currently selected options still needs to be preserved.
 		foreach ( $available_tags as $id => $tag ) {
 			if ( ! in_array( $id, $args['setting'] ) ) {
 				unset( $available_tags[ $id ] );
@@ -93,31 +90,28 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 	}
 
-	// If we're returning instead of echoing
+	// If we're returning instead of echoing.
 	if ( $args['return'] ) {
 		ob_start();
 	}
 
 	// Let's start spitting out some HTML!
-
 	echo '<select';
 		echo ( true == $args['disabled'] ? ' disabled' : '' );
-		echo ' data-placeholder="' . $args['placeholder'] . '"';
+		echo ' data-placeholder="' . esc_attr( $args['placeholder'] ) . '"';
 		echo ' multiple="multiple"';
-		echo ' id="' . $field_id . '"';
-		echo ' data-limit="' . $args['limit'] . '"';
+		echo ' id="' . esc_attr( $field_id ) . '"';
+		echo ' data-limit="' . (int) $args['limit'] . '"';
 		echo ( true == $lazy_load ? ' data-lazy-load="true"' : '' );
-		echo ' class="select4-wpf-tags ' . $args['class'] . '"';
-		echo ' name="' . $args['meta_name'] . ( ! is_null( $args['field_id'] ) ? '[' . $args['field_id'] . ']' : '' ) . '[]"';
-		echo ( ! empty( $args['no_dupes'] ) ? ' data-no-dupes="' . implode( ',', $args['no_dupes'] ) . '"' : '' );
+		echo ' class="select4-wpf-tags ' . esc_attr( $args['class'] ) . '"';
+		echo ' name="' . esc_attr( $args['meta_name'] ) . ( ! is_null( $args['field_id'] ) ? '[' . esc_attr( $args['field_id'] ) . ']' : '' ) . '[]"';
+		echo ( ! empty( $args['no_dupes'] ) ? ' data-no-dupes="' . esc_attr( implode( ',', $args['no_dupes'] ) ) . '"' : '' );
 	echo '>';
 
-	// Start outputting the tag <option>s
-
+	// Start outputting the tag <option>s.
 	if ( is_array( reset( $available_tags ) ) ) {
 
-		// Handling for select with category groupings (like Infusionsoft)
-
+		// Handling for select with category groupings (like Infusionsoft).
 		$tag_categories = array();
 
 		foreach ( $available_tags as $value ) {
@@ -128,17 +122,16 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 		foreach ( $tag_categories as $tag_category ) {
 
-			echo '<optgroup label="' . $tag_category . '">';
+			echo '<optgroup label="' . esc_attr( $tag_category ) . '">';
 
 			foreach ( $available_tags as $id => $field_data ) {
 
-				// (read only) lists with HubSpot
-
+				// (read only) lists with HubSpot.
 				if ( strpos( $tag_category, 'Read Only' ) !== false ) {
-					$field_data['label'] .= '<small>(' . __( 'read only' ) . ')</small>';
+					$field_data['label'] .= '<small>(' . esc_html__( 'read only', 'wp-fusion-lite' ) . ')</small>';
 				}
 
-				if ( $field_data['category'] == $tag_category ) {
+				if ( $field_data['category'] === $tag_category ) {
 					echo '<option value="' . esc_attr( $id ) . '" ' . selected( true, in_array( $id, $args['setting'] ), false ) . '>' . esc_html( $field_data['label'] ) . '</option>';
 				}
 			}
@@ -146,24 +139,20 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		}
 	} else {
 
-		// Tags without categories / optgroups
-
+		// Tags without categories / optgroups.
 		foreach ( $available_tags as $id => $tag ) {
 
-			// Fix for empty tags created by spaces etc
+			// Fix for empty tags created by spaces etc.
 			if ( empty( $tag ) ) {
 				continue;
 			}
 
 			// Added the following is_numeric() check for 3.29.1 to fix "5DD - Customer" tag causing "5" tag to be selected.
 			// Tag less than 10 so that tag IDs still show up and can be replaced after switching to a CRM with dynamic tagging
-
 			// if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) && is_numeric( $tag ) && $tag < 10 ) {
 			// continue;
 			// }
-
 			// ^ Removed in v3.34.8 in favor of $id = strval( $id );..
-
 			$id = strval( $id );
 
 			$is_selected = in_array( $id, $args['setting'], $strict = false );
@@ -172,8 +161,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 		}
 
-		// Maybe output any new tags that have been entered for this setting, but aren't yet stored with available_tags
-
+		// Maybe output any new tags that have been entered for this setting, but aren't yet stored with available_tags.
 		if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 			foreach ( $args['setting'] as $tag ) {
@@ -188,7 +176,6 @@ function wpf_render_tag_multiselect( $args = array() ) {
 	echo '</select>';
 
 	// ....done!
-
 	if ( $args['return'] ) {
 		return ob_get_clean();
 	}
@@ -212,20 +199,20 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 		$name = $meta_name . '[' . $field_id . '][' . $field_sub_id . '][crm_field]';
 	}
 
-	echo '<select id="' . $field_id . ( isset( $field_sub_id ) ? '-' . $field_sub_id : '' ) . '" class="select4-crm-field" name="' . $name . '" data-placeholder="Select a field">';
+	echo '<select id="' . esc_attr( $field_id . ( isset( $field_sub_id ) ? '-' . $field_sub_id : '' ) ) . '" class="select4-crm-field" name="' . esc_attr( $name ) . '" data-placeholder="Select a field">';
 
 	echo '<option></option>';
 
-	$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+	$crm_fields = wpf_get_option( 'crm_fields' );
 
 	if ( ! empty( $crm_fields ) ) {
 
 		foreach ( $crm_fields as $group_header => $fields ) {
 
-			// For CRMs with separate custom and built in fields
+			// For CRMs with separate custom and built in fields.
 			if ( is_array( $fields ) ) {
 
-				echo '<optgroup label="' . $group_header . '">';
+				echo '<optgroup label="' . esc_attr( $group_header ) . '">';
 
 				foreach ( $crm_fields[ $group_header ] as $field => $label ) {
 
@@ -255,12 +242,12 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 		}
 	}
 
-	// Save custom added fields to the DB
+	// Save custom added fields to the DB.
 	if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_fields', wp_fusion()->crm->supports ) ) {
 
 		$field_check = array();
 
-		// Collapse fields if they're grouped
+		// Collapse fields if they're grouped.
 		if ( isset( $crm_fields['Custom Fields'] ) ) {
 
 			foreach ( $crm_fields as $field_group ) {
@@ -275,10 +262,10 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 		}
 
-		// Check to see if new custom fields have been added
+		// Check to see if new custom fields have been added.
 		if ( ! empty( $setting ) && ! isset( $field_check[ $setting ] ) ) {
 
-			// Lowercase and remove spaces (for Drip)
+			// Lowercase and remove spaces (for Drip).
 			if ( in_array( 'safe_add_fields', wp_fusion()->crm->supports ) ) {
 
 				$setting_value = strtolower( str_replace( ' ', '', $setting ) );
@@ -301,8 +288,8 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 			wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
-			// Save safe crm field to DB
-			$contact_fields                               = wp_fusion()->settings->get( 'contact_fields' );
+			// Save safe crm field to DB.
+			$contact_fields                               = wpf_get_option( 'contact_fields' );
 			$contact_fields[ $field_sub_id ]['crm_field'] = $setting_value;
 			wp_fusion()->settings->set( 'contact_fields', $contact_fields );
 
@@ -313,7 +300,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 		echo '<optgroup label="Tagging">';
 
-			echo '<option ' . selected( esc_attr( $setting ), 'add_tag_' . $field_id ) . ' value="add_tag_' . $field_id . '">+ ' . __( 'Create tag(s) from value', 'wp-fusion-lite' ) . '</option>';
+			echo '<option ' . selected( esc_attr( $setting ), 'add_tag_' . $field_id ) . ' value="add_tag_' . esc_attr( $field_id ) . '">+ ' . esc_html__( 'Create tag(s) from value', 'wp-fusion-lite' ) . '</option>';
 
 		echo '</optgroup>';
 
@@ -336,7 +323,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
  */
 function wpf_logo_svg( $width = 24 ) {
 
-	return '<svg width="' . $width . '" viewBox="0 0 38 39" fill="currentColor">
+	return '<svg width="' . esc_attr( $width ) . '" viewBox="0 0 38 39" fill="currentColor">
 	    <g id="Page-1" stroke="none" stroke-width="1" fill="currentColor" fill-rule="evenodd">
 	        <g id="Mark-Copy">
 	            <path d="M8,0.5 L38,0.5 L38,0.5 L38,30.5 C38,34.918278 34.418278,38.5 30,38.5 L0,38.5 L0,38.5 L0,8.5 C-5.41083001e-16,4.081722 3.581722,0.5 8,0.5 Z" id="BG"></path>

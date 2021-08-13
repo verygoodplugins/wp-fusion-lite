@@ -95,7 +95,8 @@ function initializeTagsSelect(target) {
 						jQuery(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> ' + wpf_admin.strings.loadingTags + '</span>');
 
 						var data = {
-							'action'	: 'sync_tags'
+							'action'	  : 'sync_tags',
+							'_ajax_nonce' : wpf_admin.nonce,
 						}
 
 						jQuery.post(ajaxurl, data, function(response) {
@@ -130,7 +131,8 @@ function initializeTagsSelect(target) {
 	    			data: function( params ) {
 	    				var query = {
 							search: params.term,
-							action: 'wpf_search_available_tags'
+							action: 'wpf_search_available_tags',
+							_ajax_nonce: wpf_admin.nonce,
 						}
 
 						return query;
@@ -183,6 +185,23 @@ function initializeTagsSelect(target) {
 	}
 
 }
+
+/*
+* Hacky fix for a bug in select2 with jQuery 3.6.0's new nested-focus "protection"
+* see: https://github.com/select2/select2/issues/5993
+* see: https://github.com/jquery/jquery/issues/4382
+*
+* TODO: Recheck with the select2 GH issue and remove once this is fixed on their side
+*/
+
+jQuery(document).on('select4:open', (event) => {
+	const searchField = document.querySelector(
+		`.select4-search__field[aria-controls="select4-${event.target.getAttribute('data-select4-id')}-results"]`,
+	);
+	if (searchField) {
+		searchField.focus();
+	}
+});
 
 jQuery(document).ready(function($){
 
@@ -354,7 +373,8 @@ jQuery(document).ready(function($){
 								$(this).after('<span id="wpf-select4-tags-loading"><i class="fa fa-spinner fa-spin"></i> ' + wpf_admin.strings.loadingFields + '</span>');
 
 								var data = {
-									'action'	: 'sync_custom_fields'
+									'action'	  : 'sync_custom_fields',
+									'_ajax_nonce' : wpf_admin.nonce,
 								}
 
 								$.post(ajaxurl, data, function(response) {
@@ -384,7 +404,9 @@ jQuery(document).ready(function($){
 	}
 
 	if( typeof(wpf_admin) !== 'undefined' ) {
+
 		initializeCRMFieldSelect();
+
 	}
 
 	//
@@ -590,8 +612,9 @@ jQuery(document).ready(function($){
 			var button = $(this);
 
 			var data = {
-				'action'	: 'resync_contact',
-				'user_id' 	: $(this).data('user_id')
+				'action'	 : 'resync_contact',
+				'user_id' 	 : $(this).data('user_id'),
+				'_ajax_nonce': wpf_admin.nonce,
 			};
 
 			$.post(ajaxurl, data, function(response) {

@@ -89,32 +89,35 @@ class WPF_SendinBlue {
 
 		if ( isset( $payload->email ) ) {
 
-			$post_data['contact_id'] = $payload->email;
+			$post_data['contact_id'] = sanitize_email( $payload->email );
 
 		} elseif ( isset( $payload->content ) ) {
 
 			// Global webhooks
 
-			$post_data['contact_id'] = $payload->content[0]->email;
+			$email                   = sanitize_email( $payload->content[0]->email );
+			$post_data['contact_id'] = $email;
 
 			// Handle email changes
 
 			if ( ! empty( $payload->content[0]->updated_email ) ) {
 
-				$user = get_user_by( 'email', $payload->content[0]->email );
+				$updated_email = sanitize_email( $payload->content[0]->updated_email );
+
+				$user = get_user_by( 'email', $email );
 
 				if ( ! empty( $user ) ) {
 
 					$userdata = array(
 						'ID'         => $user->ID,
-						'user_email' => $payload->content[0]->updated_email,
+						'user_email' => $updated_email,
 					);
 
 					wp_update_user( $userdata );
 
-					update_user_meta( $user->ID, 'sendinblue_contact_id', $payload->content[0]->updated_email );
+					update_user_meta( $user->ID, 'sendinblue_contact_id', $updated_email );
 
-					$post_data['contact_id'] = $payload->content[0]->updated_email;
+					$post_data['contact_id'] = $updated_email;
 
 				}
 
@@ -249,7 +252,7 @@ class WPF_SendinBlue {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'sendinblue_key' );
+			$api_key = wpf_get_option( 'sendinblue_key' );
 		}
 
 		$this->params = array(
@@ -283,7 +286,7 @@ class WPF_SendinBlue {
 		}
 
 		$request  = 'https://api.sendinblue.com/v3/account';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -336,7 +339,7 @@ class WPF_SendinBlue {
 		while ( $proceed == true ) {
 
 			$request  = 'https://api.sendinblue.com/v3/contacts/lists?limit=' . $limit . '&offset=' . $offset;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -375,7 +378,7 @@ class WPF_SendinBlue {
 
 		$crm_fields = array( 'email' => 'Email Address' );
 		$request    = 'https://api.sendinblue.com/v3/contacts/attributes';
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -413,7 +416,7 @@ class WPF_SendinBlue {
 
 		$contact_info = array();
 		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -443,7 +446,7 @@ class WPF_SendinBlue {
 
 		$contact_tags = array();
 		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -481,7 +484,7 @@ class WPF_SendinBlue {
 			$params['method'] = 'POST';
 			$params['body']   = json_encode( array( 'emails' => [ $contact_id ] ) );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 		}
 
@@ -516,7 +519,7 @@ class WPF_SendinBlue {
 			$params['method'] = 'POST';
 			$params['body']   = json_encode( array( 'emails' => [ $contact_id ] ) );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 		}
 
@@ -568,7 +571,7 @@ class WPF_SendinBlue {
 		$params         = $this->params;
 		$params['body'] = json_encode( $post_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -627,7 +630,7 @@ class WPF_SendinBlue {
 		$params['method']        = 'PUT';
 		$params['body']          = json_encode( $post_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -651,14 +654,14 @@ class WPF_SendinBlue {
 		}
 
 		$url      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		$user_meta['user_email'] = $body_json['email'];
@@ -701,7 +704,7 @@ class WPF_SendinBlue {
 		$contact_ids = array();
 
 		$url     = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts?limit=500';
-		$results = wp_remote_get( $url, $this->params );
+		$results = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $results ) ) {
 			return $results;

@@ -53,7 +53,7 @@ class WPF_FluentCRM {
 
 		// Don't watch FluentCRM for changes if staging mode is active
 
-		if ( true == wp_fusion()->settings->get( 'staging_mode' ) || ! defined( 'FLUENTCRM' ) ) {
+		if ( true == wpf_get_option( 'staging_mode' ) || ! defined( 'FLUENTCRM' ) ) {
 			return;
 		}
 
@@ -346,7 +346,7 @@ class WPF_FluentCRM {
 			$data['custom_values'] = $custom_data;
 		}
 
-		$lists = wp_fusion()->settings->get( 'fluentcrm_lists' );
+		$lists = wpf_get_option( 'fluentcrm_lists' );
 
 		if ( ! empty( $lists ) ) {
 			$data['lists'] = $lists;
@@ -418,7 +418,7 @@ class WPF_FluentCRM {
 		$user_meta = array();
 
 		// Map contact fields
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		// Standard fields
 		foreach ( $fields as $field_name => $value ) {

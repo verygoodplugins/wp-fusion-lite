@@ -59,7 +59,7 @@ class WPF_PulseTechnologyCRM_Admin {
 		// AJAX callback to test the connection
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -88,12 +88,15 @@ class WPF_PulseTechnologyCRM_Admin {
 
 	public function maybe_oauth_complete() {
 		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && 'pulsetech' == $_GET['crm'] ) {
-			$client_id = wp_fusion()->settings->get( 'pulsetech_client_id' );
-			$secret    = wp_fusion()->settings->get( 'pulsetech_secret' );
+
+			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+
+			$client_id = wpf_get_option( 'pulsetech_client_id' );
+			$secret    = wpf_get_option( 'pulsetech_secret' );
 
 			$body = array(
 				'grant_type'    => 'authorization_code',
-				'code'          => $_GET['code'],
+				'code'          => $code,
 				'client_id'     => $client_id,
 				'client_secret' => $secret,
 				'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ),
@@ -109,7 +112,7 @@ class WPF_PulseTechnologyCRM_Admin {
 				'body'       => $body,
 			);
 
-			$response = wp_remote_post( $this->crm->oauth_url_token, $params );
+			$response = wp_safe_remote_post( $this->crm->oauth_url_token, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return false;
@@ -121,7 +124,7 @@ class WPF_PulseTechnologyCRM_Admin {
 			wp_fusion()->settings->set( 'pulsetech_token', $response->access_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
 
-			wp_redirect( get_admin_url() . 'options-general.php?page=wpf-settings' );
+			wp_safe_redirect( get_admin_url() . 'options-general.php?page=wpf-settings' );
 			exit;
 
 		}
@@ -254,8 +257,8 @@ class WPF_PulseTechnologyCRM_Admin {
 	public function show_field_pulsetech_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -284,6 +287,9 @@ class WPF_PulseTechnologyCRM_Admin {
 	 */
 
 	public function test_connection() {
+
+		check_ajax_referer( 'wpf_settings_nonce' );
+
 		$access_token = sanitize_text_field( $_POST['pulsetech_token'] );
 
 		$connection = $this->crm->connect( $access_token, true );
@@ -294,12 +300,12 @@ class WPF_PulseTechnologyCRM_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['pulsetech_token']       = $access_token;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

@@ -22,12 +22,11 @@ class WPF_HubSpot_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_hubspot_header_begin', array( $this, 'show_field_hubspot_header_begin' ), 10, 2 );
-		add_action( 'show_field_hubspot_refresh_token_end', array( $this, 'show_field_hubspot_refresh_token_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -80,21 +79,23 @@ class WPF_HubSpot_Admin {
 
 	public function maybe_oauth_complete() {
 
-		if( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && $_GET['crm'] == 'hubspot' )  {
+		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && $_GET['crm'] == 'hubspot' ) {
+
+			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
 
 			$params = array(
-				'body'	=> array(
-					'grant_type'	=> 'authorization_code',
-					'client_id'		=> $this->crm->client_id,
+				'body' => array(
+					'grant_type'    => 'authorization_code',
+					'client_id'     => $this->crm->client_id,
 					'client_secret' => $this->crm->client_secret,
-					'redirect_uri'	=> get_admin_url() . 'options-general.php?page=wpf-settings&crm=hubspot',
-					'code'			=> $_GET['code']
-				)
+					'redirect_uri'  => get_admin_url() . 'options-general.php?page=wpf-settings&crm=hubspot',
+					'code'          => $code,
+				),
 			);
 
-			$params['body']['redirect_uri'] = str_replace('http://', 'https://', $params['body']['redirect_uri']);
+			$params['body']['redirect_uri'] = str_replace( 'http://', 'https://', $params['body']['redirect_uri'] );
 
-			$response = wp_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
+			$response = wp_safe_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
 
 			if ( is_wp_error( $response ) ) {
 				return false;
@@ -102,7 +103,7 @@ class WPF_HubSpot_Admin {
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body->error ) ) {
+			if ( isset( $body->error ) ) {
 				return false;
 			}
 
@@ -110,7 +111,7 @@ class WPF_HubSpot_Admin {
 			wp_fusion()->settings->set( 'hubspot_refresh_token', $body->refresh_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
 
-			wp_redirect( get_admin_url() . 'options-general.php?page=wpf-settings#setup' );
+			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
 
 		}
@@ -142,13 +143,13 @@ class WPF_HubSpot_Admin {
 		if ( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['hubspot_header']['desc']  = '<table class="form-table"><tr>';
-			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>' . __( 'Authorize', 'wp-fusion-lite' ) . '</label></th>';
-			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">' . __( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br />';
-			$new_settings['hubspot_header']['desc'] .= '<span class="description">' . __( 'You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ) . '</td>';
+			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>' . esc_html__( 'Authorize', 'wp-fusion-lite' ) . '</label></th>';
+			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . esc_url( $auth_url ) . '">' . esc_html__( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br />';
+			$new_settings['hubspot_header']['desc'] .= '<span class="description">' . esc_html__( 'You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ) . '</td>';
 			$new_settings['hubspot_header']['desc'] .= '</tr></table>';
 
 			if ( ! is_ssl() ) {
-				$new_settings['hubspot_header']['desc'] .= '<p class="wpf-notice notice notice-error">' . __( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the HubSpot API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ) . '</p>';
+				$new_settings['hubspot_header']['desc'] .= '<p class="wpf-notice notice notice-error">' . esc_html__( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the HubSpot API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ) . '</p>';
 			}
 
 			$new_settings['hubspot_header']['desc'] .= '</div><table class="form-table">';
@@ -168,7 +169,7 @@ class WPF_HubSpot_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'hubspot_token', 'hubspot_refresh_token' ),
-				'desc'        => '<a href="' . $auth_url . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
+				'desc'        => '<a href="' . esc_url( $auth_url ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
 			);
 
 		}
@@ -196,7 +197,7 @@ class WPF_HubSpot_Admin {
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking'] = array(
@@ -204,13 +205,13 @@ class WPF_HubSpot_Admin {
 			'desc'    => __( 'Enable <a target="_blank" href="https://knowledge.hubspot.com/articles/kcs_article/account/how-does-hubspot-track-visitors">HubSpot site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking_id'] = array(
 			'std'     => '',
 			'type'    => 'hidden',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
@@ -238,9 +239,7 @@ class WPF_HubSpot_Admin {
 				if ( isset( $hubspot_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $hubspot_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
@@ -258,33 +257,11 @@ class WPF_HubSpot_Admin {
 	public function show_field_hubspot_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
-	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_hubspot_refresh_token_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #hubspot div
-
-		echo '<table class="form-table">';
-
-	}
 
 	/**
 	 * Verify connection credentials
@@ -295,8 +272,10 @@ class WPF_HubSpot_Admin {
 
 	public function test_connection() {
 
-		$access_token = sanitize_text_field( $_POST['hubspot_token'] );
-		$refresh_token = sanitize_text_field( $_POST['hubspot_refresh_token'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$access_token  = sanitize_text_field( wp_unslash( $_POST['hubspot_token'] ) );
+		$refresh_token = sanitize_text_field( wp_unslash( $_POST['hubspot_refresh_token'] ) );
 
 		$connection = $this->crm->connect( $access_token, $refresh_token, true );
 
@@ -306,11 +285,11 @@ class WPF_HubSpot_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

@@ -22,12 +22,11 @@ class WPF_KlickTipp_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_klicktipp_header_begin', array( $this, 'show_field_klicktipp_header_begin' ), 10, 2 );
-		add_action( 'show_field_klicktipp_pass_end', array( $this, 'show_field_klicktipp_pass_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -128,32 +127,11 @@ class WPF_KlickTipp_Admin {
 	public function show_field_klicktipp_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
-	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_klicktipp_pass_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #klicktipp div
-		echo '<table class="form-table">';
-
-	}
 
 	/**
 	 * Verify connection credentials
@@ -163,6 +141,8 @@ class WPF_KlickTipp_Admin {
 	 */
 
 	public function test_connection() {
+
+		check_ajax_referer( 'wpf_settings_nonce' );
 
 		$username = sanitize_text_field( $_POST['klicktipp_user'] );
 		$password = sanitize_text_field( $_POST['klicktipp_pass'] );
@@ -175,12 +155,12 @@ class WPF_KlickTipp_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['klicktipp_user']        = $username;
 			$options['klicktipp_pass']        = $password;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

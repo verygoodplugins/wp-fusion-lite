@@ -123,11 +123,11 @@ class WPF_Emercury {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$emercury_list = wp_fusion()->settings->get( 'emercury_list' );
+		$emercury_list = wpf_get_option( 'emercury_list' );
 
 		if ( ! empty( $payload ) && ! empty( $emercury_list ) && ! empty( $payload->subscriber_email ) ) {
 
-			$post_data['contact_id'] = $emercury_list . '_' . $payload->subscriber_email;
+			$post_data['contact_id'] = absint( $emercury_list ) . '_' . sanitize_email( $payload->subscriber_email );
 
 			if ( 'subscribe_add' === (string) $payload->event && (int) $payload->list_id != $emercury_list ) {
 
@@ -226,8 +226,8 @@ class WPF_Emercury {
 
 		// Get saved data from DB
 		if ( empty( $api_url ) || empty( $api_key ) ) {
-						$api_email = wp_fusion()->settings->get( 'emercury_email' );
-			$api_key               = wp_fusion()->settings->get( 'emercury_key' );
+						$api_email = wpf_get_option( 'emercury_email' );
+			$api_key               = wpf_get_option( 'emercury_key' );
 		}
 
 		$this->params = array(
@@ -298,9 +298,9 @@ class WPF_Emercury {
 
 		// Get saved data from DB
 		if ( empty( $api_email ) || empty( $api_key ) ) {
-			$api_url   = wp_fusion()->settings->get( 'emercury_url' );
-			$api_email = wp_fusion()->settings->get( 'emercury_email' );
-			$api_key   = wp_fusion()->settings->get( 'emercury_key' );
+			$api_url   = wpf_get_option( 'emercury_url' );
+			$api_email = wpf_get_option( 'emercury_email' );
+			$api_key   = wpf_get_option( 'emercury_key' );
 		}
 
 		if ( ! class_exists( 'WPF_Emercury_API' ) ) {
@@ -471,7 +471,7 @@ class WPF_Emercury {
 
 	public function get_contact_id( $email_address ) {
 
-		$emercury_list = wp_fusion()->settings->get( 'emercury_list' );
+		$emercury_list = wpf_get_option( 'emercury_list' );
 
 		if ( empty( $emercury_list ) ) {
 			return false;
@@ -611,7 +611,7 @@ class WPF_Emercury {
 			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
 		}
 
-		$emercury_list = wp_fusion()->settings->get( 'emercury_list' );
+		$emercury_list = wpf_get_option( 'emercury_list' );
 
 		if ( empty( $emercury_list ) ) {
 			return false;
@@ -656,7 +656,7 @@ class WPF_Emercury {
 		list( $emercury_list ) = explode( '_', $contact_id );
 
 		if ( empty( $emercury_list ) ) {
-			$emercury_list = wp_fusion()->settings->get( 'emercury_list' );
+			$emercury_list = wpf_get_option( 'emercury_list' );
 		}
 
 		if ( empty( $emercury_list ) ) {
@@ -709,7 +709,7 @@ class WPF_Emercury {
 
 		$user_meta = array();
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -735,7 +735,7 @@ class WPF_Emercury {
 
 	public function load_contacts( $tag ) {
 
-		$emercury_list = wp_fusion()->settings->get( 'emercury_list' );
+		$emercury_list = wpf_get_option( 'emercury_list' );
 
 		if ( empty( $emercury_list ) ) {
 			return false;

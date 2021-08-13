@@ -148,7 +148,7 @@ class WPF_Growmatik {
 		$params  = $this->get_params();
 		$request = $this->url . '/site/attributes';
 
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -224,7 +224,7 @@ class WPF_Growmatik {
 		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
 		$params['body']['data']  = $prepared_data;
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -286,8 +286,8 @@ class WPF_Growmatik {
 
 		// Get saved data from DB
 		if ( empty( $api_secret ) || empty( $api_key ) ) {
-			$api_secret = wp_fusion()->settings->get( 'growmatik_api_secret' );
-			$api_key    = wp_fusion()->settings->get( 'growmatik_api_key' );
+			$api_secret = wpf_get_option( 'growmatik_api_secret' );
+			$api_key    = wpf_get_option( 'growmatik_api_key' );
 		}
 
 		$this->params = array(
@@ -323,7 +323,7 @@ class WPF_Growmatik {
 		$params['body']['users'] = array();
 
 		// Post request.
-		$response      = wp_remote_post( $request, $params );
+		$response      = wp_safe_remote_post( $request, $params );
 		$response_code = wp_remote_retrieve_response_code( $response );
 
 		if ( 200 === $response_code ) {
@@ -372,7 +372,7 @@ class WPF_Growmatik {
 
 		$params   = $this->get_params();
 		$request  = $this->url . '/site/tags/';
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -416,7 +416,7 @@ class WPF_Growmatik {
 		$params = $this->get_params();
 		// This route returns all basic and custom attributes.
 		$request  = $this->url . '/site/attributes/';
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -462,7 +462,7 @@ class WPF_Growmatik {
 		$params['body']['email'] = $email_address;
 
 		$request  = $this->url . '/contact/email/';
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) && 'Could not load content' == $response->get_error_message() ) {
 			return false;
@@ -497,7 +497,7 @@ class WPF_Growmatik {
 		$params['body']['id'] = $contact_id;
 
 		$request  = $this->url . '/contact/tags/id/';
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -533,7 +533,7 @@ class WPF_Growmatik {
 		$params['body']['id']   = $contact_id;
 		$params['body']['tags'] = $tags;
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -563,7 +563,7 @@ class WPF_Growmatik {
 		$params['body']['tags']  = $tags;
 		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
 
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -598,7 +598,7 @@ class WPF_Growmatik {
 
 		$params['body']['user'] = $contact_data;
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -667,7 +667,7 @@ class WPF_Growmatik {
 
 		$params['body']['id'] = $contact_id;
 
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -676,7 +676,7 @@ class WPF_Growmatik {
 		$user = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 			if ( true == $field_data['active'] && isset( $user['data'][ $field_data['crm_field'] ] ) ) {

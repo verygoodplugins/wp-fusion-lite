@@ -95,7 +95,7 @@ class WPF_Salesflare {
 
 		// Get saved data from DB
 		if ( empty( $api_key )) {
-			$api_key = wp_fusion()->settings->get( 'salesflare_key' );
+			$api_key = wpf_get_option( 'salesflare_key' );
 		}
 
 		$this->params = array(
@@ -129,7 +129,7 @@ class WPF_Salesflare {
 		}
 
 		$request  = 'https://api.salesflare.com/contacts?limit=1';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -176,7 +176,7 @@ class WPF_Salesflare {
 		$available_tags = array();
 
 		$request  = 'https://api.salesflare.com/tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -218,7 +218,7 @@ class WPF_Salesflare {
 		$custom_fields = array();
 
 		$request    = "https://api.salesflare.com/customfields/contacts";
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -260,7 +260,7 @@ class WPF_Salesflare {
 
 		$contact_info = array();
 		$request      = 'https://api.salesflare.com/contacts?search=' . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -290,7 +290,7 @@ class WPF_Salesflare {
 
 		$tags 		= array();
 		$request    = 'https://api.salesflare.com/contacts/' . $contact_id;
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -307,7 +307,7 @@ class WPF_Salesflare {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach( $body_json['tags'] as $row ) {
 			if( !isset( $available_tags[ $row['id'] ] ) ) {
@@ -343,7 +343,7 @@ class WPF_Salesflare {
 			$params['method'] 	= 'PUT';
 			$params['body']  	= json_encode(array('tags' => array(array('name' => $tag_name))));
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -376,7 +376,7 @@ class WPF_Salesflare {
 			$params['method'] 		= 'PUT';
 			$params['body']  		= json_encode(array('tags' => array(array('id' => $tag, '_dirty' => true, '_deleted' => true))));
 
-			$response     		    = wp_remote_post( $request, $params );
+			$response     		    = wp_safe_remote_post( $request, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -472,7 +472,7 @@ class WPF_Salesflare {
 		$params['method'] = 'POST';
 		$params['body']   = json_encode( $data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -558,7 +558,7 @@ class WPF_Salesflare {
 		}
 
 		// Custom fields
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		if( ! empty( $crm_fields['Custom Fields'] ) ) {
 
@@ -583,7 +583,7 @@ class WPF_Salesflare {
 		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -606,7 +606,7 @@ class WPF_Salesflare {
 		}
 
 		$url      = 'https://api.salesflare.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -614,7 +614,7 @@ class WPF_Salesflare {
 
 
 		$loaded_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		// Base fields
@@ -655,7 +655,7 @@ class WPF_Salesflare {
 
 		// Set missing fields
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -686,7 +686,7 @@ class WPF_Salesflare {
 		$contact_ids = array();
 
 		$url     = 'https://api.salesflare.com/contacts?tag=' . $tag;
-		$results = wp_remote_get( $url, $this->params );
+		$results = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $results ) ) {
 			return $results;

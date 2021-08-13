@@ -22,12 +22,11 @@ class WPF_Autopilot_Admin {
 		// Settings
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_autopilot_header_begin', array( $this, 'show_field_autopilot_header_begin' ), 10, 2 );
-		add_action( 'show_field_autopilot_key_end', array( $this, 'show_field_autopilot_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -157,7 +156,7 @@ class WPF_Autopilot_Admin {
 
 	public function validate_import_trigger( $input, $setting ) {
 
-		$prev_value = wp_fusion()->settings->get('autopilot_add_tag');
+		$prev_value = wpf_get_option('autopilot_add_tag');
 
 		// If no changes have been made, quit early
 		if($input == $prev_value) {
@@ -165,7 +164,7 @@ class WPF_Autopilot_Admin {
 		}
 
 		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wp_fusion()->settings->get('autopilot_add_tag_rule_id');
+		$rule_id = wpf_get_option('autopilot_add_tag_rule_id');
 
 		if( ! empty( $rule_id ) ) {
 			wp_fusion()->crm->destroy_webhook( $rule_id );
@@ -200,7 +199,7 @@ class WPF_Autopilot_Admin {
 
 	public function validate_update_trigger( $input, $setting ) {
 
-		$prev_value = wp_fusion()->settings->get('autopilot_update_trigger');
+		$prev_value = wpf_get_option('autopilot_update_trigger');
 
 		// If no changes have been made, quit early
 		if( $input == $prev_value ) {
@@ -208,7 +207,7 @@ class WPF_Autopilot_Admin {
 		}
 
 		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wp_fusion()->settings->get('autopilot_update_trigger_rule_id');
+		$rule_id = wpf_get_option('autopilot_update_trigger_rule_id');
 
 		if( ! empty( $rule_id ) ) {
 			wp_fusion()->crm->destroy_webhook($rule_id);
@@ -272,33 +271,10 @@ class WPF_Autopilot_Admin {
 	public function show_field_autopilot_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
-
-	/**
-	 * Close out Autopilot section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_autopilot_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #autopilot div
-		echo '<table class="form-table">';
-
-	}
-
 
 	/**
 	 * Verify connection credentials
@@ -309,7 +285,9 @@ class WPF_Autopilot_Admin {
 
 	public function test_connection() {
 
-		$access_key = sanitize_text_field( $_POST['autopilot_key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$access_key = isset( $_POST['autopilot_key'] ) ? sanitize_text_field( wp_unslash( $_POST['autopilot_key'] ) ) : false;
 
 		$connection = $this->crm->connect( $access_key, true );
 
@@ -319,12 +297,12 @@ class WPF_Autopilot_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['autopilot_key']         = $access_key;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

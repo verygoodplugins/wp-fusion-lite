@@ -91,7 +91,7 @@ class WPF_EngageBay {
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
-		$domain = wp_fusion()->settings->get( 'engagebay_domain' );
+		$domain = wpf_get_option( 'engagebay_domain' );
 
 		if ( ! empty( $domain ) ) {
 			$this->edit_url = 'https://' . $domain . '.engagebay.com/home#list/0/subscriber/%d';
@@ -108,7 +108,7 @@ class WPF_EngageBay {
 	 */
 	public function set_tracking_cookie_guest( $contact_id, $email ) {
 
-		if ( wpf_is_user_logged_in() || false == wp_fusion()->settings->get( 'site_tracking' ) ) {
+		if ( wpf_is_user_logged_in() || false == wpf_get_option( 'site_tracking' ) ) {
 			return;
 		}
 
@@ -132,33 +132,33 @@ class WPF_EngageBay {
 
 	public function tracking_code_output() {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( ! wpf_get_option( 'site_tracking' ) ) {
 			return;
 		}
 
-		$tracking_id = wp_fusion()->settings->get( 'site_tracking_acct' );
+		$tracking_id = wpf_get_option( 'site_tracking_acct' );
 
 		if ( empty( $tracking_id ) ) {
 			return;
 		}
 
-		$domain = wp_fusion()->settings->get( 'engagebay_domain' );
+		$domain = wpf_get_option( 'engagebay_domain' );
 
 		if ( wpf_is_user_logged_in() ) {
 			$user  = wpf_get_current_user();
 			$email = $user->user_email;
 		} elseif ( isset( $_COOKIE['wpf_guest'] ) ) {
-			$email = sanitize_email( $_COOKIE['wpf_guest'] );
+			$email = sanitize_email( wp_unslash( $_COOKIE['wpf_guest'] ) );
 		} else {
 			$email = '';
 		}
 
 		echo '<script type="text/javascript" >';
 		echo 'var EhAPI = EhAPI || {}; EhAPI.after_load = function(){';
-		echo 'EhAPI.set_account("' . $tracking_id . '", "' . $domain . '");';
+		echo 'EhAPI.set_account("' . esc_js( $tracking_id ) . '", "' . esc_js( $domain ) . '");';
 
 		if ( ! empty( $email ) ) {
-			echo 'EhAPI.push(["setEmail", "' . $email . '"]);';
+			echo 'EhAPI.push(["setEmail", "' . esc_js( $email ) . '"]);';
 		}
 
 		echo "EhAPI.execute('rules');};(function(d,s,f) {";
@@ -217,7 +217,7 @@ class WPF_EngageBay {
 			return $post_data;
 		}
 
-		$post_data['contact_id'] = $payload->entity->id;
+		$post_data['contact_id'] = absint( $payload->entity->id );
 
 		return $post_data;
 
@@ -274,7 +274,7 @@ class WPF_EngageBay {
 	public function get_params( $api_key = null ) {
 
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'engagebay_key' );
+			$api_key = wpf_get_option( 'engagebay_key' );
 		}
 
 		$this->params = array(
@@ -310,7 +310,7 @@ class WPF_EngageBay {
 		}
 
 		$request  = $this->api_url . $this->tag_str;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -357,7 +357,7 @@ class WPF_EngageBay {
 		$available_tags = array();
 
 		$request  = $this->api_url . $this->tag_str;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -426,7 +426,7 @@ class WPF_EngageBay {
 		$custom_fields = array();
 
 		$request  = $this->api_url . $this->custom_fields_str . $ext;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -456,7 +456,7 @@ class WPF_EngageBay {
 		}
 
 		$request  = $this->api_url . $this->contact_by_email_str . $email_address;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -487,7 +487,7 @@ class WPF_EngageBay {
 		$tags = array();
 
 		$request  = $this->api_url . $this->tags_by_id_str . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -500,7 +500,7 @@ class WPF_EngageBay {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body as $tag ) {
 
@@ -541,7 +541,7 @@ class WPF_EngageBay {
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
 
 		$request  = $this->api_url . $this->add_tags_str . $contact_id;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -590,7 +590,7 @@ class WPF_EngageBay {
 		$params['headers']['Content-Type'] = 'application/json';
 
 		$request  = $this->api_url . $this->remove_tags_str . $contact_id;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -623,7 +623,7 @@ class WPF_EngageBay {
 		$params['body'] = json_encode( $data );
 
 		$request  = $this->api_url . $this->add_contact_str;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -670,7 +670,7 @@ class WPF_EngageBay {
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_url . $this->update_partial_str;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -695,7 +695,7 @@ class WPF_EngageBay {
 		}
 
 		$request  = $this->api_url . $this->get_contact_str . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -763,7 +763,7 @@ class WPF_EngageBay {
 
 		// grab list of fields to process
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -773,7 +773,7 @@ class WPF_EngageBay {
 		}
 
 		// Set missing fields
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		foreach ( $loaded_meta as $name => $value ) {
 
@@ -832,7 +832,7 @@ class WPF_EngageBay {
 			'filter_json' => json_encode( $filter ),
 		);
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

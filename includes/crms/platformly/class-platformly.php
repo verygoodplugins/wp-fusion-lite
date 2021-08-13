@@ -55,7 +55,7 @@ class WPF_Platformly {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		
-		$platformly_project_name = wp_fusion()->settings->get( 'platformly_project_name', false );
+		$platformly_project_name = wpf_get_option( 'platformly_project_name', false );
 		if(!empty($platformly_project_name)){
 			$this->edit_url = 'https://'.strtolower($platformly_project_name).'.platform.ly/index.php?page=contacts.manage&id=%d';
 		}
@@ -76,7 +76,7 @@ class WPF_Platformly {
 		}
 
 		if( isset( $post_data['contactID'] ) ) {
-			$post_data['contact_id'] = $post_data['contactID'];
+			$post_data['contact_id'] = absint( $post_data['contactID'] );
 		}
 
 		return $post_data;
@@ -159,7 +159,7 @@ class WPF_Platformly {
 
 		// Get saved data from DB
 		if ( empty( $api_key )) {
-			$api_key = wp_fusion()->settings->get( 'platformly_key' );
+			$api_key = wpf_get_option( 'platformly_key' );
 		}
 
 		$params = array(
@@ -174,7 +174,7 @@ class WPF_Platformly {
 			)
 		);
 
-		$response = wp_remote_post( 'https://api.platform.ly/', $params );
+		$response = wp_safe_remote_post( 'https://api.platform.ly/', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -260,7 +260,7 @@ class WPF_Platformly {
 		wp_fusion()->settings->set( 'available_projects', $projects );
 
 		// Set default
-		$default_project = wp_fusion()->settings->get( 'platformly_project', false );
+		$default_project = wpf_get_option( 'platformly_project', false );
 
 		if( empty( $default_project ) ) {
 
@@ -290,7 +290,7 @@ class WPF_Platformly {
 
 		$available_tags = array();
 
-		$project = wp_fusion()->settings->get( 'platformly_project', false );
+		$project = wpf_get_option( 'platformly_project', false );
 
 		$values = array(
 			'project_id' => $project
@@ -333,7 +333,7 @@ class WPF_Platformly {
 			$built_in_fields[ $field['crm_field'] ] = $field['crm_label'];
 		}
 
-		$project = wp_fusion()->settings->get( 'platformly_project', false );
+		$project = wpf_get_option( 'platformly_project', false );
 
 		$values = array(
 			'project_id' => $project
@@ -399,7 +399,7 @@ class WPF_Platformly {
 
 		$tags = array();
 
-		$project = wp_fusion()->settings->get( 'platformly_project', false );
+		$project = wpf_get_option( 'platformly_project', false );
 
 		$values = array(
 			'project_id' => $project,
@@ -417,7 +417,7 @@ class WPF_Platformly {
 		}
 
 		$needs_update = false;
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach( $response as $tag ) {
 			$tags[] = $tag->id;
@@ -503,7 +503,7 @@ class WPF_Platformly {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$project = wp_fusion()->settings->get( 'platformly_project', false );
+		$project = wpf_get_option( 'platformly_project', false );
 
 		$data['project_id'] = $project;
 
@@ -534,7 +534,7 @@ class WPF_Platformly {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$project = wp_fusion()->settings->get( 'platformly_project', false );
+		$project = wpf_get_option( 'platformly_project', false );
 
 		$data['project_id'] = $project;
 
@@ -586,8 +586,8 @@ class WPF_Platformly {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
-		$crm_fields 	= wp_fusion()->settings->get( 'crm_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
+		$crm_fields 	= wpf_get_option( 'crm_fields' );
 
 		// Convert custom fields from label to key format
 

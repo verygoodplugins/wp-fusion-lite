@@ -116,21 +116,21 @@ class WPF_MailerLite {
 			foreach ( $payload->events as $event ) {
 
 				if ( ! in_array( $event->data->subscriber->id, $contact_ids ) ) {
-					$contact_ids[] = $event->data->subscriber->id;
+					$contact_ids[] = absint( $event->data->subscriber->id );
 				}
 			}
 		} elseif ( $post_data['wpf_action'] == 'add' ) {
 
-			if ( true == wp_fusion()->settings->get( 'mailerlite_import_notification' ) ) {
+			if ( true == wpf_get_option( 'mailerlite_import_notification' ) ) {
 				$post_data['send_notification'] = true;
 			}
 
-			$tag = wp_fusion()->settings->get( 'mailerlite_add_tag' );
+			$tag = wpf_get_option( 'mailerlite_add_tag' );
 
 			foreach ( $payload->events as $event ) {
 
 				if ( $event->data->group->id == $tag[0] && ! in_array( $event->data->subscriber->id, $contact_ids ) ) {
-					$contact_ids[] = $event->data->subscriber->id;
+					$contact_ids[] = absint( $event->data->subscriber->id );
 				}
 			}
 		}
@@ -141,7 +141,7 @@ class WPF_MailerLite {
 
 			if ( 'add' == $post_data['wpf_action'] ) {
 
-				$received_name = wpf_get_tag_label( $event->data->group->id );
+				$received_name = wpf_get_tag_label( absint( $event->data->group->id ) );
 
 				wpf_log( 'info', 0, 'Subscriber was added to group <strong>' . $received_name . '</strong> which triggered an import webhook. <strong>' . $received_name . '</strong> is not the selected import group, so no data will be imported.' );
 
@@ -293,7 +293,7 @@ class WPF_MailerLite {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'mailerlite_key' );
+			$api_key = wpf_get_option( 'mailerlite_key' );
 		}
 
 		$this->params = array(
@@ -367,7 +367,7 @@ class WPF_MailerLite {
 		}
 
 		$request  = 'https://api.mailerlite.com/api/v2/groups';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -419,7 +419,7 @@ class WPF_MailerLite {
 		while ( $continue == true ) {
 
 			$request  = 'https://api.mailerlite.com/api/v2/groups?offset=' . $offset;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -459,7 +459,7 @@ class WPF_MailerLite {
 
 		$crm_fields = array();
 		$request    = 'https://api.mailerlite.com/api/v2/fields';
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -492,7 +492,7 @@ class WPF_MailerLite {
 
 		$contact_info = array();
 		$request      = 'https://api.mailerlite.com/api/v2/subscribers/' . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) && $response->get_error_message() == 'Subscriber not found' ) {
 
@@ -530,7 +530,7 @@ class WPF_MailerLite {
 
 		$tags     = array();
 		$request  = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id . '/groups';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -547,7 +547,7 @@ class WPF_MailerLite {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body_json as $row ) {
 			if ( ! isset( $available_tags[ $row['id'] ] ) ) {
@@ -583,7 +583,7 @@ class WPF_MailerLite {
 			$params['method'] = 'POST';
 			$params['body']   = json_encode( array( 'email' => $email ) );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -614,7 +614,7 @@ class WPF_MailerLite {
 			$params           = $this->params;
 			$params['method'] = 'DELETE';
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -661,7 +661,7 @@ class WPF_MailerLite {
 		$params         = $this->params;
 		$params['body'] = json_encode( $send_data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -714,14 +714,14 @@ class WPF_MailerLite {
 		$params['method'] = 'PUT';
 		$params['body']   = json_encode( $send_data );
 
-		$response = wp_remote_request( $url, $params );
+		$response = wp_safe_remote_request( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		// Check for changes in email address if enabled
-		if ( ! empty( $send_data['email'] ) && wp_fusion()->settings->get( 'email_changes' ) == 'duplicate' ) {
+		if ( ! empty( $send_data['email'] ) && wpf_get_option( 'email_changes' ) == 'duplicate' ) {
 
 			$contact_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
@@ -739,7 +739,7 @@ class WPF_MailerLite {
 				$params         = $this->params;
 				$params['body'] = json_encode( $contact_data );
 
-				$response = wp_remote_post( $url, $params );
+				$response = wp_safe_remote_post( $url, $params );
 
 				if ( is_wp_error( $response ) ) {
 					return $response;
@@ -765,7 +765,7 @@ class WPF_MailerLite {
 				$params           = $this->params;
 				$params['method'] = 'DELETE';
 
-				wp_remote_request( 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id, $params );
+				wp_safe_remote_request( 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id, $params );
 
 				wpf_log( 'notice', $user_id, 'User email changed from <strong>' . $original_email . '</strong> to <strong>' . $contact_data['email'] . '</strong>. Subscriber ID updated from <strong>' . $contact_id . '</strong> to <strong>' . $body->id . '</strong>.', array( 'source' => 'mailerlite' ) );
 
@@ -789,14 +789,14 @@ class WPF_MailerLite {
 		}
 
 		$url      = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $body_json['fields'] as $field ) {
@@ -829,7 +829,7 @@ class WPF_MailerLite {
 		$contact_ids = array();
 
 		$url     = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers?limit=1000';
-		$results = wp_remote_get( $url, $this->params );
+		$results = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $results ) ) {
 			return $results;
@@ -859,7 +859,7 @@ class WPF_MailerLite {
 		}
 
 		$request  = 'https://api.mailerlite.com/api/v2/webhooks';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -896,7 +896,7 @@ class WPF_MailerLite {
 
 		}
 
-		$access_key = wp_fusion()->settings->get( 'access_key' );
+		$access_key = wpf_get_option( 'access_key' );
 
 		// Don't do this when the settings are being reset
 		if ( empty( $access_key ) ) {
@@ -925,7 +925,7 @@ class WPF_MailerLite {
 			$params['method'] = 'POST';
 			$params['body']   = json_encode( $data );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -959,7 +959,7 @@ class WPF_MailerLite {
 		$params           = $this->params;
 		$params['method'] = 'DELETE';
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

@@ -47,7 +47,7 @@ class WPF_Autonami_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -271,8 +271,8 @@ class WPF_Autonami_Admin {
 	public function show_field_autonami_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -282,13 +282,14 @@ class WPF_Autonami_Admin {
 	 *
 	 * @return mixed JSON response.
 	 * @since 3.37.14
-	 *
 	 */
 	public function test_connection() {
 
-		$url      = esc_url( $_POST['autonami_url'] );
-		$username = sanitize_text_field( $_POST['autonami_username'] );
-		$password = sanitize_text_field( $_POST['autonami_password'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$url      = isset( $_POST['autonami_url'] ) ? esc_url_raw( wp_unslash( $_POST['autonami_url'] ) ) : false;
+		$username = isset( $_POST['autonami_username'] ) ? sanitize_text_field( wp_unslash( $_POST['autonami_username'] ) ) : false;
+		$password = isset( $_POST['autonami_password'] ) ? sanitize_text_field( wp_unslash( $_POST['autonami_password'] ) ) : false;
 
 		$connection = $this->crm->connect( $url, $username, $password, true );
 
@@ -298,14 +299,14 @@ class WPF_Autonami_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['autonami_url']          = $url;
 			$options['autonami_username']     = $username;
 			$options['autonami_password']     = $password;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

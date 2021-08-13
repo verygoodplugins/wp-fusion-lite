@@ -21,12 +21,11 @@ class WPF_AgileCRM_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_agilecrm_header_begin', array( $this, 'show_field_agilecrm_header_begin' ), 10, 2 );
-		add_action( 'show_field_agile_key_end', array( $this, 'show_field_agile_key_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -178,31 +177,8 @@ class WPF_AgileCRM_Admin {
 	public function show_field_agilecrm_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
-
-	}
-
-	/**
-	 * Close out Active Campaign section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_agile_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #agilecrm div
-		echo '<table class="form-table">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -215,9 +191,11 @@ class WPF_AgileCRM_Admin {
 
 	public function test_connection() {
 
-		$agile_domain = sanitize_text_field( $_POST['agile_domain'] );
-		$user_email   = sanitize_email( $_POST['agile_user_email'] );
-		$api_key      = sanitize_text_field( $_POST['agile_key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$agile_domain = isset( $_POST['agile_domain'] ) ? sanitize_text_field( wp_unslash( $_POST['agile_domain'] ) ) : false;
+		$user_email   = isset( $_POST['agile_user_email'] ) ? sanitize_email( wp_unslash( $_POST['agile_user_email'] ) ) : false;
+		$api_key      = isset( $_POST['agile_key'] ) ? sanitize_text_field( wp_unslash( $_POST['agile_key'] ) ) : false;
 
 		$connection = $this->crm->connect( $agile_domain, $user_email, $api_key, true );
 
@@ -225,8 +203,7 @@ class WPF_AgileCRM_Admin {
 			wp_send_json_error( $connection->get_error_message() );
 		}
 
-
-		$options = wp_fusion()->settings->get_all();
+		$options = array();
 
 		$options['agile_domain']          = $agile_domain;
 		$options['agile_user_email']      = $user_email;
@@ -234,7 +211,7 @@ class WPF_AgileCRM_Admin {
 		$options['crm']                   = $this->slug;
 		$options['connection_configured'] = true;
 
-		wp_fusion()->settings->set_all( $options );
+		wp_fusion()->settings->set_multiple( $options );
 
 		wp_send_json_success();
 

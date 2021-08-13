@@ -72,7 +72,7 @@ class WPF_Infusionsoft_iSDK {
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
 		// Set edit link
-		$app_name = wp_fusion()->settings->get( 'app_name' );
+		$app_name = wpf_get_option( 'app_name' );
 
 		if ( ! empty( $app_name ) ) {
 			$this->edit_url = 'https://' . $app_name . '.infusionsoft.com/Contact/manageContact.jsp?view=edit&ID=%s';
@@ -123,11 +123,11 @@ class WPF_Infusionsoft_iSDK {
 
 	public function tracking_code_output() {
 
-		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
-		echo '<script type="text/javascript" src="https://' . wp_fusion()->settings->get('app_name') . '.infusionsoft.com/app/webTracking/getTrackingCode"></script>';
+		echo '<script type="text/javascript" src="' . esc_url( 'https://' . wpf_get_option( 'app_name' ) . '.infusionsoft.com/app/webTracking/getTrackingCode' ) . '"></script>';
 
 	}
 
@@ -141,7 +141,7 @@ class WPF_Infusionsoft_iSDK {
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contactId'] ) ) {
-			$post_data['contact_id'] = $post_data['contactId'];
+			$post_data['contact_id'] = absint( $post_data['contactId'] );
 		}
 
 		return $post_data;
@@ -275,8 +275,8 @@ class WPF_Infusionsoft_iSDK {
 
 		// Get saved data from DB
 		if ( empty( $app_name ) && empty( $api_key ) ) {
-			$app_name = wp_fusion()->settings->get( 'app_name' );
-			$api_key  = wp_fusion()->settings->get( 'api_key' );
+			$app_name = wpf_get_option( 'app_name' );
+			$api_key  = wpf_get_option( 'api_key' );
 		}
 
 		$result = $app->cfgCon( $app_name, $api_key, 'off' );
@@ -715,7 +715,7 @@ class WPF_Infusionsoft_iSDK {
 		$return_fields = array();
 		$field_map     = array();
 
-		foreach ( wp_fusion()->settings->get( 'contact_fields' ) as $field_id => $field_data ) {
+		foreach ( wpf_get_option( 'contact_fields' ) as $field_id => $field_data ) {
 
 			if ( $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
 
@@ -819,14 +819,14 @@ class WPF_Infusionsoft_iSDK {
 
 	public function send_api_call( $contact_id ) {
 
-		if ( wp_fusion()->settings->get( 'api_call' ) == true ) {
+		if ( wpf_get_option( 'api_call' ) == true ) {
 
 			if ( is_wp_error( $this->connect() ) ) {
 				return $this->error;
 			}
 
-			$integration = wp_fusion()->settings->get( 'api_call_integration' );
-			$call_name   = wp_fusion()->settings->get( 'api_call_name' );
+			$integration = wpf_get_option( 'api_call_integration' );
+			$call_name   = wpf_get_option( 'api_call_name' );
 
 			$result = $this->app->achieveGoal( $integration, $call_name, $contact_id );
 

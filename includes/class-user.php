@@ -1,44 +1,49 @@
 <?php
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
+/**
+ * Handles user registration, profile updates, and tags.
+ *
+ * @since 1.0.0
+ */
 class WPF_User {
-
 
 	/**
 	 * WPF_User constructor.
+	 *
+	 * @since 1.0.0
 	 */
-
 	public function __construct() {
 
-		// Register and profile updates
+		// Register and profile updates.
 		add_action( 'user_register', array( $this, 'user_register' ), 20 ); // 20 so usermeta added by other plugins is saved
 		add_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
 		add_action( 'add_user_to_blog', array( $this, 'add_user_to_blog' ) );
 		add_filter( 'wpf_user_register', array( $this, 'maybe_set_first_last_name' ), 100, 2 ); // 100 so it runs after everything else
 
-		// Deleted users
+		// Deleted users.
 		add_action( 'delete_user', array( $this, 'user_delete' ) );
 		add_action( 'remove_user_from_blog', array( $this, 'user_delete' ) );
 
 		add_action( 'password_reset', array( $this, 'password_reset' ), 10, 2 );
 		add_action( 'wp_login', array( $this, 'login' ), 10, 2 );
 
-		// Roles
+		// Roles.
 		add_action( 'set_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'add_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'remove_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 
-		// User meta
+		// User meta.
 		add_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		add_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 
-		// After-import actions
+		// After-import actions.
 		add_action( 'wpf_user_imported', array( $this, 'return_password' ), 10, 2 );
 
-		// Dyanmic tagging (so so other plugins have had a chance to make their field changes)
+		// Dyanmic tagging (so so other plugins have had a chance to make their field changes).
 		add_filter( 'wpf_user_update', array( $this, 'dynamic_tagging' ), 30, 2 );
 		add_filter( 'wpf_user_register', array( $this, 'dynamic_tagging' ), 30, 2 );
 
@@ -124,18 +129,7 @@ class WPF_User {
 	}
 
 	/**
-	 * Used by create user to map post data for PHP versions less than 5.3
-	 *
-	 * @access public
-	 * @return mixed
-	 */
-
-	public function map_user_meta( $a ) {
-		return maybe_unserialize( $a[0] );
-	}
-
-	/**
-	 * Triggered when a new user is added to a blog in multisite. Applies the tags for this blog
+	 * Triggered when a new user is added to a blog in multisite. Applies the tags for this blog.
 	 *
 	 * @access public
 	 * @param $user_id
@@ -144,13 +138,13 @@ class WPF_User {
 
 	public function add_user_to_blog( $user_id ) {
 
-		// Don't need to do this if they've just registered
+		// Don't need to do this if they've just registered.
 
 		if ( did_action( 'user_register' ) ) {
 			return;
 		}
 
-		$assign_tags = wp_fusion()->settings->get( 'assign_tags' );
+		$assign_tags = wpf_get_option( 'assign_tags' );
 
 		if ( ! empty( $assign_tags ) ) {
 			$this->apply_tags( $assign_tags, $user_id );
@@ -175,7 +169,7 @@ class WPF_User {
 	 */
 	public function maybe_set_first_last_name( $post_data, $user_id ) {
 
-		if ( empty( $post_data['first_name'] ) && null !== $post_data['first_name'] ) {
+		if ( ! isset( $post_data['first_name'] ) || ( empty( $post_data['first_name'] ) && ! is_null( $post_data['first_name'] ) ) ) {
 
 			$try = array( 'first_name', 'fname', 'first_' );
 
@@ -191,7 +185,7 @@ class WPF_User {
 			}
 		}
 
-		if ( empty( $post_data['last_name'] ) && null !== $post_data['last_name'] ) {
+		if ( ! isset( $post_data['last_name'] ) || ( empty( $post_data['last_name'] ) && ! is_null( $post_data['last_name'] ) ) ) {
 
 			$try = array( 'last_name', 'lname' );
 
@@ -242,30 +236,39 @@ class WPF_User {
 
 		remove_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
 
-		// Don't load tags or meta when someone registers
+		// Don't load tags or meta when someone registers.
 		remove_action( 'wp_login', array( $this, 'login' ), 10, 2 );
 
 		do_action( 'wpf_user_register_start', $user_id, $post_data );
 
-		// Get posted data from the registration form
-
-		if ( false == $post_data && ! empty( $_POST ) && is_array( $_POST ) ) {
-			$post_data = $_POST;
+		// Get posted data from the registration form.
+		if ( false === $post_data && ! empty( $_POST ) && is_array( $_POST ) ) {
+			$post_data = wpf_clean( wp_unslash( $_POST ) );
 		} elseif ( empty( $post_data ) ) {
 			$post_data = array();
 		}
 
 		$user_meta = $this->get_user_meta( $user_id );
 
-		// Merge what's in the database with what was submitted on the form
+		// Merge what's in the database with what was submitted on the form.
 		$post_data = array_merge( $user_meta, $post_data );
 
-		// Allow outside modification of this data, also see WPF_User::maybe_set_first_last_name()
+		/**
+		 * Allow modification of the registration data.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @see   WPF_User::maybe_set_first_last_name()
+		 * @see   WPF_User_Profile::filter_form_fields()
+		 * @link  https://wpfusion.com/documentation/filters/wpf_user_register/
+		 *
+		 * @param array $post_data The registration data.
+		 * @param int   $user_id   The user ID.
+		 */
 
 		$post_data = apply_filters( 'wpf_user_register', $post_data, $user_id );
 
-		// Allows for cancelling of registration via filter
-
+		// Allows for cancelling of registration via filter.
 		if ( null === $post_data ) {
 			return false;
 		}
@@ -282,10 +285,10 @@ class WPF_User {
 			return false;
 		}
 
-		// Check if contact already exists in CRM
+		// Check if contact already exists in CRM.
 		$contact_id = $this->get_contact_id( $user_id, true );
 
-		if ( wp_fusion()->settings->get( 'create_users' ) != true && $force == false && $contact_id == false ) {
+		if ( wpf_get_option( 'create_users' ) != true && $force == false && $contact_id == false ) {
 
 			wpf_log(
 				'notice',
@@ -298,17 +301,17 @@ class WPF_User {
 
 		}
 
-		if ( false == $contact_id ) {
+		if ( empty( $contact_id ) ) {
 
-			// Contact does not exist in the CRM
+			// Contact does not exist in the CRM.
 
-			// See if user role is elligible for being created as a contact
+			// See if user role is elligible for being created as a contact.
 
-			$valid_roles = wp_fusion()->settings->get( 'user_roles', array() );
+			$valid_roles = wpf_get_option( 'user_roles', array() );
 
 			$valid_roles = apply_filters( 'wpf_register_valid_roles', $valid_roles, $user_id, $post_data );
 
-			if ( ! empty( $valid_roles ) && ! in_array( $post_data['role'], $valid_roles ) && false == $force ) {
+			if ( ! empty( $valid_roles ) && ! in_array( $post_data['role'], $valid_roles ) && false === $force ) {
 
 				wpf_log(
 					'notice',
@@ -320,7 +323,7 @@ class WPF_User {
 
 			}
 
-			// Log what's about to happen
+			// Log what's about to happen.
 
 			wpf_log(
 				'info',
@@ -332,13 +335,13 @@ class WPF_User {
 				)
 			);
 
-			// Add the contact to the CRM
+			// Add the contact to the CRM.
 
 			$contact_id = wp_fusion()->crm->add_contact( $post_data );
 
 			if ( is_wp_error( $contact_id ) ) {
 
-				// Error logging
+				// Error logging.
 
 				wpf_log(
 					$contact_id->get_error_code(),
@@ -355,11 +358,13 @@ class WPF_User {
 
 			}
 
+			$contact_id = sanitize_text_field( $contact_id );
+
 			update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
 
 		} else {
 
-			// Contact already exists in the CRM, update them
+			// Contact already exists in the CRM, update them.
 
 			wpf_log(
 				'info',
@@ -371,13 +376,13 @@ class WPF_User {
 				)
 			);
 
-			// Send the update data
+			// Send the update data.
 
 			$result = wp_fusion()->crm->update_contact( $contact_id, $post_data );
 
 			if ( is_wp_error( $result ) ) {
 
-				// If update failed
+				// If update failed.
 
 				wpf_log(
 					$result->get_error_code(),
@@ -394,14 +399,14 @@ class WPF_User {
 
 			}
 
-			// Load the tags from the existing contact record
+			// Load the tags from the existing contact record.
 
 			$this->get_tags( $user_id, true, false );
 
 		}
 
-		// Assign any tags specified in the WPF settings page
-		$assign_tags = wp_fusion()->settings->get( 'assign_tags' );
+		// Assign any tags specified in the WPF settings page.
+		$assign_tags = wpf_get_option( 'assign_tags' );
 
 		if ( ! empty( $assign_tags ) ) {
 			$this->apply_tags( $assign_tags, $user_id );
@@ -422,13 +427,16 @@ class WPF_User {
 
 	public function profile_update( $user_id, $old_user_data ) {
 
-		$bypass = apply_filters( 'wpf_bypass_profile_update', false, $_REQUEST );
+		$bypass = apply_filters( 'wpf_bypass_profile_update', false, wpf_clean( wp_unslash( $_REQUEST ) ) );
 
-		// This doesn't need to run twice on a page load
+		// This doesn't need to run twice on a page load.
 		remove_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
 
 		if ( ! empty( $_POST ) && false === $bypass ) {
-			$this->push_user_meta( $user_id, $_POST );
+
+			$post_data = wpf_clean( wp_unslash( $_POST ) );
+			$this->push_user_meta( $user_id, $post_data );
+
 		}
 
 	}
@@ -440,15 +448,14 @@ class WPF_User {
 	 * @access public
 	 * @return void
 	 */
-
 	public function user_delete( $user_id ) {
 
-		// Users are removed from the main blog when added to a new site so we we'll ignore those
+		// Users are removed from the main blog when added to a new site so we we'll ignore those.
 		if ( doing_action( 'wpmu_activate_user' ) || doing_action( 'wpmu_activate_blog' ) ) {
 			return;
 		}
 
-		$tags = wp_fusion()->settings->get( 'deletion_tags', array() );
+		$tags = wpf_get_option( 'deletion_tags', array() );
 
 		if ( ! empty( $tags ) ) {
 			$this->apply_tags( $tags, $user_id );
@@ -463,7 +470,6 @@ class WPF_User {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function has_contact_id( $user_id = false ) {
 
 		if ( ! $user_id ) {
@@ -488,16 +494,15 @@ class WPF_User {
 	 * @param int   $user_id The user ID.
 	 * @return string|bool The edit URL or false.
 	 */
-
 	public function get_contact_edit_url( $user_id = false ) {
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
 		}
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		if ( false == $contact_id ) {
+		if ( empty( $contact_id ) ) {
 			return false;
 		}
 
@@ -507,19 +512,22 @@ class WPF_User {
 
 
 	/**
-	 * Gets contact ID from user ID
+	 * Gets contact ID from user ID.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @since  1.0.0
+	 *
+	 * @param  int|bool $user_id      The user ID or false to use current user.
+	 * @param  bool     $force_update Whether or not to force-check the
+	 *                                contact ID by making an API call to the CRM.
+	 * @return string|bool Contact ID or false if not found.
 	 */
-
 	public function get_contact_id( $user_id = false, $force_update = false ) {
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
 		}
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			return false;
 		}
 
@@ -536,20 +544,20 @@ class WPF_User {
 			$email_address = false;
 		}
 
-		// Allow filtering the email used for lookups
+		// Allow filtering the email used for lookups.
 		$email_address = apply_filters( 'wpf_get_contact_id_email', $email_address, $user_id );
 
 		if ( empty( $contact_id ) && empty( $email_address ) ) {
-			// We don't know the user or contact ID, so quit
+			// We don't know the user or contact ID, so quit.
 			return false;
 		}
 
-		// If contact ID is already set
+		// If contact ID is already set.
 		if ( ( ! empty( $contact_id ) || $contact_id == false ) && $force_update == false ) {
 			return apply_filters( 'wpf_contact_id', $contact_id, $email_address );
 		}
 
-		// If no user email set, don't bother with an API call
+		// If no user email set, don't bother with an API call.
 		if ( ! is_email( $email_address ) ) {
 			return false;
 		}
@@ -565,11 +573,13 @@ class WPF_User {
 
 		$contact_id = apply_filters( 'wpf_contact_id', $contact_id, $email_address );
 
-		if ( $contact_id == false ) {
+		if ( false === $contact_id ) {
 
-			// Error logging
+			// Error logging.
 			wpf_log( 'info', $user_id, 'No contact found in ' . wp_fusion()->crm->name . ' for <strong>' . $email_address . '</strong>' );
 
+		} else {
+			$contact_id = sanitize_text_field( $contact_id );
 		}
 
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
@@ -589,7 +599,7 @@ class WPF_User {
 
 	public function pull_user_meta( $user_id = false ) {
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
 		}
 
@@ -617,17 +627,17 @@ class WPF_User {
 
 		}
 
-		// Logger. This is before the filter so that keys that are unset() (i.e. XProfile data) can still be logged
+		// Logger. This is before the filter so that keys that are unset() (i.e. XProfile data) can still be logged.
 		wpf_log( 'info', $user_id, 'Loaded meta data from ' . wp_fusion()->crm->name . ':', array( 'meta_array' => $user_meta ) );
 
 		$user_meta = apply_filters( 'wpf_pulled_user_meta', $user_meta, $user_id );
 
-		// Allows for cancelling via filter
+		// Allows for cancelling via filter.
 		if ( null === $user_meta ) {
 			return;
 		}
 
-		// Don't push updates back to CRM
+		// Don't push updates back to CRM.
 		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		remove_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 
@@ -645,12 +655,19 @@ class WPF_User {
 	 * @access public
 	 * @return array User Meta
 	 */
-
 	public function get_user_meta( $user_id ) {
 
-		$user_meta = array_map( array( $this, 'map_user_meta' ), get_user_meta( $user_id ) );
+		// Start by getting everything in the database.
+		$user_meta = array_filter(
+			array_map(
+				function( $a ) {
+					return $a[0];
+				},
+				get_user_meta( $user_id ),
+			)
+		);
 
-		// get_userdata() doesn't work properly during an auto login session
+		// get_userdata() doesn't work properly during an auto login session.
 
 		if ( doing_wpf_auto_login() ) {
 			return apply_filters( 'wpf_get_user_meta', $user_meta, $user_id );
@@ -691,7 +708,9 @@ class WPF_User {
 
 		$user_meta = apply_filters( 'wpf_set_user_meta', $user_meta, $user_id );
 
-		// Don't send updates back
+		$user_meta = wpf_clean( $user_meta ); // sanitize and clean.
+
+		// Don't send updates back.
 		remove_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
 		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		remove_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
@@ -867,7 +886,7 @@ class WPF_User {
 
 	public function get_tags( $user_id = false, $force_update = false, $lookup_cid = true ) {
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
 		}
 
@@ -875,12 +894,12 @@ class WPF_User {
 
 		$user_tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
 
-		if ( is_array( $user_tags ) && false == $force_update ) {
+		if ( is_array( $user_tags ) && false === $force_update ) {
 			return apply_filters( 'wpf_user_tags', $user_tags, $user_id );
 		}
 
-		// If no tags
-		if ( empty( $user_tags ) && false == $force_update ) {
+		// If no tags.
+		if ( empty( $user_tags ) && false === $force_update ) {
 			return apply_filters( 'wpf_user_tags', array(), $user_id );
 		}
 
@@ -888,15 +907,15 @@ class WPF_User {
 			$user_tags = array();
 		}
 
-		// Don't get the CID again if the request came from a webhook
-		if ( false == $lookup_cid ) {
+		// Don't get the CID again if the request came from a webhook.
+		if ( false === $lookup_cid ) {
 			$force_update = false;
 		}
 
 		$contact_id = $this->get_contact_id( $user_id, $force_update );
 
-		// If contact doesn't exist in CRM
-		if ( false == $contact_id ) {
+		// If contact doesn't exist in CRM.
+		if ( false === $contact_id ) {
 			return apply_filters( 'wpf_user_tags', array(), $user_id );
 		}
 
@@ -924,23 +943,21 @@ class WPF_User {
 
 	public function set_tags( $tags, $user_id ) {
 
-		// Compare new tags to current tags to see what's changed
-
+		// Compare new tags to current tags to see what's changed.
 		$user_tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
 
 		if ( empty( $user_tags ) ) {
 			$user_tags = array();
 		}
 
-		// Tags should be stored as strings
-
-		$tags = array_map( 'strval', (array) $tags );
+		// Tags should be stored as an array of strings.
+		$tags = array_map( 'sanitize_text_field', (array) $tags );
 
 		wpf_log( 'info', $user_id, __( 'Loaded tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 
 		if ( ! empty( $tags ) && $tags == $user_tags ) {
 
-			// Doing the action here so that automated enrollments are triggered
+			// Doing the action here so that automated enrollments are triggered.
 			do_action( 'wpf_tags_modified', $user_id, $user_tags );
 
 			// If nothing changed
@@ -948,12 +965,12 @@ class WPF_User {
 
 		}
 
-		// Check and see if new tags have been pulled, and if so, resync the available tags list
+		// Check and see if new tags have been pulled, and if so, resync the available tags list.
 
 		if ( is_admin() ) {
 
 			$sync_needed    = false;
-			$available_tags = wp_fusion()->settings->get( 'available_tags' );
+			$available_tags = wpf_get_option( 'available_tags' );
 
 			foreach ( (array) $tags as $tag ) {
 
@@ -962,16 +979,16 @@ class WPF_User {
 				}
 			}
 
-			if ( $sync_needed == true ) {
+			if ( true === $sync_needed ) {
 				wp_fusion()->crm->sync_tags();
 			}
 		}
 
-		// Save it to the DB
+		// Save it to the DB.
 
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $tags );
 
-		// Check if tags were added
+		// Check if tags were added.
 
 		$tags_applied = array_diff( $tags, $user_tags );
 
@@ -988,7 +1005,7 @@ class WPF_User {
 
 		}
 
-		// Check if tags were removed
+		// Check if tags were removed.
 
 		$tags_removed = array_diff( $user_tags, $tags );
 
@@ -1029,15 +1046,15 @@ class WPF_User {
 			return;
 		}
 
-		// Remove any empty ones that may have snuck in
+		// Remove any empty ones that may have snuck in.
 
 		$tags = array_filter( $tags );
 
 		// Sanitize!
 
-		$tags = array_map( 'strval', $tags );
+		$tags = array_map( 'sanitize_text_field', $tags );
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
 		}
 
@@ -1061,9 +1078,9 @@ class WPF_User {
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		// If no contact ID, don't try applying tags
+		// If no contact ID, don't try applying tags.
 
-		if ( false == $contact_id ) {
+		if ( false === $contact_id ) {
 
 			wpf_log( 'notice', $user_id, __( 'No contact ID for user. Failed to apply tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 			return false;
@@ -1072,7 +1089,7 @@ class WPF_User {
 
 		$user_tags = $this->get_tags( $user_id );
 
-		// Maybe quit early if user already has the tag
+		// Maybe quit early if user already has the tag.
 		$diff = array_diff( (array) $tags, $user_tags );
 
 		/**
@@ -1081,27 +1098,29 @@ class WPF_User {
 		 * @param bool $prevent_reapply_tags Whether to prevent re-applying tags
 		 */
 
-		$prevent_reapply = apply_filters( 'wpf_prevent_reapply_tags', wp_fusion()->settings->get( 'prevent_reapply', true ) );
+		$prevent_reapply = apply_filters( 'wpf_prevent_reapply_tags', wpf_get_option( 'prevent_reapply', true ) );
 
-		if ( empty( $diff ) && true == $prevent_reapply ) {
+		if ( empty( $diff ) && true === $prevent_reapply ) {
 
 			wpf_log( 'info', $user_id, __( 'Applying Tag(s). No API call will be sent since the user already has the tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 			return true;
 
 		}
 
-		// If we're only applying tags the user doesn't have already
-		if ( true == $prevent_reapply ) {
+		// If we're only applying tags the user doesn't have already.
+
+		if ( true === $prevent_reapply ) {
 			$tags = $diff;
 		}
 
-		// Check for chaining
+		// Check for chaining.
 
 		if ( doing_action( 'wpf_tags_modified' ) ) {
 			wpf_log( 'warning', $user_id, __( '<strong>Chaining situation detected</strong>. WP Fusion is about to apply tags as the result of an automated enrollment, which was triggered by other tags being applied. This kind of setup should be avoided and may result in unexpected behavior or site instability.', 'wp-fusion-lite' ) );
 		}
 
-		// Logging
+		// Logging.
+
 		wpf_log( 'info', $user_id, __( 'Applying tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 
 		$result = wp_fusion()->crm->apply_tags( $tags, $contact_id );
@@ -1111,17 +1130,17 @@ class WPF_User {
 			return false;
 		}
 
-		// Save to the database
+		// Save to the database.
 
 		$user_tags = array_unique( array_merge( $user_tags, $tags ) );
 
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
 
-		// If a new tag was just applied, update the available list
+		// If a new tag was just applied, update the available list.
 
 		if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
-			$available_tags = wp_fusion()->settings->get( 'available_tags' );
+			$available_tags = wpf_get_option( 'available_tags' );
 
 			foreach ( $tags as $tag ) {
 
@@ -1169,15 +1188,15 @@ class WPF_User {
 			return;
 		}
 
-		// Remove any empty ones that may have snuck in
+		// Remove any empty ones that may have snuck in.
 
 		$tags = array_filter( $tags );
 
 		// Sanitize!
 
-		$tags = array_map( 'strval', $tags );
+		$tags = array_map( 'sanitize_text_field', $tags );
 
-		if ( false == $user_id ) {
+		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
 		}
 
@@ -1201,9 +1220,9 @@ class WPF_User {
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		// If no contact ID, don't try applying tags
+		// If no contact ID, don't try applying tags.
 
-		if ( false == $contact_id ) {
+		if ( false === $contact_id ) {
 
 			wpf_log( 'notice', $user_id, __( 'No contact ID for user. Failed to remove tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 			return false;
@@ -1218,7 +1237,7 @@ class WPF_User {
 
 		$diff = array_intersect( $tags, $user_tags );
 
-		// Maybe quit early if user doesn't have the tag anyway
+		// Maybe quit early if user doesn't have the tag anyway.
 
 		if ( empty( $diff ) ) {
 
@@ -1228,13 +1247,14 @@ class WPF_User {
 
 		$tags = $diff;
 
-		// Check for chaining
+		// Check for chaining.
 
 		if ( doing_action( 'wpf_tags_modified' ) ) {
 			wpf_log( 'warning', $user_id, __( '<strong>Chaining situation detected</strong>. WP Fusion is about to remove tags as the result of an automated enrollment, which was triggered by other tags being removed. This kind of setup should be avoided and may result in unexpected behavior or site instability.', 'wp-fusion-lite' ) );
 		}
 
-		// Logging
+		// Logging.
+
 		wpf_log( 'info', $user_id, __( 'Removing tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 
 		$result = wp_fusion()->crm->remove_tags( $tags, $contact_id );
@@ -1244,7 +1264,7 @@ class WPF_User {
 			return false;
 		}
 
-		// Save to the database
+		// Save to the database.
 
 		$user_tags = array_unique( array_diff( $user_tags, $tags ) );
 
@@ -1295,9 +1315,9 @@ class WPF_User {
 
 	public function return_password( $user_id, $user_meta ) {
 
-		$password_field = wp_fusion()->settings->get( 'return_password_field', array() );
+		$password_field = wpf_get_option( 'return_password_field', array() );
 
-		if ( wp_fusion()->settings->get( 'return_password' ) == true && ! empty( $password_field['crm_field'] ) ) {
+		if ( wpf_get_option( 'return_password' ) && ! empty( $password_field['crm_field'] ) ) {
 
 			wpf_log( 'info', $user_id, 'Returning generated password <strong>' . $user_meta['user_pass'] . '</strong> to ' . wp_fusion()->crm->name );
 
@@ -1309,7 +1329,8 @@ class WPF_User {
 			}
 
 			$this->push_user_meta(
-				$user_id, array(
+				$user_id,
+				array(
 					'user_login'      => $user_meta['user_login'],
 					'user_id'         => $user_id,
 					'user_registered' => get_userdata( $user_id )->user_registered,
@@ -1319,7 +1340,8 @@ class WPF_User {
 		} else {
 
 			$this->push_user_meta(
-				$user_id, array(
+				$user_id,
+				array(
 					'user_pass'       => $user_meta['user_pass'],
 					'user_login'      => $user_meta['user_login'],
 					'user_id'         => $user_id,
@@ -1368,12 +1390,12 @@ class WPF_User {
 
 				if ( ! empty( $contact_id ) ) {
 
-					// User update for existing contact ID, easy
+					// User update for existing contact ID, easy.
 					$this->apply_tags( $apply_tags, $user_id );
 
 				} else {
 
-					// New user registration, harder
+					// New user registration, harder.
 					add_action(
 						'wpf_user_created', function( $user_id, $contact_id, $post_data ) use ( &$apply_tags ) {
 
@@ -1410,11 +1432,11 @@ class WPF_User {
 
 			$roles = array_keys( $user->caps );
 
-			if ( false == $this->get_contact_id( $user_id ) ) {
+			if ( ! $this->get_contact_id( $user_id ) ) {
 
-				if ( ! empty( array_intersect( wp_fusion()->settings->get( 'user_roles', array() ), $roles ) ) ) {
+				if ( ! empty( array_intersect( wpf_get_option( 'user_roles', array() ), $roles ) ) ) {
 
-					// If we're limiting user roles and the user's role was just changed to a valid one
+					// If we're limiting user roles and the user's role was just changed to a valid one.
 
 					$this->user_register( $user_id );
 
@@ -1441,7 +1463,7 @@ class WPF_User {
 
 	public function login( $user_login, $user = false ) {
 
-		if ( ! wp_fusion()->settings->get( 'login_sync' ) && ! wp_fusion()->settings->get( 'login_meta_sync' ) ) {
+		if ( ! wpf_get_option( 'login_sync' ) && ! wpf_get_option( 'login_meta_sync' ) ) {
 			return;
 		}
 
@@ -1449,27 +1471,27 @@ class WPF_User {
 			$user = get_user_by( 'login', $user_login );
 		}
 
-		// No need if they don't have a contact record
+		// No need if they don't have a contact record.
 
 		if ( empty( $this->get_contact_id( $user->ID ) ) ) {
 			return;
 		}
 
-		// Let's set the API timeout here to just 5 seconds for cases where the CRM is offline
+		// Let's set the API timeout here to just 5 seconds for cases where the CRM is offline.
 
 		if ( isset( wp_fusion()->crm->params ) ) {
 			add_filter( 'http_request_timeout', array( $this, 'http_request_timeout' ) );
 		}
 
-		if ( wp_fusion()->settings->get( 'login_sync' ) ) {
+		if ( wpf_get_option( 'login_sync' ) ) {
 			$this->get_tags( $user->ID, true, false );
 		}
 
-		if ( wp_fusion()->settings->get( 'login_meta_sync' ) ) {
+		if ( wpf_get_option( 'login_meta_sync' ) ) {
 			$this->pull_user_meta( $user->ID );
 		}
 
-		// Remove the filter
+		// Remove the filter.
 
 		if ( isset( wp_fusion()->crm->params ) ) {
 			remove_filter( 'http_request_timeout', array( $this, 'http_request_timeout' ) );
@@ -1488,7 +1510,7 @@ class WPF_User {
 
 		do_action( 'wpf_get_user_id_start', $contact_id );
 
-		$user_id = apply_filters( 'wpf_get_user_id', false, $contact_id ); // Allow bypassing the database query, for performance
+		$user_id = apply_filters( 'wpf_get_user_id', false, $contact_id ); // Allow bypassing the database query, for performance.
 
 		if ( false === $user_id ) {
 
@@ -1632,7 +1654,7 @@ class WPF_User {
 			return $tag_name;
 		}
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		// If it's already an ID
 
@@ -1682,25 +1704,25 @@ class WPF_User {
 
 		}
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = wpf_get_option( 'available_tags' );
 
 		if ( isset( $available_tags[ $tag_id ] ) && is_array( $available_tags[ $tag_id ] ) ) {
 
-			// CRMs with tag optgroups
+			// CRMs with tag optgroups.
 
 			return $available_tags[ $tag_id ]['label'];
 
 		} elseif ( isset( $available_tags[ $tag_id ] ) ) {
 
-			// CRMs with id => label
+			// CRMs with id => label.
 
 			return $available_tags[ $tag_id ];
 
 		} elseif ( ! isset( $available_tags[ $tag_id ] ) ) {
 
-			// Unknown tags
+			// Unknown tags.
 
-			$tag_type = wp_fusion()->settings->get( 'crm_tag_type', 'tag' );
+			$tag_type = wpf_get_option( 'crm_tag_type', 'tag' );
 
 			return '(Unknown ' . $tag_type . ': ' . $tag_id . ')';
 
@@ -1721,15 +1743,15 @@ class WPF_User {
 
 	public function push_user_meta_single( $meta_id, $object_id, $meta_key, $_meta_value ) {
 
-		// Allow itegrations to register fields that should always sync when modified
+		// Allow itegrations to register fields that should always sync when modified.
 		$watched_fields = apply_filters( 'wpf_watched_meta_fields', array() );
 
 		// Don't even try if the field isn't enabled for sync
-		if ( wp_fusion()->settings->get( 'push_all_meta' ) != true && ! in_array( $meta_key, $watched_fields ) ) {
+		if ( ! wpf_get_option( 'push_all_meta' ) && ! in_array( $meta_key, $watched_fields ) ) {
 			return;
 		}
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		if ( empty( $contact_fields[ $meta_key ] ) || $contact_fields[ $meta_key ]['active'] != true && ! in_array( $meta_key, $watched_fields ) ) {
 			return;
@@ -1749,13 +1771,13 @@ class WPF_User {
 
 	public function push_user_meta( $user_id, $user_meta = false ) {
 
-		if ( wp_fusion()->settings->get( 'push' ) != true ) {
+		if ( ! wpf_get_option( 'push' ) ) {
 			return;
 		}
 
 		do_action( 'wpf_push_user_meta_start', $user_id, $user_meta );
 
-		// If nothing's been supplied, get the latest from the DB
+		// If nothing's been supplied, get the latest from the DB.
 
 		if ( false === $user_meta ) {
 			$user_meta = $this->get_user_meta( $user_id );
@@ -1763,7 +1785,7 @@ class WPF_User {
 
 		$user_meta = apply_filters( 'wpf_user_update', $user_meta, $user_id );
 
-		// Allows for cancelling via filter
+		// Allows for cancelling via filter.
 
 		if ( null == $user_meta ) {
 			wpf_log( 'notice', $user_id, 'Push user meta aborted: no metadata found for user.' );
@@ -1772,7 +1794,7 @@ class WPF_User {
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		if ( empty( $user_meta ) || false == $contact_id ) {
+		if ( empty( $user_meta ) || false === $contact_id ) {
 			return;
 		}
 
@@ -1785,9 +1807,9 @@ class WPF_User {
 			wpf_log( $result->get_error_code(), $user_id, 'Error while updating meta data: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
 			return false;
 
-		} elseif ( false == $result ) {
+		} elseif ( false === $result ) {
 
-			// If nothing was updated
+			// If nothing was updated.
 			return false;
 
 		}
@@ -1821,7 +1843,7 @@ class WPF_User {
 			$this->pull_user_meta( $users[0]->ID );
 			$this->get_tags( $users[0]->ID, true, false );
 
-			// Maybe change role (but not for admins)
+			// Maybe change role (but not for admins).
 			if ( ! empty( $role ) && ! user_can( $users[0]->ID, 'manage_options' ) && wp_roles()->is_role( $role ) ) {
 
 				$user = new WP_User( $users[0]->ID );
@@ -1846,7 +1868,9 @@ class WPF_User {
 
 		}
 
-		// See if user with matching email exists
+		$user_meta = wpf_clean( $user_meta ); // make it safe.
+
+		// See if user with matching email exists.
 		$user = get_user_by( 'email', $user_meta['user_email'] );
 
 		if ( is_wp_error( $user ) ) {
@@ -1858,14 +1882,14 @@ class WPF_User {
 
 			$user_meta = apply_filters( 'wpf_pulled_user_meta', $user_meta, $user->ID );
 
-			// Don't push updates back to CRM
+			// Don't push updates back to CRM.
 			remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 
 			update_user_meta( $user->ID, wp_fusion()->crm->slug . '_contact_id', $contact_id );
 			$this->set_user_meta( $user->ID, $user_meta );
 			$this->get_tags( $user->ID, true, false );
 
-			// Maybe change role (but not for admins)
+			// Maybe change role (but not for admins).
 			if ( ! empty( $role ) && ! user_can( $user->ID, 'manage_options' ) && wp_roles()->is_role( $role ) ) {
 
 				$user = new WP_User( $user->ID );
@@ -1881,40 +1905,40 @@ class WPF_User {
 
 		if ( empty( $user_meta['user_pass'] ) ) {
 
-			// Generate a password if one hasn't been supplied
+			// Generate a password if one hasn't been supplied.
 			$user_meta['user_pass']           = wp_generate_password( 12, false );
 			$user_meta['generated_user_pass'] = 'true';
 
-			// If the action got removed by another user, add it back
+			// If the action got removed by another user, add it back.
 			if ( ! has_action( 'wpf_user_imported', array( $this, 'return_password' ) ) ) {
 				add_action( 'wpf_user_imported', array( $this, 'return_password' ), 10, 2 );
 			}
 		} else {
 
-			// If we're not generating a password, no need to send it back
+			// If we're not generating a password, no need to send it back.
 			remove_action( 'wpf_user_imported', array( $this, 'return_password' ), 10, 2 );
 
 		}
 
-		// If user name is set
+		// If user name is set.
 		if ( empty( $user_meta['user_login'] ) ) {
 
-			// Get the default from the settings
+			// Get the default from the settings.
 
-			$format = wp_fusion()->settings->get( 'username_format', 'email' );
+			$format = wpf_get_option( 'username_format', 'email' );
 
-			if ( 'email' == $format ) {
+			if ( 'email' === $format ) {
 				$user_meta['user_login'] = $user_meta['user_email'];
-			} elseif ( 'flname' == $format ) {
+			} elseif ( 'flname' === $format ) {
 				$user_meta['user_login'] = $user_meta['first_name'] . $user_meta['last_name'];
-			} elseif ( 'fnamenum' == $format ) {
-				$user_meta['user_login'] = $user_meta['first_name'] . rand( 1, 99999 );
+			} elseif ( 'fnamenum' === $format ) {
+				$user_meta['user_login'] = $user_meta['first_name'] . wp_rand( 1, 99999 );
 			}
 
-			// Randomize it further if needed
+			// Randomize it further if needed.
 
 			while ( username_exists( $user_meta['user_login'] ) ) {
-				$user_meta['user_login'] .= rand( 1, 999 );
+				$user_meta['user_login'] .= wp_rand( 1, 999 );
 			}
 		}
 
@@ -1924,7 +1948,7 @@ class WPF_User {
 			$user_meta['role'] = $role;
 		}
 
-		// Maybe convert a role title to slug
+		// Maybe convert a role title to slug.
 
 		$slug = array_search( $role, wp_roles()->get_names() );
 
@@ -1938,7 +1962,7 @@ class WPF_User {
 
 		} elseif ( 'administrator' == $user_meta['role'] ) {
 
-			// Not allowed
+			// Not allowed.
 			$user_meta['role'] = get_option( 'default_role' );
 			wpf_log( 'notice', 0, 'For security reasons you cannot import a contact as an administrator.' );
 
@@ -1949,44 +1973,44 @@ class WPF_User {
 
 		}
 
-		// Set contact ID
+		// Set contact ID.
 		$user_meta[ wp_fusion()->crm->slug . '_contact_id' ] = $contact_id;
 
-		// Apply filters
+		// Apply filters.
 		$user_meta = apply_filters( 'wpf_import_user', $user_meta, $contact_id );
 
 		// Allows for cancelling via filter
-		if ( null == $user_meta ) {
+		if ( null === $user_meta ) {
 			wpf_log( 'notice', 0, 'Import of contact ID ' . $contact_id . ' aborted: no metadata found for user.' );
 			return false;
 		}
 
-		// Prevent the default registration hook from running
+		// Prevent the default registration hook from running.
 		remove_action( 'user_register', array( $this, 'user_register' ), 20 );
 
-		// Don't push updates back to CRM
+		// Don't push updates back to CRM.
 		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		remove_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		remove_action( 'set_user_role', array( $this, 'update_user_role' ), 10, 3 );
 
-		// Prevent mail from being sent
-		if ( false == $send_notification && false == wp_fusion()->settings->get( 'send_welcome_email' ) ) {
+		// Prevent mail from being sent.
+		if ( false === $send_notification && ! wpf_get_option( 'send_welcome_email' ) ) {
 			add_filter( 'wp_mail', array( $this, 'suppress_wp_mail' ), 100 );
 		}
 
-		// We don't want to set a user ID here
+		// We don't want to set a user ID here.
 
 		if ( isset( $user_meta['user_id'] ) ) {
 			unset( $user_meta['user_id'] );
 		}
 
-		// We don't want to set user_registered either
+		// We don't want to set user_registered either.
 
 		if ( isset( $user_meta['user_registered'] ) ) {
 			unset( $user_meta['user_registered'] );
 		}
 
-		// Insert user and store meta
+		// Insert user and store meta.
 		$user_id = wp_insert_user( $user_meta );
 
 		if ( is_wp_error( $user_id ) ) {
@@ -1996,34 +2020,34 @@ class WPF_User {
 
 		}
 
-		// Logger
+		// Logger.
 		wpf_log( 'info', $user_id, 'Imported contact ID <strong>' . $contact_id . '</strong>, with meta data: ', array( 'meta_array_nofilter' => $user_meta ) );
 
 		if ( isset( $user_meta['generated_user_pass'] ) ) {
 
-			// Set nag to change the password on next login
+			// Set nag to change the password on next login.
 			update_user_option( $user_id, 'default_password_nag', true );
 
-			// Remove log data for generated pass
+			// Remove log data for generated pass.
 			unset( $user_meta['generated_user_pass'] );
 
 		}
 
-		// Save any custom fields (wp insert user ignores them)
+		// Save any custom fields (wp insert user ignores them).
 		$this->set_user_meta( $user_id, $user_meta );
 
-		// Get tags
+		// Get tags.
 		$this->get_tags( $user_id, true, false );
 
-		// Send notification. This is after loading tags and meta in case any other plugins have modified the password reset key
-		if ( $send_notification || wp_fusion()->settings->get( 'send_welcome_email' ) ) {
+		// Send notification. This is after loading tags and meta in case any other plugins have modified the password reset key.
+		if ( $send_notification || wpf_get_option( 'send_welcome_email' ) ) {
 			wp_new_user_notification( $user_id, null, 'user' );
 		}
 
-		// Allow wp_mail to work again now that the user has been imported
+		// Allow wp_mail to work again now that the user has been imported.
 		remove_filter( 'wp_mail', array( $this, 'suppress_wp_mail' ), 100 );
 
-		// Denote user was imported
+		// Denote user was imported.
 		do_action( 'wpf_user_imported', $user_id, $user_meta );
 
 		return $user_id;

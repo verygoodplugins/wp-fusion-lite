@@ -84,15 +84,16 @@ class WPF_Kartra {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if(isset($post_data['contact_id'])) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = $payload->lead->id;
+		$post_data['contact_id'] = absint( $payload->lead->id );
 
 		// Set the post data to contain the email for imports
-		$_POST['kartra_email'] = $payload->lead->email;
+		$_POST['kartra_email'] = sanitize_email( $payload->lead->email );
 
 		return $post_data;
 
@@ -108,7 +109,7 @@ class WPF_Kartra {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		$options = wp_fusion()->settings->get( 'kartra_dropdown_options', array() );
+		$options = wpf_get_option( 'kartra_dropdown_options', array() );
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
@@ -175,8 +176,8 @@ class WPF_Kartra {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) || empty( $api_password ) ) {
-			$api_key = wp_fusion()->settings->get( 'kartra_api_key' );
-			$api_password = wp_fusion()->settings->get( 'kartra_api_password' );
+			$api_key = wpf_get_option( 'kartra_api_key' );
+			$api_password = wpf_get_option( 'kartra_api_password' );
 		}
 
 		$this->params = array(
@@ -220,7 +221,7 @@ class WPF_Kartra {
 			array( 'cmd' => 'retrieve_account_tags' )
 		);
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -272,7 +273,7 @@ class WPF_Kartra {
 			array( 'cmd' => 'retrieve_account_tags' )
 		);
 		
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -318,7 +319,7 @@ class WPF_Kartra {
 			array( 'cmd' => 'retrieve_account_lists' )
 		);
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -369,7 +370,7 @@ class WPF_Kartra {
 
 		$params['body']['actions'][] = array( 'cmd' => 'retrieve_custom_fields' );
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		$dropdown_options = array();
 		$custom_fields    = array();
@@ -432,7 +433,7 @@ class WPF_Kartra {
 
 		$params['body']['get_lead']['email'] = $email_address;
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -470,7 +471,7 @@ class WPF_Kartra {
 		$params = $this->params;
 		$params['body']['get_lead']['id'] = $contact_id;
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -490,7 +491,7 @@ class WPF_Kartra {
 
 		// Add new tags to available tags if they don't already exist
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $tags as $tag ) {
 
@@ -528,7 +529,7 @@ class WPF_Kartra {
 			$params['body']['actions'][] = array( 'cmd' => 'assign_tag', 'tag_name' => $tag );
 		}
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -560,7 +561,7 @@ class WPF_Kartra {
 			$params['body']['actions'][] = array( 'cmd' => 'unassign_tag', 'tag_name' => $tag );
 		}
 
-		$response     = wp_remote_post( $this->api_url, $params );
+		$response     = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -622,7 +623,7 @@ class WPF_Kartra {
 			array( 'cmd' => 'create_lead' )
 		);
 
-		$lists = wp_fusion()->settings->get( 'kartra_lists' );
+		$lists = wpf_get_option( 'kartra_lists' );
 
 		if( ! empty( $lists ) && ! empty( $lists[0] ) ) {
 
@@ -634,7 +635,7 @@ class WPF_Kartra {
 
 		}
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -714,7 +715,7 @@ class WPF_Kartra {
 			array( 'cmd' => 'edit_lead' )
 		);
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -739,14 +740,14 @@ class WPF_Kartra {
 		$params = $this->params;
 		$params['body']['get_lead']['id'] = $contact_id;
 
-		$response = wp_remote_post( $this->api_url, $params );
+		$response = wp_safe_remote_post( $this->api_url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {

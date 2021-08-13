@@ -93,7 +93,7 @@ class WPF_HubSpot {
 		add_action( 'wpf_guest_contact_updated', array( $this, 'guest_checkout_complete' ), 10, 2 );
 		add_action( 'wpf_guest_contact_created', array( $this, 'guest_checkout_complete' ), 10, 2 );
 
-		$trackid = wp_fusion()->settings->get( 'site_tracking_id' );
+		$trackid = wpf_get_option( 'site_tracking_id' );
 
 		if ( empty( $trackid ) ) {
 			$trackid = $this->get_tracking_id();
@@ -158,14 +158,10 @@ class WPF_HubSpot {
 
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
-		}
-
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( ! empty( $payload ) && isset( $payload->vid ) ) {
-			$post_data['contact_id'] = $payload->vid;
+		if ( ! empty( $payload ) && isset( $payload->vid ) ) {
+			$post_data['contact_id'] = absint( $payload->vid );
 		}
 
 		return $post_data;
@@ -200,7 +196,7 @@ class WPF_HubSpot {
 
 		// Get saved data from DB
 		if ( empty( $access_token ) ) {
-			$access_token = wp_fusion()->settings->get( 'hubspot_token' );
+			$access_token = wpf_get_option( 'hubspot_token' );
 		}
 
 		$this->params = array(
@@ -210,8 +206,8 @@ class WPF_HubSpot {
 			'headers'     => array(
 				'Authorization' => 'Bearer ' . $access_token,
 				'Content-Type'  => 'application/json',
-				'Accept'  		=> 'application/json'
-			)
+				'Accept'        => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -226,21 +222,21 @@ class WPF_HubSpot {
 
 	public function refresh_token() {
 
-		$refresh_token = wp_fusion()->settings->get( 'hubspot_refresh_token' );
+		$refresh_token = wpf_get_option( 'hubspot_refresh_token' );
 
 		$params = array(
-			'body'	=> array(
-				'grant_type'	=> 'refresh_token',
-				'client_id'		=> $this->client_id,
+			'body' => array(
+				'grant_type'    => 'refresh_token',
+				'client_id'     => $this->client_id,
 				'client_secret' => $this->client_secret,
-				'redirect_uri'	=> get_admin_url() . './options-general.php?page=wpf-settings&crm=hubspot',
-				'refresh_token' => $refresh_token
-			)
+				'redirect_uri'  => get_admin_url() . './options-general.php?page=wpf-settings&crm=hubspot',
+				'refresh_token' => $refresh_token,
+			),
 		);
 
-		$response = wp_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
+		$response = wp_safe_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -263,27 +259,26 @@ class WPF_HubSpot {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'api.hubapi') !== false ) {
+		if ( strpos( $url, 'api.hubapi' ) !== false ) {
 
-			$code = wp_remote_retrieve_response_code( $response );
+			$code      = wp_remote_retrieve_response_code( $response );
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( $code == 401 ) {
+			if ( $code == 401 ) {
 
-				if( strpos($body_json->message, 'expired') !== false ) {
+				if ( strpos( $body_json->message, 'expired' ) !== false ) {
 
-					$access_token = $this->refresh_token();
+					$access_token                     = $this->refresh_token();
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
-					$response = wp_remote_request( $url, $args );
+					$response = wp_safe_remote_request( $url, $args );
 
 				} else {
 
 					$response = new WP_Error( 'error', 'Invalid API credentials.' );
 
 				}
-
-			} elseif( ( isset( $body_json->status ) && $body_json->status == 'error' ) || isset( $body_json->errorType ) ) {
+			} elseif ( ( isset( $body_json->status ) && $body_json->status == 'error' ) || isset( $body_json->errorType ) ) {
 
 				$message = $body_json->message;
 
@@ -291,15 +286,15 @@ class WPF_HubSpot {
 
 				if ( 'resource not found' == $message ) {
 					$message .= '.<br /><br />This error usually means that you\'ve deleted or merged a contact record in HubSpot, and then tried to update a contact ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
-				} elseif ( 'Can not operate manually on a dynamic list' == $message ){
+				} elseif ( 'Can not operate manually on a dynamic list' == $message ) {
 					$message .= '.<br /><br />' . __( 'This error means you tried to apply an Active list over the API. Only Static lists can be assigned over the API. For an overview of HubSpot lists, see <a href="https://knowledge.hubspot.com/lists/create-active-or-static-lists#types-of-lists" target="_blank">this documentation page</a>.', 'wp-fusion-lite' );
 				}
 
-				if( isset( $body_json->validationResults ) ) {
+				if ( isset( $body_json->validationResults ) ) {
 
 					$message .= '<ul>';
 
-					foreach( $body_json->validationResults as $result ) {
+					foreach ( $body_json->validationResults as $result ) {
 
 						$message .= '<li>' . $result->message . '</li>';
 
@@ -312,7 +307,6 @@ class WPF_HubSpot {
 				$response = new WP_Error( 'error', $message );
 
 			}
-
 		}
 
 		return $response;
@@ -339,9 +333,9 @@ class WPF_HubSpot {
 		}
 
 		$request  = 'https://api.hubapi.com/integrations/v1/me';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -397,23 +391,23 @@ class WPF_HubSpot {
 
 		while ( $continue ) {
 
-			$request = 'https://api.hubapi.com/contacts/v1/lists/?count=250&offset=' . $offset;
-			$response = wp_remote_get( $request, $this->params );
+			$request  = 'https://api.hubapi.com/contacts/v1/lists/?count=250&offset=' . $offset;
+			$response = wp_safe_remote_get( $request, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( ! empty( $response->lists ) ) {
+			if ( ! empty( $response->lists ) ) {
 
-				foreach( $response->lists as $list ) {
+				foreach ( $response->lists as $list ) {
 
-					if( $list->listType == 'STATIC' ) {
+					if ( $list->listType == 'STATIC' ) {
 						$category = 'Static Lists';
 					} else {
-						$category    = 'Active Lists (Read Only)';
+						$category = 'Active Lists (Read Only)';
 						//$list->name .= ' (read only)';
 					}
 
@@ -423,7 +417,6 @@ class WPF_HubSpot {
 					);
 
 				}
-
 			}
 
 			if ( $response->{'has-more'} ) {
@@ -452,36 +445,38 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request    = 'https://api.hubapi.com/properties/v1/contacts/properties';
-		$response   = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.hubapi.com/properties/v1/contacts/properties';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$built_in_fields = array();
-		$custom_fields = array();
+		$custom_fields   = array();
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $body_json as $field ) {
+		foreach ( $body_json as $field ) {
 
-			if( $field->readOnlyValue == true ) {
+			if ( $field->readOnlyValue == true ) {
 				continue;
 			}
 
-			if( empty( $field->createdUserId ) ) {
+			if ( empty( $field->createdUserId ) ) {
 				$built_in_fields[ $field->name ] = $field->label;
 			} else {
 				$custom_fields[ $field->name ] = $field->label;
 			}
-
 		}
 
 		asort( $built_in_fields );
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -506,13 +501,13 @@ class WPF_HubSpot {
 		// One contact can have multiple emails in HubSpot, so in theory one user can be linked to multiple contacts
 
 		$request  = 'https://api.hubapi.com/contacts/v1/contact/email/' . urlencode( $email_address ) . '/profile';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) && $response->get_error_message() == 'contact does not exist' ) {
+		if ( is_wp_error( $response ) && $response->get_error_message() == 'contact does not exist' ) {
 
 			return false;
 
-		} elseif( is_wp_error( $response ) ) {
+		} elseif ( is_wp_error( $response ) ) {
 
 			return $response;
 
@@ -542,10 +537,10 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request      = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
-		$response     = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -553,14 +548,14 @@ class WPF_HubSpot {
 
 		$tags = array();
 
-		if( empty( $body_json ) || empty( $body_json->{'list-memberships'} ) ) {
+		if ( empty( $body_json ) || empty( $body_json->{'list-memberships'} ) ) {
 			return $tags;
 		}
 
 		// This can return the IDs of lists that have been deleted, for some reason, so
 		// we'll only load the lists that we already know the IDs for.
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body_json->{'list-memberships'} as $list ) {
 
@@ -585,18 +580,17 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
-			$params = $this->params;
+			$params         = $this->params;
 			$params['body'] = json_encode( array( 'vids' => array( $contact_id ) ) );
 
-			$request      = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/add';
-			$response     = wp_remote_post( $request, $params );
+			$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/add';
+			$response = wp_safe_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -616,18 +610,17 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
-			$params = $this->params;
+			$params         = $this->params;
 			$params['body'] = json_encode( array( 'vids' => array( $contact_id ) ) );
 
-			$request      = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/remove';
-			$response     = wp_remote_post( $request, $params );
+			$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/remove';
+			$response = wp_safe_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -654,17 +647,20 @@ class WPF_HubSpot {
 
 		$properties = array();
 
-		foreach( $data as $property => $value ) {
-			$properties[] = array( 'property' => $property, 'value' => $value );
+		foreach ( $data as $property => $value ) {
+			$properties[] = array(
+				'property' => $property,
+				'value'    => $value,
+			);
 		}
 
-		$params 		= $this->params;
+		$params         = $this->params;
 		$params['body'] = json_encode( array( 'properties' => $properties ) );
 
-		$request      = 'https://api.hubapi.com/contacts/v1/contact';
-		$response     = wp_remote_post( $request, $params );
+		$request  = 'https://api.hubapi.com/contacts/v1/contact';
+		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -691,23 +687,26 @@ class WPF_HubSpot {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
 		$properties = array();
 
-		foreach( $data as $property => $value ) {
-			$properties[] = array( 'property' => $property, 'value' => $value );
+		foreach ( $data as $property => $value ) {
+			$properties[] = array(
+				'property' => $property,
+				'value'    => $value,
+			);
 		}
 
-		$params 		= $this->params;
+		$params         = $this->params;
 		$params['body'] = json_encode( array( 'properties' => $properties ) );
 
-		$request 		= 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
-		$response     	= wp_remote_post( $request, $params );
+		$request  = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
+		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -727,15 +726,15 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request      = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
-		$response     = wp_remote_get( $request, $this->params );
+		$request  = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -778,7 +777,7 @@ class WPF_HubSpot {
 		while ( $proceed ) {
 
 			$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/contacts/all?count=100&vidOffset=' . $offset;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -814,7 +813,7 @@ class WPF_HubSpot {
 
 	public function guest_checkout_complete( $contact_id, $customer_email ) {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( wpf_get_option( 'site_tracking' ) == false ) {
 			return;
 		}
 
@@ -839,25 +838,25 @@ class WPF_HubSpot {
 
 	public function tracking_code_output() {
 
-		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
-		$trackid = wp_fusion()->settings->get( 'site_tracking_id' );
+		$trackid = wpf_get_option( 'site_tracking_id' );
 
 		if ( empty( $trackid ) ) {
 			$trackid = $this->get_tracking_id();
 		}
 
 		echo '<!-- Start of HubSpot Embed Code via WP Fusion -->';
-		echo '<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/' . $trackid . '.js"></script>';
+		echo '<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/' . esc_attr( $trackid ) . '.js"></script>';
 
 		if ( wpf_is_user_logged_in() || isset( $_COOKIE['wpf_guest'] ) ) {
 
-			// This will also merge historical tracking data that was accumulated before a visitor registered
+			// This will also merge historical tracking data that was accumulated before a visitor registered.
 
 			if ( isset( $_COOKIE['wpf_guest'] ) ) {
-				$email = sanitize_email( $_COOKIE['wpf_guest'] );
+				$email = sanitize_email( wp_unslash( $_COOKIE['wpf_guest'] ) );
 			} else {
 				$user  = wp_get_current_user();
 				$email = $user->user_email;
@@ -865,7 +864,7 @@ class WPF_HubSpot {
 
 			echo '<script>';
 			echo 'var _hsq = window._hsq = window._hsq || [];';
-			echo '_hsq.push(["identify",{ email: "' . $email . '" }]);';
+			echo '_hsq.push(["identify",{ email: "' . esc_js( $email ) . '" }]);';
 			echo '</script>';
 
 		}
@@ -887,10 +886,10 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		$request    = 'https://api.hubapi.com/integrations/v1/me';
-		$response 	= wp_remote_get( $request, $this->params );
+		$request  = 'https://api.hubapi.com/integrations/v1/me';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 

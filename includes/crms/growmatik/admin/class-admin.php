@@ -29,7 +29,7 @@ class WPF_Growmatik_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -133,8 +133,8 @@ class WPF_Growmatik_Admin {
 	public function show_field_growmatik_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -147,8 +147,10 @@ class WPF_Growmatik_Admin {
 	 */
 	public function test_connection() {
 
-		$api_secret = sanitize_text_field( $_POST['growmatik_api_secret'] );
-		$api_key    = sanitize_text_field( $_POST['growmatik_api_key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$api_secret = sanitize_text_field( wp_unslash( $_POST['growmatik_api_secret'] ) );
+		$api_key    = sanitize_text_field( wp_unslash( $_POST['growmatik_api_key'] ) );
 
 		$connection = $this->crm->connect( $api_secret, $api_key );
 
@@ -156,13 +158,13 @@ class WPF_Growmatik_Admin {
 			wp_send_json_error( $connection->get_error_message() );
 		}
 
-		$options                          = wp_fusion()->settings->get_all();
+		$options                          = array();
 		$options['growmatik_api_secret']  = $api_secret;
 		$options['growmatik_api_key']     = $api_key;
 		$options['crm']                   = $this->slug;
 		$options['connection_configured'] = true;
 
-		wp_fusion()->settings->set_all( $options );
+		wp_fusion()->settings->set_multiple( $options );
 
 		wp_send_json_success();
 	}

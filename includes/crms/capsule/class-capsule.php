@@ -64,7 +64,7 @@ class WPF_Capsule {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-		$subdomain = wp_fusion()->settings->get( 'subdomain' );
+		$subdomain = wpf_get_option( 'subdomain' );
 
 		if ( ! empty( $subdomain ) ) {
 			$this->edit_url = 'https://' . $subdomain . '.capsulecrm.com/party/%d';
@@ -147,7 +147,7 @@ class WPF_Capsule {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'capsule_key' );
+			$api_key = wpf_get_option( 'capsule_key' );
 		}
 
 		$this->params = array(
@@ -181,7 +181,7 @@ class WPF_Capsule {
 		}
 
 		$request  = 'https://api.capsulecrm.com/api/v2/site';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -244,7 +244,7 @@ class WPF_Capsule {
 		while ( $proceed ) {
 
 			$request  = 'https://api.capsulecrm.com/api/v2/parties/tags?perPage=100&page=' . $page;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -297,7 +297,7 @@ class WPF_Capsule {
 		$custom_fields = array();
 
 		$request    = "https://api.capsulecrm.com/api/v2/parties/fields/definitions";
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -342,7 +342,7 @@ class WPF_Capsule {
 
 		$contact_info = array();
 		$request      = "https://api.capsulecrm.com/api/v2/parties/search?q=" . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -374,7 +374,7 @@ class WPF_Capsule {
 
 		$tags = array();
 		$request      = "https://api.capsulecrm.com/api/v2/parties/" . $contact_id . "?embed=tags";
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -391,7 +391,7 @@ class WPF_Capsule {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach( $body_json['party']['tags'] as $row ) {
 			if( ! isset( $available_tags[ $row['id'] ] ) ) {
@@ -432,7 +432,7 @@ class WPF_Capsule {
 		$nparams['method'] = 'PUT';
 		$nparams['body']   = json_encode( $post_data );
 
-		$response = wp_remote_post( $url, $nparams );
+		$response = wp_safe_remote_post( $url, $nparams );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -471,7 +471,7 @@ class WPF_Capsule {
 		$nparams['method'] = 'PUT';
 		$nparams['body']   = json_encode( $post_data );
 
-		$response = wp_remote_post( $url, $nparams );
+		$response = wp_safe_remote_post( $url, $nparams );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -608,7 +608,7 @@ class WPF_Capsule {
 		$nparams['method'] = 'POST';
 		$nparams['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( $urlp, $nparams );
+		$response = wp_safe_remote_post( $urlp, $nparams );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -669,7 +669,7 @@ class WPF_Capsule {
 		if( $needs_ids ) {
 
 			$url      = "https://api.capsulecrm.com/api/v2/parties/" . $contact_id;
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_safe_remote_get( $url, $this->params );
 
 			$loaded_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
@@ -849,7 +849,7 @@ class WPF_Capsule {
 		$nparams['method'] = 'PUT';
 		$nparams['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( $urlp, $nparams );
+		$response = wp_safe_remote_post( $urlp, $nparams );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -874,14 +874,14 @@ class WPF_Capsule {
 		}
 
 		$url      = "https://api.capsulecrm.com/api/v2/parties/" . $contact_id . "?embed=fields";
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		$email_misc = array();
@@ -1062,7 +1062,7 @@ class WPF_Capsule {
 			$nparams['method'] = 'POST';
 			$nparams['body']   = json_encode( $query_data );
 
-			$results = wp_remote_post( $urlp, $nparams );
+			$results = wp_safe_remote_post( $urlp, $nparams );
 
 			if( is_wp_error( $results ) ) {
 				return $results;

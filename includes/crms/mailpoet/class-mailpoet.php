@@ -221,7 +221,7 @@ class WPF_MailPoet {
 
 		$this->connect();
 
-		$send_confirmation = wp_fusion()->settings->get( 'mailpoet_send_confirmation', true );
+		$send_confirmation = wpf_get_option( 'mailpoet_send_confirmation', true );
 
 		try {
 
@@ -347,7 +347,7 @@ class WPF_MailPoet {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $key => $data ) {
 

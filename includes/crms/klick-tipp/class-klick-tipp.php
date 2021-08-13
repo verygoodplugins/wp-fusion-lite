@@ -109,8 +109,8 @@ class WPF_KlickTipp {
 
 		// Get saved data from DB
 		if ( empty( $username ) || empty( $password ) ) {
-			$username = wp_fusion()->settings->get( 'klicktipp_user' );
-			$password = wp_fusion()->settings->get( 'klicktipp_pass' );
+			$username = wpf_get_option( 'klicktipp_user' );
+			$password = wpf_get_option( 'klicktipp_pass' );
 		}
 
 		require_once dirname( __FILE__ ) . '/includes/klicktipp.api.inc';
@@ -400,7 +400,7 @@ class WPF_KlickTipp {
 		$user_meta = array();
 
 		// Map contact fields
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $result as $field_name => $value ) {
 

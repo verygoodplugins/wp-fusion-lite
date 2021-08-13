@@ -47,7 +47,7 @@ class WPF_Emercury_Admin {
 		// AJAX callback to test the connection
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -181,8 +181,8 @@ class WPF_Emercury_Admin {
 	public function show_field_emercury_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -197,8 +197,10 @@ class WPF_Emercury_Admin {
 
 	public function test_connection() {
 
-		$api_key   = sanitize_text_field( $_POST['emercury_key'] );
-		$api_email = sanitize_email( $_POST['emercury_email'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$api_key   = isset( $_POST['emercury_key'] ) ? sanitize_text_field( wp_unslash( $_POST['emercury_key'] ) ) : false;
+		$api_email = isset( $_POST['emercury_email'] ) ? sanitize_email( wp_unslash( $_POST['emercury_email'] ) ) : false;
 
 		$connection = $this->crm->connect( $api_email, $api_key, true );
 
@@ -212,13 +214,13 @@ class WPF_Emercury_Admin {
 
 			// Save the API credentials
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['emercury_key']          = $api_key;
 			$options['emercury_email']        = $api_email;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

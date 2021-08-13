@@ -76,7 +76,7 @@ class WPF_Customerly {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = $payload->data->user->data->email;
+		$post_data['contact_id'] = sanitize_email( $payload->data->user->data->email );
 
 		return $post_data;
 
@@ -123,7 +123,7 @@ class WPF_Customerly {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) ) {
-			$access_key = wp_fusion()->settings->get( 'customerly_key' );
+			$access_key = wpf_get_option( 'customerly_key' );
 		}
 
 		$this->params = array(
@@ -161,7 +161,7 @@ class WPF_Customerly {
 		}
 
 		$request  = 'https://api.customerly.io/v1/users?email='.$email;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 		
 		if( is_wp_error( $response ) ) {
 			return;
@@ -191,7 +191,7 @@ class WPF_Customerly {
 		}
 
 		$request  = 'https://api.customerly.io/v1/users';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -234,9 +234,9 @@ class WPF_Customerly {
 
 		// Can't sync list tags with Customerly
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
-		wp_fusion()->settings->get( 'available_tags', $available_tags );
+		wpf_get_option( 'available_tags', $available_tags );
 
 		return $available_tags;
 
@@ -252,7 +252,7 @@ class WPF_Customerly {
 
 	public function sync_crm_fields() {
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields', array() );
+		$crm_fields = wpf_get_option( 'crm_fields', array() );
 
 		// Load built in fields first
 		require dirname( __FILE__ ) . '/admin/customerly-fields.php';
@@ -334,7 +334,7 @@ class WPF_Customerly {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -373,7 +373,7 @@ class WPF_Customerly {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -429,7 +429,7 @@ class WPF_Customerly {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -484,7 +484,7 @@ class WPF_Customerly {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

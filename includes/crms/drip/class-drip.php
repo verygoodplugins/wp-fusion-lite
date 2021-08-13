@@ -83,7 +83,7 @@ class WPF_Drip {
 		// Slow down the batch processses to get around the 3600 requests per hour limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
-		$account_id = wp_fusion()->settings->get( 'drip_account' );
+		$account_id = wpf_get_option( 'drip_account' );
 
 		if ( ! empty( $account_id ) ) {
 			$this->edit_url = 'https://www.getdrip.com/' . $account_id . '/subscribers/%s';
@@ -139,8 +139,8 @@ class WPF_Drip {
 
 	public function get_params() {
 
-		$this->account_id = wp_fusion()->settings->get( 'drip_account' );
-		$api_token        = wp_fusion()->settings->get( 'drip_token' );
+		$this->account_id = wpf_get_option( 'drip_account' );
+		$api_token        = wpf_get_option( 'drip_token' );
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
@@ -192,21 +192,22 @@ class WPF_Drip {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if(isset($post_data['contact_id'])) {
 			return $post_data;
+		}
 
 		$drip_payload = json_decode( file_get_contents( 'php://input' ) );
 
 		if ( isset($drip_payload->event) && ($drip_payload->event == 'subscriber.applied_tag' || $drip_payload->event == 'subscriber.removed_tag' || $drip_payload->event == 'subscriber.updated_custom_field' || $drip_payload->event == 'subscriber.updated_email_address') ) {
 
 			// Admin settings webhooks
-			$post_data['contact_id'] = $drip_payload->data->subscriber->id;
+			$post_data['contact_id'] = sanitize_key( $drip_payload->data->subscriber->id );
 			return $post_data;
 
 		} elseif( isset($drip_payload->subscriber) ) {
 
 			// Automations / rules triggers
-			$post_data['contact_id'] = $drip_payload->subscriber->id;
+			$post_data['contact_id'] = sanitize_key( $drip_payload->subscriber->id );
 			return $post_data;
 
 		} else {
@@ -224,7 +225,7 @@ class WPF_Drip {
 
 	public function tracking_code_output() {
 
-		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -233,18 +234,18 @@ class WPF_Drip {
 			return;
 		}
 
-		$account_id = wp_fusion()->settings->get('drip_account');
+		$account_id = wpf_get_option('drip_account');
 
 		echo "<!-- Drip (via WP Fusion) -->";
 		echo '<script type="text/javascript">';
 		echo "var _dcq = _dcq || [];";
 		echo "var _dcs = _dcs || {};";
-		echo "_dcs.account = '" . $account_id . "';";
+		echo "_dcs.account = '" . esc_js( $account_id ) . "';";
 
 		echo "(function() {";
 		echo "var dc = document.createElement('script');";
 		echo "dc.type = 'text/javascript'; dc.async = true;";
-		echo "dc.src = '//tag.getdrip.com/" . $account_id . ".js';";
+		echo "dc.src = '//tag.getdrip.com/" . esc_js( $account_id ) . ".js';";
 		echo "var s = document.getElementsByTagName('script')[0];";
 		echo "s.parentNode.insertBefore(dc, s);";
 		echo "})();";
@@ -278,10 +279,10 @@ class WPF_Drip {
 
 			}
 
-			if ( false == $found ) {
+			if ( false === $found ) {
 
 				echo '_dcq.push(["identify", {';
-				echo 'email: "' . $user_email . '",';
+				echo 'email: "' . esc_js( $user_email ) . '",';
 				echo 'success: function(response) {}';
 				echo '}]);';
 
@@ -376,8 +377,8 @@ class WPF_Drip {
 		}
 
 		if ( empty( $api_token ) || empty( $account_id ) ) {
-			$api_token  = wp_fusion()->settings->get( 'drip_token' );
-			$account_id = wp_fusion()->settings->get( 'drip_account' );
+			$api_token  = wpf_get_option( 'drip_token' );
+			$account_id = wpf_get_option( 'drip_account' );
 		}
 
 		require dirname( __FILE__ ) . '/includes/Drip_API.class.php';
@@ -591,7 +592,7 @@ class WPF_Drip {
 		}
 
 		// Set available tags
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = wpf_get_option( 'available_tags' );
 
 		if ( ! is_array( $available_tags ) ) {
 			$available_tags = array();
@@ -809,7 +810,7 @@ class WPF_Drip {
 				return new WP_Error( 'error', 'Failed to update subscriber email address from ' . $old_email . ' to ' . $params['new_email'] . ': ' . $result->get_error_message() );
 			}
 
-			if ( wp_fusion()->settings->get( 'email_change_event' ) == true ) {
+			if ( wpf_get_option( 'email_change_event' ) == true ) {
 
 				$params = array(
 					'account_id' => $this->account_id,
@@ -851,7 +852,7 @@ class WPF_Drip {
 			return false;
 		}
 
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$user_meta      = array();
 
 		foreach ( $contact_fields as $field_id => $field_data ) {

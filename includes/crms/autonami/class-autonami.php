@@ -70,7 +70,7 @@ class WPF_Autonami {
 
 	public function init() {
 
-		$url = wp_fusion()->settings->get( 'autonami_url' );
+		$url = wpf_get_option( 'autonami_url' );
 
 		if ( ! empty( $url ) ) {
 			$this->url      = trailingslashit( $url ) . 'wp-json/autonami-admin';
@@ -176,7 +176,7 @@ class WPF_Autonami {
 		}
 
 		$request  = $this->url . '/contacts';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -205,9 +205,9 @@ class WPF_Autonami {
 
 		// Get saved data from DB
 		if ( ! $url || ! $username || ! $password ) {
-			$url      = wp_fusion()->settings->get( 'autonami_url' );
-			$username = wp_fusion()->settings->get( 'autonami_username' );
-			$password = wp_fusion()->settings->get( 'autonami_password' );
+			$url      = wpf_get_option( 'autonami_url' );
+			$username = wpf_get_option( 'autonami_username' );
+			$password = wpf_get_option( 'autonami_password' );
 		}
 
 		$this->url = trailingslashit( $url ) . 'wp-json/autonami-admin';
@@ -243,7 +243,7 @@ class WPF_Autonami {
 		while ( $continue ) {
 
 			$request  = $this->url . '/tags?limit=' . $limit . '&offset=' . $offset;
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -293,7 +293,7 @@ class WPF_Autonami {
 		while ( $continue ) {
 
 			$request  = $this->url . '/lists?limit=' . $limit . '&offset=' . $offset;
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -348,7 +348,7 @@ class WPF_Autonami {
 		$custom_fields = array();
 
 		$request  = $this->url . '/groupfields';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -402,7 +402,7 @@ class WPF_Autonami {
 	public function get_contact_id( $email_address ) {
 
 		$request  = $this->url . '/contacts?search=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -429,7 +429,7 @@ class WPF_Autonami {
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -471,7 +471,7 @@ class WPF_Autonami {
 		$params['body'] = json_encode( $body );
 
 		$request  = $this->url . '/contacts/' . $contact_id . '/tags';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -503,7 +503,7 @@ class WPF_Autonami {
 
 		$request = $this->url . '/contacts/' . $contact_id . '/tags';
 		;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -544,7 +544,7 @@ class WPF_Autonami {
 		$params['body'] = json_encode( $contact_data );
 
 		$request  = $this->url . '/contacts';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -592,7 +592,7 @@ class WPF_Autonami {
 		$params['body'] = json_encode( $contact_data );
 
 		$request  = $this->url . '/contacts/' . $contact_id . '/fields';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -616,14 +616,14 @@ class WPF_Autonami {
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( ! empty( $response['result']['fields'] ) ) {
@@ -671,7 +671,7 @@ class WPF_Autonami {
 		// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
 		if ( ! is_numeric( $tag ) ) {
 			$request  = $this->url . '/tags?search=' . $tag . '&limit=1';
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -697,7 +697,7 @@ class WPF_Autonami {
 		while ( $proceed ) {
 
 			$request  = $this->url . '/contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset;
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

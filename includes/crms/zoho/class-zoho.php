@@ -97,11 +97,11 @@ class WPF_Zoho {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
-		$org_id = wp_fusion()->settings->get( 'zoho_org_id' );
+		$org_id = wpf_get_option( 'zoho_org_id' );
 
 		if ( ! empty( $org_id ) ) {
 
-			$location = wp_fusion()->settings->get( 'zoho_location' );
+			$location = wpf_get_option( 'zoho_location' );
 
 			if ( 'us' == $location ) {
 				$domain = 'com';
@@ -186,10 +186,10 @@ class WPF_Zoho {
 
 		// Get saved data from DB
 		if ( empty( $access_token ) ) {
-			$access_token = wp_fusion()->settings->get( 'zoho_token' );
+			$access_token = wpf_get_option( 'zoho_token' );
 		}
 
-		$this->api_domain = wp_fusion()->settings->get( 'zoho_api_domain' );
+		$this->api_domain = wpf_get_option( 'zoho_api_domain' );
 
 		$this->params = array(
 			'timeout'     => 20,
@@ -215,8 +215,8 @@ class WPF_Zoho {
 
 	public function refresh_token() {
 
-		$refresh_token = wp_fusion()->settings->get( 'zoho_refresh_token' );
-		$location      = wp_fusion()->settings->get( 'zoho_location' );
+		$refresh_token = wpf_get_option( 'zoho_refresh_token' );
+		$location      = wpf_get_option( 'zoho_location' );
 
 		if ( $location == 'eu' ) {
 			$client_secret   = $this->client_secret_eu;
@@ -233,7 +233,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $accounts_server . '/oauth/v2/token?client_id=' . $this->client_id . '&grant_type=refresh_token&client_secret=' . $client_secret . '&refresh_token=' . $refresh_token;
-		$response = wp_remote_post( $request );
+		$response = wp_safe_remote_post( $request );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -276,7 +276,7 @@ class WPF_Zoho {
 
 				$args['headers']['Authorization'] = 'Zoho-oauthtoken ' . $access_token;
 
-				$response = wp_remote_request( $url, $args );
+				$response = wp_safe_remote_request( $url, $args );
 
 			} elseif ( isset( $body_json->code ) && ( $body_json->code == 'INVALID_DATA' || $body_json->code == 'MANDATORY_NOT_FOUND' ) ) {
 
@@ -286,7 +286,7 @@ class WPF_Zoho {
 
 				if ( $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) {
 
-					$message = 'Mandatory field not found: <pre>' . print_r( $body_json, true ) . '</pre>';
+					$message = 'Mandatory field not found: <pre>' . wpf_print_r( $body_json, true ) . '</pre>';
 
 				} elseif ( $body_json->data[0]->code == 'INVALID_DATA' ) {
 
@@ -295,7 +295,7 @@ class WPF_Zoho {
 					$message .= 'This error normally means that you tried to update a Zoho field with invalid data. For example syncing multi-select data to a text field.<br /><br />';
 					$message .= 'It can also mean you synced multi-select or picklist data, but one or more of the options sent over the API didn\'t match the allowed options inside Zoho.';
 
-					$message .= '<pre>' . print_r( $body_json, true ) . '</pre>';
+					$message .= '<pre>' . wpf_print_r( $body_json, true ) . '</pre>';
 
 				}
 
@@ -340,7 +340,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/contacts';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -389,7 +389,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.ALL';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -430,7 +430,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/settings/fields?module=' . $this->object_type;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -482,7 +482,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/settings/layouts?module=' . $this->object_type;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -521,7 +521,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/users?type=AllUsers';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -557,7 +557,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -588,7 +588,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -608,7 +608,7 @@ class WPF_Zoho {
 
 		// Maybe update available tags list
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = wpf_get_option( 'available_tags' );
 
 		foreach ( $body_json->data[0]->Tag as $tag ) {
 			$available_tags[ $tag->name ] = $tag->name;
@@ -635,7 +635,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/add_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -659,7 +659,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/remove_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
-		$response = wp_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -689,7 +689,7 @@ class WPF_Zoho {
 
 		// Set layout
 
-		$layout = wp_fusion()->settings->get( 'zoho_layout' );
+		$layout = wpf_get_option( 'zoho_layout' );
 
 		if ( ! empty( $layout ) && empty( $data['Layout'] ) ) {
 			$data['Layout'] = $layout;
@@ -697,7 +697,7 @@ class WPF_Zoho {
 
 		// Set owner
 
-		$owner = wp_fusion()->settings->get( 'zoho_owner' );
+		$owner = wpf_get_option( 'zoho_owner' );
 
 		if ( ! empty( $owner ) && empty( $data['Owner'] ) ) {
 			$data['Owner'] = $owner;
@@ -712,7 +712,7 @@ class WPF_Zoho {
 		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -750,7 +750,7 @@ class WPF_Zoho {
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -773,14 +773,14 @@ class WPF_Zoho {
 		}
 
 		$url      = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( empty( $body_json->data ) ) {
@@ -823,7 +823,7 @@ class WPF_Zoho {
 		while ( $proceed == true ) {
 
 			$url      = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?word=' . urlencode( $tag ) . '&page=' . $page;
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_safe_remote_get( $url, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -864,7 +864,7 @@ class WPF_Zoho {
 		}
 
 		$request  = $this->api_domain . '/crm/v2/org';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

@@ -73,7 +73,7 @@ class WPF_NationBuilder {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
-		$url_slug = wp_fusion()->settings->get( 'nationbuilder_slug' );
+		$url_slug = wpf_get_option( 'nationbuilder_slug' );
 
 		if ( ! empty( $url_slug ) ) {
 			$this->edit_url = 'https://' . $url_slug . '.nationbuilder.com/admin/signups/%d';
@@ -100,7 +100,7 @@ class WPF_NationBuilder {
 			return false;
 		}
 
-		$post_data['contact_id'] = $payload->payload->person->id;
+		$post_data['contact_id'] = absint( $payload->payload->person->id );
 
 		return $post_data;
 
@@ -118,8 +118,8 @@ class WPF_NationBuilder {
 
 		// Get saved data from DB
 		if ( empty( $access_token ) || empty( $slug ) ) {
-			$access_token = wp_fusion()->settings->get( 'nationbuilder_token' );
-			$url_slug = wp_fusion()->settings->get( 'nationbuilder_slug' );
+			$access_token = wpf_get_option( 'nationbuilder_token' );
+			$url_slug = wpf_get_option( 'nationbuilder_slug' );
 		}
 
 		$this->params = array(
@@ -195,7 +195,7 @@ class WPF_NationBuilder {
 		}
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people?access_token=' . $this->token;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -257,7 +257,7 @@ class WPF_NationBuilder {
 
 			$request .= '&access_token=' . $this->token;
 
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -322,7 +322,7 @@ class WPF_NationBuilder {
 		// Then get custom ones
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/me?access_token=' . $this->token;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -367,7 +367,7 @@ class WPF_NationBuilder {
 		}
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/match?access_token=' . $this->token . '&email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -398,7 +398,7 @@ class WPF_NationBuilder {
 		}
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/' . $contact_id . '/taggings?access_token=' . $this->token;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -412,7 +412,7 @@ class WPF_NationBuilder {
 			return $tags;
 		}
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 		$needs_update = false;
 
 		foreach( $response->taggings as $tag ) {
@@ -462,7 +462,7 @@ class WPF_NationBuilder {
 		$params['body']		= json_encode( $body );
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/' . $contact_id . '/taggings?access_token=' . $this->token . '&fire_webhooks=false';
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -496,7 +496,7 @@ class WPF_NationBuilder {
 		$params['body'] 	= json_encode( $body );
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/' . $contact_id . '/taggings?access_token=' . $this->token . '&fire_webhooks=false';
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -550,7 +550,7 @@ class WPF_NationBuilder {
 		$params['body'] = json_encode( array( 'person' => $data ) );
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people?access_token=' . $this->token . '&fire_webhooks=false';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -610,7 +610,7 @@ class WPF_NationBuilder {
 		$params['body'] 	= json_encode( array( 'person' => $data ) );
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/' . $contact_id . '?access_token=' . $this->token . '&fire_webhooks=false';
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -634,14 +634,14 @@ class WPF_NationBuilder {
 		}
 
 		$request  = 'https://' . $this->url_slug . '.nationbuilder.com/api/v1/people/' . $contact_id . '?access_token=' . $this->token;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
 		$loaded_data = array();
@@ -708,7 +708,7 @@ class WPF_NationBuilder {
 				$request  = 'https://' . $this->url_slug . '.nationbuilder.com' . $next . '&access_token=' . $this->token;
 			}
 
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;

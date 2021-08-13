@@ -76,7 +76,7 @@ class WPF_AgileCRM {
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
-		$domain = wp_fusion()->settings->get( 'agile_domain' );
+		$domain = wpf_get_option( 'agile_domain' );
 
 		if ( ! empty( $domain ) ) {
 			$this->edit_url = 'https://' . $domain . '.agilecrm.com/#contact/%d';
@@ -94,33 +94,33 @@ class WPF_AgileCRM {
 
 	public function tracking_code_output() {
 
-		if ( wp_fusion()->settings->get( 'site_tracking' ) == false ) {
+		if ( wpf_get_option( 'site_tracking' ) == false ) {
 			return;
 		}
 
-		$tracking_id = wp_fusion()->settings->get( 'site_tracking_acct' );
+		$tracking_id = wpf_get_option( 'site_tracking_acct' );
 
 		if ( empty( $tracking_id ) ) {
 			return;
 		}
 
-		$domain = wp_fusion()->settings->get( 'agile_domain' );
+		$domain = wpf_get_option( 'agile_domain' );
 
 		if ( wpf_is_user_logged_in() ) {
 			$user  = get_userdata( wpf_get_current_user_id() );
 			$email = $user->user_email;
 		}
 
-		echo '<script id="_agile_min_js" async type="text/javascript" src="https://' . $domain . '.agilecrm.com/stats/min/agile-min.js"> </script>';
+		echo '<script id="_agile_min_js" async type="text/javascript" src="' . esc_url( 'https://' . $domain . '.agilecrm.com/stats/min/agile-min.js' ) . '"> </script>';
 		echo '<script type="text/javascript" >';
 		echo 'var Agile_API = Agile_API || {}; Agile_API.on_after_load = function(){';
-		echo '_agile.set_account("' . $tracking_id . '", "' . $domain . '", false);';
+		echo '_agile.set_account("' . esc_js( $tracking_id ) . '", "' . esc_js( $domain ) . '", false);';
 		echo '_agile.track_page_view();';
 		echo '_agile_execute_web_rules();';
 
 		if ( isset( $email ) ) {
 
-			echo '_agile.set_email("' . $email . '");';
+			echo '_agile.set_email("' . esc_js( $email ) . '");';
 
 		}
 
@@ -163,7 +163,7 @@ class WPF_AgileCRM {
 			$payload = json_decode( file_get_contents( 'php://input' ) );
 
 			if ( is_object( $payload ) ) {
-				$post_data['contact_id'] = $payload->eventData->id;
+				$post_data['contact_id'] = absint( $payload->eventData->id );
 			}
 		}
 
@@ -353,9 +353,9 @@ class WPF_AgileCRM {
 		// Get saved data from DB
 		if ( empty( $agile_domain ) || empty( $user_email ) || empty( $api_key ) ) {
 
-			$this->domain = wp_fusion()->settings->get( 'agile_domain' );
-			$user_email   = wp_fusion()->settings->get( 'agile_user_email' );
-			$api_key      = wp_fusion()->settings->get( 'agile_key' );
+			$this->domain = wpf_get_option( 'agile_domain' );
+			$user_email   = wpf_get_option( 'agile_user_email' );
+			$api_key      = wpf_get_option( 'agile_key' );
 
 		} else {
 			$this->domain = $agile_domain;
@@ -432,7 +432,7 @@ class WPF_AgileCRM {
 		}
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/users/current-user';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( wp_remote_retrieve_response_code( $response ) != 200 ) {
 
@@ -486,7 +486,7 @@ class WPF_AgileCRM {
 		}
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -533,7 +533,7 @@ class WPF_AgileCRM {
 		// Agile can't list custom fields so we'll query contacts instead. Not sure about the order of results. Might be oldest first.
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/search/?q=%&page_size=1000&type=PERSON';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -578,7 +578,7 @@ class WPF_AgileCRM {
 		}
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/search/email/' . $email_address;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -625,7 +625,7 @@ class WPF_AgileCRM {
 		}
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -638,7 +638,7 @@ class WPF_AgileCRM {
 		}
 
 		// Add new tags to available tags if they don't already exist
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = wpf_get_option( 'available_tags' );
 
 		if ( empty( $available_tags ) ) {
 			$available_tags = array();
@@ -688,7 +688,7 @@ class WPF_AgileCRM {
 		$nparams['body']   = json_encode( $contact_json );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/edit/tags';
-		$response = wp_remote_request( $request, $nparams );
+		$response = wp_safe_remote_request( $request, $nparams );
 
 		// Error handling
 		if ( is_wp_error( $response ) ) {
@@ -696,7 +696,7 @@ class WPF_AgileCRM {
 		}
 
 		// Possibly update available tags if it's a newly created one
-		$available_tags = wp_fusion()->settings->get( 'available_tags' );
+		$available_tags = wpf_get_option( 'available_tags' );
 
 		foreach ( $tags as $tag ) {
 			if ( ! isset( $available_tags[ $tag ] ) ) {
@@ -736,7 +736,7 @@ class WPF_AgileCRM {
 		$nparams['body']   = json_encode( $contact_json );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/delete/tags';
-		$response = wp_remote_request( $request, $nparams );
+		$response = wp_safe_remote_request( $request, $nparams );
 
 		// Error handling
 		if ( is_wp_error( $response ) ) {
@@ -771,7 +771,7 @@ class WPF_AgileCRM {
 		$nparams['body'] = json_encode( $data );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts';
-		$response = wp_remote_post( $request, $nparams );
+		$response = wp_safe_remote_post( $request, $nparams );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -813,7 +813,7 @@ class WPF_AgileCRM {
 		$nparams['body']   = json_encode( $data );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/edit-properties';
-		$response = wp_remote_request( $request, $nparams );
+		$response = wp_safe_remote_request( $request, $nparams );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -836,7 +836,7 @@ class WPF_AgileCRM {
 		}
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -879,7 +879,7 @@ class WPF_AgileCRM {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -889,7 +889,7 @@ class WPF_AgileCRM {
 		}
 
 		// Set missing fields
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		foreach ( $loaded_meta as $name => $value ) {
 
@@ -947,7 +947,7 @@ class WPF_AgileCRM {
 				$params['body']['cursor'] = $cursor;
 			}
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

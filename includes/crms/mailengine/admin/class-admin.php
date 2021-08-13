@@ -27,12 +27,11 @@ class WPF_MailEngine_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_mailengine_header_begin', array( $this, 'show_field_mailengine_header_begin' ), 10, 2 );
-		add_action( 'show_field_mailengine_client_id_end', array( $this, 'show_field_mailengine_client_id_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -122,31 +121,11 @@ class WPF_MailEngine_Admin {
 	public function show_field_mailengine_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
-	/**
-	 * Close out settings section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-	public function show_field_mailengine_client_id_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #custom div
-		echo '<table class="form-table">';
-
-	}
 
 	/**
 	 * Loads standard mailengine field names and attempts to match them up with standard local ones
@@ -225,26 +204,31 @@ class WPF_MailEngine_Admin {
 
 	public function test_connection() {
 
-		$wsdl_url     = $_POST['mailengine_wsdl_url'];
-		$client_id    = $_POST['mailengine_client_id'];
-		$subscribe_id = $_POST['mailengine_subscribe_id'];
+		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$connection = $this->crm->connect( $wsdl_url, $client_id, $subscribe_id, true );
+		if ( isset( $_POST['mailengine_wsdl_url'] ) && isset( $_POST['mailengine_client_id'] ) && isset( $_POST['mailengine_subscribe_id'] ) ) {
 
-		if ( is_wp_error( $connection ) ) {
-			wp_send_json_error( $connection->get_error_message() );
-		} else {
+			$wsdl_url     = esc_url_raw( wp_unslash( $_POST['mailengine_wsdl_url'] ) );
+			$client_id    = sanitize_text_field( wp_unslash( $_POST['mailengine_client_id'] ) );
+			$subscribe_id = sanitize_text_field( wp_unslash( $_POST['mailengine_subscribe_id'] ) );
 
-			$options                            = wp_fusion()->settings->get_all();
-			$options['mailengine_wsdl_url']     = $wsdl_url;
-			$options['mailengine_client_id']    = $client_id;
-			$options['mailengine_subscribe_id'] = $subscribe_id;
-			$options['crm']                     = $this->slug;
-			$options['connection_configured']   = true;
+			$connection = $this->crm->connect( $wsdl_url, $client_id, $subscribe_id, true );
 
-			wp_fusion()->settings->set_all( $options );
+			if ( is_wp_error( $connection ) ) {
+				wp_send_json_error( $connection->get_error_message() );
+			} else {
 
-			wp_send_json_success();
+				$options                            = array();
+				$options['mailengine_wsdl_url']     = $wsdl_url;
+				$options['mailengine_client_id']    = $client_id;
+				$options['mailengine_subscribe_id'] = $subscribe_id;
+				$options['crm']                     = $this->slug;
+				$options['connection_configured']   = true;
+
+				wp_fusion()->settings->set_multiple( $options );
+
+				wp_send_json_success();
+			}
 		}
 
 		die();

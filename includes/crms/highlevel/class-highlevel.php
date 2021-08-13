@@ -80,18 +80,18 @@ class WPF_HighLevel {
 	 * @param integer $user_id
 	 * @return string
 	 */
-	public function get_user_edit_url($email_address,$user_id){
-		if(empty($email_address)){
+	public function get_user_edit_url( $email_address, $user_id ) {
+		if ( empty( $email_address ) ) {
 			return;
 		}
 
-		$edit_url = get_user_meta($user_id,'wpf_highlevel_edit_url',true);
-		if(!empty($edit_url)){
+		$edit_url = get_user_meta( $user_id, 'wpf_highlevel_edit_url', true );
+		if ( ! empty( $edit_url ) ) {
 			return $edit_url;
 		}
 
 		$request  = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) && 'email: The email address is invalid.' == $response->get_error_message() ) {
 
@@ -106,9 +106,9 @@ class WPF_HighLevel {
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
-		$contact = $response->contacts[0];
-		$edit_url =  'https://app.gohighlevel.com/location/'.$contact->locationId.'/customers/detail/'.$contact->id.'';
-		update_user_meta($user_id,'wpf_highlevel_edit_url',$edit_url);
+		$contact  = $response->contacts[0];
+		$edit_url = 'https://app.gohighlevel.com/location/' . $contact->locationId . '/customers/detail/' . $contact->id . '';
+		update_user_meta( $user_id, 'wpf_highlevel_edit_url', $edit_url );
 		return $edit_url;
 	}
 
@@ -131,7 +131,7 @@ class WPF_HighLevel {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = $payload->contact_id;
+		$post_data['contact_id'] = absint( $payload->contact_id );
 
 		return $post_data;
 
@@ -184,7 +184,6 @@ class WPF_HighLevel {
 					$value = '+1' . $value;
 
 				}
-
 			}
 
 			return $value;
@@ -323,7 +322,7 @@ class WPF_HighLevel {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'highlevel_api_key' );
+			$api_key = wpf_get_option( 'highlevel_api_key' );
 		}
 
 		$this->params = array(
@@ -354,7 +353,7 @@ class WPF_HighLevel {
 			return true;
 		}
 
-		$response = wp_remote_get( $this->url . 'contacts/', $params );
+		$response = wp_safe_remote_get( $this->url . 'contacts/', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -398,7 +397,7 @@ class WPF_HighLevel {
 
 	public function sync_tags() {
 
-		$response = wp_remote_get( $this->url . 'tags/', $this->get_params() );
+		$response = wp_safe_remote_get( $this->url . 'tags/', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -441,7 +440,7 @@ class WPF_HighLevel {
 		asort( $built_in_fields );
 
 		// Custom fields
-		$response = wp_remote_get( $this->url . 'custom-fields/', $this->get_params() );
+		$response = wp_safe_remote_get( $this->url . 'custom-fields/', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -479,7 +478,7 @@ class WPF_HighLevel {
 	public function get_contact_id( $email_address ) {
 
 		$request  = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) && 'email: The email address is invalid.' == $response->get_error_message() ) {
 
@@ -512,7 +511,7 @@ class WPF_HighLevel {
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . 'contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -521,7 +520,7 @@ class WPF_HighLevel {
 		$response  = json_decode( wp_remote_retrieve_body( $response ) );
 		$user_tags = array();
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $response->contact->tags as $tag ) {
 
@@ -557,7 +556,7 @@ class WPF_HighLevel {
 
 		$params['body'] = json_encode( $data );
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -587,7 +586,7 @@ class WPF_HighLevel {
 		$params['body']   = json_encode( $data );
 		$params['method'] = 'DELETE';
 
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -614,7 +613,7 @@ class WPF_HighLevel {
 		}
 
 		// Separate the built in fields from custom ones
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		foreach ( $contact_data as $key => $value ) {
 
@@ -632,7 +631,7 @@ class WPF_HighLevel {
 		$params         = $this->get_params();
 		$params['body'] = json_encode( $contact_data );
 
-		$response = wp_remote_post( $this->url . 'contacts/', $params );
+		$response = wp_safe_remote_post( $this->url . 'contacts/', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -662,7 +661,7 @@ class WPF_HighLevel {
 		}
 
 		// Separate the built in fields from custom ones
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		foreach ( $contact_data as $key => $value ) {
 
@@ -682,7 +681,7 @@ class WPF_HighLevel {
 		$params['body']   = json_encode( $contact_data );
 
 		$request  = $this->url . 'contacts/' . $contact_id;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -704,7 +703,7 @@ class WPF_HighLevel {
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . 'contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -726,7 +725,7 @@ class WPF_HighLevel {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -756,7 +755,7 @@ class WPF_HighLevel {
 		while ( $proceed ) {
 
 			$request  = "{$this->url}contacts/?page={$page}&limit=100&query={$tag}";
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

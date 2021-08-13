@@ -64,7 +64,7 @@ class WPF_Copper {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-		$account_id = wp_fusion()->settings->get( 'account_id' );
+		$account_id = wpf_get_option( 'account_id' );
 
 		if ( ! empty( $account_id ) ) {
 			$this->edit_url = 'https://app.copper.com/companies/' . $account_id . '/app#/contact/%d';
@@ -88,8 +88,8 @@ class WPF_Copper {
 
 				if( isset( $payload->subscription_id ) ) {
 
-					$_REQUEST['wpf_action'] = $payload->secret;
-					$_REQUEST['access_key'] = $payload->key;
+					$_REQUEST['wpf_action'] = sanitize_text_field( $payload->secret );
+					$_REQUEST['access_key'] = sanitize_text_field( $payload->key );
 
 				}
 
@@ -148,7 +148,7 @@ class WPF_Copper {
 
 		} elseif( $post_data['wpf_action'] == 'add' && isset( $payload->updated_attributes->tags ) ) {
 
-			$tag = wp_fusion()->settings->get('copper_add_tag');
+			$tag = wpf_get_option('copper_add_tag');
 
 			foreach( $payload->updated_attributes->tags as $update_tag ) {
 
@@ -209,8 +209,8 @@ class WPF_Copper {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) || empty( $user_email ) ) {
-			$access_key = wp_fusion()->settings->get( 'copper_key' );
-			$user_email = wp_fusion()->settings->get( 'copper_user_email' );
+			$access_key = wpf_get_option( 'copper_key' );
+			$user_email = wpf_get_option( 'copper_user_email' );
 		}
 
 		$this->params = array(
@@ -246,7 +246,7 @@ class WPF_Copper {
 		}
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/account';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -304,7 +304,7 @@ class WPF_Copper {
 		// Can't currently list tags or list all contacts
 		$tags 		= array();
 		$request    = 'https://api.prosperworks.com/developer_api/v1/people/search';
-		$response   = wp_remote_post( $request, $this->params );
+		$response   = wp_safe_remote_post( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -328,7 +328,7 @@ class WPF_Copper {
 		$tags = array_unique($tags);
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body_json as $person => $fields ) {
 
@@ -373,7 +373,7 @@ class WPF_Copper {
 		}
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/custom_field_definitions';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -438,7 +438,7 @@ class WPF_Copper {
 		$params['body'] = json_encode( $email );
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/fetch_by_email';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) && $response->get_error_message() == 'Resource not found' ) {
 			return false;
@@ -471,7 +471,7 @@ class WPF_Copper {
 		}
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -513,7 +513,7 @@ class WPF_Copper {
 		}
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -532,7 +532,7 @@ class WPF_Copper {
 		$params['method'] = 'PUT';
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -558,7 +558,7 @@ class WPF_Copper {
 		}
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -577,7 +577,7 @@ class WPF_Copper {
 		$params['method'] = 'PUT';
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -609,7 +609,7 @@ class WPF_Copper {
 
 		$update_data = array();
 
-		$option_ids = wp_fusion()->settings->get( 'copper_option_ids', array() );
+		$option_ids = wpf_get_option( 'copper_option_ids', array() );
 
 		foreach( $data as $field => $value ) {
 
@@ -657,7 +657,7 @@ class WPF_Copper {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -688,7 +688,7 @@ class WPF_Copper {
 
 		$update_data = array();
 
-		$option_ids = wp_fusion()->settings->get( 'copper_option_ids', array() );
+		$option_ids = wpf_get_option( 'copper_option_ids', array() );
 
 		foreach( $data as $field => $value ) {
 
@@ -736,7 +736,7 @@ class WPF_Copper {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -762,21 +762,21 @@ class WPF_Copper {
 		}
 
 		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response      	= json_decode( wp_remote_retrieve_body( $response ) );
 
 		if( empty( $response ) ) {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Copper.' );
 		}
 
-		$option_ids = wp_fusion()->settings->get( 'copper_option_ids', array() );
+		$option_ids = wpf_get_option( 'copper_option_ids', array() );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -861,7 +861,7 @@ class WPF_Copper {
 		$params['body'] = json_encode( $tag );
 
 		$url     = 'https://api.prosperworks.com/developer_api/v1/people/search';
-		$results = wp_remote_post( $url, $params );
+		$results = wp_safe_remote_post( $url, $params );
 
 		if( is_wp_error( $results ) ) {
 			return $results;
@@ -877,7 +877,7 @@ class WPF_Copper {
 		// 	$params['body'] = json_encode( $tag );	
 
 		// 	$url     = 'https://api.prosperworks.com/developer_api/v1/people/search'];
-		// 	$results = wp_remote_get( $url, $this->params );
+		// 	$results = wp_safe_remote_get( $url, $this->params );
 		// }
 
 		foreach ( $body_json as $row => $contact ) {
@@ -901,7 +901,7 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$access_key = wp_fusion()->settings->get('access_key');
+		$access_key = wpf_get_option('access_key');
 
 		$data = array(
 			'target'    => get_home_url(),
@@ -918,7 +918,7 @@ class WPF_Copper {
 		$params['method'] 	= 'POST';
 		$params['body']  	= json_encode($data);
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -951,7 +951,7 @@ class WPF_Copper {
 		$params           		= $this->params;
 		$params['method'] 		= 'DELETE';
 
-		$response     		    = wp_remote_post( $request, $params );
+		$response     		    = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;

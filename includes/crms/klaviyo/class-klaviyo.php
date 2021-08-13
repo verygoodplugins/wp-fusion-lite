@@ -150,7 +150,7 @@ class WPF_Klaviyo {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) ) {
-			$access_key = wp_fusion()->settings->get( 'klaviyo_key' );
+			$access_key = wpf_get_option( 'klaviyo_key' );
 		}
 
 		$this->params = array(
@@ -187,7 +187,7 @@ class WPF_Klaviyo {
 		}
 
 		$request  = 'https://a.klaviyo.com/api/v2/lists';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -236,7 +236,7 @@ class WPF_Klaviyo {
 		$available_tags = array();
 
 		$request  = 'https://a.klaviyo.com/api/v2/lists';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -298,7 +298,7 @@ class WPF_Klaviyo {
 		}
 
 		$request  = 'https://a.klaviyo.com/api/v2/people/search?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -334,7 +334,7 @@ class WPF_Klaviyo {
 
 		$user_tags = array();
 
-		$available_lists = wp_fusion()->settings->get( 'available_tags' );
+		$available_lists = wpf_get_option( 'available_tags' );
 
 		$email = $this->get_email_from_cid( $contact_id );
 
@@ -347,7 +347,7 @@ class WPF_Klaviyo {
 		foreach ( $available_lists as $list_id => $list_name ) {
 
 			$request  = 'https://a.klaviyo.com/api/v2/list/' . $list_id . '/members?emails=' . $email;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -390,7 +390,7 @@ class WPF_Klaviyo {
 		foreach ( $tags as $tag_id ) {
 
 			$request  = 'https://a.klaviyo.com/api/v2/list/' . $tag_id . '/members';
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -427,7 +427,7 @@ class WPF_Klaviyo {
 		foreach ( $tags as $tag_id ) {
 
 			$request  = 'https://a.klaviyo.com/api/v2/list/' . $tag_id . '/members';
-			$response = wp_remote_request( $request, $params );
+			$response = wp_safe_remote_request( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -466,7 +466,7 @@ class WPF_Klaviyo {
 		}
 
 		// Users can't be added without a list
-		$assign_lists = wp_fusion()->settings->get( 'assign_tags' );
+		$assign_lists = wpf_get_option( 'assign_tags' );
 
 		// If no tags configured, pick the first one in the account so the request doesn't fail
 		if ( ! empty( $assign_lists ) ) {
@@ -475,7 +475,7 @@ class WPF_Klaviyo {
 
 		} else {
 
-			$available_lists = wp_fusion()->settings->get( 'available_tags' );
+			$available_lists = wpf_get_option( 'available_tags' );
 			reset( $available_lists );
 			$assign_list = key( $available_lists );
 
@@ -485,7 +485,7 @@ class WPF_Klaviyo {
 		$params         = $this->params;
 		$params['body'] = json_encode( array( 'profiles' => array( $data ) ) );
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -527,7 +527,7 @@ class WPF_Klaviyo {
 		$params['method'] = 'PUT';
 		$request          = 'https://a.klaviyo.com/api/v1/person/' . $contact_id . '?api-key=' . $this->key;
 
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		return new WP_Error( 'error', 'Klaviyo does not currently support updating Person records over the API.' );
 
@@ -555,14 +555,14 @@ class WPF_Klaviyo {
 		$params['body'] = array( 'api_key' => $this->key );
 
 		$request  = 'https://a.klaviyo.com/api/v1/person/' . $contact_id;
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -594,7 +594,7 @@ class WPF_Klaviyo {
 		$contact_ids = array();
 
 		$request  = 'https://a.klaviyo.com/api/v2/group/' . $tag_query . '/members/all';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

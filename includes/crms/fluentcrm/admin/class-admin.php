@@ -25,7 +25,7 @@ class WPF_FluentCRM_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -107,7 +107,7 @@ class WPF_FluentCRM_Admin {
 			$settings['create_users']['unlock'][] = 'available_lists';
 		}
 
-		$settings['fluentcrm_lists']['disabled'] = ( wp_fusion()->settings->get( 'create_users' ) == 0 ? true : false );
+		$settings['fluentcrm_lists']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
 
 		return $settings;
 
@@ -148,8 +148,8 @@ class WPF_FluentCRM_Admin {
 
 	public function show_field_fluentcrm_header_begin( $id, $field ) {
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 		echo '<style>#fluentcrm_connect {display: none;}</style>';
 	}
@@ -162,13 +162,15 @@ class WPF_FluentCRM_Admin {
 	 */
 
 	public function test_connection() {
+
+		check_ajax_referer( 'wpf_settings_nonce' );
 		if ( ! defined( 'FLUENTCRM' ) ) {
 			wp_send_json_error( 'FluentCRM does not exist' );
 		}
-		$options                          = wp_fusion()->settings->get_all();
+		$options                          = array();
 		$options['connection_configured'] = true;
 		$options['crm']                   = $this->slug;
-		wp_fusion()->settings->set_all( $options );
+		wp_fusion()->settings->set_multiple( $options );
 		wp_send_json_success();
 	}
 

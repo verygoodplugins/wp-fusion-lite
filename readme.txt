@@ -4,7 +4,7 @@ Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 5.8
-Stable tag: 3.37.31
+Stable tag: 3.38.0
 
 WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
@@ -182,6 +182,19 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.38.0 = 8/13/2021 =
+
+* Big cleanup and refactoring with improvements for security, internationalization, and documentation
+* Added View in CRM URL for Jetpack CRM
+* Fixed user profile updates overwriting Jetpack CRM contacts
+* Fixed logs getting flushed when hitting Enter in the pagination box
+* Deleted unused XMLRPC modules in the Infusionsoft iSDK
+* Developers: Added function `wpf_get_option()` (alternative for `wp_fusion()->settings->get()`)
+* Developers: Added function `wpf_clean()`
+* Developers: Deprecated `wp_fusion()->settings->get_all()`
+* Developers: Changed `wp_fusion()->settings->set_all( $options )` to `wp_fusion()->settings->set_multiple( $options )`
+
 
 = 3.37.31 - 8/7/2021 =
 

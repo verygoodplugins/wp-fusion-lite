@@ -68,7 +68,7 @@ class WPF_PulseTechnologyCRM {
 		$this->slug = 'pulsetech';
 		$this->name = 'PulseTechnologyCRM';
 
-		$api_url = wp_fusion()->settings->get( 'pulsetech_url', '' );
+		$api_url = wpf_get_option( 'pulsetech_url', '' );
 
 		if ( strpos( $api_url, '.dev.thepulsespot.com' ) !== false ) {
 			$portal_url = str_replace( '/app.', '/portal.', $api_url );
@@ -103,7 +103,7 @@ class WPF_PulseTechnologyCRM {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
-		$api_url = wp_fusion()->settings->get( 'pulsetech_url' );
+		$api_url = wpf_get_option( 'pulsetech_url' );
 
 		if ( ! empty( $api_url ) ) {
 			$this->edit_url = trailingslashit( $api_url ) . 'crm/contact/%d/edit';
@@ -157,7 +157,7 @@ class WPF_PulseTechnologyCRM {
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
 		if ( is_object( $payload ) ) {
-			$post_data['contact_id'] = $payload->id;
+			$post_data['contact_id'] = absint( $payload->id );
 		}
 
 		return $post_data;
@@ -178,10 +178,10 @@ class WPF_PulseTechnologyCRM {
 
 		// Get saved data from DB
 		if ( empty( $api_url ) || empty( $client_id ) || empty( $client_secret ) ) {
-			$api_url       = wp_fusion()->settings->get( 'pulsetech_url' );
-			$client_secret = wp_fusion()->settings->get( 'pulsetech_secret' );
-			$client_id     = wp_fusion()->settings->get( 'pulsetech_client_id' );
-			$token         = wp_fusion()->settings->get( 'pulsetech_token', null );
+			$api_url       = wpf_get_option( 'pulsetech_url' );
+			$client_secret = wpf_get_option( 'pulsetech_secret' );
+			$client_id     = wpf_get_option( 'pulsetech_client_id' );
+			$token         = wpf_get_option( 'pulsetech_token', null );
 		} else {
 			$token = null;
 		}
@@ -214,7 +214,7 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 */
 	public function refresh_token() {
-		$refresh_token = wp_fusion()->settings->get( 'pulsetech_refresh_token' );
+		$refresh_token = wpf_get_option( 'pulsetech_refresh_token' );
 
 		$params = array(
 			'headers' => array(
@@ -228,7 +228,7 @@ class WPF_PulseTechnologyCRM {
 			),
 		);
 
-		$response = wp_remote_post( $this->oauth_url_token, $params );
+		$response = wp_safe_remote_post( $this->oauth_url_token, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -344,7 +344,7 @@ class WPF_PulseTechnologyCRM {
 		$params  = $this->get_params();
 		$request = $this->url . 'api/v1/' . $uri;
 
-		$response = wp_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 
@@ -369,7 +369,7 @@ class WPF_PulseTechnologyCRM {
 		$request        = $this->url . 'api/v1/' . $uri;
 		$params['body'] = $data;
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -395,7 +395,7 @@ class WPF_PulseTechnologyCRM {
 		$params['body']   = $data;
 		$params['method'] = 'PUT';
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 
@@ -699,7 +699,7 @@ class WPF_PulseTechnologyCRM {
 		$fields = (array) $response;
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 			if ( $field_data['active'] && isset( $fields[ $field_data['crm_field'] ] ) ) {

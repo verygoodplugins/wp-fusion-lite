@@ -1,7 +1,7 @@
 <?php
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 /**
@@ -11,6 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class WPF_Lite_Helper {
 
+	/**
+	 * Constructs a new instance.
+	 *
+	 * @since 3.37.17
+	 */
 	public function __construct() {
 
 		add_action( 'wp_fusion_init', array( $this, 'init' ) );
@@ -23,7 +28,6 @@ class WPF_Lite_Helper {
 	 *
 	 * @since  3.37.17
 	 */
-
 	public function init() {
 
 		if ( apply_filters( 'wp_fusion_hide_upgrade_nags', false ) ) {
@@ -80,15 +84,14 @@ class WPF_Lite_Helper {
 			}
 		}
 
-		// Add some promo HTML
-
+		// Add some promo HTML.
 		$webhooks_desc  = '<div id="webhooks-notice" class="wpf-upgrade-nag-container">';
 		$webhooks_desc .= $this->get_sync_svg();
 		$webhooks_desc .= '<div class="innercontent">';
 		$webhooks_desc .= '<h3>Webhooks allow for an automatic, bi-directional integration with ' . wp_fusion()->crm->name . '.</h3>';
 		$webhooks_desc .= '<ul>';
 		$webhooks_desc .= '<li>Import new WordPress users based on ' . wp_fusion()->crm->name . ' automations and generate passwords.</li>';
-		$webhooks_desc .= '<li>Sync ' . strtolower( wp_fusion()->settings->get( 'crm_tag_type' ) ) . ' changes in ' . wp_fusion()->crm->name . ' back to WordPress to unlock content, trigger course enrollments, and change membership levels.</li>';
+		$webhooks_desc .= '<li>Sync ' . strtolower( wpf_get_option( 'crm_tag_type' ) ) . ' changes in ' . wp_fusion()->crm->name . ' back to WordPress to unlock content, trigger course enrollments, and change membership levels.</li>';
 		$webhooks_desc .= '<li>Edits to contact records in ' . wp_fusion()->crm->name . ' are synced back to WordPress instantly.</li>';
 		$webhooks_desc .= '</ul>';
 		$webhooks_desc .= '<strong>Upgrade to the full version of WP Fusion to enable ' . wp_fusion()->crm->name . ' webhooks.</strong>';
@@ -180,12 +183,12 @@ class WPF_Lite_Helper {
 
 		$woocommerce_fields = WC()->countries->get_address_fields( '', 'billing_' );
 
-		// Cleanup
+		// Cleanup.
 		unset( $woocommerce_fields['billing_first_name'] );
 		unset( $woocommerce_fields['billing_last_name'] );
 		unset( $woocommerce_fields['billing_email'] );
 
-		// Support for WooCommerce Checkout Field Editor
+		// Support for WooCommerce Checkout Field Editor.
 		$additional_fields = get_option( 'wc_fields_additional' );
 
 		if ( ! empty( $additional_fields ) ) {
@@ -206,7 +209,7 @@ class WPF_Lite_Helper {
 
 		}
 
-		// Support for WooCommerce Checkout Field Editor Pro
+		// Support for WooCommerce Checkout Field Editor Pro.
 		if ( class_exists( 'WCFE_Checkout_Section' ) ) {
 
 			$additional_fields = get_option( 'thwcfe_sections' );
@@ -284,8 +287,9 @@ class WPF_Lite_Helper {
 
 		echo '<li class="custom_tab wp-fusion-settings-tab hide_if_grouped">';
 		echo '<a href="#wp_fusion_tab">';
-		echo wpf_logo_svg( '14px' );
-		echo '<span>' . __( 'WP Fusion', 'wp-fusion-lite' ) . '</span>';
+		// phpcs:ignore
+		echo wpf_logo_svg( '14px' ); // escaped in admin-functions.php
+		echo '<span>' . esc_html_e( 'WP Fusion', 'wp-fusion-lite' ) . '</span>';
 		echo '</a>';
 		echo '</li>';
 
@@ -299,34 +303,33 @@ class WPF_Lite_Helper {
 	public function woocommerce_write_panels() {
 
 		if ( ! is_admin() ) {
-			return; // YITH WooCommerce Frontend Manager adds these panels to the frontend, which crashes WPF
+			return; // YITH WooCommerce Frontend Manager adds these panels to the frontend, which crashes WPF.
 		}
 
 		echo '<div id="wp_fusion_tab" class="panel woocommerce_options_panel wpf-meta wpf-panel-disabled">';
 
 		// Product
-
 		echo '<div class="options_group wpf-product">';
 
 		echo '<p class="form-field"><label><strong>Product</strong></label></p>';
 
-		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . __( 'Apply tags when<br />purchased', 'wp-fusion-lite' ) . '</label>';
+		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Apply tags when<br />purchased', 'wp-fusion-lite' ) . '</label>';
 		wpf_render_tag_multiselect();
 
 		echo '<br /><span style="margin-left: 0px;" class="description show_if_variable">Tags for product variations can be configured within the Variations tab.</span>';
 
 		echo '</p>';
 
-		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . __( 'Apply tags when<br />refunded', 'wp-fusion-lite' );
-		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . __( 'The tags specified above for \'Apply tags when purchased\' will automatically be removed if an order is refunded.', 'wp-fusion-lite' ) . '"></span>';
+		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Apply tags when<br />refunded', 'wp-fusion-lite' );
+		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr_e( 'The tags specified above for \'Apply tags when purchased\' will automatically be removed if an order is refunded.', 'wp-fusion-lite' ) . '"></span>';
 		echo '</label>';
 
 		wpf_render_tag_multiselect();
 
 		echo '</p>';
 
-		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . __( 'Apply tags when transaction failed', 'wp-fusion-lite' );
-		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . __( 'A contact record will be created and these tags will be applied when an initial transaction on an order fails.<br /><br />Note that this may create problems since WP Fusion normally doesn\'t create a contact record until a successful payment is received.<br /><br />In almost all cases it\'s preferable to use abandoned cart tracking instead of failed transaction tagging.', 'wp-fusion-lite' ) . '"></span>';
+		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Apply tags when transaction failed', 'wp-fusion-lite' );
+		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr_e( 'A contact record will be created and these tags will be applied when an initial transaction on an order fails.<br /><br />Note that this may create problems since WP Fusion normally doesn\'t create a contact record until a successful payment is received.<br /><br />In almost all cases it\'s preferable to use abandoned cart tracking instead of failed transaction tagging.', 'wp-fusion-lite' ) . '"></span>';
 		echo '</label>';
 
 		wpf_render_tag_multiselect();
@@ -343,44 +346,44 @@ class WPF_Lite_Helper {
 
 			echo '<p class="form-field"><label><strong>Subscription</strong></label></p>';
 
-			echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . __( 'Remove tags', 'wp-fusion-lite' ) . '</label>';
+			echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Remove tags', 'wp-fusion-lite' ) . '</label>';
 			echo '<input class="checkbox" type="checkbox" id="wpf-remove-tags-woo" name="wpf-settings-woo[remove_tags]" value="1" />';
-			echo '<span class="description">' . __( 'Remove original tags (above) when the subscription is cancelled, put on hold, expires, or is switched', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Remove original tags (above) when the subscription is cancelled, put on hold, expires, or is switched', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Payment failed
 			echo '<p class="form-field"><label>Payment failed</label>';
 			wpf_render_tag_multiselect();
-			echo '<span class="description">' . __( 'Apply these tags when a renewal payment fails', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Apply these tags when a renewal payment fails', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Cancelled
 			echo '<p class="form-field"><label>Cancelled</label>';
 			wpf_render_tag_multiselect();
-			echo '<span class="description">' . __( 'Apply these tags when a subscription is cancelled', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription is cancelled', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Put on hold
 			echo '<p class="form-field"><label>Put on hold</label>';
 			wpf_render_tag_multiselect();
-			echo '<span class="description">' . __( 'Apply these tags when a subscription is put on hold', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription is put on hold', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Expires
 			echo '<p class="form-field"><label>Pending cancellation</label>';
 			wpf_render_tag_multiselect();
-			echo '<span class="description">' . __( 'Apply these tags when a subscription has been cancelled by the user but there is still time remaining in the subscription', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription has been cancelled by the user but there is still time remaining in the subscription', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Expires
 			echo '<p class="form-field"><label>Expired</label>';
 			wpf_render_tag_multiselect();
-			echo '<span class="description">' . __( 'Apply these tags when a subscription expires', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription expires', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			echo '<p class="form-field"><label>Free trial over</label>';
 			wpf_render_tag_multiselect();
-			echo '<span class="description">' . __( 'Apply these tags when free trial ends', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html_e( 'Apply these tags when free trial ends', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			echo '</div>';
@@ -393,17 +396,17 @@ class WPF_Lite_Helper {
 
 		echo '<div class="innercontent">';
 
-		echo '<h3>' . sprintf( __( 'Segment customers using tags in %s.' ), wp_fusion()->crm->name ) . '</h3>';
+		echo '<h3>' . sprintf( esc_html__( 'Segment customers using tags in %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</h3>';
 
-		echo '<p>' . sprintf( __( 'With the full version of WP Fusion you can apply tags in %s based on product purchases, variations, coupon usage, order status changes, and more.' ), wp_fusion()->crm->name ) . '</p>';
+		echo '<p>' . sprintf( esc_html__( 'With the full version of WP Fusion you can apply tags in %s based on product purchases, variations, coupon usage, order status changes, and more.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</p>';
 
 		if ( class_exists( 'WC_Subscriptions' ) ) {
 
-			echo '<p>' . sprintf( __( 'With WooCommerce Subscriptions active you can also %1$sapply tags based on subscription status changes and payment failures%2$s.' ), '<a href="https://wpfusion.com/documentation/ecommerce/woocommerce-subscriptions/?utm_source=free-plugin&utm_medium=woocommerce&utm_campaign=free-plugin" target="_blank">', '</a>' ) . '</p>';
+			echo '<p>' . sprintf( esc_html__( 'With WooCommerce Subscriptions active you can also %1$sapply tags based on subscription status changes and payment failures%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/ecommerce/woocommerce-subscriptions/?utm_source=free-plugin&utm_medium=woocommerce&utm_campaign=free-plugin" target="_blank">', '</a>' ) . '</p>';
 
 		}
 
-		echo '<p>' . sprintf( __( '<strong>Upgrade WP Fusion today</strong> and automate your WooCommerce marketing with %s.' ), wp_fusion()->crm->name ) . '</p>';
+		echo '<p>' . sprintf( esc_html__( '<strong>Upgrade WP Fusion today</strong> and automate your WooCommerce marketing with %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</p>';
 
 		echo '<div class="buttonwrapper">';
 		echo '<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_source=free-plugin&utm_medium=woocommerce&utm_campaign=free-plugin" target="_blank">Learn More</a>';
@@ -643,7 +646,7 @@ class WPF_Lite_Helper {
 
 		echo '<div class="innercontent">';
 
-		echo '<h2>Sync more data with ' . wp_fusion()->crm->name . '.</h2>';
+		echo '<h2>Sync more data with ' . esc_html( wp_fusion()->crm->name ) . '.</h2>';
 
 		echo '<p>You\'re currently using <strong>WP Fusion Lite</strong>, which syncs your WordPress "core" fields with your CRM.</p>';
 
@@ -673,7 +676,7 @@ class WPF_Lite_Helper {
 			echo '<a href="https://wpfusion.com/documentation/learning-management/lifterlms/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">LifterLMS</a>, ';
 		}
 
-		echo 'and <a href="https://wpfusion.com/documentation/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields#integrations" target="_blank">over 100 other plugins</a> bidirectionally with ' . wp_fusion()->crm->name . '</strong>?</p>';
+		echo 'and <a href="https://wpfusion.com/documentation/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields#integrations" target="_blank">over 100 other plugins</a> bidirectionally with ' . esc_html( wp_fusion()->crm->name ) . '</strong>?</p>';
 
 		echo '<div class="buttonwrapper">';
 		echo '<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">Learn More About Syncing Custom Fields</a>';
@@ -706,11 +709,11 @@ class WPF_Lite_Helper {
 	 */
 	public function title_upgrade_message() {
 
-		if ( wp_fusion()->settings->get( 'connection_configured' ) ) {
+		if ( wpf_get_option( 'connection_configured' ) ) {
 
 			echo '<div id="wpf-pro">';
-			echo '<img src="' . WPF_DIR_URL . '/assets/img/logo-sm-trans.png">';
-			echo '<strong>You are using the free version of WP Fusion.</strong> For an even deeper integration with ' . wp_fusion()->crm->name . ', consider <a href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=header&utm_campaign=free-plugin" target="_blank">upgrading to one of our paid plans</a> 🚀';
+			echo '<img src="' . esc_url( WPF_DIR_URL . '/assets/img/logo-sm-trans.png' ) . '">';
+			echo '<strong>You are using the free version of WP Fusion.</strong> For an even deeper integration with ' . esc_html( wp_fusion()->crm->name ) . ', consider <a href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=header&utm_campaign=free-plugin" target="_blank">upgrading to one of our paid plans</a> 🚀';
 			echo '</div>';
 
 		}
@@ -719,4 +722,4 @@ class WPF_Lite_Helper {
 
 }
 
-new WPF_Lite_Helper;
+new WPF_Lite_Helper();

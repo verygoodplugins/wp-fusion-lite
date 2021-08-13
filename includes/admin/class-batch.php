@@ -193,30 +193,30 @@ class WPF_Batch {
 			$active = true;
 		}
 
-		// Try and restart it if it's stalled
+		// Try and restart it if it's stalled.
 		if ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
 			$this->process->dispatch();
 		}
 
-		$total     = intval( $status['total'] );
-		$remaining = intval( $status['remaining'] );
+		$total     = absint( $status['total'] );
+		$remaining = absint( $status['remaining'] );
 		$done      = $total - $remaining;
 
-		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . $remaining . '"' : '' ) . ' ' . ( $active ? 'data-key="' . $status['key'] . '"' : '' ) . '>';
-		echo '<p><span class="dashicons dashicons-update-alt wpf-spin"></span><span class="title"><strong>' . __( 'Background operation running:', 'wp-fusion-lite' ) . '</strong></span> <span class="status">';
+		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . esc_attr( $remaining ) . '"' : '' ) . ' ' . ( $active ? 'data-key="' . esc_attr( $status['key'] ) . '"' : '' ) . '>';
+		echo '<p><span class="dashicons dashicons-update-alt wpf-spin"></span><span class="title"><strong>' . esc_html__( 'Background operation running:', 'wp-fusion-lite' ) . '</strong></span> <span class="status">';
 
 		$title = 'records';
 
-		// Get the title from the status
+		// Get the title from the status.
 		if ( ! empty( $status['next_step'] ) ) {
 			$title = $this->get_operation_title( $status['next_step'][0] );
 		}
 
 		if ( $active ) {
-			echo __( 'Processing', 'wp-fusion-lite' ) . ' ' . $done . ' / ' . $total . ' ' . $title . ' ';
+			echo esc_html__( 'Processing', 'wp-fusion-lite' ) . esc_html( ' ' . $done . ' / ' . $total . ' ' . $title );
 		}
 
-		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">' . __( 'Cancel', 'wp-fusion-lite' ) . '</a></p>';
+		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">' . esc_html__( 'Cancel', 'wp-fusion-lite' ) . '</a></p>';
 		echo '</div>';
 
 	}
@@ -230,20 +230,21 @@ class WPF_Batch {
 
 	public function batch_init( $hook = false, $args = array() ) {
 
+		check_ajax_referer( 'wpf_settings_nonce' );
+
 		if ( isset( $_POST['hook'] ) ) {
-			$hook = $_POST['hook'];
+			$hook = sanitize_key( $_POST['hook'] );
 		}
 
 		if ( isset( $_POST['args'] ) && is_array( $_POST['args'] ) ) {
-			$args = $_POST['args'];
+			$args = array_map( 'sanitize_text_field', wp_unslash( $_POST['args'] ) );
 		}
 
 		$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
-
 		$objects = apply_filters( 'wpf_batch_objects', $objects, $args );
 
 		if ( empty( $objects ) ) {
-			wp_send_json_success( json_encode( $objects ) );
+			wp_send_json_success( $objects );
 			die();
 		}
 
@@ -251,14 +252,16 @@ class WPF_Batch {
 
 		wpf_log( 'info', 0, sprintf( __( 'Beginning %1$s batch operation on %2$d %3$s.', 'wp-fusion-lite' ), '<strong>' . $operations[ $hook ]['label'] . '</strong>', count( $objects ), strtolower( $operations[ $hook ]['title'] ) ), array( 'source' => 'batch-process' ) );
 
-		// Int IDs are smaller in the DB than strings, but sometimes we'll still need to use strings (i.e. Drip subscriber IDs)
+		// Int IDs are smaller in the DB than strings, but sometimes we'll still need to use strings (i.e. Drip subscriber IDs).
 		if ( is_numeric( $objects[0] ) ) {
 			$objects = array_map( 'intval', $objects );
+		} else {
+			$objects = array_map( 'sanitize_text_field', $objects );
 		}
 
 		foreach ( $objects as $object ) {
 
-			// This is the new smaller array to help with max_allowed_packet issues
+			// This is the new smaller array to help with max_allowed_packet issues.
 
 			$data = array( $hook, array( $object ) );
 
@@ -272,7 +275,7 @@ class WPF_Batch {
 
 		$this->process->save()->dispatch();
 
-		wp_send_json_success( json_encode( $objects ) );
+		wp_send_json_success( $objects );
 
 		die();
 
@@ -286,6 +289,8 @@ class WPF_Batch {
 	 */
 
 	public function batch_status() {
+
+		check_ajax_referer( 'wpf_settings_nonce' );
 
 		$key = false;
 
@@ -308,7 +313,7 @@ class WPF_Batch {
 			$status['title'] = false;
 		}
 
-		echo json_encode( $status );
+		echo wp_json_encode( $status );
 
 		die();
 
@@ -323,10 +328,16 @@ class WPF_Batch {
 
 	public function batch_cancel() {
 
-		$key = sanitize_key( $_POST['key'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
 
-		// We'll set this in the DB and then the background worker will pick up on it when it's a good time
-		set_site_transient( 'wpfb_cancel_' . $key, true, MINUTE_IN_SECONDS );
+		if ( isset( $_POST['key'] ) ) {
+
+			$key = sanitize_key( $_POST['key'] );
+
+			// We'll set this in the DB and then the background worker will pick up on it when it's a good time.
+			set_site_transient( 'wpfb_cancel_' . $key, true, MINUTE_IN_SECONDS );
+
+		}
 
 		die();
 
@@ -434,7 +445,6 @@ class WPF_Batch {
 		}
 
 		// Logging
-
 		$message = 'Beginning <strong>Import Contacts</strong> batch operation on ' . count( $contact_ids ) . ' contacts with tag <strong>' . wp_fusion()->user->get_tag_label( $args['tag'] ) . '</strong>.';
 
 		if ( $removed ) {
@@ -443,10 +453,10 @@ class WPF_Batch {
 
 		wpf_log( 'info', 0, $message, array( 'source' => 'batch-process' ) );
 
-		// Keep track of import groups so they can be removed later
+		// Keep track of import groups so they can be removed later.
 		$import_groups = get_option( 'wpf_import_groups', array() );
 
-		$params               = new stdClass;
+		$params               = new stdClass();
 		$params->import_users = array( $args['tag'] );
 
 		$import_groups[ current_time( 'timestamp' ) ] = array(
@@ -482,8 +492,7 @@ class WPF_Batch {
 
 		if ( $user_id ) {
 
-			// Track the imported users
-
+			// Track the imported users.
 			$import_groups = get_option( 'wpf_import_groups', array() );
 
 			end( $import_groups );
@@ -605,7 +614,7 @@ class WPF_Batch {
 
 	public function users_register_tags_step( $user_id ) {
 
-		$assign_tags = wp_fusion()->settings->get( 'assign_tags' );
+		$assign_tags = wpf_get_option( 'assign_tags' );
 
 		if ( ! empty( $assign_tags ) ) {
 			wp_fusion()->user->apply_tags( $assign_tags, $user_id );

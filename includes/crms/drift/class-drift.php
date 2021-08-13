@@ -87,7 +87,7 @@ class WPF_Drift {
 
 		// Get saved data from DB
 		if ( empty( $access_token ) ) {
-			$access_token = wp_fusion()->settings->get( 'drift_token' );
+			$access_token = wpf_get_option( 'drift_token' );
 		}
 
 		$this->params = array(
@@ -111,7 +111,7 @@ class WPF_Drift {
 
 	public function refresh_token() {
 
-		$refresh_token = wp_fusion()->settings->get( 'drift_refresh_token' );
+		$refresh_token = wpf_get_option( 'drift_refresh_token' );
 
 		$params = array(
 			'headers'	=> array(
@@ -125,7 +125,7 @@ class WPF_Drift {
 			)
 		);
 
-		$response = wp_remote_post( 'https://driftapi.com/oauth2/token', $params );
+		$response = wp_safe_remote_post( 'https://driftapi.com/oauth2/token', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -167,7 +167,7 @@ class WPF_Drift {
 
 				$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
-				$response = wp_remote_request( $url, $args );
+				$response = wp_safe_remote_request( $url, $args );
 
 			} elseif( wp_remote_retrieve_response_code( $response ) == 404 ) {
 
@@ -213,7 +213,7 @@ class WPF_Drift {
 		}
 
 		$request  = 'https://driftapi.com/contacts/attributes';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -281,7 +281,7 @@ class WPF_Drift {
 		}
 
 		$request  = 'https://driftapi.com/contacts/attributes';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -320,7 +320,7 @@ class WPF_Drift {
 		}
 
 		$request  = 'https://driftapi.com/contacts/?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -351,7 +351,7 @@ class WPF_Drift {
 		}
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -365,7 +365,7 @@ class WPF_Drift {
 			return $tags;
 		}
 
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 		$needs_update = false;
 
 		foreach( $response->data->attributes->tags as $tag ) {
@@ -413,7 +413,7 @@ class WPF_Drift {
 		$params['body'] = json_encode( $body );
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id . '/tags';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -440,7 +440,7 @@ class WPF_Drift {
 		$params['body'] = json_encode( $tags );
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id . '/tags/delete/_bulk';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -472,7 +472,7 @@ class WPF_Drift {
 		$params['body'] = json_encode( array( 'attributes' => $data ) );
 
 		$request  = 'https://driftapi.com/contacts';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -510,7 +510,7 @@ class WPF_Drift {
 		$params['method'] 	= 'PATCH';
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -533,14 +533,14 @@ class WPF_Drift {
 		}
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response      	= json_decode( wp_remote_retrieve_body( $response ) );
 
 		if( empty( $response->data ) ) {

@@ -87,7 +87,7 @@ class WPF_Flexie {
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
 		if( isset( $payload->{'flexie.lead_post_save_update'} ) ) {
-			$post_data['contact_id'] = $payload->{'flexie.lead_post_save_update'}[0]->lead->id;
+			$post_data['contact_id'] = absint( $payload->{'flexie.lead_post_save_update'}[0]->lead->id );
 		}
 
 		return $post_data; 
@@ -155,8 +155,8 @@ class WPF_Flexie {
 
 		// Get saved data from DB
 		if ( empty( $flexie_url ) || empty($api_key) ) {
-			$flexie_url = wp_fusion()->settings->get( 'flexie_url' );
-			$api_key = wp_fusion()->settings->get( 'flexie_key' );
+			$flexie_url = wpf_get_option( 'flexie_url' );
+			$api_key = wpf_get_option( 'flexie_key' );
 		}
 
 		$this->url = trailingslashit( $flexie_url );
@@ -167,7 +167,7 @@ class WPF_Flexie {
 		}
 
 		$request  = $this->url . 'api/contacts?apikey=' . $this->api_key;
-		$response = wp_remote_get( $request );
+		$response = wp_safe_remote_get( $request );
 		
 		if( is_wp_error( $response ) ) {
 
@@ -217,7 +217,7 @@ class WPF_Flexie {
 		$available_tags = array();
 
 		$request  = $this->url . 'api/contact/lists?apikey=' . $this->api_key;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -248,7 +248,7 @@ class WPF_Flexie {
 
 		$crm_fields = array();
 		$request  = $this->url . 'api/contacts/list/fields?apikey=' . $this->api_key;
-		$response = wp_remote_get( $request );
+		$response = wp_safe_remote_get( $request );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -300,7 +300,7 @@ class WPF_Flexie {
 		);
 
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -333,7 +333,7 @@ class WPF_Flexie {
 
 		$contact_info = array();
 		$request      = $this->url . 'api/contacts/' . $contact_id . '/lists?apikey=' . $this->api_key;
-		$response     = wp_remote_get( $request );
+		$response     = wp_safe_remote_get( $request );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -368,7 +368,7 @@ class WPF_Flexie {
 
 		$this->connect();
 
-		$lists = wp_fusion()->settings->get( 'avaliable_lists' );
+		$lists = wpf_get_option( 'avaliable_lists' );
 
 		foreach ($tags as $tag_key => $tag) {
 
@@ -379,7 +379,7 @@ class WPF_Flexie {
 					$tags = $list_key;
 
 					$request      		= $this->url . 'api/contact/lists/' . $tags . '/add/' . $contact_id . '?apikey=' . $this->api_key;
-					$response = wp_remote_post( $request );
+					$response = wp_safe_remote_post( $request );
 					$body_json = json_decode( $response['body'] );
 
 					if( is_wp_error( $response ) ) {
@@ -406,7 +406,7 @@ class WPF_Flexie {
 
 		$this->connect();
 
-			$lists = wp_fusion()->settings->get( 'avaliable_lists' );
+			$lists = wpf_get_option( 'avaliable_lists' );
 
 			foreach ($tags as $tag_key => $tag) {
 
@@ -417,7 +417,7 @@ class WPF_Flexie {
 
 						$request      		= $this->url . 'api/contact/lists/' . $tags . '/remove/' . $contact_id . '?apikey=' . $this->api_key;
 						
-						$response = wp_remote_post( $request );
+						$response = wp_safe_remote_post( $request );
 						$body_json = json_decode( $response['body'] );
 
 						if( is_wp_error( $response ) ) {
@@ -457,7 +457,7 @@ class WPF_Flexie {
 			'headers' => array( 'Content-Type' => 'application/json' )
 		);
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -504,7 +504,7 @@ class WPF_Flexie {
 		);
 		
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -532,14 +532,14 @@ class WPF_Flexie {
 		$this->connect();
 
 		$url      = $this->url . 'api/contacts/' . $contact_id . '?apikey=' . $this->api_key;
-		$response = wp_remote_get( $url );
+		$response = wp_safe_remote_get( $url );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -568,7 +568,7 @@ class WPF_Flexie {
 		$contact_ids = array();
 		$proceed = true;
 
-		$lists = wp_fusion()->settings->get( 'avaliable_lists' );
+		$lists = wpf_get_option( 'avaliable_lists' );
 
 		foreach($lists as $list => $value){
 			$tag = $list;
@@ -577,7 +577,7 @@ class WPF_Flexie {
 		if( $proceed == true ) {
 
 			$url     = $this->url . "/api/contacts?apikey=" . $this->api_key . "&entityList=" . $tag;
-			$results = wp_remote_get( $url );
+			$results = wp_safe_remote_get( $url );
 
 			if( is_wp_error( $results ) ) {
 				return $results;

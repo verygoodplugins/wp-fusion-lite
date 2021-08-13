@@ -1,6 +1,6 @@
 <?php
 
-// Contains default names and types for standard WordPress fields. Can be filtered with wpf_meta_fields
+// Contains default names and types for standard WordPress fields. Can be filtered with wpf_meta_fields.
 $wp_fields['first_name'] = array(
 	'type'  => 'text',
 	'label' => __( 'First Name', 'wp-fusion-lite' ),

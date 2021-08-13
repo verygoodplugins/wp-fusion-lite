@@ -74,7 +74,7 @@ class WPF_FluentCRM_REST {
 		// Error handling
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
-		$url = wp_fusion()->settings->get( 'fluentcrm_rest_url' );
+		$url = wpf_get_option( 'fluentcrm_rest_url' );
 
 		if ( ! empty( $url ) ) {
 			$this->url      = trailingslashit( $url ) . 'wp-json/fluent-crm/v2';
@@ -99,7 +99,7 @@ class WPF_FluentCRM_REST {
 			return false;
 		}
 
-		$post_data['contact_id'] = $payload->id;
+		$post_data['contact_id'] = absint( $payload->id );
 		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
 
 		return $post_data;
@@ -126,9 +126,9 @@ class WPF_FluentCRM_REST {
 
 		// Get saved data from DB
 		if ( ! $url || ! $username || ! $password ) {
-			$url      = wp_fusion()->settings->get( 'fluentcrm_rest_url' );
-			$username = wp_fusion()->settings->get( 'fluentcrm_rest_username' );
-			$password = wp_fusion()->settings->get( 'fluentcrm_rest_password' );
+			$url      = wpf_get_option( 'fluentcrm_rest_url' );
+			$username = wpf_get_option( 'fluentcrm_rest_username' );
+			$password = wpf_get_option( 'fluentcrm_rest_password' );
 		}
 
 		$this->url = trailingslashit( $url ) . 'wp-json/fluent-crm/v2';
@@ -220,7 +220,7 @@ class WPF_FluentCRM_REST {
 		}
 
 		$request  = $this->url . '/subscribers';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -269,7 +269,7 @@ class WPF_FluentCRM_REST {
 		while ( $continue ) {
 
 			$request  = $this->url . '/tags?sort_by=id&sort_order=DESC&per_page=100&page=' . $page;
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -326,7 +326,7 @@ class WPF_FluentCRM_REST {
 		// Then get custom ones
 
 		$request  = $this->url . '/custom-fields/contacts?per_page=500';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -367,7 +367,7 @@ class WPF_FluentCRM_REST {
 	public function get_contact_id( $email_address ) {
 
 		$request  = $this->url . '/subscribers?per_page=1&search=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -396,7 +396,7 @@ class WPF_FluentCRM_REST {
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . '/subscribers/' . $contact_id;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -437,7 +437,7 @@ class WPF_FluentCRM_REST {
 		$params['body'] = json_encode( $body );
 
 		$request  = $this->url . '/subscribers/sync-segments';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -469,7 +469,7 @@ class WPF_FluentCRM_REST {
 		$params['body'] = json_encode( $body );
 
 		$request  = $this->url . '/subscribers/sync-segments';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -498,7 +498,7 @@ class WPF_FluentCRM_REST {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$fields = wp_fusion()->settings->get( 'crm_fields' );
+		$fields = wpf_get_option( 'crm_fields' );
 
 		// Custom fields go in their own key
 
@@ -525,7 +525,7 @@ class WPF_FluentCRM_REST {
 		$params['body'] = json_encode( $data );
 
 		$request  = $this->url . '/subscribers';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -555,7 +555,7 @@ class WPF_FluentCRM_REST {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$fields = wp_fusion()->settings->get( 'crm_fields' );
+		$fields = wpf_get_option( 'crm_fields' );
 
 		// Custom fields go in their own key
 
@@ -578,7 +578,7 @@ class WPF_FluentCRM_REST {
 		$params['body'] = json_encode( array( 'subscriber' => $data ) );
 
 		$request  = $this->url . '/subscribers/' . $contact_id;
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -601,14 +601,14 @@ class WPF_FluentCRM_REST {
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . '/subscribers/' . $contact_id . '?with%5B%5D=subscriber.custom_values';
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( ! empty( $response['subscriber']['custom_values'] ) ) {
@@ -640,7 +640,7 @@ class WPF_FluentCRM_REST {
 		// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
 
 		$request  = $this->url . '/tags?sort_by=id&per_page=1&search=' . $tag;
-		$response = wp_remote_get( $request, $this->get_params() );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -661,7 +661,7 @@ class WPF_FluentCRM_REST {
 		while ( $proceed ) {
 
 			$request  = $this->url . '/subscribers?per_page=100&tags%5B%5D=' . $tag_id . '&page=' . $page;
-			$response = wp_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

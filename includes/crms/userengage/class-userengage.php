@@ -66,7 +66,7 @@ class WPF_UserEngage {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
-		$domain = wp_fusion()->settings->get( 'userengage_domain' );
+		$domain = wpf_get_option( 'userengage_domain' );
 
 		if ( ! empty( $domain ) ) {
 			$this->edit_url = 'https://' . $domain . '.user.com/user/%d/';
@@ -94,7 +94,7 @@ class WPF_UserEngage {
 			return false;
 		}
 
-		$post_data['contact_id'] = $payload->user->id;
+		$post_data['contact_id'] = absint( $payload->user->id );
 
 		return $post_data;
 
@@ -167,11 +167,11 @@ class WPF_UserEngage {
 
 		// Get saved data from DB
 		if ( empty( $domain ) ) {
-			$domain = wp_fusion()->settings->get( 'userengage_domain' );
+			$domain = wpf_get_option( 'userengage_domain' );
 		}
 
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'userengage_key' );
+			$api_key = wpf_get_option( 'userengage_key' );
 		}
 
 		$this->params = array(
@@ -207,7 +207,7 @@ class WPF_UserEngage {
 		}
 
 		$request  = $this->api_url . 'users/';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -254,7 +254,7 @@ class WPF_UserEngage {
 		$available_tags = array();
 
 		$request  = $this->api_url . 'tags/';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -296,7 +296,7 @@ class WPF_UserEngage {
 
 		$custom_fields = array();
 		$request       = 'https://app.userengage.com/api/public/attributes/';
-		$response      = wp_remote_get( $request, $this->params );
+		$response      = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -343,7 +343,7 @@ class WPF_UserEngage {
 
 		$contact_info = array();
 		$request      = $this->api_url . 'users/search/?email=' . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -374,7 +374,7 @@ class WPF_UserEngage {
 
 		$tags     = array();
 		$request  = $this->api_url . 'users/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -410,7 +410,7 @@ class WPF_UserEngage {
 			$params         = $this->params;
 			$params['body'] = json_encode( array( 'name' => $tag ) );
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -441,7 +441,7 @@ class WPF_UserEngage {
 			$params           = $this->params;
 			$params['method'] = 'DELETE';
 
-			$response = wp_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -474,7 +474,7 @@ class WPF_UserEngage {
 		$params         = $this->params;
 		$params['body'] = json_encode( $data );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -482,7 +482,7 @@ class WPF_UserEngage {
 			return $response;
 		}
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		if ( empty( $crm_fields['Custom Fields'] ) ) {
 			return $body->id;
@@ -502,7 +502,7 @@ class WPF_UserEngage {
 			$params         = $this->params;
 			$params['body'] = json_encode( $attributes );
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $url, $params );
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
@@ -533,7 +533,7 @@ class WPF_UserEngage {
 			return false;
 		}
 
-		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		$send = false;
 
@@ -550,7 +550,7 @@ class WPF_UserEngage {
 			$params['body']   = json_encode( $data );
 			$params['method'] = 'PUT';
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $url, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -573,7 +573,7 @@ class WPF_UserEngage {
 			$url            = $this->api_url . 'users/' . $contact_id . '/set_multiple_attributes/';
 			$params         = $this->params;
 			$params['body'] = json_encode( $attributes );
-			$response       = wp_remote_post( $url, $params );
+			$response       = wp_safe_remote_post( $url, $params );
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -600,14 +600,14 @@ class WPF_UserEngage {
 		}
 
 		$url      = $this->api_url . 'users/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		$name                    = $body_json['name'];

@@ -1,40 +1,43 @@
 <?php
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
+/**
+ * Handles the auto login functionality.
+ *
+ * @link  https://wpfusion.com/documentation/tutorials/auto-login-links/
+ *
+ * @since 2.9.0
+ */
 class WPF_Auto_Login {
 
 	/**
 	 * Auto login user
 	 */
-
 	public $auto_login_user = array();
 
 	/**
-	 * Get things started
+	 * Get things started.
 	 *
-	 * @access  public
-	 * @since   3.12
+	 * @since 2.9.0
 	 */
-
 	public function __construct() {
 
-		// Track URL session logins
+		// Track URL session logins.
 		add_action( 'init', array( $this, 'start_auto_login' ), 1 );
 		add_filter( 'wpf_end_auto_login', array( $this, 'maybe_end' ), 10, 2 );
 		add_filter( 'wpf_skip_auto_login', array( $this, 'maybe_skip' ), 10, 2 );
 
+		// phpcs:ignore
 		// add_action( 'wp_head', array( $this, 'hide_auto_login_parameter' ) );
 
-		// Session cleanup cron
+		// Session cleanup cron.
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
 
-		// End the session when someone logs in
-
+		// End the session when someone logs in.
 		add_action( 'wp_logout', array( $this, 'end_auto_login' ), 1 );
-		//add_action( 'wp_login', array( $this, 'end_auto_login' ), 1 ); // We don't want to run on wp_login because if someone has just logged in this will end the session
 		add_action( 'wp_authenticate', array( $this, 'end_auto_login' ), 1 );
 
 		add_action( 'wpf_get_tags_start', array( $this, 'unhook_tags_modified' ), 1 );
@@ -62,11 +65,11 @@ class WPF_Auto_Login {
 
 		if ( isset( $_GET['cid'] ) ) {
 
-			$contact_id = sanitize_text_field( $_GET['cid'] );
+			$contact_id = sanitize_text_field( wp_unslash( $_GET['cid'] ) );
 
-		} elseif ( $contact_id == false && $alt_query_var != false && isset( $_GET[ $alt_query_var ] ) ) {
+		} elseif ( false === $contact_id && false !== $alt_query_var && isset( $_GET[ $alt_query_var ] ) ) {
 
-			$contact_id = sanitize_text_field( $_GET[ $alt_query_var ] );
+			$contact_id = sanitize_text_field( wp_unslash( $_GET[ $alt_query_var ] ) );
 
 		}
 
@@ -78,13 +81,13 @@ class WPF_Auto_Login {
 
 
 	/**
-	 * Hides the ?cid= login parameter from the URL.
+	 * Hides the ?cid= login parameter from the URL. Not currently in use but
+	 * can be registered by adding add_action( 'wp_head', array(
+	 * wp_fusion()->auto_login, 'hide_auto_login_parameter' ) ); to
+	 * functions.php
 	 *
 	 * @since 3.36.5
-	 *
-	 * @return string Javascript
 	 */
-
 	public function hide_auto_login_parameter() {
 
 		if ( doing_wpf_auto_login() && isset( $_GET['cid'] ) ) {
@@ -115,14 +118,14 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		if ( false == $contact_id && false == wp_fusion()->settings->get( 'auto_login' ) && false == wp_fusion()->settings->get( 'auto_login_forms' ) ) {
+		if ( false === $contact_id && ! wpf_get_option( 'auto_login' ) && ! wpf_get_option( 'auto_login_forms' ) ) {
 			return;
 		}
 
 		$contact_data = array();
 
-		// Try finding a contact ID in the URL
-		if ( false == $contact_id ) {
+		// Try finding a contact ID in the URL.
+		if ( false === $contact_id ) {
 			$contact_id = $this->get_contact_id_from_url();
 		}
 
@@ -131,16 +134,16 @@ class WPF_Auto_Login {
 		}
 
 		if ( ! empty( $_COOKIE['wpf_contact'] ) ) {
-			$contact_data = json_decode( stripslashes( $_COOKIE['wpf_contact'] ), true );
+			$contact_data = array_map( 'sanitize_text_field', json_decode( wp_unslash( $_COOKIE['wpf_contact'] ), true ) );
 		}
 
-		// Allow permanently ending the session
+		// Allow permanently ending the session.
 		if ( true === apply_filters( 'wpf_end_auto_login', false, $contact_data ) ) {
 			$this->end_auto_login();
 			return;
 		}
 
-		// If CID has changed, start a new session
+		// If CID has changed, start a new session.
 		if ( ! empty( $contact_data ) && ! empty( $contact_id ) && $contact_id != $contact_data['contact_id'] ) {
 			$this->end_auto_login();
 			$contact_data = array();
@@ -163,7 +166,7 @@ class WPF_Auto_Login {
 
 		} elseif ( isset( $contact_data['user_id'] ) ) {
 
-			// If data already exists, make sure the user hasn't expired
+			// If data already exists, make sure the user hasn't expired.
 
 			$contact_id_from_db = get_user_meta( $contact_data['user_id'], wp_fusion()->crm->slug . '_contact_id', true );
 
@@ -188,31 +191,28 @@ class WPF_Auto_Login {
 
 		$this->auto_login_user = $contact_data;
 
-		// Allow temporarily skipping the session on a single page
+		// Allow temporarily skipping the session on a single page.
 		if ( false !== $contact_data && true === apply_filters( 'wpf_skip_auto_login', false, $contact_data ) ) {
 			return;
 		}
 
-		// Get the temporary user object
-
+		// Get the temporary user object.
 		$user = wpf_get_current_user();
 
-		// Maybe set the $current_user global
-
-		if ( true == wp_fusion()->settings->get( 'auto_login_current_user' ) ) {
+		// Maybe set the $current_user global.
+		if ( wpf_get_option( 'auto_login_current_user' ) ) {
 			global $current_user;
 			$current_user = $user;
 		}
 
-		// Set the user in the cache
-
+		// Set the user in the cache.
 		wp_cache_set( $contact_data['user_id'], $user, 'users', DAY_IN_SECONDS );
 
-		// Hide admin bar
+		// Hide admin bar.
 		add_filter( 'show_admin_bar', '__return_false' );
 
-		// Disable comments (removed in v3.37.27)
-		// add_filter( 'comments_open', array( wp_fusion()->access, 'turn_off_comments' ), 10, 2 );
+		// Disable comments (removed in v3.37.27).
+		// add_filter( 'comments_open', array( wp_fusion()->access, 'turn_off_comments' ), 10, 2 );.
 
 		add_filter( 'wp_get_current_commenter', array( $this, 'get_current_commenter' ) );
 
@@ -226,9 +226,8 @@ class WPF_Auto_Login {
 	 * Permanently ends the auto login session in certain scenarios
 	 *
 	 * @access public
-	 * @return void
+	 * @return bool Whether or not to end the session.
 	 */
-
 	public function maybe_end( $end, $contact_data ) {
 
 		if ( isset( $_GET['wpf-end-auto-login'] ) ) {
@@ -244,15 +243,17 @@ class WPF_Auto_Login {
 
 		$request_uris = apply_filters( 'wpf_end_auto_login_request_uris', $request_uris );
 
-		foreach ( $request_uris as $uri ) {
+		if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
 
-			if ( strpos( $_SERVER['REQUEST_URI'], $uri ) !== false ) {
-				$end = true;
+			foreach ( $request_uris as $uri ) {
+
+				if ( strpos( $_SERVER['REQUEST_URI'], $uri ) !== false ) {
+					$end = true;
+				}
 			}
 		}
 
-		// Check transient
-
+		// Check transient.
 		if ( isset( $contact_data['contact_id'] ) ) {
 
 			$transient = get_option( 'wpf_end_auto_login_' . $contact_data['contact_id'] );
@@ -282,7 +283,7 @@ class WPF_Auto_Login {
 
 		foreach ( $request_uris as $uri ) {
 
-			if ( strpos( $_SERVER['REQUEST_URI'], $uri ) !== false ) {
+			if ( false !== strpos( $_SERVER['REQUEST_URI'], $uri ) ) {
 				$skip = true;
 			}
 		}
@@ -306,19 +307,20 @@ class WPF_Auto_Login {
 			return $user_tags;
 		}
 
-		// Set the random number based on the CID
-		$user_id = rand( 100000000, 1000000000 );
+		$user_tags = array_map( 'sanitize_text_field', $user_tags );
+
+		// Set the random number based on the CID.
+		$user_id = wp_rand( 100000000, 1000000000 );
 
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
 		update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
 
 		wpf_log( 'info', $user_id, 'Starting auto-login session for contact ID ' . $contact_id . ' with tags:', array( 'tag_array' => $user_tags ) );
 
-		// Allow other integrations to quickly access the auto login user ID
-
+		// Allow other integrations to quickly access the auto login user ID.
 		$this->auto_login_user['user_id'] = $user_id;
 
-		// Load meta data
+		// Load meta data.
 		$user = wp_fusion()->user->pull_user_meta( $user_id );
 
 		if ( is_wp_error( $user ) ) {
@@ -334,9 +336,9 @@ class WPF_Auto_Login {
 
 		$cookie_expiration = apply_filters( 'wpf_auto_login_cookie_expiration', DAY_IN_SECONDS * 180 );
 
-		setcookie( 'wpf_contact', json_encode( $contact_data ), time() + $cookie_expiration, COOKIEPATH, COOKIE_DOMAIN );
+		setcookie( 'wpf_contact', wp_json_encode( $contact_data ), time() + $cookie_expiration, COOKIEPATH, COOKIE_DOMAIN );
 
-		// Schedule cleanup after one day
+		// Schedule cleanup after one day.
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
 
 		return $user_id;
@@ -377,14 +379,14 @@ class WPF_Auto_Login {
 
 		if ( ! empty( $_COOKIE['wpf_contact'] ) ) {
 
-			$contact_data = json_decode( stripslashes( $_COOKIE['wpf_contact'] ), true );
+			$contact_data = array_map( 'sanitize_text_field', json_decode( wp_unslash( $_COOKIE['wpf_contact'] ), true ) );
 
 			$this->clear_auto_login_metadata( $contact_data['user_id'] );
 			$this->auto_login_user = false;
 
 			if ( ! headers_sent() ) {
 
-				// Clear the cookie if headers haven't been sent yet
+				// Clear the cookie if headers haven't been sent yet.
 				setcookie( 'wpf_contact', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
 
 				wp_destroy_current_session();
@@ -392,7 +394,7 @@ class WPF_Auto_Login {
 
 			} elseif ( wpf_is_user_logged_in() ) {
 
-				// If headers have been sent, set a transient to clear the cookie on next load (since 3.36.1 we'll use update_option instead of set_transient)
+				// If headers have been sent, set a transient to clear the cookie on next load (since 3.36.1 we'll use update_option instead of set_transient).
 				update_option( 'wpf_end_auto_login_' . $contact_data['contact_id'], true );
 
 			}
@@ -407,7 +409,6 @@ class WPF_Auto_Login {
 	 * @access public
 	 * @return void
 	 */
-
 	public function unhook_tags_modified( $user_id ) {
 
 		if ( doing_wpf_auto_login() || $this->get_contact_id_from_url() ) {
@@ -425,7 +426,6 @@ class WPF_Auto_Login {
 	 * @access public
 	 * @return void
 	 */
-
 	public function clear_auto_login_metadata( $user_id ) {
 
 		global $wpdb;
@@ -508,7 +508,7 @@ class WPF_Auto_Login {
 	 */
 	public function debug_mode() {
 
-		if ( ! wp_fusion()->settings->get( 'auto_login_debug_mode' ) ) {
+		if ( ! wpf_get_option( 'auto_login_debug_mode' ) ) {
 			return;
 		}
 
@@ -516,97 +516,97 @@ class WPF_Auto_Login {
 
 		// URL login enabled?
 
-		echo '* ' . __( 'Auto login enabled?' ) . ' ';
+		echo '* ' . esc_html__( 'Auto login enabled?' ) . ' ';
 
-		if ( ! wp_fusion()->settings->get( 'auto_login' ) ) {
-			echo __( 'No' ) . ' ❌';
+		if ( ! wpf_get_option( 'auto_login' ) ) {
+			echo esc_html__( 'No' ) . ' ❌';
 		} else {
-			echo __( 'Yes' ) . ' ✅';
+			echo esc_html__( 'Yes' ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
 		// Form login enabled?
 
-		echo '* ' . __( 'Form auto login enabled?' ) . ' ';
+		echo '* ' . esc_html__( 'Form auto login enabled?' ) . ' ';
 
-		if ( ! wp_fusion()->settings->get( 'auto_login_forms' ) ) {
-			echo __( 'No' ) . ' ❌';
+		if ( ! wpf_get_option( 'auto_login_forms' ) ) {
+			echo esc_html__( 'No' ) . ' ❌';
 		} else {
-			echo __( 'Yes' ) . ' ✅';
+			echo esc_html__( 'Yes' ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
 		// Set current user enabled?
 
-		echo '* ' . __( 'Set Current User enabled?' ) . ' ';
+		echo '* ' . esc_html__( 'Set Current User enabled?' ) . ' ';
 
-		if ( ! wp_fusion()->settings->get( 'auto_login_current_user' ) ) {
-			echo __( 'No' ) . ' ❌';
+		if ( ! wpf_get_option( 'auto_login_current_user' ) ) {
+			echo esc_html__( 'No' ) . ' ❌';
 		} else {
-			echo __( 'Yes' ) . ' ✅';
+			echo esc_html__( 'Yes' ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
-		// URL parameter
+		// URL parameter.
 
-		echo '* ' . __( 'URL parameter set?' ) . ' ';
+		echo '* ' . esc_html__( 'URL parameter set?' ) . ' ';
 
 		$contact_id = $this->get_contact_id_from_url();
 
 		if ( false === $contact_id ) {
-			echo __( 'No' );
+			echo esc_html__( 'No' );
 		} else {
-			echo __( 'Yes' ) . ' - Contact ID ' . $contact_id . ' ✅';
+			echo esc_html__( 'Yes' ) . ' - Contact ID ' . esc_html( $contact_id ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
-		// Auto-login cookie
+		// Auto-login cookie.
 
-		echo '* ' . __( 'wpf_contact cookie set?' ) . ' ';
+		echo '* ' . esc_html__( 'wpf_contact cookie set?' ) . ' ';
 
 		if ( empty( $_COOKIE['wpf_contact'] ) ) {
-			echo __( 'No' ) . ' ❌';
+			echo esc_html__( 'No' ) . ' ❌';
 		} else {
-			echo __( 'Yes' ) . ' ✅';
+			echo esc_html__( 'Yes' ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
-		// Auto-login user
+		// Auto-login user.
 
-		echo '* ' . __( 'Auto login user ID set?' ) . ' ';
+		echo '* ' . esc_html__( 'Auto login user ID set?' ) . ' ';
 
 		if ( empty( $this->auto_login_user['user_id'] ) ) {
-			echo __( 'No' ) . ' ❌';
+			echo esc_html__( 'No' ) . ' ❌';
 		} else {
-			echo __( 'Yes' ) . ' - User ID ' . $this->auto_login_user['user_id'] . ' ✅';
+			echo esc_html__( 'Yes' ) . ' - User ID ' . $this->auto_login_user['user_id'] . ' ✅';
 		}
 
 		echo PHP_EOL;
 
 		if ( doing_wpf_auto_login() ) {
 
-			// Tags
+			// Tags.
 
-			echo '* ' . __( 'Auto login tags: ' ) . PHP_EOL;
+			echo '* ' . esc_html__( 'Auto login tags: ' ) . PHP_EOL;
 
-			echo print_r( wp_fusion()->user->get_tags(), true );
+			echo wp_kses_post( wpf_print_r( wp_fusion()->user->get_tags(), true ) );
 
 			echo PHP_EOL;
 
-			// Fields
+			// Fields.
 
-			echo '* ' . __( 'Auto login usermeta: ' ) . PHP_EOL;
+			echo '* ' . esc_html__( 'Auto login usermeta: ' ) . PHP_EOL;
 
 			$meta = wp_fusion()->user->get_user_meta( wpf_get_current_user_id() );
 
 			unset( $meta[ wp_fusion()->crm->slug . '_tags' ] ); // we just displayed this above
 
-			echo print_r( $meta, true );
+			echo wp_kses_post( wpf_print_r( $meta, true ) );
 
 			echo PHP_EOL;
 
@@ -632,7 +632,7 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		if ( false == wp_fusion()->settings->get( 'auto_login' ) && false == wp_fusion()->settings->get( 'auto_login_forms' ) ) {
+		if ( ! wpf_get_option( 'auto_login' ) && ! wpf_get_option( 'auto_login_forms' ) ) {
 			return;
 		}
 
@@ -640,9 +640,9 @@ class WPF_Auto_Login {
 
 			echo '<div style="padding: 20px; border: 4px solid #ff0000; text-align: center;">';
 
-			echo '<strong>' . __( 'Heads up: It looks like you\'re using a WP Fusion auto-login link, but you\'re already logged into the site, so nothing will happen. Always test auto-login links in a private browser tab.', 'wp-fusion-lite' ) . '</strong><br /><br />';
+			echo '<strong>' . esc_html__( 'Heads up: It looks like you\'re using a WP Fusion auto-login link, but you\'re already logged into the site, so nothing will happen. Always test auto-login links in a private browser tab.', 'wp-fusion-lite' ) . '</strong><br /><br />';
 
-			echo '<em>(' . __( 'This message is only shown to admins and won\'t be visible to regular users.', 'wp-fusion-lite' ) . ')</em>';
+			echo '<em>(' . esc_html__( 'This message is only shown to admins and won\'t be visible to regular users.', 'wp-fusion-lite' ) . ')</em>';
 
 			echo '</div>';
 

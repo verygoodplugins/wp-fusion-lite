@@ -69,7 +69,7 @@ class WPF_Mautic {
 		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 
-		$mautic_url = wp_fusion()->settings->get( 'mautic_url' );
+		$mautic_url = wpf_get_option( 'mautic_url' );
 		if(!empty($mautic_url)){
 			$this->edit_url = trailingslashit($mautic_url).'s/contacts/view/%d';
 		}
@@ -85,20 +85,20 @@ class WPF_Mautic {
 
 	public function tracking_code_output() {
 
-		if ( false == wp_fusion()->settings->get( 'site_tracking' ) || true == wp_fusion()->settings->get( 'staging_mode' ) ) {
+		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
-		$url = wp_fusion()->settings->get( 'mautic_url' );
+		$url = wpf_get_option( 'mautic_url' );
 
 		echo '<!-- WP Fusion Mautic site tracking -->';
 		echo '<script>';
 		echo '(function(w,d,t,u,n,a,m){w["MauticTrackingObject"]=n;';
 		echo 'w[n]=w[n]||function(){(w[n].q=w[n].q||[]).push(arguments)},a=d.createElement(t),';
 		echo 'm=d.getElementsByTagName(t)[0];a.async=1;a.src=u;m.parentNode.insertBefore(a,m)';
-		echo '})(window,document,"script","' . trailingslashit( $url ) . 'mtc.js","mt");';
+		echo '})(window,document,"script","' . esc_url( trailingslashit( $url ) ) . 'mtc.js","mt");';
 
-		if ( true == wp_fusion()->settings->get( 'advanced_site_tracking' ) && wpf_is_user_logged_in() ) {
+		if ( wpf_get_option( 'advanced_site_tracking' ) && wpf_is_user_logged_in() ) {
 
 			$user = wpf_get_current_user();
 
@@ -106,7 +106,7 @@ class WPF_Mautic {
 
 			// NB: Does not work if you're currently logged into Mautic with the same email, test incognito
 
-			echo 'mt("send", "pageview", {"email": "' . $user->user_email . '"});';
+			echo 'mt("send", "pageview", {"email": "' . esc_js( $user->user_email ) . '"});';
 
 		} else {
 
@@ -132,7 +132,7 @@ class WPF_Mautic {
 			return;
 		}
 
-		if ( true != wp_fusion()->settings->get( 'advanced_site_tracking' ) ) {
+		if ( true != wpf_get_option( 'advanced_site_tracking' ) ) {
 			return;
 		}
 
@@ -178,26 +178,26 @@ class WPF_Mautic {
 
 			if ( isset( $payload->{'mautic.lead_post_save_update'}[0]->lead ) ) {
 
-				$post_data['contact_id'] = $payload->{'mautic.lead_post_save_update'}[0]->lead->id;
+				$post_data['contact_id'] = absint( $payload->{'mautic.lead_post_save_update'}[0]->lead->id );
 
 				if ( ! empty( $payload->{'mautic.lead_post_save_update'}[0]->lead->tags ) ) {
 
 					$post_data['tags'] = array();
 
 					foreach ( $payload->{'mautic.lead_post_save_update'}[0]->lead->tags as $tag ) {
-						$post_data['tags'][] = $tag->tag;
+						$post_data['tags'][] = sanitize_text_field( $tag->tag );
 					}
 				}
 			} elseif ( isset( $payload->{'mautic.lead_post_save_update'}[0]->contact ) ) {
 
-				$post_data['contact_id'] = $payload->{'mautic.lead_post_save_update'}[0]->contact->id;
+				$post_data['contact_id'] = absint( $payload->{'mautic.lead_post_save_update'}[0]->contact->id );
 
 				if ( ! empty( $payload->{'mautic.lead_post_save_update'}[0]->contact->tags ) ) {
 
 					$post_data['tags'] = array();
 
 					foreach ( $payload->{'mautic.lead_post_save_update'}[0]->contact->tags as $tag ) {
-						$post_data['tags'][] = $tag->tag;
+						$post_data['tags'][] = sanitize_text_field( $tag->tag );
 					}
 				}
 			}
@@ -208,13 +208,13 @@ class WPF_Mautic {
 
 			if ( empty( $user_id ) ) {
 
-				$email = $payload->{'mautic.lead_post_save_update'}[0]->lead->fields->core->email->value;
+				$email = sanitize_email( $payload->{'mautic.lead_post_save_update'}[0]->lead->fields->core->email->value );
 
 				$user = get_user_by( 'email', $email );
 
 				if ( ! empty( $user ) ) {
 
-					update_user_meta( $user->ID, 'mautic_contact_id', $contact_id );
+					update_user_meta( $user->ID, 'mautic_contact_id', $post_data['contact_id'] );
 
 				}
 			}
@@ -327,9 +327,9 @@ class WPF_Mautic {
 
 		// Get saved data from DB
 		if ( empty( $mautic_url ) || empty( $mautic_username ) || empty($mautic_password) ) {
-			$mautic_url = wp_fusion()->settings->get( 'mautic_url' );
-			$mautic_username = wp_fusion()->settings->get( 'mautic_username' );
-			$mautic_password = wp_fusion()->settings->get( 'mautic_password' );
+			$mautic_url = wpf_get_option( 'mautic_url' );
+			$mautic_username = wpf_get_option( 'mautic_username' );
+			$mautic_password = wpf_get_option( 'mautic_password' );
 		}
 
 		$auth_key = base64_encode($mautic_username . ':' . $mautic_password);
@@ -369,7 +369,7 @@ class WPF_Mautic {
 		if( $test == true ) {
 
 			$request  = $this->url . 'api/contacts';
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -444,7 +444,7 @@ class WPF_Mautic {
 		$available_tags = array();
 
 		$request  = $this->url . 'api/tags?limit=5000';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -483,7 +483,7 @@ class WPF_Mautic {
 
 		$crm_fields = array();
 		$request  = $this->url . 'api/fields/contact?limit=1000';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -519,7 +519,7 @@ class WPF_Mautic {
 
 		$contact_info = array();
 		$request      = $this->url . 'api/contacts?search=' . urlencode( 'email:"+' . $email_address . '"' ) . '&minimal=true';
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -529,17 +529,19 @@ class WPF_Mautic {
 
 		if ( empty( $body_json['contacts'] ) ) {
 
-			// Use tracking cookie if CORS is configured properly and the tracked contact doesn't have an email address
+			// Use tracking cookie if CORS is configured properly and the tracked contact doesn't have an email address.
 
-			if ( true == wp_fusion()->settings->get( 'advanced_site_tracking' ) ) {
+			if ( wpf_get_option( 'advanced_site_tracking' ) ) {
 
 				if ( isset( $_COOKIE['mtc_id'] ) && ( ! is_admin() || defined( 'DOING_AJAX' ) ) ) {
 
-					$contact_data = $this->load_contact( $_COOKIE['mtc_id'] );
+					$contact_id = absint( $_COOKIE['mtc_id'] );
+
+					$contact_data = $this->load_contact( $contact_id );
 
 					if ( ! is_wp_error( $contact_data ) && empty( $contact_data['user_email'] ) ) {
 
-						return $_COOKIE['mtc_id'];
+						return $contact_id;
 
 					}
 				}
@@ -569,7 +571,7 @@ class WPF_Mautic {
 
 		$contact_info = array();
 		$request      = $this->url . 'api/contacts/' . $contact_id;
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -585,7 +587,7 @@ class WPF_Mautic {
 
 
 		$found_new = false;
-		$available_tags = wp_fusion()->settings->get('available_tags');
+		$available_tags = wpf_get_option('available_tags');
 
 		foreach( $body_json['contact']['tags'] as $tag ) {
 			
@@ -624,7 +626,7 @@ class WPF_Mautic {
 		$params['method'] 	= 'PATCH';
 		$params['body']  	= array('tags' => $tags);
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -657,7 +659,7 @@ class WPF_Mautic {
 		$params['method'] 	= 'PATCH';
 		$params['body']  	= array('tags' => $tags);
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -691,7 +693,7 @@ class WPF_Mautic {
 		$params 		= $this->params;
 		$params['body'] = $data;
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -740,7 +742,7 @@ class WPF_Mautic {
 		$params['method'] = 'PATCH';
 		$params['body']   = $data;
 
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 
@@ -827,14 +829,14 @@ class WPF_Mautic {
 		}
 
 		$url      = $this->url . 'api/contacts/' . $contact_id;;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -870,7 +872,7 @@ class WPF_Mautic {
 		while ( $proceeed ) {
 
 			$url      = $this->url . 'api/contacts?limit=1000&minimal=true&search=' . urlencode( 'tag:"+' . $tag . '"' ) . '&start=' . $start;
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_safe_remote_get( $url, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

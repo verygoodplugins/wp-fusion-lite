@@ -65,7 +65,7 @@ class WPF_Intercom {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'set_country_names' ), 10, 2 );
 
-		$app_id_code = wp_fusion()->settings->get( 'app_id_code' );
+		$app_id_code = wpf_get_option( 'app_id_code' );
 
 		if ( ! empty( $app_id_code ) ) {
 			$this->edit_url = 'https://app.intercom.com/a/apps/' . $app_id_code . '/users/%s/all-conversations';
@@ -113,7 +113,7 @@ class WPF_Intercom {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = $payload->data->item->user->id;
+		$post_data['contact_id'] = sanitize_key( $payload->data->item->user->id );
 
 		return $post_data;
 
@@ -176,7 +176,7 @@ class WPF_Intercom {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) ) {
-			$access_key = wp_fusion()->settings->get( 'intercom_key' );
+			$access_key = wpf_get_option( 'intercom_key' );
 		}
 
 		$this->params = array(
@@ -212,7 +212,7 @@ class WPF_Intercom {
 		}
 
 		$request  = 'https://api.intercom.io/me';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -271,7 +271,7 @@ class WPF_Intercom {
 		$available_tags = array();
 
 		$request  = 'https://api.intercom.io/tags';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -311,13 +311,13 @@ class WPF_Intercom {
 		);
 
 		$request  = 'https://api.intercom.io/data_attributes/customer';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) && $response->get_error_message() == 'intercom_version_invalid' ) {
 
 			// Try v1.4 API
 			$request  = 'https://api.intercom.io/data_attributes';
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -359,7 +359,7 @@ class WPF_Intercom {
 		}
 
 		$request  = 'https://api.intercom.io/users?email=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -400,7 +400,7 @@ class WPF_Intercom {
 		$user_tags = array();
 
 		$request  = 'https://api.intercom.io/users/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -444,7 +444,7 @@ class WPF_Intercom {
 				)
 			);
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $url, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -484,7 +484,7 @@ class WPF_Intercom {
 				)
 			);
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $url, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -546,7 +546,7 @@ class WPF_Intercom {
 		$params         = $this->get_params();
 		$params['body'] = json_encode( $body );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -612,7 +612,7 @@ class WPF_Intercom {
 		$params         = $this->get_params();
 		$params['body'] = json_encode( $body );
 
-		$response = wp_remote_post( $url, $params );
+		$response = wp_safe_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -631,14 +631,14 @@ class WPF_Intercom {
 	public function load_contact( $contact_id ) {
 
 		$url      = 'https://api.intercom.io/users/' . $contact_id;
-		$response = wp_remote_get( $url, $this->get_params() );
+		$response = wp_safe_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		// Break the "name" field into firstname / lastname
@@ -694,7 +694,7 @@ class WPF_Intercom {
 				$url .= '?scroll_param=' . $param;
 			}
 
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_safe_remote_get( $url, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

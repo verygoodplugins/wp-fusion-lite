@@ -124,7 +124,7 @@ class WPF_BirdSend {
 
 		// Get saved data from DB
 		if ( empty( $access_token ) ) {
-			$access_token = wp_fusion()->settings->get( 'birdsend_token' );
+			$access_token = wpf_get_option( 'birdsend_token' );
 		}
 
 		$this->params = array(
@@ -196,7 +196,7 @@ class WPF_BirdSend {
 		}
 
 		$request  = 'https://api.birdsend.co/v1/account';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -249,7 +249,7 @@ class WPF_BirdSend {
 		while ( $proceed ) {
 
 			$request  = 'https://api.birdsend.co/v1/tags?per_page=100&page=' . $page;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -293,7 +293,7 @@ class WPF_BirdSend {
 		}
 
 		$request  = 'https://api.birdsend.co/v1/fields?per_page=100';
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -335,7 +335,7 @@ class WPF_BirdSend {
 		}
 
 		$request  = 'https://api.birdsend.co/v1/contacts?search_by=email&keyword=' . urlencode( $email_address );
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -366,7 +366,7 @@ class WPF_BirdSend {
 		}
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -413,7 +413,7 @@ class WPF_BirdSend {
 		$params['body']   = json_encode( $body );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id . '/tags';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -442,7 +442,7 @@ class WPF_BirdSend {
 		foreach ( $tags as $tag_id ) {
 
 			$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id . '/tags/' . $tag_id;
-			$response = wp_remote_request( $request, $params );
+			$response = wp_safe_remote_request( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -482,7 +482,7 @@ class WPF_BirdSend {
 		$params['body'] = json_encode( $update_data );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/';
-		$response = wp_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -534,7 +534,7 @@ class WPF_BirdSend {
 		$params['body']   = json_encode( $update_data );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id;
-		$response = wp_remote_request( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -558,14 +558,14 @@ class WPF_BirdSend {
 		}
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id;
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
 		// Move email into fields so it's loaded properly
@@ -605,7 +605,7 @@ class WPF_BirdSend {
 		while ( $proceed ) {
 
 			$request  = 'https://api.birdsend.co/v1/contacts?search_by=tag&keyword=' . urlencode( $tag ) . '&per_page=100&page=' . $page;
-			$response = wp_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

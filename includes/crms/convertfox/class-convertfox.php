@@ -125,7 +125,7 @@ class WPF_ConvertFox {
 
 		} elseif ( isset( $_COOKIE['wpf_gist_id'] ) ) {
 
-			$email = $_COOKIE['wpf_gist_id'];
+			$email = sanitize_email( wp_unslash( $_COOKIE['wpf_gist_id'] ) );
 
 		}
 
@@ -134,7 +134,7 @@ class WPF_ConvertFox {
 			echo '<!-- WP Fusion / Gist identify -->';
 			echo '<script type="text/javascript">';
 			echo 'if ( typeof gist !== "undefined" ) {';
-			echo 'gist.identify("' . $email . '");';
+			echo 'gist.identify("' . esc_js( $email ) . '");';
 			echo '}';
 			echo '</script>';
 
@@ -184,7 +184,7 @@ class WPF_ConvertFox {
 		} else {
 
 			$url      = 'https://api.getgist.com/contacts/' . $contact_id;
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_safe_remote_get( $url, $this->params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -210,7 +210,7 @@ class WPF_ConvertFox {
 
 		// Get saved data from DB
 		if ( empty( $api_key ) ) {
-			$api_key = wp_fusion()->settings->get( 'convertfox_key' );
+			$api_key = wpf_get_option( 'convertfox_key' );
 		}
 
 		$this->params = array(
@@ -244,7 +244,7 @@ class WPF_ConvertFox {
 		}
 
 		$request  = "https://api.getgist.com/tags";
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -299,7 +299,7 @@ class WPF_ConvertFox {
 		$available_tags = array();
 
 		$request  = "https://api.getgist.com/tags";
-		$response = wp_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -342,7 +342,7 @@ class WPF_ConvertFox {
 		$custom_fields = array();
 
 		$request    = "https://api.getgist.com/contacts?page=1&per_page=1";
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -389,7 +389,7 @@ class WPF_ConvertFox {
 
 		$contact_info = array();
 		$request      = "https://api.getgist.com/contacts?email=" . urlencode( $email_address );
-		$response     = wp_remote_get( $request, $this->params );
+		$response     = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -420,7 +420,7 @@ class WPF_ConvertFox {
 
 		$tags 		= array();
 		$request    = 'https://api.getgist.com/contacts/' . $contact_id;
-		$response   = wp_remote_get( $request, $this->params );
+		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -437,7 +437,7 @@ class WPF_ConvertFox {
 		}
 
 		// Check if we need to update the available tags list
-		$available_tags = wp_fusion()->settings->get( 'available_tags', array() );
+		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach( $tags as $tag_name ) {
 			if( !isset( $available_tags[ $tag_name ] ) ) {
@@ -476,7 +476,7 @@ class WPF_ConvertFox {
 
 			$params['body'] = json_encode( $update_data );
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $url, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -513,7 +513,7 @@ class WPF_ConvertFox {
 
 			$params['body'] = json_encode( $update_data );
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $url, $params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;
@@ -595,7 +595,7 @@ class WPF_ConvertFox {
 		$params           = $this->params;
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( 'https://api.getgist.com/contacts', $params );
+		$response = wp_safe_remote_post( 'https://api.getgist.com/contacts', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -689,7 +689,7 @@ class WPF_ConvertFox {
 		$params           = $this->params;
 		$params['body']   = json_encode( $update_data );
 
-		$response = wp_remote_post( 'https://api.getgist.com/contacts', $params );
+		$response = wp_safe_remote_post( 'https://api.getgist.com/contacts', $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -712,14 +712,14 @@ class WPF_ConvertFox {
 		}
 
 		$url      = 'https://api.getgist.com/contacts/' . $contact_id;
-		$response = wp_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		// Explode name into first name and last name
@@ -784,7 +784,7 @@ class WPF_ConvertFox {
 		while($proceed == true) {
 
 			$url      = 'https://api.getgist.com/contacts?page=' . $page . '&tags=' . $tag;
-			$response = wp_remote_get( $url, $this->params );
+			$response = wp_safe_remote_get( $url, $this->params );
 
 			if( is_wp_error( $response ) ) {
 				return $response;

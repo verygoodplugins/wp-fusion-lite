@@ -26,7 +26,7 @@ class WPF_Zoho_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -58,9 +58,11 @@ class WPF_Zoho_Admin {
 
 	public function maybe_oauth_complete() {
 
-		if ( isset( $_GET['code'] ) && isset( $_GET['location'] ) && isset( $_GET['crm'] ) && 'zoho' == $_GET['crm'] ) {
+		if ( isset( $_GET['code'] ) && isset( $_GET['location'] ) && isset( $_GET['accounts-server'] ) && isset( $_GET['crm'] ) && 'zoho' == $_GET['crm'] ) {
 
-			$location = sanitize_text_field( $_GET['location'] );
+			$location        = sanitize_text_field( wp_unslash( $_GET['location'] ) );
+			$code            = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+			$accounts_server = esc_url_raw( wp_unslash( $_GET['accounts-server'] ) );
 
 			if( $location == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
@@ -76,7 +78,7 @@ class WPF_Zoho_Admin {
 				$api_domain    = 'https://www.zohoapis.com';
 			}
 
-			$response = wp_remote_post( $_GET['accounts-server'] . '/oauth/v2/token?code=' . $_GET['code'] . '&client_id=' . $this->crm->client_id . '&grant_type=authorization_code&client_secret=' . $client_secret . '&redirect_uri=https%3A%2F%2Fwpfusionplugin.com%2Fparse-zoho-oauth.php' );
+			$response = wp_safe_remote_post( $accounts_server . '/oauth/v2/token?code=' . $code . '&client_id=' . $this->crm->client_id . '&grant_type=authorization_code&client_secret=' . $client_secret . '&redirect_uri=https%3A%2F%2Fwpfusionplugin.com%2Fparse-zoho-oauth.php' );
 
 			if ( is_wp_error( $response ) ) {
 				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
@@ -96,7 +98,7 @@ class WPF_Zoho_Admin {
 			wp_fusion()->settings->set( 'zoho_refresh_token', $body->refresh_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
 
-			wp_redirect( get_admin_url() . 'options-general.php?page=wpf-settings#setup' );
+			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
 
 		}
@@ -129,7 +131,7 @@ class WPF_Zoho_Admin {
 
 			$new_settings['zoho_header']['desc'] = '<table class="form-table"><tr>';
 			$new_settings['zoho_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="' . $auth_url . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
+			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="' . esc_url( $auth_url ) . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['zoho_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
@@ -147,7 +149,7 @@ class WPF_Zoho_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'zoho_token', 'zoho_refresh_token' ),
-				'desc'        => '<a href="' . $auth_url . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</a>',
+				'desc'        => '<a href="' . esc_url( $auth_url ) . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</a>',
 			);
 
 		}
@@ -251,8 +253,8 @@ class WPF_Zoho_Admin {
 	public function show_field_zoho_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -266,8 +268,10 @@ class WPF_Zoho_Admin {
 
 	public function test_connection() {
 
-		$access_token = sanitize_text_field( $_POST['zoho_token'] );
-		$refresh_token = sanitize_text_field( $_POST['zoho_refresh_token'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$access_token  = sanitize_text_field( wp_unslash( $_POST['zoho_token'] ) );
+		$refresh_token = sanitize_text_field( wp_unslash( $_POST['zoho_refresh_token'] ) );
 
 		$connection = $this->crm->connect( $access_token, $refresh_token, true );
 
@@ -277,13 +281,13 @@ class WPF_Zoho_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['zoho_token']            = $access_token;
 			$options['zoho_refresh_token']    = $refresh_token;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

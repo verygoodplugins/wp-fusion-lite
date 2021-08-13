@@ -47,7 +47,7 @@ class WPF_FluentCRM_REST_Admin {
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -78,7 +78,7 @@ class WPF_FluentCRM_REST_Admin {
 
 		if ( isset( $_GET['site_url'] ) && isset( $_GET['crm'] ) && 'fluentcrm' == $_GET['crm'] ) {
 
-			$url      = esc_url( urldecode( $_GET['site_url'] ) );
+			$url      = esc_url_raw( urldecode( $_GET['site_url'] ) );
 			$username = sanitize_text_field( urldecode( $_GET['user_login'] ) );
 			$password = sanitize_text_field( urldecode( $_GET['password'] ) );
 
@@ -277,8 +277,8 @@ class WPF_FluentCRM_REST_Admin {
 	public function show_field_fluentcrm_rest_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 
 	}
 
@@ -292,9 +292,11 @@ class WPF_FluentCRM_REST_Admin {
 	 */
 	public function test_connection() {
 
-		$url      = esc_url( $_POST['fluentcrm_rest_url'] );
-		$username = sanitize_text_field( $_POST['fluentcrm_rest_username'] );
-		$password = sanitize_text_field( $_POST['fluentcrm_rest_password'] );
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		$url      = esc_url_raw( wp_unslash( $_POST['fluentcrm_rest_url'] ) );
+		$username = sanitize_text_field( wp_unslash( $_POST['fluentcrm_rest_username'] ) );
+		$password = sanitize_text_field( wp_unslash( $_POST['fluentcrm_rest_password'] ) );
 
 		$connection = $this->crm->connect( $url, $username, $password, true );
 
@@ -304,14 +306,14 @@ class WPF_FluentCRM_REST_Admin {
 
 		} else {
 
-			$options                            = wp_fusion()->settings->get_all();
+			$options                            = array();
 			$options['fluentcrm_rest_url']      = $url;
 			$options['fluentcrm_rest_username'] = $username;
 			$options['fluentcrm_rest_password'] = $password;
 			$options['crm']                     = $this->slug;
 			$options['connection_configured']   = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

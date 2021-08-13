@@ -709,8 +709,8 @@ class WP_Fusion_Options {
 		<?php do_action( 'wpf_settings_page_before_wrap' ); ?>
 
 		<div class="wrap wpf-settings-wrap">
-		<img id="wpf-settings-logo" src="<?php echo WPF_DIR_URL; ?>/assets/img/logo-sm-trans.png">
-		<h2 class="wp-heading-inline" id="wpf-settings-header"><?php echo $page['page_title']; ?></h2>
+		<img id="wpf-settings-logo" src="<?php echo esc_url( WPF_DIR_URL . '/assets/img/logo-sm-trans.png' ); ?>">
+		<h2 class="wp-heading-inline" id="wpf-settings-header"><?php echo esc_html( $page['page_title'] ); ?></h2>
 		<?php do_action( 'wpf_settings_page_title' ); ?>
 
 		<hr class="wp-header-end" />
@@ -735,8 +735,8 @@ class WP_Fusion_Options {
 
 			if ( $this->errors ) {
 				foreach ( $this->errors as $id => $error_message ) {
-					echo '<div id="message" class="error"><p><i class="fa fa-warning"></i>' . $error_message . '</p></div>';
-					echo '<style type="text/css">#' . $id . '{ border: 1px solid #d00; }</style>';
+					echo '<div id="message" class="error"><p><i class="fa fa-warning"></i>' . esc_html( $error_message ) . '</p></div>';
+					echo '<style type="text/css">#' . esc_attr( $id ) . '{ border: 1px solid #d00; }</style>';
 				}
 			}
 
@@ -744,11 +744,11 @@ class WP_Fusion_Options {
 
 		</div>
 
-		<form id="<?php echo $page['slug']; ?>" class="
+		<form id="<?php echo esc_attr( $page['slug'] ); ?>" class="
 								<?php
 								if ( $this->options['connection_configured'] == false ) {
 									echo 'setup';}
-?>
+								?>
 " action="" method="post">
 			<?php wp_nonce_field( $this->setup['project_slug'], $this->setup['project_slug'] . '_nonce' ); ?>
 			<input type="hidden" name="action" value="update">
@@ -764,31 +764,34 @@ class WP_Fusion_Options {
 
 				<ul class="nav nav-tabs">
 					<?php $isfirst = true; ?>
-		<?php foreach ( $page['sections'] as $section_slug => $section ) { ?>
+				<?php foreach ( $page['sections'] as $section_slug => $section ) { ?>
 
 						<?php if ( ! is_array( $section ) ) : ?>
 
-							<li id="tab-<?php echo $section_slug; ?>"
+							<li id="tab-<?php echo esc_attr( $section_slug ); ?>"
 													<?php
 													if ( $isfirst ) {
 														echo "class='active'"; }
-?>
+													?>
 >
-								<a href="#<?php echo $section_slug; ?>" data-toggle="tab" data-taget="<?php echo $section_slug; ?>"><?php echo $section; ?></a>
+								<a href="#<?php echo esc_attr( $section_slug ); ?>" data-toggle="tab" data-taget="<?php echo esc_attr( $section_slug ); ?>"><?php echo esc_html( $section ); ?></a>
 							</li>
 
 						<?php else : ?>
 
 							<?php if ( isset( $section['url'] ) ) : ?>
 
-								<li id="tab-<?php echo $section_slug; ?>"> 
-									<a href="<?php echo $section['url']; ?>"><?php echo $section['title']; ?></a>
+								<li id="tab-<?php echo esc_attr( $section_slug ); ?>">
+									<a href="<?php echo esc_url( $section['url'] ); ?>"><?php echo esc_html( $section['title'] ); ?></a>
 								</li>
 
 							<?php elseif ( isset( $section['slug'] ) ) : ?>
 
-								<li id="tab-<?php echo $section_slug; ?>"> 
-									<a href="<?php menu_page_url( $section['slug'] ); ?>"><?php echo $section['title']; ?></a>
+								<li id="tab-<?php echo esc_attr( $section_slug ); ?>"> 
+
+									<?php $allowed_tags = array( 'span' => array( 'title' => true, 'class' => true ) ); ?>
+
+									<a href="<?php echo esc_url( menu_page_url( $section['slug'], false ) ); ?>"><?php echo wp_kses( $section['title'], $allowed_tags ); ?></a>
 								</li>
 
 							<?php endif; ?>
@@ -801,7 +804,7 @@ class WP_Fusion_Options {
 							</ul>
 
 						<?php } ?>
-			<div class="<?php echo $page['id']; ?>-tab-content">
+			<div class="<?php echo esc_attr( $page['id'] ); ?>-tab-content">
 				<?php $isfirst = true; ?>
 
 				<?php
@@ -817,21 +820,21 @@ class WP_Fusion_Options {
 				}
 
 				foreach ( $page['sections'] as $section_slug => $section ) {
-				?>
+					?>
 
 					<?php
 					if ( is_array( $section ) ) {
 						continue;}
-?>
+					?>
 
 					<div class="tab-pane 
 					<?php
 					if ( $isfirst ) {
 						echo 'active'; }
-?>
-" id="<?php echo $section_slug; ?>">
+					?>
+" id="<?php echo esc_attr( $section_slug ); ?>">
 						<?php if ( count( $page['sections'] ) > 1 ) { ?>
-							<h3><?php echo $section; ?></h3>
+							<h3><?php echo esc_html( $section ); ?></h3>
 						<?php } ?>
 
 						<?php
@@ -848,10 +851,10 @@ class WP_Fusion_Options {
 					<?php $isfirst = false; ?>
 				<?php } ?>
 			</div>
-			<p class="submit"><input name="Submit" type="submit" class="button-primary" value="<?php _e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
+			<p class="submit"><input name="Submit" type="submit" class="button-primary" value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
 		</form>
 
-	<?php
+		<?php
 	}
 
 	/**
@@ -970,7 +973,7 @@ class WP_Fusion_Options {
 			}
 			?>
 		</table>
-	<?php
+		<?php
 	}
 
 	/*
@@ -997,10 +1000,10 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_begin( $id, $field ) {
 		echo '<tr valign="top"' . ( ! empty( $field['disabled'] ) ? ' class="disabled"' : '' ) . '>';
-		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label>';
+		echo '<th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( $field['title'] ) . '</label>';
 
 		if ( isset( $field['tooltip'] ) ) {
-			echo ' <i class="fa fa-question-circle wpf-tip wpf-tip-right" data-tip="' . $field['tooltip'] . '"></i>';
+			echo ' <i class="fa fa-question-circle wpf-tip wpf-tip-right" data-tip="' . esc_attr( $field['tooltip'] ) . '"></i>';
 		}
 
 		echo '</th>';
@@ -1019,7 +1022,7 @@ class WP_Fusion_Options {
 	private function show_field_end( $id, $field ) {
 
 		if ( ! empty( $field['desc'] ) ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
+			echo '<span class="description">' . wp_kses_post( $field['desc'] ) . '</span>';
 		}
 		echo '</td>';
 		echo '</tr>';
@@ -1033,47 +1036,17 @@ class WP_Fusion_Options {
 	 *
 	 * @return mixed
 	 */
-	private function validate_field_default( $input, $setting ) {
+	private function validate_field_default( $input, $setting = false ) {
+
+		if ( is_array( $input ) ) {
+			$input = array_map( array( $this, 'validate_field_default' ), $input );
+		} else {
+			$input = sanitize_text_field( $input );
+		}
 
 		return $input;
 	}
 
-	/**
-	 *
-	 * Wrapper for fields with subfields
-	 */
-
-	/**
-	 * Show subfields field begin
-	 *
-	 * @param string $id
-	 * @param array  $field
-	 */
-	private function show_field_subfields_begin( $id, $field ) {
-		echo '<tr valign="top">';
-		echo '<th scope="row"><label for="' . $id . '">' . $field['title'] . '</label></th>';
-		echo '<td class="subfields">';
-	}
-
-	/**
-	 * Show subfields field
-	 *
-	 * @param string $id
-	 * @param array  $field
-	 */
-	private function show_field_subfields( $id, $field ) {
-
-		foreach ( $field['subfields'] as $subfield_id => $subfield ) {
-
-			if ( has_action( 'show_field_' . $subfield['type'] ) ) {
-
-				do_action( 'show_field_' . $subfield['type'], $id, $subfield );
-			} else {
-				// If no custom override, use the default
-				call_user_func( array( $this, 'show_field_' . $subfield['type'] ), $id, $subfield, $subfield_id );
-			}
-		}
-	}
 
 	/**
 	 *
@@ -1100,11 +1073,11 @@ class WP_Fusion_Options {
 	private function show_field_heading( $id, $field ) {
 
 		if ( ! empty( $field['title'] ) ) {
-			echo '<h4>' . $field['title'] . '</h4>';
+			echo '<h4>' . esc_html( $field['title'] ) . '</h4>';
 		}
 
 		if ( ! empty( $field['desc'] ) ) {
-			echo $field['desc'];
+			echo wp_kses_post( $field['desc'] );
 		}
 	}
 
@@ -1142,10 +1115,10 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_paragraph( $id, $field ) {
 		if ( isset( $field['title'] ) ) {
-			echo '<h3 class="title">' . $field['title'] . '</h3>';
+			echo '<h3 class="title">' . esc_html( $field['title'] ) . '</h3>';
 		}
 
-		echo '<p' . ( $field['class'] ? ' class="' . $field['class'] . '"' : '' ) . '>' . $field['desc'] . '</p>';
+		echo '<p' . ( $field['class'] ? ' class="' . esc_attr( $field['class'] ) . '"' : '' ) . '>' . wp_kses_post( $field['desc'] ) . '</p>';
 	}
 
 	/**
@@ -1200,11 +1173,9 @@ class WP_Fusion_Options {
 		}
 
 		if ( isset( $field['format'] ) && $field['format'] == 'phone' ) {
-
-			echo '<input id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="form-control bfh-phone ' . $field['class'] . '" data-format="(ddd) ddd-dddd" type="text" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" placeholder="' . $field['std'] . '" value="' . esc_attr( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+			echo '<input id="' . esc_attr( $id ) . '" class="form-control bfh-phone ' . esc_attr( $field['class'] ) . '" data-format="(ddd) ddd-dddd" type="text" id="' . esc_attr( $id ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 		} else {
-
-			echo '<input id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="form-control ' . $field['class'] . '" type="text" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" placeholder="' . $field['std'] . '" value="' . esc_attr( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+			echo '<input id="' . esc_attr( $id ) . '" class="form-control ' . esc_attr( $field['class'] ) . '" type="text" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 		}
 	}
 
@@ -1235,14 +1206,14 @@ class WP_Fusion_Options {
 
 			if ( preg_match( '/^\d{5}$/', $input ) ) {
 
-				return $input;
+				return (int) $input;
 			} else {
 
 				return new WP_Error( 'error', __( 'Invalid ZIP code.' ), $input );
 			}
 		} elseif ( $setting['format'] == 'html' ) {
 
-			return stripslashes( $input );
+			return wp_kses_post( stripslashes( $input ) );
 
 		} else {
 
@@ -1279,7 +1250,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_textarea( $id, $field ) {
 
-		echo '<textarea class="form-control ' . $field['class'] . '" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" placeholder="' . $field['placeholder'] . '" rows="' . $field['rows'] . '" cols="' . $field['cols'] . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . format_for_editor( $this->options[ $id ] ) . '</textarea>';
+		echo '<textarea class="form-control ' . esc_attr( $field['class'] ) . '" id="' . esc_attr( $id ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['placeholder'] ) . '" rows="' . (int) $field['rows'] . '" cols="' . (int) $field['cols'] . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . format_for_editor( $this->options[ $id ] ) . '</textarea>';
 	}
 
 	/**
@@ -1293,7 +1264,7 @@ class WP_Fusion_Options {
 	 */
 	public function validate_field_textarea( $input, $setting ) {
 
-		return esc_textarea( $input );
+		return sanitize_textarea_field( $input );
 	}
 
 	/**
@@ -1329,10 +1300,10 @@ class WP_Fusion_Options {
 			$field['class'] = '';
 		}
 
-		echo '<input class="checkbox ' . $field['class'] . '" type="checkbox" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . trim( $unlock ) . '"' : '' ) . ' />';
+		echo '<input class="checkbox ' . esc_attr( $field['class'] ) . '" type="checkbox" id="' . esc_attr( $id ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . esc_attr( trim( $unlock ) ) . '"' : '' ) . ' />';
 
 		if ( $field['desc'] != '' ) {
-			echo '<label for="' . $id . '">' . $field['desc'] . '</label>';
+			echo '<label for="' . esc_attr( $id ) . '">' . wp_kses_post( $field['desc'] ) . '</label>';
 		}
 
 	}
@@ -1374,9 +1345,9 @@ class WP_Fusion_Options {
 				$this->options[ $id ][ $value ] = false;
 			}
 
-			echo '<input class="checkbox ' . $field['class'] . '" type="checkbox" id="' . $id . '-' . $value . '" name="' . $this->option_group . '[' . $id . '][' . $value . ']" value="1" ' . checked( $this->options[ $id ][ $value ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' />';
+			echo '<input class="checkbox ' . esc_attr( $field['class'] ) . '" type="checkbox" id="' . esc_attr( $id ) . '-' . esc_attr( $value ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . '][' . esc_attr( $value ) . ']" value="1" ' . checked( $this->options[ $id ][ $value ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' />';
 
-			echo '<label for="' . $id . '-' . $value . '">' . $label . '</label><br />';
+			echo '<label for="' . esc_attr( $id ) . '-' . esc_attr( $value ) . '">' . esc_html( $label ) . '</label><br />';
 
 		}
 
@@ -1415,7 +1386,8 @@ class WP_Fusion_Options {
 
 		foreach ( $field['choices'] as $value => $label ) {
 
-			echo '<input class="radio ' . $field['class'] . '" type="radio" name="' . $this->option_group . '[' . $id . ']" id="' . $id . $i . '" value="' . esc_attr( $value ) . '" ' . checked( $this->options[ $id ], $value, false ) . ' ' . ( $field['disabled'] ? 'disabled=true' : '' ) . '><label for="' . $id . $i . '">' . $label . '</label>';
+			echo '<input class="radio ' . esc_attr( $field['class'] ) . '" type="radio" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" id="' . esc_attr( $id . $i ) . '" value="' . esc_attr( $value ) . '" ' . checked( $this->options[ $id ], $value, false ) . ' ' . ( $field['disabled'] ? 'disabled=true' : '' ) . '>';
+			echo '<label for="' . esc_attr( $id . $i ) . '">' . esc_html( $label ) . '</label>';
 
 			if ( $i < count( $field['choices'] ) - 1 ) {
 				echo '<br />';
@@ -1457,14 +1429,14 @@ class WP_Fusion_Options {
 			$this->options[ $id ] = array();
 		}
 
-		echo '<select multiple="multiple" id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="select4 ' . $field['class'] . '" name="' . $this->option_group . '[' . $id . '][]' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" ' . ( $field['disabled'] ? 'disabled="true" ' : '' ) . ( $field['placeholder'] ? 'data-placeholder="' . $field['placeholder'] . '" ' : '' ) . '>';
+		echo '<select multiple="multiple" id="' . esc_attr( $id ) . '" class="select4 ' . esc_attr( $field['class'] ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . '][]" ' . ( $field['disabled'] ? 'disabled="true" ' : '' ) . ( $field['placeholder'] ? 'data-placeholder="' . esc_attr( $field['placeholder'] ) . '" ' : '' ) . '>';
 
 		if ( isset( $field['placeholder'] ) ) {
 			echo '<option></option>';
 		}
 
 		foreach ( (array) $field['choices'] as $value => $label ) {
-			echo '<option value="' . esc_attr( $value ) . '"' . selected( true, in_array( $value, $this->options[ $id ] ), false ) . '>' . $label . '</option>';
+			echo '<option value="' . esc_attr( $value ) . '"' . selected( true, in_array( $value, $this->options[ $id ] ), false ) . '>' . esc_html( $label ) . '</option>';
 		}
 
 		echo '</select>';
@@ -1520,13 +1492,13 @@ class WP_Fusion_Options {
 			$field['class'] .= 'select4-search';
 		}
 
-		echo '<select id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="select4 ' . $field['class'] . '" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . ' ' . ( $field['placeholder'] ? 'data-placeholder="' . $field['placeholder'] . '"' : '' ) . ' ' . ( $field['allow_null'] == false ? 'data-allow-clear="false"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . trim( $unlock ) . '"' : '' ) . '>';
+		echo '<select id="' . esc_attr( $id ) . '" class="select4 ' . esc_attr( $field['class'] ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . ' ' . ( $field['placeholder'] ? 'data-placeholder="' . esc_attr( $field['placeholder'] ) . '"' : '' ) . ' ' . ( $field['allow_null'] == false ? 'data-allow-clear="false"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . esc_attr( trim( $unlock ) ) . '"' : '' ) . '>';
 		if ( $field['allow_null'] == true || ! empty( $field['placeholder'] ) ) {
 			echo '<option></option>';}
 
 		if ( isset( $field['choices'] ) && is_array( $field['choices'] ) ) {
 			foreach ( $field['choices'] as $value => $label ) {
-				echo '<option value="' . esc_attr( $value ) . '"' . selected( $this->options[ $id ], $value, false ) . '>' . $label . '</option>';
+				echo '<option value="' . esc_attr( $value ) . '"' . selected( $this->options[ $id ], $value, false ) . '>' . esc_html( $label ) . '</option>';
 			}
 		}
 
@@ -1563,7 +1535,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_number( $id, $field, $subfield_id = null ) {
 
-		echo '<input id="' . ( $subfield_id ? $subfield_id : $id ) . '" type="number" class="select form-control ' . $field['class'] . '" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" min="' . $field['min'] . '" ' . ( $field['max'] ? 'max=' . $field['max'] : '' ) . ' value="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+		echo '<input id="' . esc_attr( $id ) . '" type="number" class="select form-control ' . esc_attr( $field['class'] ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" min="' . (int) $field['min'] . '" ' . ( $field['max'] ? 'max=' . (int) $field['max'] : '' ) . ' value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 	}
 
 	/**
@@ -1580,11 +1552,10 @@ class WP_Fusion_Options {
 		if ( ! empty( $setting['min'] ) && $input < $setting['min'] ) {
 			return new WP_Error( 'error', __( 'Number must be greater than or equal to ' . $setting['min'] . '.' ), $input );
 		} elseif ( $input > $setting['max'] && $setting['max'] != null ) {
-
 			return new WP_Error( 'error', __( 'Number must be less than or equal to ' . $setting['max'] . '.' ), $input );
 		} else {
 
-			return $input;
+			return (int) $input;
 		}
 	}
 
@@ -1612,7 +1583,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_slider( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-slider ' . $field['class'] . '" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-min="' . $field['min'] . '" ' . ( $field['max'] ? 'data-max=' . $field['max'] : '' ) . ' data-value="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-slider ' . esc_attr( $field['class'] ) . '" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-min="' . (int) $field['min'] . '" ' . ( $field['max'] ? 'data-max=' . (int) $field['max'] : '' ) . ' data-value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '></div>';
 	}
 
 	/**
@@ -1641,7 +1612,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_date( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-datepicker ' . $field['class'] . '" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-format="' . $field['format'] . '" data-date="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" data-min="' . $field['min'] . '" data-max="' . $field['max'] . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-datepicker ' . esc_attr( $field['class'] ) . '" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-format="' . esc_attr( $field['format'] ) . '" data-date="' . esc_attr( $this->options[ $id ] ) . '" data-min="' . (int) $field['min'] . '" data-max="' . (int) $field['max'] . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '></div>';
 	}
 
 	/**
@@ -1667,7 +1638,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_time( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-timepicker ' . $field['class'] . '" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-time="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-timepicker ' . esc_attr( $field['class'] ) . '" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-time="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '></div>';
 	}
 
 	/**
@@ -1694,7 +1665,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_hidden( $id, $field ) {
 
-		echo '<input id="' . $id . '" type="hidden" name="' . $this->option_group . '[' . $id . ']" value="' . $this->options[ $id ] . '">';
+		echo '<input id="' . esc_attr( $id ) . '" type="hidden" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->options[ $id ] ) . '">';
 
 	}
 
@@ -1734,7 +1705,7 @@ class WP_Fusion_Options {
 
 		$this->options[ $id ] = stripslashes( $this->options[ $id ] );
 
-		echo '<input id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="form-control ' . $field['class'] . '" type="password" name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" placeholder="' . $field['std'] . '" value="' . esc_attr( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+		echo '<input id="' . esc_attr( $id ) . '" class="form-control ' . esc_attr( $field['class'] ) . '" type="password" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 
 	}
 
@@ -1765,7 +1736,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_code( $id, $field ) {
 
-		echo '<textarea id="' . $id . '" class="code_text ' . $field['class'] . '" name="' . $this->option_group . '[' . $id . ']" data-lang="' . $field['lang'] . '" data-theme="' . $field['theme'] . '">' . ( ! empty( $this->options[ $id ] ) ? stripslashes( $this->options[ $id ] ) : '' ) . '</textarea>';
+		echo '<textarea id="' . esc_attr( $id ) . '" class="code_text ' . esc_attr( $field['class'] ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-lang="' . esc_attr( $field['lang'] ) . '" data-theme="' . esc_attr( $field['theme'] ) . '">' . ( ! empty( $this->options[ $id ] ) ? esc_textarea( stripslashes( $this->options[ $id ] ) ) : '' ) . '</textarea>';
 	}
 
 	/**
@@ -1797,7 +1768,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_font_size( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-selectbox bfh-fontsizes ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-fontsize="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" data-blank="false"></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-selectbox bfh-fontsizes ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-fontsize="' . esc_attr( $this->options[ $id ] ) . '" data-blank="false"></div>';
 	}
 
 	/**
@@ -1809,7 +1780,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_font_face( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-selectbox bfh-googlefonts ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-font="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '"></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-selectbox bfh-googlefonts ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-font="' . esc_attr( $this->options[ $id ] ) . '"></div>';
 	}
 
 	/**
@@ -1821,7 +1792,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_font_weight( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-selectbox ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-value="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '">
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-selectbox ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-value="' . esc_attr( $this->options[ $id ] ) . '">
 		  <div data-value="100">100</div>
 		  <div data-value="200">200</div>
 		  <div data-value="300">300</div>
@@ -1843,7 +1814,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_font_style( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-selectbox ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-value="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '">
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-selectbox ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-value="' . esc_attr( $this->options[ $id ] ) . '">
 		  <div data-value="normal">Normal</div>
 		  <div data-value="italic">Italic</div>
 		</div>';
@@ -1858,7 +1829,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_color( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-colorpicker ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-color="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '" data-close="false"></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-colorpicker ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-color="' . esc_attr( $this->options[ $id ] ) . '" data-close="false"></div>';
 	}
 
 	/**
@@ -1911,7 +1882,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_state( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-selectbox bfh-states ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-country="' . $field['country'] . '" data-state="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '"></div>';
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-selectbox bfh-states ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-country="' . esc_attr( $field['country'] ) . '" data-state="' . esc_attr( $this->options[ $id ] ) . '"></div>';
 	}
 
 	/**
@@ -1941,76 +1912,7 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_country( $id, $field, $subfield_id = null ) {
 
-		echo '<div id="' . ( $subfield_id ? $subfield_id : $id ) . '" class="bfh-selectbox bfh-countries ' . $field['class'] . '"" data-name="' . $this->option_group . '[' . $id . ']' . ( $subfield_id ? '[' . $subfield_id . ']' : '' ) . '" data-flags="true" data-country="' . ( $subfield_id ? $this->options[ $id ][ $subfield_id ] : $this->options[ $id ] ) . '"></div>';
-	}
-
-	/**
-	 *
-	 * File upload field and utility functions
-	 */
-
-	/**
-	 * Add data encoding type for file uploading
-	 *
-	 * @since  0.1
-	 * @access public
-	 */
-	public function add_enctype() {
-		echo ' enctype="multipart/form-data"';
-	}
-
-	/**
-	 * Defaults for file field
-	 *
-	 * @return array $args
-	 */
-	private function default_field_file() {
-
-		$args = array(
-			'layout' => 'standard',
-			'width'  => 250,
-			'height' => 150,
-		);
-
-		return $args;
-	}
-
-	/**
-	 * Show file field
-	 *
-	 * @param $id
-	 * @param $field
-	 *
-	 * @internal param string $input
-	 *
-	 * @return string $input
-	 */
-	private function show_field_file( $id, $field ) {
-
-		if ( $field['layout'] == 'image' ) {
-
-			echo '<div class="fileinput fileinput-field fileinput-image ' . ( isset( $this->options[ $id ] ) && $this->options[ $id ] != '' ? 'fileinput-exists' : 'fileinput-new' ) . '" data-provides="fileinput">
-			  <div class="fileinput-new thumbnail" style="width: ' . $field['width'] . 'px; height: ' . $field['height'] . 'px;">
-			    <img data-src="' . $this->selfpath . 'js/holder.js/' . $field['width'] . 'x' . $field['height'] . '">
-			  </div>
-			  <div class="fileinput-preview fileinput-exists thumbnail" style="max-width: ' . $field['width'] . 'px; max-height: ' . $field['height'] . 'px;">
-			  ' . ( isset( $this->options[ $id ] ) && $this->options[ $id ] != '' ? '<img src="' . $this->options[ $id ] . '">' : '' ) . '
-			  </div>
-			  <div>
-			    <span class="btn btn-default btn-file"><span class="fileinput-new">Select image</span><span class="fileinput-exists">Change</span><input class="fileinput-input" type="text" value="' . ( ! empty( $this->options[ $id ] ) ? $this->options[ $id ] : '' ) . '" name="' . $this->option_group . '[' . $id . ']"></span>
-			    <a href="#" class="btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-			  </div>
-			</div>';
-		} else {
-
-			echo '<div id="' . $id . '" class="fileinput fileinput-field fileinput-file ' . ( isset( $this->options[ $id ] ) && $this->options[ $id ] != '' ? 'fileinput-exists' : 'fileinput-new' ) . '" data-provides="fileinput">
-			  <div class="input-group">
-			    <div class="form-control uneditable-input span3" data-trigger="fileinput"><i class="fa fa-file-o fileinput-exists"></i> <span class="fileinput-filename">' . basename( $this->options[ $id ] ) . '</span></div>
-			    <span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Select file</span><span class="fileinput-exists">Change</span><input class="fileinput-input" type="text" value="' . $this->options[ $id ] . '" name="' . $this->option_group . '[' . $id . ']"></span>
-			    <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-			  </div>
-			</div>';
-		}
+		echo '<div id="' . esc_attr( $id ) . '" class="bfh-selectbox bfh-countries ' . esc_attr( $field['class'] ) . '"" data-name="' . $this->option_group . '[' . esc_attr( $id ) . ']" data-flags="true" data-country="' . esc_attr( $this->options[ $id ] ) . '"></div>';
 	}
 
 	/**
@@ -2046,7 +1948,7 @@ class WP_Fusion_Options {
 
 		$settings = array(
 			'editor_class'  => 'at-wysiwyg ' . $field['class'],
-			'textarea_name' => $this->option_group . '[' . $id . ']',
+			'textarea_name' => $this->option_group . '[' . esc_attr( $id ) . ']',
 			'media_buttons' => $field['media_buttons'],
 			'wpautop'       => $field['wpautop'],
 			'textarea_rows' => $field['textarea_rows'],
@@ -2054,99 +1956,6 @@ class WP_Fusion_Options {
 		);
 
 		wp_editor( stripslashes( stripslashes( html_entity_decode( $this->options[ $id ] ) ) ), $id, $settings );
-	}
-
-	/**
-	 *
-	 * Import, export, and utility functions
-	 */
-
-	/**
-	 * Show export field
-	 *
-	 * @param string $id
-	 * @param array  $field
-	 */
-
-	private function show_field_export( $id, $field ) {
-
-		$nonce = wp_create_nonce( 'export-options' );
-
-		echo '<a id="' . $id . '" class="button button-default" href="' . admin_url( 'admin-post.php?action=export&option_group=' . $this->option_group . '&_wpnonce=' . $nonce ) . '" >Download Export</a>';
-	}
-
-	/**
-	 * Prepare and serve export settings
-	 *
-	 * @return string $content
-	 */
-
-	public function download_export() {
-
-		if ( $this->option_group == $_REQUEST['option_group'] ) {
-
-			if ( ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'export-options' ) ) {
-				wp_die( 'Security check' );
-			}
-			// here you get the options to export and set it as content, ex:
-			$content   = base64_encode( serialize( $this->options ) );
-			$file_name = 'exported_settings_' . date( 'm-d-y' ) . '.txt';
-			header( 'HTTP/1.1 200 OK' );
-			if ( ! current_user_can( 'edit_theme_options' ) ) {
-				wp_die( '<p>' . __( 'You do not have sufficient permissions to edit templates for this site.' ) . '</p>' );
-			}
-			if ( $content === null || $file_name === null ) {
-				wp_die( '<p>' . __( 'Error Downloading file.' ) . '</p>' );
-			}
-			$fsize = strlen( $content );
-			header( 'Cache-Control: must-revalidate, post-check=0, pre-check=0' );
-			header( 'Content-Description: File Transfer' );
-			header( 'Content-Disposition: attachment; filename=' . $file_name );
-			header( 'Content-Length: ' . $fsize );
-			header( 'Expires: 0' );
-			header( 'Pragma: public' );
-			echo $content;
-			exit;
-		}
-	}
-
-	/**
-	 * Show import field
-	 *
-	 * @param string $id
-	 * @param array  $field
-	 */
-
-	private function show_field_import( $id, $field ) {
-
-		echo '<textarea class="form-control ' . $field['class'] . '" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" placeholder="' . $field['std'] . '" rows="3" cols="39" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>' . format_for_editor( $this->options[ $id ] ) . '</textarea>';
-	}
-
-	/**
-	 * Validate import field.
-	 *
-	 * @param string  $input
-	 *
-	 * @param        $setting
-	 *
-	 * @return string $input
-	 */
-
-	public function validate_field_import( $input, $setting ) {
-
-		$import_code = unserialize( base64_decode( $input ) );
-
-		if ( is_array( $import_code ) ) {
-
-			update_option( $this->option_group, $import_code, false );
-			$this->options           = $import_code;
-			$this->settings_imported = true;
-
-			return true;
-		} else {
-
-			return new WP_Error( 'error', __( 'Error importing settings. Check your import file and try again.' ) );
-		}
 	}
 
 	/**
@@ -2162,10 +1971,10 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_reset( $id, $field ) {
 
-		echo '<input class="checkbox warning" type="checkbox" id="' . $id . '" name="' . $this->option_group . '[' . $id . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' />';
+		echo '<input class="checkbox warning" type="checkbox" id="' . esc_attr( $id ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' />';
 
 		if ( $field['desc'] != '' ) {
-			echo '<label for="' . $id . '">' . $field['desc'] . '</label>';
+			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $field['desc'] ) . '</label>';
 		}
 	}
 

@@ -21,12 +21,11 @@ class WPF_ZeroBSCRM_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_zerobscrm_header_begin', array( $this, 'show_field_zerobscrm_header_begin' ), 10, 2 );
-		add_action( 'show_field_zerobscrm_connect_end', array( $this, 'show_field_zerobscrm_connect_end' ), 10, 2 );
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wp_fusion()->settings->get( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
@@ -130,7 +129,7 @@ class WPF_ZeroBSCRM_Admin {
 			'title'   => __( 'Bidirectional Sync with Jetpack CRM', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'main',
-			'desc'    => __( 'Changes to contacts and contact tags in Jetpack CRM are automatically synced back to the contact\'s corresponding WordPress user record.', 'wp-fusion-lite' ),
+			'desc'    => __( 'Changes to contacts and contact tags in Jetpack CRM are automatically synced back to the contact\'s corresponding WordPress user record. To automatically import Jetpack contacts as WordPress users, select an <strong>Import Trigger</strong> below.', 'wp-fusion-lite' ),
 		);
 
 		$new_settings['jetpack_import_tag'] = array(
@@ -139,6 +138,10 @@ class WPF_ZeroBSCRM_Admin {
 			'type'    => 'assign_tags',
 			'section' => 'main',
 		);
+
+		if ( zeroBSCRM_getSetting( 'portalusers' ) ) {
+			$new_settings['jetpack_import_tag']['desc'] .= '<br /><br /><div class="alert alert-info">' . sprintf( __( 'Heads up: You currently have <strong>Generate WordPress Users for new contacts</strong> enabled in the <a href="%s">Jetpack CRM Client Portal</a>.<br />The Import Trigger will not work if Jetpack is also automatically importing WordPress users.', 'wp-fusion-lite' ), esc_url( admin_url( 'admin.php?page=zerobscrm-plugin-settings&tab=clients' ) ) ) . '</div>';
+		}
 
 		$settings = wp_fusion()->settings->insert_setting_before( 'return_password_header', $settings, $new_settings );
 
@@ -156,27 +159,9 @@ class WPF_ZeroBSCRM_Admin {
 	public function show_field_zerobscrm_header_begin( $id, $field ) {
 
 		echo '</table>';
-		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . $this->slug . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . $this->name . '" data-crm="' . $this->slug . '">';
+		$crm = wpf_get_option( 'crm' );
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 		echo '<style>#zerobscrm_connect {display: none;}</style>';
-
-	}
-
-	/**
-	 * Close out ZeroBSCRM section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-	public function show_field_zerobscrm_connect_end( $id, $field ) {
-
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		echo '</div>'; // close #nationbuilder div
-		echo '<table class="form-table">';
 
 	}
 
@@ -190,6 +175,8 @@ class WPF_ZeroBSCRM_Admin {
 
 	public function test_connection() {
 
+		check_ajax_referer( 'wpf_settings_nonce' );
+
 		$connection = $this->crm->connect( true );
 
 		if ( is_wp_error( $connection ) ) {
@@ -198,11 +185,11 @@ class WPF_ZeroBSCRM_Admin {
 
 		} else {
 
-			$options                          = wp_fusion()->settings->get_all();
+			$options                          = array();
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 

@@ -204,7 +204,7 @@ class WPF_Vtiger {
 
 	public function login() {
 
-		$response = wp_remote_get( $this->domain . '?operation=getchallenge&username=' . $this->username );
+		$response = wp_safe_remote_get( $this->domain . '?operation=getchallenge&username=' . $this->username );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -220,7 +220,7 @@ class WPF_Vtiger {
 			'accessKey' => md5( $body->result->token . $this->api_key )
 		);
 
-		$response = wp_remote_post( $this->domain, $params );
+		$response = wp_safe_remote_post( $this->domain, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -247,10 +247,10 @@ class WPF_Vtiger {
 		// Get saved data from DB
 		if ( empty( $domain ) || empty( $username ) || empty( $api_key ) ) {
 
-			$this->domain 		= trailingslashit( wp_fusion()->settings->get( 'vtiger_domain' ) ) . 'webservice.php';
-			$this->username   	= wp_fusion()->settings->get( 'vtiger_username' );
-			$this->api_key      = wp_fusion()->settings->get( 'vtiger_key' );
-			$this->session      = wp_fusion()->settings->get( 'vtiger_session' );
+			$this->domain 		= trailingslashit( wpf_get_option( 'vtiger_domain' ) ) . 'webservice.php';
+			$this->username   	= wpf_get_option( 'vtiger_username' );
+			$this->api_key      = wpf_get_option( 'vtiger_key' );
+			$this->session      = wpf_get_option( 'vtiger_session' );
 			
 		} else {
 
@@ -362,7 +362,7 @@ class WPF_Vtiger {
 			'elementType'	=> $this->element_type
 		);
 
-		$response = wp_remote_get( add_query_arg( $args, $this->domain ) );
+		$response = wp_safe_remote_get( add_query_arg( $args, $this->domain ) );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -404,7 +404,7 @@ class WPF_Vtiger {
 			'query'			=> urlencode("SELECT id FROM Contacts WHERE email='" . $email_address . "';")
 		);
 
-		$response = wp_remote_get( add_query_arg( $args, $this->domain ) );
+		$response = wp_safe_remote_get( add_query_arg( $args, $this->domain ) );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -494,7 +494,7 @@ class WPF_Vtiger {
 			'elementType'	=> $this->element_type
 		);
 
-		$response = wp_remote_post( $this->domain, $params );
+		$response = wp_safe_remote_post( $this->domain, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -538,7 +538,7 @@ class WPF_Vtiger {
 			'element'		=> json_encode( $data ),
 		);
 
-		$response = wp_remote_post( $this->domain, $params );
+		$response = wp_safe_remote_post( $this->domain, $params );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -566,7 +566,7 @@ class WPF_Vtiger {
 			'id'			=> $contact_id
 		);
 
-		$response = wp_remote_get( add_query_arg( $args, $this->domain ) );
+		$response = wp_safe_remote_get( add_query_arg( $args, $this->domain ) );
 
 		if( is_wp_error( $response ) ) {
 			return $response;
@@ -577,7 +577,7 @@ class WPF_Vtiger {
 		$user_meta = array();
 
 		// Map contact fields
-		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields' );
 
 		foreach ( $body->result as $field_name => $value ) {
 

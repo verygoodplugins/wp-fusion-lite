@@ -90,7 +90,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			$url  = add_query_arg( $this->get_query_args(), $this->get_query_url() );
 			$args = $this->get_post_args();
 
-			return wp_remote_post( esc_url_raw( $url ), $args );
+			return wp_safe_remote_post( esc_url_raw( $url ), $args );
 
 		}
 
@@ -106,9 +106,9 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			}
 
 			return array(
-				'action'       => $this->identifier,
-				'nonce'        => wp_create_nonce( $this->identifier ),
-				'cachebuster'  => microtime(),
+				'action'      => $this->identifier,
+				'nonce'       => wp_create_nonce( $this->identifier ),
+				'cachebuster' => microtime(),
 			);
 
 		}
