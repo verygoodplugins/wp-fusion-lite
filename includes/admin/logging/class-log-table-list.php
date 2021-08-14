@@ -618,17 +618,17 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		if ( ! empty( $_REQUEST['user'] ) ) {
 			$where_conditions[] = 'user = %s';
-			$where_values[]     = esc_attr( $_REQUEST['user'] );
+			$where_values[]     = absint( $_REQUEST['user'] );
 		}
 
 		if ( ! empty( $_REQUEST['startdate'] ) ) {
 			$where_conditions[] = 'timestamp > %s';
-			$where_values[]     = esc_attr( $_REQUEST['startdate'] );
+			$where_values[]     = wpf_clean( wp_unslash( $_REQUEST['startdate'] ) );
 		}
 
 		if ( ! empty( $_REQUEST['enddate'] ) ) {
 			$where_conditions[] = 'timestamp < %s';
-			$where_values[]     = esc_attr( $_REQUEST['enddate'] );
+			$where_values[]     = wpf_clean( wp_unslash( $_REQUEST['enddate'] ) );
 		}
 
 		if ( ! empty( $where_conditions ) ) {

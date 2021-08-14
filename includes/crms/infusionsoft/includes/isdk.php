@@ -2343,7 +2343,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 				}
 			} else {
 				foreach ( $dArray['errors'] as $err ) {
-					echo "ERROR: " . $err . "<br />";
+					echo "ERROR: " . esc_html( $err ) . "<br />";
 				}
 				die( "The above errors prevented the application from executing properly." );
 			}

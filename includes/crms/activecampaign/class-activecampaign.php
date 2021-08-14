@@ -255,12 +255,12 @@ class WPF_ActiveCampaign {
 		echo '<!-- Start ActiveCampaign site tracking -->';
 		echo '<script type="text/javascript">';
 		echo '(function(e,t,o,n,p,r,i){e.visitorGlobalObjectAlias=n;e[e.visitorGlobalObjectAlias]=e[e.visitorGlobalObjectAlias]||function(){(e[e.visitorGlobalObjectAlias].q=e[e.visitorGlobalObjectAlias].q||[]).push(arguments)};e[e.visitorGlobalObjectAlias].l=(new Date).getTime();r=t.createElement("script");r.src=o;r.async=true;i=t.getElementsByTagName("script")[0];i.parentNode.insertBefore(r,i)})(window,document,"https://diffuser-cdn.app-us1.com/diffuser/diffuser.js","vgo");';
-		echo 'vgo("setAccount", "' . $trackid . '");';
+		echo 'vgo("setAccount", "' . esc_js( $trackid ) . '");';
 		echo 'vgo("setTrackByDefault", true);';
 
 		// This does not reliably work when the AC forms plugin is active or any other kind of AC site tracking
 		if ( ! empty( $email ) ) {
-			echo 'vgo("setEmail", "' . $email . '");';
+			echo 'vgo("setEmail", "' . esc_js( $email ) . '");';
 		}
 
 		echo 'vgo("process");';

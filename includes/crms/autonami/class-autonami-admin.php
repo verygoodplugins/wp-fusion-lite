@@ -74,8 +74,8 @@ class WPF_Autonami_Admin {
 		?>
 		<script>
 			var bwf_wp_fusion_params = {
-				optionsurl: '<?php echo admin_url( 'options-general.php?page=wpf-settings' ); ?>',
-				sitetitle: '<?php echo urlencode( get_bloginfo( 'name' ) ); ?>',
+				optionsurl: '<?php echo esc_url( admin_url( 'options-general.php?page=wpf-settings' ) ); ?>',
+				sitetitle: '<?php echo esc_js( urlencode( get_bloginfo( 'name' ) ) ); ?>',
 			};
 			
 			jQuery(document).ready(function ($) {
@@ -170,7 +170,7 @@ class WPF_Autonami_Admin {
 			$class = 'button';
 		}
 
-		$new_settings['autonami_url']['desc'] .= '<br /><br /><a id="autonami-auth-btn" class="' . $class . '" href="' . $href . '">' . __( 'Authorize with Autonami', 'wp-fusion-lite' ) . '</a>';
+		$new_settings['autonami_url']['desc'] .= '<br /><br /><a id="autonami-auth-btn" class="' . sanitize_html_class( $class ) . '" href="' . esc_url( $href ) . '">' . __( 'Authorize with Autonami', 'wp-fusion-lite' ) . '</a>';
 		$new_settings['autonami_url']['desc'] .= '<span class="description">' . __( 'You can click the Authorize button to be taken to the Autonami site and generate an application password automatically.', 'wp-fusion-lite' ) . '</span>';
 
 		$new_settings['autonami_username'] = array(
