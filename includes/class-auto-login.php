@@ -118,14 +118,14 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		if ( false === $contact_id && ! wpf_get_option( 'auto_login' ) && ! wpf_get_option( 'auto_login_forms' ) ) {
+		if ( empty( $contact_id ) && ! wpf_get_option( 'auto_login' ) && ! wpf_get_option( 'auto_login_forms' ) ) {
 			return;
 		}
 
 		$contact_data = array();
 
 		// Try finding a contact ID in the URL.
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 			$contact_id = $this->get_contact_id_from_url();
 		}
 
