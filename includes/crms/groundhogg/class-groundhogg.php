@@ -51,7 +51,6 @@ class WPF_Groundhogg {
 	 */
 
 	public function init() {
-
 		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
 
 		// Don't watch GH for changes if staging mode is active
@@ -77,11 +76,54 @@ class WPF_Groundhogg {
 		add_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 		add_action( 'groundhogg/meta/contact/update', array( $this, 'contact_post_update_fallback' ), 10, 4 );
 
-		// Tags
+		// Tags.
 		add_action( 'groundhogg/db/post_insert/tag', array( $this, 'tag_created' ) );
 		add_action( 'groundhogg/db/post_delete/tag', array( $this, 'tag_deleted' ) );
 
+		add_filter( 'wpf_map_meta_fields', array( $this, 'fix_consent_fields_dates' ), 10, 2 );
+
 	}
+
+	/**
+	 * Add/Fix dates to consent fields.
+	 *
+	 * @since  3.38.0
+	 *
+	 * @param  array $update_data The update data to send to the CRM.
+	 * @param  array $user_meta   The user meta that was updated in WordPress.
+	 * @return array The update data to send to the CRM.
+	 */
+	public function fix_consent_fields_dates( $update_data, $user_meta ) {
+
+		$consent_keys = array(
+			'gdpr_consent',
+			'terms_agreement',
+			'marketing_consent',
+		);
+
+		foreach ( $consent_keys as $key ) {
+
+			if ( isset( $update_data[ $key ] ) && ! empty( $update_data[ $key ] ) ) {
+				$value = $update_data[ $key ];
+
+				// Check if consent retruns true.
+
+				if ( filter_var( $update_data[ $key ], FILTER_VALIDATE_BOOLEAN ) ) {
+					$update_data[ $key ]           = 'yes';
+					$update_data[ $key . '_date' ] = gmdate( 'Y-m-d', time() );
+				} else {
+					// Check if it's a valid date.
+					if ( strtotime( $value ) ) {
+						$update_data[ $key ]           = 'yes';
+						$update_data[ $key . '_date' ] = $value;
+					}
+				}
+			}
+		}
+
+		return $update_data;
+	}
+
 
 	/**
 	 * Make sure Groundhogg is active before using any of these methods
@@ -125,15 +167,7 @@ class WPF_Groundhogg {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field == 'gdpr_consent' || $field == 'terms_agreement' ) {
-
-			if( ! empty( $value ) ) {
-				$value = 'yes';
-			} else {
-				$value = 'no';
-			}
-
-		} elseif ( $field == 'optin_status' && ! is_numeric( $field ) ) {
+		if ( $field == 'optin_status' && ! is_numeric( $field ) ) {
 
 			// Convert optin status strings to proper format
 
@@ -195,7 +229,7 @@ class WPF_Groundhogg {
 
 			remove_action( 'groundhogg/db/post_insert/tag', array( $this, 'tag_created' ) );
 
-			$id = Groundhogg\get_db( 'tags' )->add( [ 'tag_name' => $tag ] );
+			$id = Groundhogg\get_db( 'tags' )->add( array( 'tag_name' => $tag ) );
 
 			$available_tags[ $id ] = $tag;
 			wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -427,7 +461,6 @@ class WPF_Groundhogg {
 					$crm_fields[ $field['meta'] ] = $field['name'];
 				}
 			}
-
 		}
 
 		asort( $crm_fields );
@@ -616,7 +649,6 @@ class WPF_Groundhogg {
 		unset( $data['first_name'] );
 		unset( $data['last_name'] );
 		unset( $data['email'] );
-
 		foreach ( $data as $key => $value ) {
 
 			$contact->update_meta( $key, $value );
@@ -649,7 +681,6 @@ class WPF_Groundhogg {
 				if ( empty( $value ) ) {
 					continue;
 				}
-
 				$user_meta[ $key ] = $value;
 
 			}

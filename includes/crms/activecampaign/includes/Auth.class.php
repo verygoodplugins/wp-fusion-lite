@@ -1,6 +1,6 @@
 <?php
 
-class WPF_AC_Auth extends WPF_ActiveCampaign_API {
+class AC_Auth extends ActiveCampaign_API {
 
 	public $version;
 	public $url_base;

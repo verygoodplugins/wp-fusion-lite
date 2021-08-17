@@ -5,7 +5,7 @@
  *
  * @author Svetoslav Marinov (SLAVI)
  */
-class WPF_Drip_Api {
+class Drip_API {
 	private $version       = '2';
 	private $api_token     = '';
 	private $error_code    = '';

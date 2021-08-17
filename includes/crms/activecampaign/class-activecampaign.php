@@ -313,11 +313,11 @@ class WPF_ActiveCampaign {
 			$api_key = wpf_get_option( 'ac_key' );
 		}
 
-		if ( ! class_exists( 'WPF_ActiveCampaign_API' ) ) {
-			require dirname( __FILE__ ) . '/includes/ActiveCampaign.class.php';
+		if ( ! class_exists( 'ActiveCampaign_API' ) ) {
+			require_once dirname( __FILE__ ) . '/includes/ActiveCampaign.class.php';
 		}
 
-		$app = new WPF_ActiveCampaign_API( $api_url, $api_key );
+		$app = new ActiveCampaign_API( $api_url, $api_key );
 
 		if ( $test == true ) {
 
@@ -743,7 +743,7 @@ class WPF_ActiveCampaign {
 		$user_meta = array();
 
 		// Map contact fields
-		$contact_fields = wpf_get_option( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields', array() );
 
 		// Standard fields
 		foreach ( $result as $field_name => $value ) {

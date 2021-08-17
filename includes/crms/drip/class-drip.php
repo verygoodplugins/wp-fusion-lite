@@ -381,8 +381,11 @@ class WPF_Drip {
 			$account_id = wpf_get_option( 'drip_account' );
 		}
 
-		require dirname( __FILE__ ) . '/includes/Drip_API.class.php';
-		$app = new WPF_Drip_API( $api_token );
+		if ( ! class_exists( 'Drip_API' ) ) {
+			require_once dirname( __FILE__ ) . '/includes/Drip_API.class.php';
+		}
+
+		$app = new Drip_API( $api_token );
 
 		if ( $test == true ) {
 

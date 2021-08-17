@@ -269,9 +269,11 @@ class WPF_Infusionsoft_iSDK {
 			return true;
 		}
 
-		require dirname( __FILE__ ) . '/includes/isdk.php';
+		if ( ! class_exists( 'iSDK' ) ) {
+			require_once dirname( __FILE__ ) . '/includes/isdk.php';
+		}
 
-		$app = new WPF_iSDK;
+		$app = new iSDK();
 
 		// Get saved data from DB
 		if ( empty( $app_name ) && empty( $api_key ) ) {

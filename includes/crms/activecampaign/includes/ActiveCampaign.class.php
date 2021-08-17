@@ -6,7 +6,7 @@ if ( ! defined( "ACTIVECAMPAIGN_URL" ) || ( ! defined( "ACTIVECAMPAIGN_API_KEY" 
 
 require_once( "Connector.class.php" );
 
-class WPF_ActiveCampaign_API extends WPF_AC_Connector {
+class ActiveCampaign_API extends AC_Connector {
 
 	public $url_base;
 	public $url;
@@ -75,11 +75,11 @@ class WPF_ActiveCampaign_API extends WPF_AC_Connector {
 		}
 
 		$class = ucwords( $component ); // IE: "contact" becomes "Contact"
-		$class = "WPF_AC_" . $class;
+		$class = "AC_" . $class;
 		// IE: new Contact();
 
 		$add_tracking = false;
-		if ( $class == "WPF_AC_Tracking" ) {
+		if ( $class == "AC_Tracking" ) {
 			$add_tracking = true;
 		}
 

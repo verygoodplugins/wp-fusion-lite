@@ -12,13 +12,13 @@ if ( ! class_exists( 'xmlrpc_client' ) ) {
 	include( "xmlrpc-4.0/lib/xmlrpc.inc" );
 }
 
-if ( ! class_exists( 'WPF_iSDKException' ) ) {
-	class WPF_iSDKException extends Exception {
+if ( ! class_exists( 'iSDKException' ) ) {
+	class iSDKException extends Exception {
 	}
 }
 
-if ( ! class_exists( 'WPF_iSDK' ) ) {
-	class WPF_iSDK {
+if ( ! class_exists( 'iSDK' ) ) {
+	class iSDK {
 
 		static private $handle;
 		public $logname = '';
@@ -34,7 +34,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 		 * @param string $type - Infusionsoft or Mortgage Pro
 		 *
 		 * @return bool
-		 * @throws WPF_iSDKException
+		 * @throws iSDKException
 		 */
 		public function cfgCon( $name, $key = "", $dbOn = "on" ) {
 			$this->debug = ( ( $key == 'on' || $key == 'off' || $key == 'kill' || $key == 'throw' ) ? $key : $dbOn );
@@ -88,7 +88,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 		 * @param string $dbOn - Error Handling On
 		 *
 		 * @return bool
-		 * @throws WPF_iSDKException
+		 * @throws iSDKException
 		 */
 		public function vendorCon( $name, $user, $pass, $key = "", $dbOn = "on" ) {
 			$this->debug = ( ( $key == 'on' || $key == 'off' || $key == 'kill' || $key == 'throw' ) ? $key : $dbOn );
@@ -110,10 +110,10 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 						$this->client = new xmlrpc_client( "https://" . $details[ $name ][1] .
 						                                   ".mortgageprocrm.com/api/xmlrpc" );
 					} else {
-						throw new WPF_iSDKException( "Invalid application name: \"" . $name . "\"" );
+						throw new iSDKException( "Invalid application name: \"" . $name . "\"" );
 					}
 				} else {
-					throw new WPF_iSDKException( "Application Does Not Exist: \"" . $name . "\"" );
+					throw new iSDKException( "Application Does Not Exist: \"" . $name . "\"" );
 				}
 				$this->key = $details[ $name ][3];
 			}
@@ -137,8 +137,8 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 
 			try {
 				$connected = $this->dsGetSetting( "Application", "enabled" );
-			} catch( WPF_iSDKException $e ) {
-				throw new WPF_iSDKException( "Connection Failed" );
+			} catch( iSDKException $e ) {
+				throw new iSDKException( "Connection Failed" );
 			}
 
 			return true;
@@ -161,7 +161,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 		}
 
 		// WPF formatting for HTML-ENTITIES
-		public function wpf_convert_encoding( &$item ) {
+		public function convert_encoding( &$item ) {
 			if(function_exists('mb_convert_encoding')) {
 				$item = mb_convert_encoding( $item, 'HTML-ENTITIES', 'UTF-8' );
 			}
@@ -175,7 +175,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 		 * @param array $callArray
 		 *
 		 * @return int|mixed|string
-		 * @throws WPF_iSDKException
+		 * @throws iSDKException
 		 */
 		public function methodCaller( $service, $callArray ) {
 			/* Set up the call */
@@ -210,7 +210,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 				$value = $result->value();
 
 				if ( is_array( $value ) ) {
-					array_walk_recursive( $value, array( $this, 'wpf_convert_encoding' ) );
+					array_walk_recursive( $value, array( $this, 'convert_encoding' ) );
 				}
 
 				return $value;
@@ -240,7 +240,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 
 				} elseif ( $this->debug == "throw" ) {
 
-					throw new WPF_iSDKException( $result->faultString(), $result->faultCode() );
+					throw new iSDKException( $result->faultString(), $result->faultCode() );
 
 				} elseif ( $this->debug == "off" ) {
 
@@ -2316,7 +2316,7 @@ if ( ! class_exists( 'WPF_iSDK' ) ) {
 		}
 
 		/**
-		 * @service Misc WPF_iSDK Functions
+		 * @service Misc iSDK Functions
 		 */
 
 		/**

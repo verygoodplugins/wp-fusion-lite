@@ -1,6 +1,6 @@
 <?php
 
-class WPF_AC_Webhook extends WPF_ActiveCampaign_API {
+class AC_Webhook extends ActiveCampaign_API {
 
 	public $version;
 	public $url_base;
