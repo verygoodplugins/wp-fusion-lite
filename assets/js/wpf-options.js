@@ -417,7 +417,7 @@ jQuery(document).ready(function($){
 
 				if(response.success == true) {
 
-					if( $('#connection_configured').val() == true || $('#connection_configured').val() == "1" || $('#connection_configured').val() == "true" ) {
+					if( true == wpf_ajax.connected ) {
 
 						// If connection already configured, skip users sync
 						button.find('span.dashicons').removeClass('wpf-spin');
@@ -436,8 +436,7 @@ jQuery(document).ready(function($){
 						$.post(ajaxurl, data, function(total) {
 
 							//getBatchStatus(total, 'Users (syncing contact IDs and tags, no data is being sent)');
-
-							$('#connection_configured').val(true);
+							wpf_ajax.connected = true;
 							button.find('span.dashicons').removeClass('wpf-spin');
 							button.find('span.text').html( 'Complete' );
 
@@ -497,6 +496,7 @@ jQuery(document).ready(function($){
 
 				} else {
 
+					$('#connection_configured').val('1'); // connection is configured
 					$('#wpf-needs-setup').slideUp(400);
 					var total = parseFloat(button.attr('data-total-users'));
 					syncTags(button, total, crmContainer);
@@ -516,7 +516,7 @@ jQuery(document).ready(function($){
 			var container = $( '.crm-config.crm-active' );
 			var button = container.find( '#test-connection' );
 
-			if( button.length && ! $('#connection_configured').val() ) {
+			if( button.length && false == wpf_ajax.connected ) {
 
 				postFields = button.attr('data-post-fields').split(',');
 				

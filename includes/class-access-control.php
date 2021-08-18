@@ -1784,7 +1784,7 @@ class WPF_Access_Control {
 
 		$access_meta = $this->get_post_access_meta( $post->ID );
 
-		if ( true === $access_meta['lock_content'] && false === $this->can_filter_content && false === $this->get_redirect( $post->ID ) ) {
+		if ( true === $access_meta['lock_content'] && false === $this->can_filter_content && empty( $this->get_redirect( $post->ID ) ) ) {
 
 			echo '<div style="padding: 10px 30px; border: 4px solid #ff0000; text-align: center; position: fixed; top: 32px; background: #fff; width: 100%; z-index: 999;">';
 

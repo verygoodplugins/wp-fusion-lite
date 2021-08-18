@@ -645,6 +645,7 @@ ul.wc-tabs li.wp-fusion-settings-tab a:before {
 
 ul.wc-tabs li.wp-fusion-settings-tab a svg {
 	vertical-align: middle;
+	margin-right: .618em;
 }
 
 #post-body #postbox-container-2 .woocommerce_product_addon .select4-container {

@@ -119,7 +119,7 @@ abstract class WPF_Integrations_Base {
 
 		wpf_log( 'info', 0, $this->name . ' guest registration.' . $log_text, array( 'meta_array' => $update_data ) );
 
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 
 			$contact_id = wp_fusion()->crm->add_contact( $update_data );
 

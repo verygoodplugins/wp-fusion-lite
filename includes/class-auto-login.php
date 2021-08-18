@@ -67,7 +67,7 @@ class WPF_Auto_Login {
 
 			$contact_id = sanitize_text_field( wp_unslash( $_GET['cid'] ) );
 
-		} elseif ( false === $contact_id && false !== $alt_query_var && isset( $_GET[ $alt_query_var ] ) ) {
+		} elseif ( empty( $contact_id ) && false !== $alt_query_var && isset( $_GET[ $alt_query_var ] ) ) {
 
 			$contact_id = sanitize_text_field( wp_unslash( $_GET[ $alt_query_var ] ) );
 
@@ -556,7 +556,7 @@ class WPF_Auto_Login {
 
 		$contact_id = $this->get_contact_id_from_url();
 
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 			echo esc_html__( 'No' );
 		} else {
 			echo esc_html__( 'Yes' ) . ' - Contact ID ' . esc_html( $contact_id ) . ' ✅';

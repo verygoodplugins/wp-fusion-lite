@@ -412,6 +412,8 @@ function wpf_get_option( $key, $default = false ) {
 function wpf_clean( $var ) {
 	if ( is_array( $var ) ) {
 		return array_map( 'wpf_clean', $var );
+	} elseif( is_bool( $var ) ) {
+		return $var;
 	} else {
 		return is_scalar( $var ) ? sanitize_text_field( $var ) : $var;
 	}

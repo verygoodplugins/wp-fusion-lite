@@ -573,7 +573,7 @@ class WPF_User {
 
 		$contact_id = apply_filters( 'wpf_contact_id', $contact_id, $email_address );
 
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 
 			// Error logging.
 			wpf_log( 'info', $user_id, 'No contact found in ' . wp_fusion()->crm->name . ' for <strong>' . $email_address . '</strong>' );
@@ -915,7 +915,7 @@ class WPF_User {
 		$contact_id = $this->get_contact_id( $user_id, $force_update );
 
 		// If contact doesn't exist in CRM.
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 			return apply_filters( 'wpf_user_tags', array(), $user_id );
 		}
 
@@ -1080,7 +1080,7 @@ class WPF_User {
 
 		// If no contact ID, don't try applying tags.
 
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 
 			wpf_log( 'notice', $user_id, __( 'No contact ID for user. Failed to apply tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 			return false;
@@ -1222,7 +1222,7 @@ class WPF_User {
 
 		// If no contact ID, don't try applying tags.
 
-		if ( false === $contact_id ) {
+		if ( empty( $contact_id ) ) {
 
 			wpf_log( 'notice', $user_id, __( 'No contact ID for user. Failed to remove tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 			return false;
@@ -1794,7 +1794,7 @@ class WPF_User {
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		if ( empty( $user_meta ) || false === $contact_id ) {
+		if ( empty( $user_meta ) || empty( $contact_id ) ) {
 			return;
 		}
 

@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.38.0
+ * Version: 3.38.2
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,9 +28,9 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.38.0' );
+define( 'WP_FUSION_VERSION', '3.38.2' );
 
-// deny direct access
+// deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
 	header( 'Status: 403 Forbidden' );
 	header( 'HTTP/1.1 403 Forbidden' );
@@ -38,12 +38,12 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 
-final class WP_Fusion {
+final class WP_Fusion_Lite {
 
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion The one true WP_Fusion
+	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -157,22 +157,22 @@ final class WP_Fusion {
 
 
 	/**
-	 * Main WP_Fusion Instance
+	 * Main WP_Fusion_Lite Instance
 	 *
-	 * Ensures that only one instance of WP_Fusion exists in memory at any one
+	 * Ensures that only one instance of WP_Fusion_Lite exists in memory at any one
 	 * time. Also prevents needing to define globals all over the place.
 	 *
 	 * @since 1.0
 	 *
 	 * @static var array $instance
-	 * @return WP_Fusion The one true WP_Fusion
+	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
 	 */
 
 	public static function instance() {
 
-		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion ) ) {
+		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion_Lite ) ) {
 
-			self::$instance = new WP_Fusion();
+			self::$instance = new WP_Fusion_Lite();
 
 			self::$instance->setup_constants();
 			self::$instance->check_install();
@@ -670,7 +670,7 @@ final class WP_Fusion {
 if ( ! function_exists( 'wp_fusion' ) ) {
 
 	function wp_fusion() {
-		return WP_Fusion::instance();
+		return WP_Fusion_Lite::instance();
 	}
 
 	// Get WP Fusion running.

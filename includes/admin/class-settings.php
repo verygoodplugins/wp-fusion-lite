@@ -290,6 +290,21 @@ class WPF_Settings {
 	}
 
 	/**
+	 * Set all settings.
+	 *
+	 * @deprecated 3.38.0 Deprecated in favor of set_multiple()
+	 *
+	 * @param array $options The options.
+	 */
+	public function set_all( $options ) {
+
+		_deprecated_function( 'set_all', '3.38.0', 'set_multiple' );
+
+		$this->set_multiple( $options );
+
+	}
+
+	/**
 	 * Set defaults for contact fields to avoid undefined index errors.
 	 *
 	 * @since  3.37.30
@@ -500,6 +515,7 @@ class WPF_Settings {
 			'ajaxurl'    => admin_url( 'admin-ajax.php' ),
 			'nonce'      => wp_create_nonce( 'wpf_settings_nonce' ),
 			'optionsurl' => admin_url( 'options-general.php?page=wpf-settings' ),
+			'connected'  => (bool) $this->get( 'connection_configured' ),
 			'sitetitle'  => rawurlencode( get_bloginfo( 'name' ) ),
 			'tag_type'   => $this->get( 'crm_tag_type' ),
 			'strings'    => array(
@@ -1153,6 +1169,11 @@ class WPF_Settings {
 		// Staging CRM.
 		if ( isset( $options['crm'] ) && 'staging' === $options['crm'] ) {
 			$options['connection_configured'] = true;
+		}
+
+		// Set the initial field mappings for the CRM.
+		if ( ! empty( $options['contact_fields']['user_email'] ) && empty( $options['contact_fields']['user_email']['crm_field'] ) && true === $options['connection_configured'] ) {
+			$options = apply_filters( 'wpf_initialize_options_contact_fields', $options );
 		}
 
 		return $options;

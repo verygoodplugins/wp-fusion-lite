@@ -1681,6 +1681,25 @@ class WP_Fusion_Options {
 	}
 
 	/**
+	 * Validate hidden field
+	 *
+	 * @param mixed   $input
+	 *
+	 * @param       $setting
+	 *
+	 * @return mixed|\WP_Error
+	 */
+	public function validate_field_hidden( $input, $setting ) {
+
+		if ( '1' === $input ) {
+			$input = true;
+		}
+
+		return $input;
+
+	}
+
+	/**
 	 *
 	 * Password field
 	 */

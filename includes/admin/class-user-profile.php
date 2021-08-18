@@ -225,6 +225,10 @@ class WPF_User_Profile {
 
 	public function filter_form_fields( $post_data, $user_id ) {
 
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return $post_data;
+		}
+
 		$screen = get_current_screen();
 
 		if ( ! is_null( $screen ) && in_array( $screen->id, array( 'profile', 'user-edit', 'user-new' ) ) ) {

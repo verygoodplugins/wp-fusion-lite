@@ -4,7 +4,7 @@ Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 5.8
-Stable tag: 3.38.0
+Stable tag: 3.38.2
 
 WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
@@ -182,6 +182,13 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.38.2 = 8/18/2021 =
+
+* Fixed error `Call to undefined function get_current_screen()` since 3.38.0 when performing some admin actions
+* Fixed auto-login links not working since 3.38.0
+* Fixed initial default field mapping not being stored after setup until the settings were saved the first time
+* Developers: Removed WPF_* prefix from 3rd party CRM SDK classes (to comply with wordpress.org plugin guidelines)
 
 = 3.38.0 = 8/13/2021 =
 
