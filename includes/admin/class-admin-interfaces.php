@@ -58,7 +58,6 @@ class WPF_Admin_Interfaces {
 		add_action( 'restrict_manage_users', array( $this, 'restrict_manage_users' ), 30 );
 		add_filter( 'pre_get_users', array( $this, 'custom_users_filter' ), 5 );
 
-		// Content locked indicators.
 		add_filter( 'display_post_states', array( $this, 'admin_table_post_states' ), 10, 2 );
 
 		// Bulk edit / quick edit interfaces.
@@ -70,6 +69,9 @@ class WPF_Admin_Interfaces {
 		// User columns.
 		add_filter( 'manage_users_columns', array( $this, 'manage_users_columns' ) );
 		add_filter( 'manage_users_custom_column', array( $this, 'manage_users_custom_column' ), 10, 3 );
+
+		// User edit links.
+		add_filter( 'user_row_actions', array( $this, 'user_row_actions' ), 10, 2 );
 
 		// Menus.
 		add_action( 'wp_nav_menu_item_custom_fields', array( $this, 'admin_menu_fields' ), 10, 5 );
@@ -84,8 +86,14 @@ class WPF_Admin_Interfaces {
 		add_action( 'wpf_meta_box_content', array( $this, 'apply_tags_select' ), 30, 2 );
 		add_action( 'wpf_meta_box_content', array( $this, 'apply_to_children' ), 40, 2 );
 
+		// Search available tags.
 		add_action( 'wp_ajax_wpf_search_available_tags', array( $this, 'search_available_tags' ) );
+
+		// Search redirect pages.
 		add_action( 'wp_ajax_wpf_get_redirect_options', array( $this, 'get_redirect_options' ) );
+
+		// Seasrch users dropdown in the logs.
+		add_action( 'wp_ajax_wpf_get_log_users', array( $this, 'get_log_users' ) );
 
 		// Saving metabox.
 		add_action( 'save_post', array( $this, 'save_meta_box_data' ) );
@@ -103,6 +111,7 @@ class WPF_Admin_Interfaces {
 		add_action( 'add_meta_boxes', array( $this, 'add_debug_meta_box' ) );
 
 	}
+
 
 	/**
 	 * Includes
@@ -212,7 +221,7 @@ class WPF_Admin_Interfaces {
 				'noContact'        => __( 'No contact record found.', 'wp-fusion-lite' ),
 				'noTags'           => __( 'No tags applied.', 'wp-fusion-lite' ),
 				'foundTags'        => __( 'Reload page to see tags.', 'wp-fusion-lite' ),
-				'resyncContact'    => __( 'Resync Contact', 'wp-fusion-lite' ),
+				'resyncContact'    => __( 'Resync Tags', 'wp-fusion-lite' ),
 				'maxSelected'      => sprintf(
 					__( 'You can only select %s item', 'wp-fusion-lite' ),
 					'MAX'
@@ -330,15 +339,15 @@ class WPF_Admin_Interfaces {
 				$meta_query = array(
 					'relation' => 'OR',
 					array(
-						'key'     => wp_fusion()->crm->slug . '_tags',
+						'key'     => WPF_TAGS_META_KEY,
 						'compare' => 'NOT EXISTS',
 					),
 					array(
-						'key'   => wp_fusion()->crm->slug . '_tags',
+						'key'   => WPF_TAGS_META_KEY,
 						'value' => null,
 					),
 					array(
-						'key'   => wp_fusion()->crm->slug . '_tags',
+						'key'   => WPF_TAGS_META_KEY,
 						'value' => 'a:0:{}',
 					),
 				);
@@ -348,15 +357,15 @@ class WPF_Admin_Interfaces {
 				$meta_query = array(
 					'relation' => 'OR',
 					array(
-						'key'     => wp_fusion()->crm->slug . '_contact_id',
+						'key'     => WPF_CONTACT_ID_META_KEY,
 						'compare' => 'NOT EXISTS',
 					),
 					array(
-						'key'   => wp_fusion()->crm->slug . '_contact_id',
+						'key'   => WPF_CONTACT_ID_META_KEY,
 						'value' => null,
 					),
 					array(
-						'key'   => wp_fusion()->crm->slug . '_contact_id',
+						'key'   => WPF_CONTACT_ID_META_KEY,
 						'value' => false,
 					),
 				);
@@ -365,7 +374,7 @@ class WPF_Admin_Interfaces {
 
 				$meta_query = array(
 					array(
-						'key'     => wp_fusion()->crm->slug . '_tags',
+						'key'     => WPF_TAGS_META_KEY,
 						'value'   => '"' . $filter . '"',
 						'compare' => 'LIKE',
 					),
@@ -499,6 +508,7 @@ class WPF_Admin_Interfaces {
 							'meta_name' => 'wpf-settings',
 							'field_id'  => 'allow_tags',
 							'disabled'  => $disabled,
+							'read_only' => true,
 						);
 
 						wpf_render_tag_multiselect( $args );
@@ -575,17 +585,17 @@ class WPF_Admin_Interfaces {
 			}
 
 			// Save the option array.
-			update_option( 'wpf_taxonomy_rules', $taxonomy_rules, false );
+			update_option( 'wpf_taxonomy_rules', $taxonomy_rules, true ); // yes to autoload, so there's no DB hit.
 
 		} else {
 
-			// No option
+			// No option.
 			if ( isset( $taxonomy_rules[ $term_id ] ) ) {
 
 				unset( $taxonomy_rules[ $term_id ] );
 
 				if ( ! empty( $taxonomy_rules ) ) {
-					update_option( 'wpf_taxonomy_rules', $taxonomy_rules, false );
+					update_option( 'wpf_taxonomy_rules', $taxonomy_rules, true ); // yes to autoload, so there's no DB hit.
 				} else {
 					delete_option( 'wpf_taxonomy_rules' );
 				}
@@ -610,7 +620,7 @@ class WPF_Admin_Interfaces {
 
 		$wpf_settings = get_post_meta( $post->ID, 'wpf-settings', true );
 
-		if ( ! empty( $wpf_settings ) && isset( $wpf_settings['lock_content'] ) && $wpf_settings['lock_content'] == true ) {
+		if ( ! empty( $wpf_settings ) && ! empty( $wpf_settings['lock_content'] ) ) {
 
 			$post_type_object = get_post_type_object( $post->post_type );
 			$post_type_object = apply_filters( 'wpf_restrict_content_post_type_object_label', strtolower( $post_type_object->labels->singular_name ), $post );
@@ -689,7 +699,7 @@ class WPF_Admin_Interfaces {
 
 		if ( 'wpf_tags' == $column_name ) {
 
-			$tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
+			$tags = get_user_meta( $user_id, WPF_TAGS_META_KEY, true );
 
 			if ( empty( $tags ) && is_array( $tags ) ) {
 
@@ -710,6 +720,28 @@ class WPF_Admin_Interfaces {
 		}
 
 		return $val;
+
+	}
+
+
+	/**
+	 * Link to CRM contact record from user action links.
+	 *
+	 * @since  3.38.34
+	 *
+	 * @param  array   $actions The actions.
+	 * @param  WP_User $user    The user.
+	 * @return array   The action links.
+	 */
+	public function user_row_actions( $actions, $user ) {
+
+		$edit_url = wp_fusion()->user->get_contact_edit_url( $user->ID );
+
+		if ( false !== $edit_url ) {
+			$actions['wp_fusion'] = '<a href="' . esc_url( $edit_url ) . '" target="_blank">' . sprintf( esc_html__( 'View in %s', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</a>';
+		}
+
+		return $actions;
 
 	}
 
@@ -745,11 +777,11 @@ class WPF_Admin_Interfaces {
 		<div id="wpf-meta" class="inline-edit-col-wpf">
 			<div class="inline-edit-col">
 				<div style="margin: 10px">
-					<?php $this->restrict_content_checkbox( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
+					<?php $this->restrict_content_checkbox( $post, self::$meta_box_defaults ); ?>
 				</div>
-				<?php $this->required_tags_select( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
-				<?php $this->page_redirect_select( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
-				<?php $this->external_redirect_input( $post, WPF_Admin_Interfaces::$meta_box_defaults ); ?>
+				<?php $this->required_tags_select( $post, self::$meta_box_defaults ); ?>
+				<?php $this->page_redirect_select( $post, self::$meta_box_defaults ); ?>
+				<?php $this->external_redirect_input( $post, self::$meta_box_defaults ); ?>
 
 				<div style="margin: 20px 10px 10px;">
 					<input type="checkbox" name="wpf-settings[bulk_edit_merge]" value="1"> Merge Changes <br />
@@ -793,7 +825,7 @@ class WPF_Admin_Interfaces {
 
 					foreach ( $post_ids as $post_id ) {
 
-						$current_settings = wp_parse_args( get_post_meta( $post_id, 'wpf-settings', true ), WPF_Admin_Interfaces::$meta_box_defaults );
+						$current_settings = wp_parse_args( get_post_meta( $post_id, 'wpf-settings', true ), self::$meta_box_defaults );
 
 						$new_allow_tags     = array_merge( $current_settings['allow_tags'], $settings['allow_tags'] );
 						$new_allow_tags_all = array_merge( $current_settings['allow_tags_all'], $settings['allow_tags_all'] );
@@ -847,7 +879,9 @@ class WPF_Admin_Interfaces {
 
 		$defaults = array(
 			'lock_content' => false,
-			'allow_tags'   => array(),
+			'allow_tags'     => array(),
+			'allow_tags_all' => array(),
+			'allow_tags_not' => array(),
 		);
 
 		// Get the settings saved for the menu item.
@@ -856,6 +890,8 @@ class WPF_Admin_Interfaces {
 		if ( isset( $settings['loggedout'] ) ) {
 			$settings['lock_content'] = 'loggedout';
 		}
+
+		$settings = apply_filters( 'wpf_menu_item_settings', $settings, $item->ID );
 
 		// Whether to display the tag selector.
 		$hidden = $settings['lock_content'] === '1' ? '' : 'display: none;';
@@ -887,8 +923,8 @@ class WPF_Admin_Interfaces {
 
 		</div>
 
-		<div class="wpf_nav_menu_tags_field description-wide" style="margin: 5px 0; <?php echo $hidden; ?>">
-			<p class="description description-wide"><?php esc_html_e( 'Required tags (any)', 'wp-fusion-lite' ); ?>:</p>
+		<div class="wpf_nav_menu_tags_field description-wide" style="<?php echo $hidden; ?>">
+			<p class="description description-wide"><?php esc_html_e( 'Required tags (any)', 'wp-fusion-lite' ); ?>: <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php echo esc_attr__( 'The user must be logged in and have at least one of the tags specified to access the item.', 'wp-fusion-lite' ) ?>"></span></p>
 			<br />
 
 			<?php
@@ -897,6 +933,8 @@ class WPF_Admin_Interfaces {
 				'setting'   => $settings['allow_tags'],
 				'meta_name' => 'wpf-nav-menu[' . $item->ID . ']',
 				'field_id'  => 'allow_tags',
+				'read_only' => true,
+				'lazy_load' => true,
 			);
 
 			wpf_render_tag_multiselect( $args );
@@ -904,6 +942,52 @@ class WPF_Admin_Interfaces {
 			?>
 
 		</div>
+
+		<?php if ( has_filter( 'wpf_menu_item_settings' ) ) : // we only show these if User Menus is active. ?>
+
+
+			<div class="wpf_nav_menu_tags_field description-wide" style="<?php echo $hidden; ?>">
+				<p class="description description-wide"><?php esc_html_e( 'Required tags (all)', 'wp-fusion-lite' ); ?>: <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php echo esc_attr__( 'The user must be logged in and have <em>all</em> of the tags specified to access the item.', 'wp-fusion-lite' ) ?>"></span></p>
+				<br />
+
+				<?php
+
+				$args = array(
+					'setting'   => $settings['allow_tags_all'],
+					'meta_name' => 'wpf-nav-menu[' . $item->ID . ']',
+					'field_id'  => 'allow_tags_all',
+					'read_only' => true,
+					'lazy_load' => true,
+				);
+
+				wpf_render_tag_multiselect( $args );
+
+				?>
+
+			</div>
+
+			<div class="wpf_nav_menu_tags_field description-wide" style="<?php echo $hidden; ?> ">
+				<p class="description description-wide"><?php esc_html_e( 'Required tags (not)', 'wp-fusion-lite' ); ?>: <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php echo esc_attr__( 'If the user is logged in, they must have <em>none</em> of the tags specified to access the item.', 'wp-fusion-lite' ) ?>"></span></p>
+
+				<br />
+
+				<?php
+
+				$args = array(
+					'setting'   => $settings['allow_tags_not'],
+					'meta_name' => 'wpf-nav-menu[' . $item->ID . ']',
+					'field_id'  => 'allow_tags_not',
+					'read_only' => true,
+					'lazy_load' => true,
+				);
+
+				wpf_render_tag_multiselect( $args );
+
+				?>
+
+			</div>
+
+		<?php endif; // end check for has_filter(). ?>
 
 		<?php
 
@@ -1008,7 +1092,9 @@ class WPF_Admin_Interfaces {
 		$post_type_object_label = apply_filters( 'wpf_restrict_content_post_type_object_label', $label, $post );
 
 		echo '<input class="checkbox wpf-restrict-access-checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <label for="wpf-lock-content" class="wpf-restrict-access">';
-		printf( esc_html__( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), $post_type_object_label );
+		$message = sprintf( __( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), $post_type_object_label );
+		$message = apply_filters( 'wpf_restrict_content_checkbox_label', $message, $post );
+		echo esc_html( $message );
 		echo '</label>';
 
 	}
@@ -1037,6 +1123,7 @@ class WPF_Admin_Interfaces {
 			'meta_name' => 'wpf-settings',
 			'field_id'  => 'allow_tags',
 			'disabled'  => $disabled,
+			'read_only' => true,
 		);
 
 		wpf_render_tag_multiselect( $args );
@@ -1052,6 +1139,7 @@ class WPF_Admin_Interfaces {
 			'meta_name' => 'wpf-settings',
 			'field_id'  => 'allow_tags_all',
 			'disabled'  => $disabled,
+			'read_only' => true,
 		);
 
 		wpf_render_tag_multiselect( $args );
@@ -1070,6 +1158,7 @@ class WPF_Admin_Interfaces {
 			'setting'   => $settings['allow_tags_not'],
 			'meta_name' => 'wpf-settings',
 			'field_id'  => 'allow_tags_not',
+			'read_only' => true,
 		);
 
 		wpf_render_tag_multiselect( $args );
@@ -1197,8 +1286,8 @@ class WPF_Admin_Interfaces {
 			$settings['apply_children'] = false;
 		}
 
-		if ( ! empty( $children ) ) {
-			echo '<p><input class="checkbox" type="checkbox" id="wpf-apply-children" name="wpf-settings[apply_children]" value="1" ' . checked( $settings['apply_children'], 1, false ) . ' /> Apply these settings to ' . count( (int) $children ) . ' children</p>';
+		if ( ! empty( $children ) && is_array( $children ) ) {
+			echo '<p><input class="checkbox" type="checkbox" id="wpf-apply-children" name="wpf-settings[apply_children]" value="1" ' . checked( $settings['apply_children'], 1, false ) . ' /> Apply these settings to ' . esc_html( count( $children ) ) . ' children</p>';
 		}
 
 	}
@@ -1216,7 +1305,7 @@ class WPF_Admin_Interfaces {
 			wp_die();
 		}
 
-		$search = sanitize_text_field( $_POST['search'] );
+		$search = sanitize_text_field( wp_unslash( $_POST['search'] ) );
 		$tags   = wp_fusion()->settings->get_available_tags_flat();
 
 		$return = array(
@@ -1253,7 +1342,7 @@ class WPF_Admin_Interfaces {
 			wp_die();
 		}
 
-		$search = sanitize_text_field( $_POST['search'] );
+		$search = sanitize_text_field( wp_unslash( $_POST['search'] ) );
 
 		$args = array(
 			'post_type'      => 'any',
@@ -1278,6 +1367,61 @@ class WPF_Admin_Interfaces {
 
 		wp_die();
 
+	}
+
+
+	/**
+	 * Get log users for logging dropdown.
+	 *
+	 * @since  3.38.27
+	 */
+	public function get_log_users() {
+
+		if ( empty( $_POST['search'] ) ) {
+			wp_die();
+		}
+
+		$search = sanitize_text_field( wp_unslash( $_POST['search'] ) );
+		global $wpdb;
+
+		$users_ids = $wpdb->get_col(
+			"
+			SELECT DISTINCT user
+			FROM {$wpdb->prefix}wpf_logging
+			WHERE user != ''
+			ORDER BY user ASC
+		"
+		);
+
+		$return = array(
+			'results' => array(),
+		);
+
+		if ( empty( $users_ids ) ) {
+
+			echo wp_json_encode( $return );
+			wp_die();
+
+		}
+
+		$args = array(
+			'include'        => array_values( $users_ids ),
+			'search'         => '*' . esc_attr( $search ) . '*',
+			'search_columns' => array( 'user_login', 'user_email', 'display_name', 'user_nicename' ),
+		);
+
+		$user_query = new WP_User_Query( $args );
+
+		foreach ( $user_query->get_results() as $result ) {
+			$return['results'][] = array(
+				'id'   => $result->ID,
+				'text' => $result->user_login . ' (#' . $result->ID . ' - ' . $result->user_email . ')',
+			);
+		}
+
+		echo wp_json_encode( $return );
+
+		wp_die();
 	}
 
 
@@ -1325,11 +1469,11 @@ class WPF_Admin_Interfaces {
 		wp_nonce_field( 'wpf_meta_box', 'wpf_meta_box_nonce' );
 
 		if ( ! empty( $post->ID ) ) {
-			$settings = wp_parse_args( get_post_meta( $post->ID, 'wpf-settings', true ), WPF_Admin_Interfaces::$meta_box_defaults );
+			$settings = wp_parse_args( get_post_meta( $post->ID, 'wpf-settings', true ), self::$meta_box_defaults );
 		} else {
 
 			// Cases where there is no "ID", like a BuddyPress group.
-			$settings = WPF_Admin_Interfaces::$meta_box_defaults;
+			$settings = self::$meta_box_defaults;
 		}
 
 		$settings = apply_filters( 'wpf_settings_for_meta_box', $settings, $post );
@@ -1337,7 +1481,7 @@ class WPF_Admin_Interfaces {
 		if ( ! is_a( $post, 'WP_Post' ) ) {
 
 			// Use a dummy post here to prevent warnings.
-			$post = new WP_Post( array() );
+			$post = new WP_Post( (object) 0 );
 
 		}
 
@@ -1388,7 +1532,7 @@ class WPF_Admin_Interfaces {
 		$settings  = apply_filters( 'wpf_sanitize_meta_box', $post_data );
 		$settings  = array_filter( $settings );
 
-		if ( isset( $_POST['wpf-settings'] ) && empty( $settings ) ) {
+		if ( isset( $_POST['wpf_meta_box_nonce'] ) && empty( $settings ) ) {
 
 			// Delete if empty.
 			delete_post_meta( $post_id, 'wpf-settings' );

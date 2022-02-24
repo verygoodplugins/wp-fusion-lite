@@ -554,7 +554,7 @@ class WPF_HighLevel {
 
 		$data = (object) array( 'tags' => $tags );
 
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -583,7 +583,7 @@ class WPF_HighLevel {
 
 		$data = (object) array( 'tags' => $tags );
 
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'DELETE';
 
 		$response = wp_safe_remote_request( $request, $params );
@@ -629,7 +629,7 @@ class WPF_HighLevel {
 		}
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $contact_data );
+		$params['body'] = wp_json_encode( $contact_data );
 
 		$response = wp_safe_remote_post( $this->url . 'contacts/', $params );
 
@@ -678,7 +678,7 @@ class WPF_HighLevel {
 
 		$params           = $this->get_params();
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $contact_data );
+		$params['body']   = wp_json_encode( $contact_data );
 
 		$request  = $this->url . 'contacts/' . $contact_id;
 		$response = wp_safe_remote_request( $request, $params );

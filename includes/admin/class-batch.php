@@ -24,46 +24,46 @@ class WPF_Batch {
 
 	public function __construct() {
 
-		// Status monitor
+		// Status monitor.
 		add_action( 'wpf_settings_notices', array( $this, 'batch_status_bar' ) );
 
-		// Global handlers
+		// Global handlers.
 		add_action( 'wp_ajax_wpf_batch_init', array( $this, 'batch_init' ), 10, 2 );
 		add_action( 'wp_ajax_wpf_batch_status', array( $this, 'batch_status' ) );
 		add_action( 'wp_ajax_wpf_batch_cancel', array( $this, 'batch_cancel' ) );
 
-		// Error handling
+		// Error handling.
 		add_action( 'wpf_handle_log', array( $this, 'handle_error' ), 10, 5 );
 
-		// Export users
+		// Export users.
 		add_filter( 'wpf_batch_users_register_init', array( $this, 'users_register_init' ) );
 		add_action( 'wpf_batch_users_register', array( $this, 'users_register_step' ) );
 
-		// Tag all users with registration tags
+		// Tag all users with registration tags.
 		add_filter( 'wpf_batch_users_register_tags_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_register_tags', array( $this, 'users_register_tags_step' ) );
 
-		// Push user meta
+		// Push user meta.
 		add_filter( 'wpf_batch_users_meta_init', 'wpf_get_users_with_contact_ids' );
 		add_action( 'wpf_batch_users_meta', array( $this, 'users_meta_step' ) );
 
-		// Pull user meta
+		// Pull user meta.
 		add_filter( 'wpf_batch_pull_users_meta_init', 'wpf_get_users_with_contact_ids' );
 		add_action( 'wpf_batch_pull_users_meta', array( $this, 'pull_users_meta_step' ) );
 
-		// Sync users (just CIDs)
+		// Sync users (just CIDs).
 		add_filter( 'wpf_batch_users_cid_sync_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_cid_sync', array( $this, 'users_cid_sync_step' ) );
 
-		// Sync users (just tags)
+		// Sync users (just tags).
 		add_filter( 'wpf_batch_users_tags_sync_init', 'wpf_get_users_with_contact_ids' );
 		add_action( 'wpf_batch_users_tags_sync', array( $this, 'users_tags_sync_step' ) );
 
-		// Sync users
+		// Sync users.
 		add_filter( 'wpf_batch_users_sync_init', array( $this, 'users_sync_init' ) );
 		add_action( 'wpf_batch_users_sync', array( $this, 'users_sync_step' ) );
 
-		// Import contacts
+		// Import contacts.
 		add_filter( 'wpf_batch_import_users_init', array( $this, 'import_users_init' ) );
 		add_action( 'wpf_batch_import_users', array( $this, 'import_users_step' ), 10, 2 );
 
@@ -157,7 +157,7 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Initialize batch processing library
+	 * Initialize batch processing library.
 	 *
 	 * @since 3.0
 	 * @return void
@@ -238,6 +238,8 @@ class WPF_Batch {
 
 		if ( isset( $_POST['args'] ) && is_array( $_POST['args'] ) ) {
 			$args = array_map( 'sanitize_text_field', wp_unslash( $_POST['args'] ) );
+		} else {
+			$args = array();
 		}
 
 		$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
@@ -250,6 +252,12 @@ class WPF_Batch {
 
 		$operations = $this->get_export_options();
 
+		// This one we'll hardcode since it doesn't show up in the usual list.
+		$operations['import_users'] = array(
+			'label' => 'Import users',
+			'title' => 'Contacts',
+		);
+
 		wpf_log( 'info', 0, sprintf( __( 'Beginning %1$s batch operation on %2$d %3$s.', 'wp-fusion-lite' ), '<strong>' . $operations[ $hook ]['label'] . '</strong>', count( $objects ), strtolower( $operations[ $hook ]['title'] ) ), array( 'source' => 'batch-process' ) );
 
 		// Int IDs are smaller in the DB than strings, but sometimes we'll still need to use strings (i.e. Drip subscriber IDs).
@@ -257,6 +265,11 @@ class WPF_Batch {
 			$objects = array_map( 'intval', $objects );
 		} else {
 			$objects = array_map( 'sanitize_text_field', $objects );
+		}
+
+		if ( isset( $args['skip_processed'] ) ) {
+			// We only need this for the initial query, can remove it now and save some space.
+			unset( $args['skip_processed'] );
 		}
 
 		foreach ( $objects as $object ) {
@@ -360,15 +373,10 @@ class WPF_Batch {
 			$this->init();
 		}
 
-		$this->process->push_to_queue(
-			array(
-				'action' => $action,
-				'args'   => $args,
-			)
-		);
+		$this->process->push_to_queue( array( $action, $args ) )->save();
 
-		if ( $start ) {
-			$this->process->save()->dispatch();
+		if ( $start && ! wpf_get_option( 'enable_cron' ) ) {
+			$this->process->dispatch();
 		}
 
 	}
@@ -478,7 +486,7 @@ class WPF_Batch {
 	 * @return void
 	 */
 
-	public function import_users_step( $contact_id, $args ) {
+	public function import_users_step( $contact_id, $args = array() ) {
 
 		if ( ! isset( $args['notify'] ) || $args['notify'] === 'false' ) {
 			$args['notify'] = false;
@@ -576,11 +584,11 @@ class WPF_Batch {
 			'meta_query' => array(
 				'relation' => 'OR',
 				array(
-					'key'     => wp_fusion()->crm->slug . '_contact_id',
+					'key'     => WPF_CONTACT_ID_META_KEY,
 					'compare' => 'NOT EXISTS',
 				),
 				array(
-					'key'   => wp_fusion()->crm->slug . '_contact_id',
+					'key'   => WPF_CONTACT_ID_META_KEY,
 					'value' => false,
 				),
 			),

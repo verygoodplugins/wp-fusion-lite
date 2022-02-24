@@ -96,8 +96,13 @@ class WPF_Log_Handler {
 		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'add_screen_options' ) );
 		add_filter( 'set_screen_option_wpf_status_log_items_per_page', array( $this, 'set_screen_option' ), 10, 3 );
 
+		// Export & Flush logs.
+		add_action( 'admin_init', array( $this, 'export_logs' ) );
+		add_action( 'admin_init', array( $this, 'flush_logs' ) );
+
 		// HTTP API logging.
 		if ( wpf_get_option( 'logging_http_api' ) ) {
+			add_filter( 'http_request_args', array( $this, 'http_request_args' ), 10, 2 );
 			add_action( 'http_api_debug', array( $this, 'http_api_debug' ), 10, 5 );
 		}
 
@@ -130,6 +135,27 @@ class WPF_Log_Handler {
 
 	}
 
+
+	/**
+	 * When HTTP API logging is enabled, send all event tracking API calls
+	 * blocking, so we can read the responses.
+	 *
+	 * @since  3.38.28
+	 *
+	 * @param  array  $args   The HTTP request args.
+	 * @param  string $url    The request URL.
+	 * @return array  The request args.
+	 */
+	public function http_request_args( $args, $url ) {
+
+		if ( 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
+			$args['blocking'] = true;
+		}
+
+		return $args;
+
+	}
+
 	/**
 	 * Log HTTP API calls
 	 *
@@ -143,10 +169,32 @@ class WPF_Log_Handler {
 			return;
 		}
 
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		unset( $response['http_response'] ); // This is redundant, we don't need to log it.
+
 		$message  = '<ul>';
-		$message .= '<li><strong>Request:</strong> ' . esc_url_raw( $url ) . '</li>';
-		$message .= '<li><strong>Params:</strong> <pre>' . esc_html( wpf_print_r( $parsed_args, true ) ) . '</pre></li>';
-		$message .= '<li><strong>Response:</strong><br /><pre>' . esc_html( wpf_print_r( $response, true ) ) . '</pre></li>';
+		$message .= '<li><strong>Request URI:</strong> ' . esc_url_raw( $url ) . '</li>';
+
+		if ( ! is_array( $parsed_args['body'] ) ) {
+			$maybe_json = json_decode( $parsed_args['body'] );
+
+			if ( ! is_null( $maybe_json ) ) {
+				$message .= '<li><strong>Request (JSON Decoded):</strong><br /><pre>' . esc_html( wpf_print_r( $maybe_json, true ) ) . '</pre></li>';
+			}
+		}
+
+		$maybe_json = json_decode( $response['body'] );
+
+		if ( ! is_null( $maybe_json ) ) {
+			$message .= '<li><strong>Response (JSON Decoded):</strong><br /><pre>' . esc_html( wpf_print_r( $maybe_json, true ) ) . '</pre></li>';
+		}
+
+		$message .= '<li><strong>Request:</strong> <pre>' . esc_html( wpf_print_r( array_filter( $parsed_args ), true ) ) . '</pre></li>';
+		$message .= '<li><strong>Response:</strong><br /><pre>' . esc_html( wpf_print_r( array_filter( $response ), true ) ) . '</pre></li>';
+
 		$message .= '</ul>';
 
 		$this->handle( 'http', 0, $message );
@@ -170,7 +218,7 @@ class WPF_Log_Handler {
 
 		if ( wpf_get_option( 'logging_badge', true ) && ( ! isset( $_GET['page'] ) || 'wpf-settings-logs' !== $_GET['page'] ) ) {
 
-			$errors_count = (int) get_option( 'wpf_logs_unseen_errors' );
+			$errors_count = wpf_get_option( 'logs_unseen_errors', 0 );
 
 			if ( $errors_count ) {
 
@@ -209,7 +257,8 @@ class WPF_Log_Handler {
 	public function clear_errors_count() {
 
 		if ( wpf_get_option( 'logging_badge', true ) ) {
-			delete_option( 'wpf_logs_unseen_errors' );
+			delete_option( 'wpf_logs_unseen_errors' ); // pre-3.38.31
+			wp_fusion()->settings->set( 'logs_unseen_errors', 0 );
 		}
 
 	}
@@ -283,7 +332,7 @@ class WPF_Log_Handler {
 
 		if ( wpf_get_option( 'logging_badge', true ) ) {
 
-			$errors_count = (int) get_option( 'wpf_logs_unseen_errors' );
+			$errors_count = wpf_get_option( 'logs_unseen_errors', 0 );
 
 			if ( $errors_count ) {
 
@@ -294,7 +343,9 @@ class WPF_Log_Handler {
 		}
 
 		$page['sections'] = wp_fusion()->settings->insert_setting_after(
-			'advanced', $page['sections'], array(
+			'advanced',
+			$page['sections'],
+			array(
 				'logs' => array(
 					'title' => $title . ' &rarr;',
 					'slug'  => 'wpf-settings-logs',
@@ -349,16 +400,11 @@ class WPF_Log_Handler {
 	}
 
 	/**
-	 * Logging tab content
+	 * Flush all logs.
 	 *
-	 * @access public
 	 * @return void
 	 */
-
-	public function show_logs_section() {
-
-		include_once WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php';
-
+	public function flush_logs() {
 		// Flush logs.
 		if ( ! empty( $_REQUEST['flush-logs'] ) ) { // phpcs:ignore
 
@@ -372,6 +418,38 @@ class WPF_Log_Handler {
 			wp_redirect( esc_url_raw( admin_url( 'tools.php?page=wpf-settings-logs' ) ) );
 			exit;
 		}
+	}
+
+
+	/**
+	 * Export logs from db to a csv file.
+	 *
+	 * @since 3.38.23
+	 */
+	public function export_logs() {
+
+		if ( ! empty( $_REQUEST['export-logs'] ) ) {
+
+			if ( empty( $_REQUEST['wpf_logs_submit'] ) || ! wp_verify_nonce( $_REQUEST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) { // @codingStandardsIgnoreLine.
+				wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
+			}
+
+			self::export();
+
+		}
+	}
+
+
+	/**
+	 * Logging tab content
+	 *
+	 * @access public
+	 * @return void
+	 */
+
+	public function show_logs_section() {
+
+		include_once WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php';
 
 		// Bulk actions.
 		if ( isset( $_REQUEST['action'] ) && isset( $_REQUEST['log'] ) ) { // @codingStandardsIgnoreLine.
@@ -395,6 +473,8 @@ class WPF_Log_Handler {
 
 				<input style="vertical-align: baseline;" type="submit" name="flush-logs" id="flush-logs" class="button delete" value="<?php esc_attr_e( 'Flush all logs', 'wp-fusion-lite' ); ?>">
 
+				<input style="vertical-align: baseline;" type="submit" name="export-logs" id="export-logs" class="button" value="<?php esc_attr_e( 'Export to .csv', 'wp-fusion-lite' ); ?>">
+
 				<hr class="wp-header-end" />
 
 				<span class="description" style="display: inline-block; padding: 5px 0;">
@@ -405,7 +485,7 @@ class WPF_Log_Handler {
 				<?php if ( wpf_get_option( 'logging_errors_only' ) ) : ?>
 
 					<div class="notice notice-warning">
-						<p><?php esc_html_e( '<strong>Note:</strong> The logs are currently set to record <strong>Only Errors</strong>, from the Advanced tab in the WP Fusion settings. Informational and debugging messages are not being recorded.', 'wp-fusion-lite' ); ?></p>
+						<p><?php echo wp_kses_post( __( '<strong>Note:</strong> The logs are currently set to record <strong>Only Errors</strong>, from the Advanced tab in the WP Fusion settings. Informational and debugging messages are not being recorded.', 'wp-fusion-lite' ) ); ?></p>
 					</div>
 
 				<?php endif; ?>
@@ -475,7 +555,7 @@ class WPF_Log_Handler {
 	 *
 	 * @type string $source Optional. Source will be available in log table. If
 	 * no source is provided, attempt to provide sensible default. }
-	 * @param int   $timestamp Log timestamp.
+	 * @param int    $timestamp Log timestamp.
 	 *
 	 * @see    WPF_Log_Handler::get_log_source() for default source.
 	 * @return bool   False if value was not handled and true if value was handled.
@@ -484,20 +564,14 @@ class WPF_Log_Handler {
 
 		$timestamp = current_time( 'timestamp' );
 
-		do_action( 'wpf_handle_log', $timestamp, $level, $user, $message, $context );
-
-		if ( wpf_get_option( 'enable_logging' ) != true ) {
-			return;
-		}
-
-		if ( wpf_get_option( 'logging_errors_only' ) == true && $level != 'error' ) {
-			return;
-		}
-
-		if ( isset( $context['source'] ) && $context['source'] ) {
+		if ( ! empty( $context['source'] ) ) {
 			$source = $context['source'];
 		} else {
 			$source = $this->get_log_source();
+		}
+
+		if ( 'http_request_failed' === $level ) {
+			$level = 'error';
 		}
 
 		// Change "tags" to "lists" etc. in the message.
@@ -511,6 +585,21 @@ class WPF_Log_Handler {
 			if ( 'contact' !== $selected_type ) {
 				$message = str_replace( 'contact', $selected_type, $message );
 			}
+		}
+
+		// At this point we've got enough info to pass it on to Fatal Error
+		// Notify or other integrations via wpf_handle_log.
+
+		do_action( 'wpf_handle_log', $timestamp, $level, $user, $message, $context );
+
+		// If logging isn't enabled, nothing more to do.
+
+		if ( ! wpf_get_option( 'enable_logging' ) ) {
+			return;
+		}
+
+		if ( wpf_get_option( 'logging_errors_only' ) && 'error' !== $level ) {
+			return;
 		}
 
 		// Filter out irrelevant meta fields and show any field format changes (don't do it when loading data).
@@ -568,11 +657,11 @@ class WPF_Log_Handler {
 		// Track errors.
 		if ( 'error' == $level && wpf_get_option( 'logging_badge', true ) ) {
 
-			$count = (int) get_option( 'wpf_logs_unseen_errors', 0 );
+			$count = wpf_get_option( 'logs_unseen_errors', 0 );
 
 			$count++;
 
-			update_option( 'wpf_logs_unseen_errors', $count, false );
+			wp_fusion()->settings->set( 'logs_unseen_errors', $count );
 
 		}
 
@@ -603,7 +692,7 @@ class WPF_Log_Handler {
 			'level'     => self::get_level_severity( $level ),
 			'user'      => $user,
 			'message'   => $message,
-			'source'    => $source,
+			'source'    => maybe_serialize( $source ),
 		);
 
 		$format = array(
@@ -638,6 +727,54 @@ class WPF_Log_Handler {
 	}
 
 	/**
+	 * Export all db data to csv file.
+	 *
+	 * @since 3.38.23
+	 */
+	public static function export() {
+		global $wpdb;
+		$results = $wpdb->get_results( "SELECT * from {$wpdb->prefix}wpf_logging" );
+		if ( ! empty( $results ) ) {
+
+			$delimiter = ',';
+			$filename  = 'wp-fusion-activity-logs' . gmdate( 'Y-m-d' ) . '.csv';
+
+			// Create a file pointer.
+			$output = fopen( 'php://output', 'w' );
+
+			// Set column headers.
+			$fields = array( 'ID', 'Time', 'Level', 'User', 'Source', 'Message', 'Context' );
+			fputcsv( $output, $fields );
+
+			// Output each row of the data, format line as csv and write to file pointer.
+			foreach ( $results as $result ) {
+				$line_data = array(
+					$result->log_id,
+					$result->timestamp,
+					$result->level,
+					$result->user,
+					$result->source,
+					wp_strip_all_tags( htmlspecialchars_decode( $result->message ) ),
+					$result->context,
+				);
+
+				fputcsv( $output, $line_data );
+			}
+
+			header( 'Pragma: public' );
+			header( 'Expires: 0' );
+			header( 'Cache-Control: must-revalidate, post-check=0, pre-check=0' );
+			header( 'Cache-Control: private', false );
+			header( 'Content-Type: text/csv; charset=utf-8' );
+			header( 'Content-Disposition: attachment; filename=' . $filename . '' );
+			header( 'Content-Transfer-Encoding: binary' );
+			exit;
+		}
+
+	}
+
+
+	/**
 	 * Clear all logs from the DB.
 	 *
 	 * @return bool True if flush was successful.
@@ -662,7 +799,7 @@ class WPF_Log_Handler {
 
 		$log_ids = array_map( 'absint', (array) $_REQUEST['log'] );
 
-		if ( 'delete' === $_REQUEST['action'] || 'delete' === $_REQUEST['action2'] ) { 
+		if ( 'delete' === $_REQUEST['action'] || 'delete' === $_REQUEST['action2'] ) {
 			self::delete( $log_ids );
 		}
 	}
@@ -704,19 +841,7 @@ class WPF_Log_Handler {
 
 	public function get_log_source() {
 
-		/**
-		 * PHP < 5.3.6 correct behavior
-		 *
-		 * @see http://php.net/manual/en/function.debug-backtrace.php#refsect1-function.debug-backtrace-parameters
-		 */
-
-		if ( defined( 'DEBUG_BACKTRACE_IGNORE_ARGS' ) ) {
-			$debug_backtrace_arg = DEBUG_BACKTRACE_IGNORE_ARGS;
-		} else {
-			$debug_backtrace_arg = false;
-		}
-
-		// Get the available files that are valid as a log source
+		// Get the available files that are valid as a log source.
 
 		$slugs = array( 'user-profile', 'api', 'access-control', 'auto-login', 'ajax', 'shortcodes' );
 
@@ -738,14 +863,20 @@ class WPF_Log_Handler {
 		// This allows us to preprend a source manually
 
 		if ( ! empty( $this->event_sources ) ) {
-			$found_integrations = array_merge( $found_integrations, $this->event_sources );
+			$found_integrations  = array_merge( $found_integrations, $this->event_sources );
+			$this->event_sources = array(); // clear it out.
 		}
 
-		$full_trace = array_reverse( debug_backtrace( $debug_backtrace_arg ) );
+		$full_trace = array_reverse( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 15 ) );
 
 		foreach ( $full_trace as $i => $trace ) {
 
 			if ( isset( $trace['file'] ) ) {
+
+				if ( 'login' === $trace['function'] ) {
+					$found_integrations[] = 'user-login';
+					continue;
+				}
 
 				foreach ( $slugs as $slug ) {
 
@@ -765,11 +896,9 @@ class WPF_Log_Handler {
 			}
 		}
 
-		// Figure out most likely integration
+		// Figure out most likely integration.
 		if ( ! empty( $found_integrations ) ) {
-
-			$source = serialize( array_unique( $found_integrations ) );
-
+			$source = array_unique( $found_integrations );
 		} else {
 			$source = 'unknown';
 		}

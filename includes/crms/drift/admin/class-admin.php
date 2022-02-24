@@ -49,6 +49,29 @@ class WPF_Drift_Admin {
 	}
 
 	/**
+	 * Gets the OAuth URL for the initial connection.
+	 *
+	 * If we're using the WP Fusion app, send the request through wpfusion.com,
+	 * otherwise allow a custom app.
+	 *
+	 * @since  3.38.44
+	 *
+	 * @return string The URL.
+	 */
+	public function get_oauth_url() {
+
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
+
+		$args = array(
+			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings' ),
+			'action'   => "wpf_get_{$this->slug}_token",
+		);
+
+		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
+
+	}
+
+	/**
 	 * Hooks to run when this CRM is selected as active
 	 *
 	 * @access  public
@@ -111,17 +134,20 @@ class WPF_Drift_Admin {
 
 		$new_settings['drift_header'] = array(
 			'title'   => __( 'Drift Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		if( empty( $options['drift_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
 
-			$new_settings['drift_header']['desc'] = '<table class="form-table"><tr>';
-			$new_settings['drift_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['drift_header']['desc'] .= '<td><a class="button button-primary" href="https://wpfusion.com/parse-drift-oauth.php?redirect=' .  urlencode( get_admin_url() . './options-general.php?page=wpf-settings' ) . '&action=wpf_get_drift_token&client_id=' . $this->crm->client_id . '">Authorize with Drift</a><br /><span class="description">You\'ll be taken to Drift to authorize WP Fusion and generate access keys for this site.</td>';
-			$new_settings['drift_header']['desc'] .= '</tr></table></div><table class="form-table">';
+			$new_settings['drift_auth'] = array(
+				'title'   => __( 'Authorize', 'wp-fusion-lite' ),
+				'type'    => 'oauth_authorize',
+				'section' => 'setup',
+				'url'     => $this->get_oauth_url(),
+				'name'    => $this->name,
+				'slug'    => $this->slug,
+			);
 
 		} else {
 
@@ -129,7 +155,7 @@ class WPF_Drift_Admin {
 				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'std'     => '',
 				'type'    => 'text',
-				'section' => 'setup'
+				'section' => 'setup',
 			);
 
 			$new_settings['drift_refresh_token'] = array(

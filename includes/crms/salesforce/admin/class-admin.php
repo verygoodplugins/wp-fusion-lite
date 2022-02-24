@@ -22,14 +22,59 @@ class WPF_Salesforce_Admin {
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_salesforce_header_begin', array( $this, 'show_field_salesforce_header_begin' ), 10, 2 );
 
-		// AJAX
+		// AJAX.
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
 
+		// OAuth
+		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ), 1 );
+
 	}
+
+	/**
+	 * Gets the OAuth URL for the initial connection.
+	 *
+	 * If we're using the WP Fusion app, send the request through wpfusion.com,
+	 * otherwise allow a custom app.
+	 *
+	 * @since  3.38.20
+	 *
+	 * @return string The URL.
+	 */
+	public function get_oauth_url() {
+
+		$url       = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
+
+		$args = array(
+			'action'   => 'wpf_get_salesforce_token',
+			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=salesforce' ),
+		);
+
+		if ( 'https://login.salesforce.com/services/oauth2/token' === $url ) {
+
+			// Standard URL.
+			return apply_filters( 'wpf_salesforce_init_auth_url', add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
+
+		} elseif ( 'https://test.salesforce.com/services/oauth2/token' === $url ) {
+
+			$args['sandbox'] = true;
+
+			// Sandbox URLs.
+			return apply_filters( 'wpf_salesforce_init_auth_url', add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
+
+		} else {
+
+			// Custom URL, we don't need to send it through wpfusion.com.
+			return $url;
+
+		}
+
+	}
+
 
 	/**
 	 * Hooks to run when this CRM is selected as active
@@ -40,9 +85,28 @@ class WPF_Salesforce_Admin {
 
 	public function init() {
 
+		add_action( 'wpf_settings_notices', array( $this, 'oauth_warning' ) );
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
+	}
+
+	/**
+	 * Check if we need to upgrade to the new OAuth.
+	 *
+	 * @since 3.38.17
+	 */
+	public function oauth_warning() {
+
+		if ( empty( wpf_get_option( 'sf_refresh_token' ) ) ) {
+
+			echo '<div class="notice notice-warning wpf-notice"><p>';
+
+			echo wp_kses_post( sprintf( __( '<strong>Heads up:</strong> WP Fusion\'s Salesforce integration has been updated to use OAuth authentication. Please %1$sclick here to re-authorize the connection%2$s before the end of 2021 to avoid service interruption.', 'wp-fusion-lite' ), '<a href="' . $this->get_oauth_url() . '">', '</a>' ) );
+
+			echo '</p></div>';
+
+		}
 	}
 
 
@@ -59,49 +123,66 @@ class WPF_Salesforce_Admin {
 
 		$new_settings['salesforce_header'] = array(
 			'title'   => __( 'Salesforce Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
+			'url'     => 'https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/',
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
-		$new_settings['sf_username'] = array(
-			'title'   => __( 'Username', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter the username for the administrator of your Salesforce account (usually an email address).', 'wp-fusion-lite' ),
-			'std'     => '',
-			'type'    => 'text',
-			'section' => 'setup',
-		);
+		if ( empty( $options['sf_access_token'] ) && ! isset( $_GET['code'] ) ) {
 
-		$new_settings['sf_pass'] = array(
-			'title'   => __( 'Password', 'wp-fusion-lite' ),
-			'std'     => '',
-			'type'    => 'password',
-			'section' => 'setup',
-		);
+			$new_settings['salesforce_header']['desc']  = '<table class="form-table"><tr>';
+			$new_settings['salesforce_header']['desc'] .= '<th scope="row"><label>' . esc_html__( 'Authorize', 'wp-fusion-lite' ) . '</label></th>';
+			$new_settings['salesforce_header']['desc'] .= '<td><a id="dynamics-auth-btn" class="button button-primary" href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Authorize with %s', 'wp-fusion-lite' ), $this->name ) . '</a><br />';
+			$new_settings['salesforce_header']['desc'] .= '<span class="description">' . sprintf( esc_html__( 'You\'ll be taken to %s to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ), $this->name ) . '</td>';
+			$new_settings['salesforce_header']['desc'] .= '</tr></table>';
 
-		$new_settings['sf_token'] = array(
-			'title'       => __( 'Security Token', 'wp-fusion-lite' ),
-			'desc'        => __( 'You can generate a security token by visiting the My Settings page and navigating to Personal >> Reset My Security Token.', 'wp-fusion-lite' ),
-			'type'        => 'api_validate',
-			'section'     => 'setup',
-			'class'       => 'api_key',
-			'post_fields' => array( 'sf_username', 'sf_pass', 'sf_token' ),
-		);
+			if ( ! is_ssl() ) {
+				$new_settings['salesforce_header']['desc'] .= '<p class="wpf-notice notice notice-error">' . sprintf( esc_html__( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the %s API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ), $this->name ) . '</p>';
+			}
 
-		if ( $settings['connection_configured'] == true && wpf_get_option( 'crm' ) == 'salesforce' ) {
+			$new_settings['salesforce_header']['desc'] .= '</div><table class="form-table">';
 
-			$new_settings['sf_tag_type'] = array(
-				'title'   => __( 'Salesforce Tag Type', 'wp-fusion-lite' ),
-				'std'     => 'Topics',
-				'type'    => 'radio',
+		} else {
+
+			$new_settings['sf_instance_url'] = array(
+				'title'   => __( 'Instance URL', 'wp-fusion-lite' ),
+				'type'    => 'text',
 				'section' => 'setup',
-				'choices' => array(
-					'Topics'   => 'Topics',
-					'Personal' => 'Personal tags',
-					'Public'   => 'Public tags',
-				),
-				'desc'    => __( 'After changing the tag type, save the settings page and click Refresh above.', 'wp-fusion-lite' ),
 			);
+
+			if ( $settings['connection_configured'] == true && wpf_get_option( 'crm' ) == 'salesforce' ) {
+
+				$new_settings['sf_tag_type'] = array(
+					'title'   => __( 'Salesforce Tag Type', 'wp-fusion-lite' ),
+					'std'     => 'Topics',
+					'type'    => 'radio',
+					'section' => 'setup',
+					'choices' => array(
+						'Topics'   => 'Topics',
+						'Personal' => 'Personal tags',
+						'Public'   => 'Public tags',
+					),
+					'desc'    => __( 'After changing the tag type, save the settings page and click Refresh below.', 'wp-fusion-lite' ),
+				);
+
+			}
+
+			$new_settings['sf_access_token'] = array(
+				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
+
+			$new_settings['sf_refresh_token'] = array(
+				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
+				'type'        => 'api_validate',
+				'section'     => 'setup',
+				'class'       => 'api_key',
+				'post_fields' => array( 'sf_access_token', 'sf_refresh_token', 'sf_instance_url' ),
+				'desc'        => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
+			);
+
+			$new_settings['sf_refresh_token']['desc'] .= __( 'To avoid having to repeatedly re-authorize, make sure the WP Fusion app is <a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/#complete-installation" target="_blank">completely installed</a>.', 'wp-fusion-lite' );
 
 		}
 
@@ -180,6 +261,55 @@ class WPF_Salesforce_Admin {
 
 
 	/**
+	 * Hooks to run when this CRM is selected as active
+	 *
+	 * @access  public
+	 * @since   1.0
+	 */
+
+	public function maybe_oauth_complete() {
+
+		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && 'salesforce' === $_GET['crm'] ) {
+
+			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+
+			$params = array(
+				'body' => array(
+					'grant_type'    => 'authorization_code',
+					'client_id'     => $this->crm->client_id,
+					'client_secret' => $this->crm->client_secret,
+					'redirect_uri'  => 'https://wpfusion.com/oauth/?action=wpf_get_salesforce_token&redirect',
+					'code'          => $code,
+				),
+			);
+
+			$url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
+
+			$response = wp_safe_remote_post( $url, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return false;
+			}
+
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( isset( $body->error ) ) {
+				return false;
+			}
+
+			wp_fusion()->settings->set( 'sf_access_token', $body->access_token );
+			wp_fusion()->settings->set( 'sf_refresh_token', $body->refresh_token );
+			wp_fusion()->settings->set( 'sf_instance_url', $body->instance_url );
+			wp_fusion()->settings->set( 'crm', $this->slug );
+
+			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
+			exit;
+
+		}
+
+	}
+
+
+	/**
 	 * Puts a div around the Salesforce configuration section so it can be toggled
 	 *
 	 * @access  public
@@ -205,12 +335,10 @@ class WPF_Salesforce_Admin {
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
+		$instance_url = sanitize_text_field( $_POST['sf_instance_url'] );
+		$access_token = sanitize_text_field( $_POST['sf_access_token'] );
 
-		$username       = sanitize_text_field( $_POST['sf_username'] );
-		$token          = sanitize_text_field( $_POST['sf_token'] );
-		$combined_token = stripslashes( $_POST['sf_pass'] ) . $token;
-
-		$connection = $this->crm->connect( $username, $combined_token, true );
+		$connection = $this->crm->connect( $instance_url, $access_token, true );
 
 		if ( is_wp_error( $connection ) ) {
 
@@ -220,9 +348,8 @@ class WPF_Salesforce_Admin {
 
 			$options = array();
 
-			$options['sf_username']           = $username;
-			$options['sf_token']              = $token;
-			$options['sf_combined_token']     = $combined_token;
+			$options['sf_access_token']       = $access_token;
+			$options['sf_instance_url']       = $instance_url;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 

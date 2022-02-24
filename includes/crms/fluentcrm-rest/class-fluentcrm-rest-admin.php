@@ -76,7 +76,7 @@ class WPF_FluentCRM_REST_Admin {
 	 */
 	public function handle_rest_authentication() {
 
-		if ( isset( $_GET['site_url'] ) && isset( $_GET['crm'] ) && 'fluentcrm' == $_GET['crm'] ) {
+		if ( isset( $_GET['site_url'] ) && isset( $_GET['crm'] ) && $this->slug == $_GET['crm'] ) {
 
 			$url      = esc_url_raw( urldecode( $_GET['site_url'] ) );
 			$username = sanitize_text_field( urldecode( $_GET['user_login'] ) );
@@ -119,15 +119,16 @@ class WPF_FluentCRM_REST_Admin {
 			'title'   => __( 'URL', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup',
+			'class'   => 'wp-rest-url',
 			'desc'    => __( 'Enter the URL to your website where FluentCRM is installed (must be https://)', 'wp-fusion-lite' ),
 		);
 
 		if ( empty( $options['fluentcrm_rest_url'] ) ) {
 			$href  = '#';
-			$class = 'button button-disabled';
+			$class = 'button button-disabled rest-auth-btn';
 		} else {
-			$href  = trailingslashit( $options['fluentcrm_rest_url'] ) . 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' . urlencode( get_bloginfo( 'name' ) ) . '&success_url=' . admin_url( 'options-general.php?page=wpf-settings' ) . '%26crm=fluentcrm';
-			$class = 'button';
+			$href  = trailingslashit( $options['fluentcrm_rest_url'] ) . 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' . urlencode( get_bloginfo( 'name' ) ) . '&success_url=' . admin_url( 'options-general.php?page=wpf-settings' ) . '%26crm=' . $this->slug;
+			$class = 'button rest-auth-btn';
 		}
 
 		$new_settings['fluentcrm_rest_url']['desc'] .= '<br /><br /><a id="fluentcrm_rest-auth-btn" class="' . $class . '" href="' . $href . '">' . __( 'Authorize with FluentCRM', 'wp-fusion-lite' ) . '</a>';

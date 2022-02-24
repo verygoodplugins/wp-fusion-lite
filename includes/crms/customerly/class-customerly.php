@@ -146,7 +146,7 @@ class WPF_Customerly {
 	 * @param integer $user_id
 	 * @return string
 	 */
-	public function get_user_edit_url($access_key=null,$email,$user_id){
+	public function get_user_edit_url($access_key,$email,$user_id){
 		if(empty($email)){
 			return;
 		}

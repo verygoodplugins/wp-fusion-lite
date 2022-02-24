@@ -62,6 +62,11 @@ $kartra_fields['country'] = array(
 	'crm_field' => 'country'
 );
 
+$kartra_fields[] = array(
+	'crm_label' => 'IP',
+	'crm_field' => 'ip'
+);
+
 $kartra_fields['phone_number'] = array(
 	'crm_label' => 'Phone',
 	'crm_field' => 'phone'

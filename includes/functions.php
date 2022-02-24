@@ -108,6 +108,20 @@ if ( ! function_exists( 'wpf_get_current_user' ) ) {
 }
 
 /**
+ * Gets the current user's email address, with support for auto-logged-in
+ * users, and guests that are being tracked via cookie.
+ *
+ * @since  3.38.23
+ *
+ * @return string|bool Email address or false.
+ */
+function wpf_get_current_user_email() {
+
+	return wp_fusion()->user->get_current_user_email();
+
+}
+
+/**
  * Gets the WordPress user ID from a contact ID.
  *
  * @since 3.35.17
@@ -131,9 +145,9 @@ function wpf_get_user_id( $contact_id ) {
  * @return string|bool The contact ID, or false if not found,
  */
 
-function wpf_get_contact_id( $user_id = false ) {
+function wpf_get_contact_id( $user_id = false, $force_update = false ) {
 
-	return wp_fusion()->user->get_contact_id( $user_id );
+	return wp_fusion()->user->get_contact_id( $user_id, $force_update );
 
 }
 
@@ -354,7 +368,6 @@ function doing_wpf_webhook() {
  *
  * @return string The date time format.
  */
-
 function wpf_get_datetime_format() {
 
 	$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
@@ -368,16 +381,13 @@ function wpf_get_datetime_format() {
  *
  * @since  3.6.26
  *
- * @param  int   $user_id The user ID.
- * @return bool
+ * @return bool  Whether or not to do an admin override.
  */
-function wpf_admin_override( $user_id = false ) {
+function wpf_admin_override() {
 
-	if ( false === $user_id ) {
-		$user_id = get_current_user_id(); // don't use wpf_get_current_user_id() here since auto-login users don't have permissions anyway.
-	}
+	// Don't use user_can() here, it creates a memory leak with WPML for some reason.
 
-	if ( wpf_get_option( 'exclude_admins' ) && user_can( $user_id, 'manage_options' ) ) {
+	if ( wpf_get_option( 'exclude_admins' ) && current_user_can( 'manage_options' ) ) {
 		return true;
 	} else {
 		return false;
@@ -412,11 +422,43 @@ function wpf_get_option( $key, $default = false ) {
 function wpf_clean( $var ) {
 	if ( is_array( $var ) ) {
 		return array_map( 'wpf_clean', $var );
-	} elseif( is_bool( $var ) ) {
+	} elseif ( is_bool( $var ) ) {
 		return $var;
 	} else {
-		return is_scalar( $var ) ? sanitize_text_field( $var ) : $var;
+
+		$allowed_html = apply_filters( 'wpf_wp_kses_allowed_html', wp_kses_allowed_html( 'post' ) );
+
+		if ( is_scalar( $var ) ) {
+			$var = wp_kses( $var, $allowed_html );
+			$var = htmlspecialchars_decode( $var ); // we need special characters to be left alone.
+		}
+
+		return $var;
 	}
+}
+
+/**
+ * Sanitizes an array of tags while preserving special characters.
+ *
+ * @since  3.38.15
+ *
+ * @param  array $tags   The tags.
+ * @return array The tags.
+ */
+function wpf_clean_tags( $tags ) {
+
+	if ( ! is_array( $tags ) ) {
+		$tags = array( $tags );
+	}
+
+	$tags = array_filter( $tags ); // Remove any empties.
+
+	$tags = array_map( 'sanitize_text_field', $tags ); // Tags should be treated as an array of strings.
+
+	$tags = array_map( 'htmlspecialchars_decode', $tags ); // sanitize_text_field removes HTML special characters so we'll add them back.
+
+	return $tags;
+
 }
 
 

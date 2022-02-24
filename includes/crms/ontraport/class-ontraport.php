@@ -20,7 +20,7 @@ class WPF_Ontraport {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags_api' );
 
 	/**
 	 * Lets outside functions override the object type (Leads for example)
@@ -36,7 +36,7 @@ class WPF_Ontraport {
 	 * @var  string
 	 */
 
-	public $edit_url = 'https://app.ontraport.com/#!/contact/listAll&quickView=%d';
+	public $edit_url = 'https://app.ontraport.com/#!/contact/edit&id=%d';
 
 	/**
 	 * Get things started
@@ -49,7 +49,6 @@ class WPF_Ontraport {
 
 		$this->slug     = 'ontraport';
 		$this->name     = 'Ontraport';
-		$this->supports = array();
 
 		$this->object_type = 0;
 
@@ -75,7 +74,6 @@ class WPF_Ontraport {
 		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_states' ), 10, 2 );
-		// add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
 
 		// Add tracking code to footer
 		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
@@ -109,14 +107,23 @@ class WPF_Ontraport {
 
 		$options = wpf_get_option( 'ontraport_dropdown_options', array() );
 
-		if ( 'datepicker' == $field_type || 'date' == $field_type && is_numeric( $value ) ) {
-
-			// Dates are a unix timestamp and have to match the timezone set in the Ontraport account. For now we'll assume that is the same as the WP timezone
-
-			// strtotime() in CRM_Base seems to give us UTC, so this will switch it back to local? I really have no idea....
+		if ( 'date' === $field_type && is_numeric( $value ) ) {
 
 			$offset = get_option( 'gmt_offset' );
 			$value -= ( $offset * 60 * 60 );
+
+			// Dates in Ontraport are definitely stored in UTC. And loaded in
+			// UTC. This function assumes the date coming in is local time, and
+			// converts it.
+			//
+			// Many dates in WP are already UTC, so this messes those up. But
+			// for some reason we decided to add this in 3.33.17 and it's been
+			// mostly working since then so we're not going to mess with it.
+			//
+			// Though considering we don't convert the date loaded *from* OP
+			// into local time, this does mean a datetime field will drift by a
+			// few hours every time a user is edited and the date is synced back
+			// to OP. So basically, we're screwed either way 🤷‍♂️.
 
 			return $value;
 
@@ -202,47 +209,26 @@ class WPF_Ontraport {
 	}
 
 	/**
-	 * Creates new tags in Ontraport if needed
+	 * Creates a new tag in Ontraport and returns the ID.
 	 *
-	 * @access public
-	 * @return array Tags
+	 * @since  3.38.40
+	 *
+	 * @param  string $tag_name The tag name.
+	 * @return int    $tag_id the tag id returned from API.
 	 */
+	public function add_tag( $tag_name ) {
 
-	public function create_new_tags( $tags ) {
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( array( 'tag_name' => $tag_name ) );
+		$response       = wp_safe_remote_post( 'https://api.ontraport.com/1/Tags', $params );
 
-		foreach ( $tags as $i => $tag_id ) {
-
-			if ( is_numeric( $tag_id ) || empty( $tag_id ) ) {
-				continue;
-			}
-
-			// Remove the tag with a label from the list of IDs
-			unset( $tags[ $i ] );
-
-			$available_tags = wpf_get_option( 'available_tags' );
-
-			if ( isset( $available_tags[ $tag_id ] ) ) {
-				unset( $available_tags[ $tag_id ] );
-			}
-
-			$params         = $this->get_params();
-			$params['body'] = json_encode( array( 'tag_name' => $tag_id ) );
-			$response       = wp_safe_remote_post( 'https://api.ontraport.com/1/Tags', $params );
-			$response       = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( is_wp_error( $response ) ) {
-				return $tags;
-			}
-
-			$available_tags[ $response->data->tag_id ] = $tag_id;
-			wp_fusion()->settings->set( 'available_tags', $available_tags );
-
-			$tags[] = $response->data->tag_id;
-
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
-		return $tags;
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
+		return $response->data->tag_id;
 	}
 
 
@@ -694,10 +680,6 @@ class WPF_Ontraport {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if ( empty( $data['email'] ) ) {
-			return false;
-		}
-
 		// Referral data.
 		if ( isset( $_COOKIE['aff_'] ) ) {
 			$data['freferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
@@ -715,7 +697,7 @@ class WPF_Ontraport {
 		}
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -727,7 +709,7 @@ class WPF_Ontraport {
 
 		if ( ! isset( $body->data->id ) && isset( $body->data->attrs->id ) ) {
 
-			return new WP_Error( 'error', 'Failed to add contact with email ' . $data['email'] . ', contact already exists with ID ' . $body->data->attrs->id );
+			return new WP_Error( 'error', 'Failed to add contact with email ' . $data['email'] . ', contact already exists with ID #' . $body->data->attrs->id );
 
 		}
 
@@ -813,7 +795,11 @@ class WPF_Ontraport {
 
 				$value = $body_json['data'][ $field_data['crm_field'] ];
 
-				// Handle dropdowns and picklists
+				// Dates: Ontraport returns datetime fields in the time zone set on
+				// the field (no conversion). We'll assume the timezone in OP
+				// matches the site, and also not convert anything here.
+
+				// Handle dropdowns and picklists.
 
 				if ( isset( $options[ $field_data['crm_field'] ] ) && isset( $options[ $field_data['crm_field'] ][ $value ] ) ) {
 					$value = $options[ $field_data['crm_field'] ][ $value ];

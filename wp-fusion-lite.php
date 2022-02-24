@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.38.2
+ * Version: 3.38.44
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.38.2' );
+define( 'WP_FUSION_VERSION', '3.38.44' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -178,20 +178,20 @@ final class WP_Fusion_Lite {
 			self::$instance->check_install();
 			self::$instance->init_includes();
 
-			// Create settings
+			// Create settings.
 			self::$instance->settings = new WPF_Settings();
 			self::$instance->logger   = new WPF_Log_Handler();
 			self::$instance->batch    = new WPF_Batch();
 
 			// Integration modules are stored here for easy access, for
-			// example wp_fusion()->integrations->{'woocommerce'}->process_order( $order_id );
+			// example wp_fusion()->integrations->{'woocommerce'}->process_order( $order_id );.
 
 			self::$instance->integrations = new stdClass();
 
-			// Load the CRM modules
+			// Load the CRM modules.
 			add_action( 'plugins_loaded', array( self::$instance, 'init_crm' ) );
 
-			// Only useful if a CRM is selected
+			// Only useful if a CRM is selected.
 			if ( self::$instance->settings->get( 'connection_configured' ) ) {
 
 				self::$instance->includes();
@@ -206,7 +206,7 @@ final class WP_Fusion_Lite {
 				self::$instance->auto_login           = new WPF_Auto_Login();
 				self::$instance->ajax                 = new WPF_AJAX();
 
-				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor
+				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor.
 				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
 
 				add_action( 'init', array( self::$instance, 'init' ), 0 );
@@ -214,9 +214,12 @@ final class WP_Fusion_Lite {
 			}
 
 			if ( self::$instance->is_full_version() ) {
-				add_action( 'after_setup_theme', array( self::$instance, 'updater' ), 20 );
+				add_action( 'init', array( self::$instance, 'updater' ) );
 				add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 			}
+
+			register_deactivation_hook( __FILE__, array( self::$instance, 'deactivate' ) );
+
 		}
 
 		return self::$instance;
@@ -283,6 +286,10 @@ final class WP_Fusion_Lite {
 			define( 'WPF_STORE_URL', 'https://wpfusion.com' );
 		}
 
+		if ( ! defined( 'WPF_EDD_ITEM_ID' ) ) {
+			define( 'WPF_EDD_ITEM_ID', 'XXXX' );
+		}
+
 	}
 
 
@@ -298,6 +305,21 @@ final class WP_Fusion_Lite {
 	 */
 	public function init() {
 		do_action( 'wp_fusion_init' );
+	}
+
+	/**
+	 * Fires when WP Fusion is deactivated.
+	 *
+	 * @since 3.38.31
+	 */
+	public function deactivate() {
+
+		$timestamp = wp_next_scheduled( 'wpf_background_process_cron' );
+
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, 'wpf_background_process_cron' );
+		}
+
 	}
 
 	/**
@@ -319,8 +341,10 @@ final class WP_Fusion_Lite {
 				require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
 			}
 
+			// If the full version has been installed, deactivate this one.
 			if ( is_plugin_active( 'wp-fusion/wp-fusion.php' ) ) {
 				add_action( 'admin_notices', array( self::$instance, 'full_version_notice' ) );
+				deactivate_plugins( plugin_basename( __FILE__ ) );
 			}
 		}
 
@@ -336,9 +360,7 @@ final class WP_Fusion_Lite {
 
 	public function get_integrations() {
 
-		return apply_filters(
-			'wpf_integrations', array()
-		);
+		return apply_filters( 'wpf_integrations', array() );
 
 	}
 
@@ -351,9 +373,7 @@ final class WP_Fusion_Lite {
 
 	public function get_integrations_theme() {
 
-		return apply_filters(
-			'wpf_integrations_theme', array()
-		);
+		return apply_filters( 'wpf_integrations_theme', array() );
 
 	}
 
@@ -367,60 +387,65 @@ final class WP_Fusion_Lite {
 	public function get_crms() {
 
 		return apply_filters(
-			'wpf_crms', array(
-				'infusionsoft'   => 'WPF_Infusionsoft_iSDK',
-				'activecampaign' => 'WPF_ActiveCampaign',
-				'ontraport'      => 'WPF_Ontraport',
-				'drip'           => 'WPF_Drip',
-				'convertkit'     => 'WPF_ConvertKit',
-				'agilecrm'       => 'WPF_AgileCRM',
-				'salesforce'     => 'WPF_Salesforce',
-				'mautic'         => 'WPF_Mautic',
-				'intercom'       => 'WPF_Intercom',
+			'wpf_crms',
+			array(
+				'infusionsoft'    => 'WPF_Infusionsoft_iSDK',
+				'activecampaign'  => 'WPF_ActiveCampaign',
+				'ontraport'       => 'WPF_Ontraport',
+				'drip'            => 'WPF_Drip',
+				'convertkit'      => 'WPF_ConvertKit',
+				'agilecrm'        => 'WPF_AgileCRM',
+				'salesforce'      => 'WPF_Salesforce',
+				'mautic'          => 'WPF_Mautic',
+				'intercom'        => 'WPF_Intercom',
 				//'aweber'         => 'WPF_AWeber',
-				'mailerlite'     => 'WPF_MailerLite',
-				'capsule'        => 'WPF_Capsule',
-				'zoho'           => 'WPF_Zoho',
-				'kartra'         => 'WPF_Kartra',
-				'userengage'     => 'WPF_UserEngage',
-				'convertfox'     => 'WPF_ConvertFox',
-				'salesflare'     => 'WPF_Salesflare',
+				'mailerlite'      => 'WPF_MailerLite',
+				'capsule'         => 'WPF_Capsule',
+				'zoho'            => 'WPF_Zoho',
+				'kartra'          => 'WPF_Kartra',
+				'userengage'      => 'WPF_UserEngage',
+				'convertfox'      => 'WPF_ConvertFox',
+				'salesflare'      => 'WPF_Salesflare',
 				//'vtiger'         => 'WPF_Vtiger',
-				'flexie'         => 'WPF_Flexie',
-				'tubular'        => 'WPF_Tubular',
-				'maropost'       => 'WPF_Maropost',
-				'mailchimp'      => 'WPF_MailChimp',
-				'sendinblue'     => 'WPF_SendinBlue',
-				'hubspot'        => 'WPF_HubSpot',
-				'platformly'     => 'WPF_Platformly',
-				'drift'          => 'WPF_Drift',
-				'staging'        => 'WPF_Staging',
-				'autopilot'      => 'WPF_Autopilot',
-				'customerly'     => 'WPF_Customerly',
-				'copper'         => 'WPF_Copper',
-				'nationbuilder'  => 'WPF_NationBuilder',
-				'groundhogg'     => 'WPF_Groundhogg',
-				'mailjet'        => 'WPF_Mailjet',
-				'sendlane'       => 'WPF_Sendlane',
-				'getresponse'    => 'WPF_GetResponse',
-				'mailpoet'       => 'WPF_MailPoet',
-				'klaviyo'        => 'WPF_Klaviyo',
-				'birdsend'       => 'WPF_BirdSend',
-				'zerobscrm'      => 'WPF_ZeroBSCRM',
-				'mailengine'     => 'WPF_MailEngine',
-				'klick-tipp'     => 'WPF_KlickTipp',
-				'sendfox'        => 'WPF_SendFox',
-				'quentn'         => 'WPF_Quentn',
+				'flexie'          => 'WPF_Flexie',
+				'tubular'         => 'WPF_Tubular',
+				'maropost'        => 'WPF_Maropost',
+				'mailchimp'       => 'WPF_MailChimp',
+				'sendinblue'      => 'WPF_SendinBlue',
+				'hubspot'         => 'WPF_HubSpot',
+				'platformly'      => 'WPF_Platformly',
+				'drift'           => 'WPF_Drift',
+				'staging'         => 'WPF_Staging',
+				'autopilot'       => 'WPF_Autopilot',
+				'customerly'      => 'WPF_Customerly',
+				'copper'          => 'WPF_Copper',
+				'nationbuilder'   => 'WPF_NationBuilder',
+				'groundhogg'      => 'WPF_Groundhogg',
+				'mailjet'         => 'WPF_Mailjet',
+				'sendlane'        => 'WPF_Sendlane',
+				'getresponse'     => 'WPF_GetResponse',
+				'mailpoet'        => 'WPF_MailPoet',
+				'klaviyo'         => 'WPF_Klaviyo',
+				'birdsend'        => 'WPF_BirdSend',
+				'zerobscrm'       => 'WPF_ZeroBSCRM',
+				'mailengine'      => 'WPF_MailEngine',
+				'klick-tipp'      => 'WPF_KlickTipp',
+				'sendfox'         => 'WPF_SendFox',
+				'quentn'          => 'WPF_Quentn',
 				//'loopify'        => 'WPF_Loopify',
-				'wp-erp'         => 'WPF_WP_ERP',
-				'engagebay'      => 'WPF_EngageBay',
-				'fluentcrm'      => 'WPF_FluentCRM',
-				'growmatik'      => 'WPF_Growmatik',
-				'highlevel'      => 'WPF_HighLevel',
-				'emercury'       => 'WPF_Emercury',
-				'fluentcrm-rest' => 'WPF_FluentCRM_REST',
-				'pulsetech'      => 'WPF_PulseTechnologyCRM',
-				'autonami'       => 'WPF_Autonami',
+				'wp-erp'          => 'WPF_WP_ERP',
+				'engagebay'       => 'WPF_EngageBay',
+				'fluentcrm'       => 'WPF_FluentCRM',
+				'growmatik'       => 'WPF_Growmatik',
+				'highlevel'       => 'WPF_HighLevel',
+				'emercury'        => 'WPF_Emercury',
+				'fluentcrm-rest'  => 'WPF_FluentCRM_REST',
+				'pulsetech'       => 'WPF_PulseTechnologyCRM',
+				'autonami'        => 'WPF_Autonami',
+				'bento'           => 'WPF_Bento',
+				'dynamics-365'    => 'WPF_Dynamics_365',
+				'groundhogg-rest' => 'WPF_Groundhogg_REST',
+				'moosend'         => 'WPF_MooSend',
 			)
 		);
 
@@ -450,16 +475,16 @@ final class WP_Fusion_Lite {
 
 			require_once WPF_DIR_PATH . 'includes/admin/class-notices.php';
 			require_once WPF_DIR_PATH . 'includes/admin/admin-functions.php';
-
-			if ( ! $this->is_full_version() ) {
-				require_once WPF_DIR_PATH . 'includes/admin/class-lite-helper.php';
-			}
+			require_once WPF_DIR_PATH . 'includes/admin/class-upgrades.php';
+			require_once WPF_DIR_PATH . 'includes/admin/class-staging-sites.php';
 		}
 
-		// Plugin updater
+		// Plugin updater.
 
-		if ( is_admin() && $this->is_full_version() ) {
-			require_once WPF_DIR_PATH . 'includes/admin/class-updater.php';
+		if ( $this->is_full_version() ) {
+			include WPF_DIR_PATH . 'includes/admin/class-updater.php';
+		} else {
+			require_once WPF_DIR_PATH . 'includes/admin/class-lite-helper.php';
 		}
 
 	}
@@ -502,10 +527,8 @@ final class WP_Fusion_Lite {
 	/**
 	 * Initialize the CRM object based on the currently configured options
 	 *
-	 * @access private
 	 * @return object CRM Interface
 	 */
-
 	public function init_crm() {
 
 		self::$instance->crm_base = new WPF_CRM_Base();
@@ -518,11 +541,12 @@ final class WP_Fusion_Lite {
 		 * or modifying it by reference.
 		 *
 		 * @since 3.37.14
+		 * @since 3.38.24 CRM is now passed by reference because it's cooler.
 		 *
 		 * @param WPF_* object  The CRM class.
 		 */
 
-		do_action( 'wp_fusion_init_crm', self::$instance->crm );
+		do_action_ref_array( 'wp_fusion_init_crm', array( &self::$instance->crm ) );
 
 		return self::$instance->crm;
 
@@ -583,19 +607,6 @@ final class WP_Fusion_Lite {
 
 	}
 
-	/**
-	 * Load internationalization files
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function load_textdomain() {
-
-		load_plugin_textdomain( 'wp-fusion-lite', false, 'wp-fusion/languages' );
-
-	}
-
 
 	/**
 	 * Check to see if this is WPF Lite or regular
@@ -615,6 +626,7 @@ final class WP_Fusion_Lite {
 		}
 
 	}
+
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.
@@ -644,7 +656,7 @@ final class WP_Fusion_Lite {
 
 		echo '<div class="notice notice-error">';
 		echo '<p>';
-		esc_html_e( 'Warning: It looks like the full version of WP Fusion has been installed. Please deactivate the WP Fusion Lite plugin.', 'wp-fusion-lite' );
+		esc_html_e( 'Heads up: It looks like you\'ve installed the full version of WP Fusion. We have deactivated WP Fusion Lite for you, and copied over all your settings. You can go ahead and delete the WP Fusion Lite plugin 🙂', 'wp-fusion-lite' );
 		echo '</p>';
 		echo '</div>';
 

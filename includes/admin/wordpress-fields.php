@@ -78,3 +78,8 @@ $wp_fields['user_url'] = array(
 	'label' => __( 'Website (URL)', 'wp-fusion-lite' ),
 );
 
+$wp_fields['ip'] = array(
+	'type'   => 'text',
+	'label'  => __( 'IP Address', 'wp-fusion-lite' ),
+	'pseudo' => true,
+);

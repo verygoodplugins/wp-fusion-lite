@@ -87,7 +87,15 @@ class WPF_CRM_Queue {
 
 		if ( wpf_get_option( 'staging_mode' ) == true || defined( 'WPF_STAGING_MODE' ) ) {
 
-			wpf_log( 'notice', 0, 'Staging mode enabled. Method ' . $method . ':', array( 'source' => $this->crm->slug, 'args' => $args ) );
+			wpf_log(
+				'notice',
+				0,
+				'Staging mode enabled. Method ' . $method . ':',
+				array(
+					'source' => $this->crm->slug,
+					'args'   => $args,
+				)
+			);
 
 			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
 			$staging_crm = new WPF_Staging;
@@ -120,15 +128,18 @@ class WPF_CRM_Queue {
 		// wp_fusion()->crm->add_contact( $data, $map_meta_fields = false ), while changing
 		// the object type to "Lead".
 
-		if ( false !== strpos( $method, '_object' ) && isset( $this->crm->object_type ) ) {
+		if ( false !== strpos( $method, '_object' ) && isset( $this->crm->object_type ) && ! method_exists( $this->crm, $method ) ) {
 
 			$method      = str_replace( '_object', '', $method );
 			$object_type = array_pop( $args );
 
 			// Switch the object type for the API call
-			add_filter( 'wpf_crm_object_type', function() use ( &$object_type ) {
-				return $object_type;
-			} );
+			add_filter(
+				'wpf_crm_object_type',
+				function() use ( &$object_type ) {
+					return $object_type;
+				}
+			);
 
 			// Set $map_meta_fields to always false
 
@@ -147,7 +158,8 @@ class WPF_CRM_Queue {
 
 		}
 
-		if ( 'apply_tags' == $method || 'remove_tags' == $method || 'update_contact' == $method ) {
+		// You can set the third argument to true to bypass the queue, for example ->update_contact( $contact_id, $data, false, $bypass_queue = true ).
+		if ( ( 'apply_tags' === $method || 'remove_tags' === $method || 'update_contact' === $method ) && apply_filters( 'wpf_use_api_queue', true, $method, $args ) ) {
 
 			// Queue sending data and return true.
 			$this->add_to_buffer( $method, $args );
@@ -197,6 +209,9 @@ class WPF_CRM_Queue {
 			$cid  = $args[0];
 			$data = $args[1];
 
+			if ( empty( $data ) ) {
+				return; // if no fields in the data were enabled, nothing more to do.
+			}
 		}
 
 		if ( in_array( 'combined_updates', $this->crm->supports ) ) {
@@ -234,9 +249,7 @@ class WPF_CRM_Queue {
 							if ( $match !== false ) {
 								unset( $this->buffer['combined_update'][ $cid ]['remove_tags'][ $match ] );
 							}
-
 						}
-
 					}
 
 					$this->buffer['combined_update'][ $cid ]['apply_tags'] = array_unique( array_merge( $this->buffer['combined_update'][ $cid ]['apply_tags'], $data ) );
@@ -254,9 +267,7 @@ class WPF_CRM_Queue {
 							if ( $match !== false ) {
 								unset( $this->buffer['combined_update'][ $cid ]['apply_tags'][ $match ] );
 							}
-
 						}
-
 					}
 
 					$this->buffer['combined_update'][ $cid ]['remove_tags'] = array_unique( array_merge( $this->buffer['combined_update'][ $cid ]['remove_tags'], $data ) );
@@ -266,12 +277,10 @@ class WPF_CRM_Queue {
 					$this->buffer['combined_update'][ $cid ]['update_contact'] = array_merge( $this->buffer['combined_update'][ $cid ]['update_contact'], $data );
 
 				}
-
 			}
-
 		} else {
 
-			// CRMs that require separate API calls for tags and contact data
+			// CRMs that require separate API calls for tags and contact data.
 
 			if ( ! isset( $this->buffer[ $method ] ) ) {
 
@@ -281,56 +290,33 @@ class WPF_CRM_Queue {
 
 				$this->buffer[ $method ][ $cid ] = $args;
 
-			} else {
-
-				if ( $method == 'apply_tags' ) {
-
-					// Prevent tags getting added and removed in the same request
-
-					if(isset($this->buffer[ 'remove_tags' ]) && isset($this->buffer['remove_tags'][ $cid ])) {
-
-						foreach( $args[0] as $tag ) {
-
-							$match = array_search($tag, $this->buffer[ 'remove_tags' ][ $cid ][0]);
-
-							if($match !== false) {
-								unset($this->buffer[ 'remove_tags' ][ $cid ][0][$match]);
-							}
-
-						}
-
-					}
-
-					$this->buffer[ 'apply_tags' ][ $cid ][0] = array_unique( array_merge( $this->buffer[ 'apply_tags' ][ $cid ][0], $args[0] ) );
-
-				} elseif( $method == 'remove_tags' ) {
-
-					// Prevent tags getting added and removed in the same request
-
-					if(isset($this->buffer[ 'apply_tags' ]) && isset($this->buffer[ 'apply_tags' ][ $cid ])) {
-
-						foreach( $args[0] as $tag ) {
-
-							$match = array_search($tag, $this->buffer[ 'apply_tags' ][ $cid ][0]);
-
-							if($match !== false) {
-								unset($this->buffer[ 'apply_tags' ][ $cid ][0][$match]);
-							}
-
-						}
-
-					}
-
-					$this->buffer[ 'remove_tags' ][ $cid ][0] = array_unique( array_merge( $this->buffer[ 'remove_tags' ][ $cid ][0], $args[0] ) );
-
-				} elseif( $method == 'update_contact' ) {
-
-					$this->buffer[ $method ][ $cid ][1] = array_merge( $this->buffer[ $method ][ $cid ][1], $args[1] );
-
-				}
-
 			}
 
+			if ( 'apply_tags' === $method ) {
+
+				// Prevent tags getting added and removed in the same request.
+
+				if ( isset( $this->buffer['remove_tags'] ) && isset( $this->buffer['remove_tags'][ $cid ] ) ) {
+					$this->buffer['remove_tags'][ $cid ][0] = array_diff( $this->buffer['remove_tags'][ $cid ][0], $args[0] );
+				}
+
+				$this->buffer['apply_tags'][ $cid ][0] = array_unique( array_merge( $this->buffer['apply_tags'][ $cid ][0], $args[0] ) );
+
+			} elseif ( 'remove_tags' === $method ) {
+
+				// Prevent tags getting added and removed in the same request.
+
+				if ( isset( $this->buffer['apply_tags'] ) && isset( $this->buffer['apply_tags'][ $cid ] ) ) {
+					$this->buffer['apply_tags'][ $cid ][0] = array_diff( $this->buffer['apply_tags'][ $cid ][0], $args[0] );
+				}
+
+				$this->buffer['remove_tags'][ $cid ][0] = array_unique( array_merge( $this->buffer['remove_tags'][ $cid ][0], $args[0] ) );
+
+			} elseif ( 'update_contact' === $method ) {
+
+				$this->buffer[ $method ][ $cid ][1] = array_merge( $this->buffer[ $method ][ $cid ][1], $args[1] );
+
+			}
 		}
 
 	}
@@ -351,8 +337,8 @@ class WPF_CRM_Queue {
 		foreach ( $this->buffer as $method => $contacts ) {
 
 			foreach ( $contacts as $cid => $args ) {
- 
-				// Don't send empty data
+
+				// Don't send empty data.
 				if ( ! empty( $args[0] ) && ! empty( $args[1] ) || $method == 'combined_update' ) {
 
 					if ( $method == 'combined_update' ) {
@@ -366,7 +352,15 @@ class WPF_CRM_Queue {
 
 						$user_id = wp_fusion()->user->get_user_id( $cid );
 
-						wpf_log( 'error', $user_id, 'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(), array( 'source' => $this->crm->slug, 'args' => $args ) );
+						wpf_log(
+							'error',
+							$user_id,
+							'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(),
+							array(
+								'source' => $this->crm->slug,
+								'args'   => $args,
+							)
+						);
 
 						do_action( 'wpf_api_error', $method, $args, $cid, $result );
 
@@ -380,6 +374,8 @@ class WPF_CRM_Queue {
 				}
 			}
 		}
+
+		$this->buffer = false; // in case we need to call it again later, clear it out.
 
 	}
 

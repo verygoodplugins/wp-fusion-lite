@@ -6,7 +6,7 @@ if ( ! defined( "ACTIVECAMPAIGN_URL" ) || ( ! defined( "ACTIVECAMPAIGN_API_KEY" 
 
 require_once( "Connector.class.php" );
 
-class ActiveCampaign_API extends AC_Connector {
+class ActiveCampaign extends AC_Connector {
 
 	public $url_base;
 	public $url;

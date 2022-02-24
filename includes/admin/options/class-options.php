@@ -249,6 +249,11 @@ class WP_Fusion_Options {
 
 		foreach ( $settings as $id => $setting ) {
 
+			if ( empty( $this->post_data[ $id ] ) && 'hidden' === $setting['type'] ) {
+				// Don't erase saved values with empty hidden fields.
+				unset( $this->post_data[ $id ] );
+			}
+
 			if ( isset( $this->post_data[ $id ] ) && ! isset( $setting['subfields'] ) ) {
 
 				$this->post_data[ $id ] = $this->validate_options( $id, $this->post_data[ $id ], $setting );
@@ -261,6 +266,9 @@ class WP_Fusion_Options {
 			do_action( 'wpf_resetting_options', $this->options );
 
 			delete_option( $this->option_group );
+			delete_option( 'wpf_available_tags' );
+			delete_option( 'wpf_crm_fields' );
+
 			$this->options = array();
 
 			// Rebuild defaults and apply filters
@@ -415,12 +423,6 @@ class WP_Fusion_Options {
 				$this->checkboxes[] = $id;
 			} elseif ( 'multi_select' == $setting['type'] || 'checkboxes' == $setting['type'] || 'assign_tags' == $setting['type'] ) {
 				$this->multi_selects[] = $id;
-			}
-
-			// Add integrations tab
-
-			if ( 'integrations' == $setting['section'] && ! isset( $this->sections[ $this->setup['slug'] ]['integrations'] ) ) {
-				$this->sections[ $this->setup['slug'] ] = wp_fusion()->settings->insert_setting_after( 'contact-fields', $this->sections[ $this->setup['slug'] ], array( 'integrations' => __( 'Integrations', 'wp-fusion-lite' ) ) );
 			}
 
 			// If a custom setting template has been specified, load those values as well
@@ -1073,7 +1075,14 @@ class WP_Fusion_Options {
 	private function show_field_heading( $id, $field ) {
 
 		if ( ! empty( $field['title'] ) ) {
-			echo '<h4>' . esc_html( $field['title'] ) . '</h4>';
+			echo '<h4>';
+			echo esc_html( $field['title'] );
+
+			if ( ! empty( $field['url'] ) ) {
+				echo '<a class="header-docs-link" href="' . esc_url( $field['url'] ) . '" target="_blank">' . esc_html__( 'View documentation', 'wp-fusion-lite' ) . ' &rarr;</a>';
+			}
+
+			echo '</h4>';
 		}
 
 		if ( ! empty( $field['desc'] ) ) {
@@ -1456,7 +1465,6 @@ class WP_Fusion_Options {
 
 		$args = array(
 			'choices'    => array(),
-			'allow_null' => false,
 		);
 
 		return $args;
@@ -1472,7 +1480,11 @@ class WP_Fusion_Options {
 	private function show_field_select( $id, $field, $subfield_id = null ) {
 
 		if ( ! isset( $field['allow_null'] ) ) {
-			$field['allow_null'] = false;
+			if ( empty( $field['std'] ) ) {
+				$field['allow_null'] = true;
+			} else {
+				$field['allow_null'] = false;
+			}
 		}
 
 		if ( ! isset( $field['placeholder'] ) ) {
@@ -1976,6 +1988,22 @@ class WP_Fusion_Options {
 
 		wp_editor( stripslashes( stripslashes( html_entity_decode( $this->options[ $id ] ) ) ), $id, $settings );
 	}
+
+	/**
+	 * Validate editor field.
+	 *
+	 * @since  3.38.15
+	 *
+	 * @param  mixed $input   The HTML content.
+	 * @param  bool  $setting The setting.
+	 * @return mixed HTML content.
+	 */
+	public function validate_field_editor( $input, $setting = false ) {
+
+		return wp_kses_post( $input );
+
+	}
+
 
 	/**
 	 *

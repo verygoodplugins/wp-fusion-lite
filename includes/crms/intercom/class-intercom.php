@@ -41,7 +41,7 @@ class WPF_Intercom {
 
 		$this->slug     = 'intercom';
 		$this->name     = 'Intercom';
-		$this->supports = array( 'add_fields', 'add_tags' );
+		$this->supports = array( 'add_fields', 'add_tags', 'events', 'leads' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -298,10 +298,6 @@ class WPF_Intercom {
 
 	public function sync_crm_fields() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$crm_fields = array(
 			'email'     => 'Email',
 			'phone'     => 'Phone',
@@ -310,22 +306,11 @@ class WPF_Intercom {
 			'name'      => 'Name',
 		);
 
-		$request  = 'https://api.intercom.io/data_attributes/customer';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.intercom.io/data_attributes';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
-		if ( is_wp_error( $response ) && $response->get_error_message() == 'intercom_version_invalid' ) {
-
-			// Try v1.4 API
-			$request  = 'https://api.intercom.io/data_attributes';
-			$response = wp_safe_remote_get( $request, $this->params );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-		} elseif ( is_wp_error( $response ) ) {
-
+		if ( is_wp_error( $response ) ) {
 			return $response;
-
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
@@ -354,12 +339,8 @@ class WPF_Intercom {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$request  = 'https://api.intercom.io/users?email=' . urlencode( $email_address );
-		$response = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.intercom.io/users?email=' . rawurlencode( $email_address );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -374,6 +355,42 @@ class WPF_Intercom {
 		} elseif ( isset( $response->users ) && ! empty( $response->users ) ) {
 
 			return $response->users[0]->id;
+
+		} else {
+
+			return false;
+
+		}
+
+	}
+
+
+	/**
+	 * Gets lead ID for a user based on email address.
+	 *
+	 * @since  3.38.36
+	 *
+	 * @param  string $email_address The email address.
+	 * @return int    Contact ID
+	 */
+	public function get_lead_id( $email_address ) {
+
+		$request  = 'https://api.intercom.io/contacts?email=' . rawurlencode( $email_address );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( isset( $response->id ) ) {
+
+			return $response->id;
+
+		} elseif ( isset( $response->contacts ) && ! empty( $response->contacts ) ) {
+
+			return $response->contacts[0]->id;
 
 		} else {
 
@@ -409,7 +426,7 @@ class WPF_Intercom {
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( empty( $response['tags']['tags'] ) ) {
-			return false;
+			return array();
 		}
 
 		foreach ( $response['tags']['tags'] as $tag ) {
@@ -503,25 +520,33 @@ class WPF_Intercom {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data, $map_meta_fields = true, $lead = false ) {
 
 		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		// General cleanup and restructuring
+		// General cleanup and restructuring.
 
 		$body = array( 'email' => $data['email'] );
 
-		// Maybe use the combined name
+		// Intercom requires a name.
 
-		if ( isset( $data['firstname'] ) && isset( $data['lastname'] ) ) {
+		if ( ! isset( $data['firstname'] ) ) {
+			$data['firstname'] = '';
+		}
 
-			$body['name'] = $data['firstname'] . ' ' . $data['lastname'];
+		if ( ! isset( $data['lastname'] ) ) {
+			$data['lastname'] = '';
+		}
 
-			unset( $data['firstname'] );
-			unset( $data['lastname'] );
+		$body['name'] = trim( $data['firstname'] . ' ' . $data['lastname'] );
 
+		unset( $data['firstname'] );
+		unset( $data['lastname'] );
+
+		if ( empty( $body['name'] ) ) {
+			$body['name'] = 'unknown';
 		}
 
 		require_once dirname( __FILE__ ) . '/admin/intercom-fields.php';
@@ -537,14 +562,19 @@ class WPF_Intercom {
 
 		if ( ! empty( $data ) ) {
 
-			// All other custom fields
+			// All other custom fields.
 			$body['custom_attributes'] = $data;
 
 		}
 
-		$url            = 'https://api.intercom.io/users';
+		if ( false === $lead ) {
+			$url = 'https://api.intercom.io/users';
+		} else {
+			$url = 'https://api.intercom.io/contacts';
+		}
+
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -559,13 +589,28 @@ class WPF_Intercom {
 	}
 
 	/**
+	 * Adds a new lead.
+	 *
+	 * @since  3.38.36
+	 *
+	 * @param array $data            The lead data.
+	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @return string The lead ID.
+	 */
+	public function add_lead( $data, $map_meta_fields = true ) {
+
+		return $this->add_contact( $data, $map_meta_fields, $lead = true );
+
+	}
+
+	/**
 	 * Update contact
 	 *
 	 * @access public
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data, $map_meta_fields = true, $lead = false ) {
 
 		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
@@ -608,9 +653,14 @@ class WPF_Intercom {
 
 		}
 
-		$url            = 'https://api.intercom.io/users';
+		if ( false === $lead ) {
+			$url = 'https://api.intercom.io/users';
+		} else {
+			$url = 'https://api.intercom.io/contacts';
+		}
+
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -619,6 +669,22 @@ class WPF_Intercom {
 		}
 
 		return true;
+	}
+
+
+	/**
+	 * Upadates a lead.
+	 *
+	 * @since  3.38.36
+	 *
+	 * @param array $data            The lead data.
+	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @return string The lead ID.
+	 */
+	public function update_lead( $data, $map_meta_fields = true ) {
+
+		return $this->update_contact( $data, $map_meta_fields, $lead = true );
+
 	}
 
 	/**
@@ -726,5 +792,52 @@ class WPF_Intercom {
 		return $contact_ids;
 
 	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the Intercom site tracking API.
+	 *
+	 * @since  3.38.28
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		if ( empty( $email_address ) && ! wpf_is_user_logged_in() ) {
+			// Tracking only works if WP Fusion knows who the contact is.
+			return;
+		}
+
+		// Get the email address to track.
+		if ( empty( $email_address ) ) {
+			$user          = wpf_get_current_user();
+			$email_address = $user->user_email;
+		}
+
+		$data = array(
+			'event_name' => sanitize_title( $event ),
+			'created_at' => time(),
+			'email'      => $email_address,
+			'metadata'   => array(
+				'data' => $event_data,
+			),
+		);
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $data );
+
+		$response = wp_safe_remote_post( 'https://api.intercom.io/events', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+	}
+
 
 }

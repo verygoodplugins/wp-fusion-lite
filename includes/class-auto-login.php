@@ -37,8 +37,9 @@ class WPF_Auto_Login {
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
 
 		// End the session when someone logs in.
-		add_action( 'wp_logout', array( $this, 'end_auto_login' ), 1 );
+		add_action( 'wp_login', array( $this, 'end_auto_login' ), 1 );
 		add_action( 'wp_authenticate', array( $this, 'end_auto_login' ), 1 );
+		add_action( 'wp_logout', array( $this, 'end_auto_login' ), 1 );
 
 		add_action( 'wpf_get_tags_start', array( $this, 'unhook_tags_modified' ), 1 );
 
@@ -134,7 +135,11 @@ class WPF_Auto_Login {
 		}
 
 		if ( ! empty( $_COOKIE['wpf_contact'] ) ) {
-			$contact_data = array_map( 'sanitize_text_field', json_decode( wp_unslash( $_COOKIE['wpf_contact'] ), true ) );
+			$contact_data = json_decode( wp_unslash( $_COOKIE['wpf_contact'] ), true );
+
+			if ( ! empty( $contact_data ) ) {
+				$contact_data = array_map( 'sanitize_text_field', $contact_data );
+			}
 		}
 
 		// Allow permanently ending the session.
@@ -168,7 +173,7 @@ class WPF_Auto_Login {
 
 			// If data already exists, make sure the user hasn't expired.
 
-			$contact_id_from_db = get_user_meta( $contact_data['user_id'], wp_fusion()->crm->slug . '_contact_id', true );
+			$contact_id_from_db = get_user_meta( $contact_data['user_id'], WPF_CONTACT_ID_META_KEY, true );
 
 			if ( empty( $contact_id_from_db ) || $contact_id_from_db != $contact_data['contact_id'] ) {
 
@@ -182,10 +187,17 @@ class WPF_Auto_Login {
 
 			} elseif ( false !== $contact_id ) {
 
-				// If the temp user already exists but ?cid= is in the URL, update their tags anyway
+				// If the temp user already exists but ?cid= is in the URL, update their tags anyway.
 
-				wp_fusion()->user->get_tags( $contact_data['user_id'], true, false );
+				if ( ! isset( $_SERVER['HTTP_CACHE_CONTROL'] ) && empty( $_POST ) ) {
 
+					// We don't need to do this if the page was refreshed
+					// (HTTP_CACHE_CONTROL = max-age=0), or if a form is being
+					// submitted.
+
+					wp_fusion()->user->get_tags( $contact_data['user_id'], true, false );
+
+				}
 			}
 		}
 
@@ -210,9 +222,6 @@ class WPF_Auto_Login {
 
 		// Hide admin bar.
 		add_filter( 'show_admin_bar', '__return_false' );
-
-		// Disable comments (removed in v3.37.27).
-		// add_filter( 'comments_open', array( wp_fusion()->access, 'turn_off_comments' ), 10, 2 );.
 
 		add_filter( 'wp_get_current_commenter', array( $this, 'get_current_commenter' ) );
 
@@ -312,10 +321,10 @@ class WPF_Auto_Login {
 		// Set the random number based on the CID.
 		$user_id = wp_rand( 100000000, 1000000000 );
 
-		update_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', $user_tags );
-		update_user_meta( $user_id, wp_fusion()->crm->slug . '_contact_id', $contact_id );
+		update_user_meta( $user_id, WPF_TAGS_META_KEY, $user_tags );
+		update_user_meta( $user_id, WPF_CONTACT_ID_META_KEY, $contact_id );
 
-		wpf_log( 'info', $user_id, 'Starting auto-login session for contact ID ' . $contact_id . ' with tags:', array( 'tag_array' => $user_tags ) );
+		wpf_log( 'info', $user_id, 'Starting auto-login session for contact #' . $contact_id . ' with tags:', array( 'tag_array' => $user_tags ) );
 
 		// Allow other integrations to quickly access the auto login user ID.
 		$this->auto_login_user['user_id'] = $user_id;
@@ -334,9 +343,10 @@ class WPF_Auto_Login {
 			'user_id'    => $user_id,
 		);
 
-		$cookie_expiration = apply_filters( 'wpf_auto_login_cookie_expiration', DAY_IN_SECONDS * 180 );
+		$expire = time() + apply_filters( 'wpf_auto_login_cookie_expiration', DAY_IN_SECONDS * 180 );
 
-		setcookie( 'wpf_contact', wp_json_encode( $contact_data ), time() + $cookie_expiration, COOKIEPATH, COOKIE_DOMAIN );
+		setcookie( 'wpf_contact', wp_json_encode( $contact_data ), $expire, COOKIEPATH, COOKIE_DOMAIN );
+		setcookie( 'wordpress_logged_in_wpfusioncachebuster', true, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
 
 		// Schedule cleanup after one day.
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
@@ -386,19 +396,19 @@ class WPF_Auto_Login {
 
 			if ( ! headers_sent() ) {
 
-				// Clear the cookie if headers haven't been sent yet.
+				// Clear the cookies if headers haven't been sent yet.
 				setcookie( 'wpf_contact', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( 'wordpress_logged_in_wp_fusion_cachebuster', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
 
 				wp_destroy_current_session();
 				wp_clear_auth_cookie();
 
-			} elseif ( wpf_is_user_logged_in() ) {
+			} else {
 
 				// If headers have been sent, set a transient to clear the cookie on next load (since 3.36.1 we'll use update_option instead of set_transient).
 				update_option( 'wpf_end_auto_login_' . $contact_data['contact_id'], true );
 
 			}
-
 		}
 
 	}
@@ -594,7 +604,7 @@ class WPF_Auto_Login {
 
 			echo '* ' . esc_html__( 'Auto login tags: ' ) . PHP_EOL;
 
-			echo wp_kses_post( wpf_print_r( wp_fusion()->user->get_tags(), true ) );
+			echo str_replace( '&gt;', '>', esc_html( wpf_print_r( wp_fusion()->user->get_tags(), true ) ) );
 
 			echo PHP_EOL;
 
@@ -604,9 +614,9 @@ class WPF_Auto_Login {
 
 			$meta = wp_fusion()->user->get_user_meta( wpf_get_current_user_id() );
 
-			unset( $meta[ wp_fusion()->crm->slug . '_tags' ] ); // we just displayed this above
+			unset( $meta[ WPF_TAGS_META_KEY ] ); // we just displayed this above
 
-			echo wp_kses_post( wpf_print_r( $meta, true ) );
+			echo str_replace( '&gt;', '>', esc_html( wpf_print_r( $meta, true ) ) );
 
 			echo PHP_EOL;
 

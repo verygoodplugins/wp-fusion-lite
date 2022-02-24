@@ -64,6 +64,7 @@ class WPF_Emercury_Admin {
 		// Hooks in init() will run on the admin screen when this CRM is active
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_filter( 'validate_field_site_tracking', array( $this, 'validate_site_tracking' ), 10, 2 );
 	}
 
 
@@ -139,7 +140,69 @@ class WPF_Emercury_Admin {
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'general_desc', $settings, $new_settings );
 
+		$site_tracking = array();
+
+		$site_tracking['site_tracking_header'] = array(
+			'title'   => __( 'Emercury Settings', 'wp-fusion-lite' ),
+			'type'    => 'heading',
+			'section' => 'main',
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="http://help.emercury.net/en/articles/5121464-site-event-tracking-in-emercury">Emercury site tracking</a>.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+		);
+
+		$site_tracking['site_tracking_id'] = array(
+			'type'    => 'hidden',
+			'section' => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
+
 		return $settings;
+	}
+
+	/**
+	 * Get a site tracking ID when tracking is enabled.
+	 *
+	 * @since 3.38.15
+	 *
+	 * @param bool  $input   The input.
+	 * @param array $setting The setting.
+	 * @return bool|WP_Error The validated input.
+	 */
+	public function validate_site_tracking( $input, $setting ) {
+
+		if ( ! empty( $input ) && ! wpf_get_option( 'site_tracking_id' ) ) {
+
+			$result = $this->crm->get_tracking_id();
+
+			$result = false;
+
+			if ( $result ) {
+
+				// Save it.
+
+				add_filter(
+					'validate_field_site_tracking_id',
+					function() use ( &$result ) {
+						return $result;
+					}
+				);
+
+			} else {
+
+				// Error.
+				return new WP_Error( 'error', 'Error: Site tracking is only available on Pro and Scale plans. Please upgrade your Emercury account to enable site tracking.' );
+
+			}
+		}
+
+		return $input;
+
 	}
 
 	/**

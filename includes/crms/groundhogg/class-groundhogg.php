@@ -28,9 +28,10 @@ class WPF_Groundhogg {
 
 	public function __construct() {
 
-		$this->slug     = 'groundhogg';
-		$this->name     = 'Groundhogg';
-		$this->supports = array();
+		$this->slug      = 'groundhogg';
+		$this->name      = 'Groundhogg';
+		$this->menu_name = 'Groundhogg (This Site)';
+		$this->supports  = array( 'events', 'add_tags_api' );
 
 		// $this->supports = array( 'add_tags' ); // Removed in 3.35.10
 
@@ -572,9 +573,10 @@ class WPF_Groundhogg {
 		}
 
 		// If we're creating a contact from a user, pass that through
-
+		$by_user_id = false;
 		if ( isset( $user_id ) ) {
 			$data['user_id'] = $user_id;
+			$by_user_id = true;
 		}
 
 		// Set to opted in by default unless otherwise specified
@@ -585,8 +587,8 @@ class WPF_Groundhogg {
 
 		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 
-		$contact = new \Groundhogg\Contact( $data );
-
+		$contact = new \Groundhogg\Contact( $data, $by_user_id);
+		
 		if ( ! $contact->exists() ) {
 			return new WP_Error( 'error', 'Contact creation failed.' );
 		}
@@ -619,6 +621,27 @@ class WPF_Groundhogg {
 		return $id;
 
 	}
+
+
+
+	/**
+	 * Creates a new tag in Groundhogg and returns the ID.
+	 *
+	 * @since  3.38.42
+	 *
+	 * @param  string $tag_name The tag name.
+	 * @return int    $tag_id the tag id returned from API.
+	 */
+	public function add_tag( $tag_name ) {
+		$tag_ids = \Groundhogg\Plugin::$instance->dbs->get_db( 'tags' )->validate( array( $tag_name ) );
+
+		if ( is_wp_error( $tag_ids ) ) {
+			return $tag_ids;
+		}
+
+		return $tag_ids[0];
+	}
+
 
 	/**
 	 * Update contact
@@ -710,5 +733,44 @@ class WPF_Groundhogg {
 		return $contact_ids;
 
 	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event.
+	 *
+	 * @since  3.38.16
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		if ( empty( $email_address ) ) {
+			$email_address = wpf_get_current_user_email();
+		}
+
+		if ( false === $email_address ) {
+			return; // can't track without an email.
+		}
+
+		$contact = \Groundhogg\get_contactdata( $email_address );
+
+		if ( ! $contact ) {
+			return;
+		}
+
+		$args = array(
+			'contact_id' => $contact->ID,
+		);
+
+		$track = \Groundhogg\track_activity( $contact, $event, $args, $event_data );
+
+		return true;
+	}
+
+
 
 }

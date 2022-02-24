@@ -37,7 +37,6 @@ class WPF_Copper {
 		$this->name     = 'Copper';
 		$this->supports = array( 'add_tags' );
 
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
@@ -61,7 +60,7 @@ class WPF_Copper {
 		add_action( 'init', array( $this, 'get_actions' ), 5 );
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		//add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 		$account_id = wpf_get_option( 'account_id' );
@@ -80,21 +79,19 @@ class WPF_Copper {
 	 */
 
 	public function get_actions() {
-		if( ! empty( file_get_contents( 'php://input' ) ) ) {
+		if ( ! empty( file_get_contents( 'php://input' ) ) ) {
 
 			$payload = json_decode( file_get_contents( 'php://input' ) );
 
-			if( ! empty( $payload ) ) {
+			if ( ! empty( $payload ) ) {
 
-				if( isset( $payload->subscription_id ) ) {
+				if ( isset( $payload->subscription_id ) ) {
 
 					$_REQUEST['wpf_action'] = sanitize_text_field( $payload->secret );
 					$_REQUEST['access_key'] = sanitize_text_field( $payload->key );
 
 				}
-
 			}
-
 		}
 
 	}
@@ -109,11 +106,17 @@ class WPF_Copper {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'date' === $field_type ) {
 
-			// Make sure dates are ints and not strings
+			// Make sure dates are ints and not strings.
 
 			return (int) $value;
+
+		} elseif ( is_array( $value ) ) {
+
+			// Copper can handle arrays.
+
+			return $value;
 
 		} else {
 
@@ -132,39 +135,38 @@ class WPF_Copper {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( !is_object( $payload ) ) {
+		if ( ! is_object( $payload ) ) {
 			return false;
 		}
 
-		if( $post_data['wpf_action'] == 'update' ) {
+		if ( $post_data['wpf_action'] == 'update' ) {
 
 			$post_data['contact_id'] = $payload->ids[0];
 			return $post_data;
 
-		} elseif( $post_data['wpf_action'] == 'add' && isset( $payload->updated_attributes->tags ) ) {
+		} elseif ( $post_data['wpf_action'] == 'add' && isset( $payload->updated_attributes->tags ) ) {
 
-			$tag = wpf_get_option('copper_add_tag');
+			$tag = wpf_get_option( 'copper_add_tag' );
 
-			foreach( $payload->updated_attributes->tags as $update_tag ) {
+			foreach ( $payload->updated_attributes->tags as $update_tag ) {
 
-				if( empty( $update_tag ) ) {
+				if ( empty( $update_tag ) ) {
 					continue;
 				}
 
-				if( $update_tag[0] == $tag[0] ) {
+				if ( $update_tag[0] == $tag[0] ) {
 
 					$post_data['contact_id'] = $payload->ids[0];
 					return $post_data;
 
 				}
-
 			}
-
 		}
 
 	}
@@ -178,11 +180,11 @@ class WPF_Copper {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'prosperworks') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'copper.com' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->success ) && $body_json->success == false ) {
+			if ( isset( $body_json->success ) && $body_json->success == false ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
@@ -191,7 +193,6 @@ class WPF_Copper {
 				$response = new WP_Error( 'error', $body_json->error );
 
 			}
-
 		}
 
 		return $response;
@@ -214,15 +215,15 @@ class WPF_Copper {
 		}
 
 		$this->params = array(
-			'timeout'     => 60,
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'headers'     => array(
+			'timeout'    => 60,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
 				'X-PW-AccessToken' => $access_key,
 				'X-PW-Application' => 'developer_api',
 				'X-PW-UserEmail'   => $user_email,
-				'Content-type'	   => 'application/json',
+				'Content-type'     => 'application/json',
 
-			)
+			),
 		);
 
 		return $this->params;
@@ -245,7 +246,7 @@ class WPF_Copper {
 			return true;
 		}
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/account';
+		$request  = 'https://api.copper.com/developer_api/v1/account';
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -302,11 +303,11 @@ class WPF_Copper {
 		}
 
 		// Can't currently list tags or list all contacts
-		$tags 		= array();
-		$request    = 'https://api.prosperworks.com/developer_api/v1/people/search';
-		$response   = wp_safe_remote_post( $request, $this->params );
+		$tags     = array();
+		$request  = 'https://api.copper.com/developer_api/v1/people/search';
+		$response = wp_safe_remote_post( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -318,30 +319,28 @@ class WPF_Copper {
 
 		foreach ( $body_json as $person => $fields ) {
 
-			foreach ($fields['tags'] as $person_tags) {
-				$tags[$person_tags] = $person_tags;
+			foreach ( $fields['tags'] as $person_tags ) {
+				$tags[ $person_tags ] = $person_tags;
 			}
-
 		}
 
 		//fix keys later
-		$tags = array_unique($tags);
+		$tags = array_unique( $tags );
 
 		// Check if we need to update the available tags list
 		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body_json as $person => $fields ) {
 
-			foreach ($fields['tags'] as $person_tags) {
+			foreach ( $fields['tags'] as $person_tags ) {
 
-				if( !isset( $available_tags[ $person_tags ] ) ) {
-					$available_tags[$person_tags] = $person_tags;
+				if ( ! isset( $available_tags[ $person_tags ] ) ) {
+					$available_tags[ $person_tags ] = $person_tags;
 				}
-
 			}
 		}
 
-		$available_tags = array_unique($available_tags);
+		$available_tags = array_unique( $available_tags );
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
@@ -372,10 +371,10 @@ class WPF_Copper {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/custom_field_definitions';
+		$request  = 'https://api.copper.com/developer_api/v1/custom_field_definitions';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -388,7 +387,7 @@ class WPF_Copper {
 
 		if ( ! empty( $response ) ) {
 
-			foreach( $response as $field ) {
+			foreach ( $response as $field ) {
 
 				$custom_fields[ $field->id ] = ucwords( str_replace( '_', ' ', $field->name ) );
 
@@ -397,16 +396,17 @@ class WPF_Copper {
 					foreach ( $field->options as $option ) {
 						$option_ids[ $option->name ] = $option->id;
 					}
-
 				}
-
 			}
 
 			asort( $custom_fields );
 
 		}
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -432,12 +432,12 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$email = array('email' => $email_address);
+		$email = array( 'email' => $email_address );
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = json_encode( $email );
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/fetch_by_email';
+		$request  = 'https://api.copper.com/developer_api/v1/people/fetch_by_email';
 		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) && $response->get_error_message() == 'Resource not found' ) {
@@ -448,7 +448,7 @@ class WPF_Copper {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $response ) || empty( $response->id ) ) {
+		if ( empty( $response ) || empty( $response->id ) ) {
 			return false;
 		}
 
@@ -470,10 +470,10 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -481,18 +481,17 @@ class WPF_Copper {
 
 		$tags = array();
 
-		if( empty( $response->tags ) ) {
+		if ( empty( $response->tags ) ) {
 			return false;
 		}
 
-		foreach( $response->tags as $tag_name ) {
-			 
-			 $tag_name = explode(',', $tag_name);
-			 
-			 foreach ($tag_name as $tag) {
-			 	$tags[$tag] = $tag;
-			 }
+		foreach ( $response->tags as $tag_name ) {
 
+			$tag_name = explode( ',', $tag_name );
+
+			foreach ( $tag_name as $tag ) {
+				$tags[ $tag ] = $tag;
+			}
 		}
 
 		return $tags;
@@ -512,10 +511,10 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -523,18 +522,18 @@ class WPF_Copper {
 
 		$original_tags = $response->tags;
 
-		$new_tags = array_merge($original_tags, $tags);
+		$new_tags = array_merge( $original_tags, $tags );
 
-		$tags = array('tags' => $new_tags);
+		$tags = array( 'tags' => $new_tags );
 
 		$params           = $this->params;
 		$params['body']   = json_encode( $tags );
 		$params['method'] = 'PUT';
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -557,10 +556,10 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -568,24 +567,115 @@ class WPF_Copper {
 
 		$original_tags = $response->tags;
 
-		$new_tags = str_replace($tags, '', $original_tags);
+		$new_tags = str_replace( $tags, '', $original_tags );
 
-		$tags = array('tags' => $new_tags);
+		$tags = array( 'tags' => $new_tags );
 
 		$params           = $this->params;
 		$params['body']   = json_encode( $tags );
 		$params['method'] = 'PUT';
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return true;
+
+	}
+
+	/**
+	 * Takes an array of key / value pairs and formats them according to the
+	 * Copper API standard.
+	 *
+	 * @since  3.38.11
+	 *
+	 * @param  array $data   The data.
+	 * @return array The formatted data.
+	 */
+	public function format_contact_api_payload( $data ) {
+
+		$option_ids = wpf_get_option( 'copper_option_ids', array() );
+
+		foreach ( $data as $field => $value ) {
+
+			if ( 'email' === $field ) {
+
+				$update_data['emails'] = array(
+					array(
+						'email'    => $value,
+						'category' => 'work',
+					),
+				);
+
+			} elseif ( 'number' === $field ) {
+
+				$updata_data['phone_numbers'] = array(
+					array(
+						'number'   => $value,
+						'category' => 'work',
+					),
+				);
+
+			} elseif ( in_array( $field, array( 'street', 'city', 'state', 'postal_code', 'country' ), true ) ) {
+
+				if ( ! isset( $update_data['address'] ) ) {
+					$update_data['address'] = array();
+				}
+
+				$update_data['address'][ $field ] = $value;
+
+			} elseif ( is_int( $field ) ) {
+
+				// Custom fields.
+
+				if ( ! isset( $update_data['custom_fields'] ) ) {
+					$update_data['custom_fields'] = array();
+				}
+
+				if ( is_array( $value ) ) {
+
+					foreach ( $value as $i => $option ) {
+
+						if ( isset( $option_ids[ $option ] ) ) {
+							$value[ $i ] = absint( $option_ids[ $option ] );
+						} else {
+							wpf_log( 'notice', wpf_get_current_user_id(), 'An unknown value <code>' . $option . '</code> was provided for field <code>' . $field . '</code>. To use this value as a multiselect option, it must be first added to the dropdown options on the field in Copper. After adding a new option, click <strong>Refresh Available Tags and Fields</strong> in the WP Fusion settings to update the local cache.' );
+							unset( $value[ $i ] ); // to avoid an error.
+						}
+					}
+				} else {
+
+					// Dropdowns.
+
+					if ( isset( $option_ids[ $value ] ) ) {
+						$value = absint( $option_ids[ $value ] );
+					}
+				}
+
+				if ( empty( $value ) ) {
+					$value = false; // checkboxes
+				}
+
+				$update_data['custom_fields'][] = array(
+					'custom_field_definition_id' => $field,
+					'value'                      => $value,
+				);
+
+			} else {
+
+				$update_data[ $field ] = $value;
+
+			}
+		}
+
+		$update_data['name'] = $update_data['first_name'] . ' ' . $update_data['last_name']; // Copper requires a name.
+
+		return $update_data;
 
 	}
 
@@ -607,59 +697,15 @@ class WPF_Copper {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$update_data = array();
+		$update_data = $this->format_contact_api_payload( $data );
 
-		$option_ids = wpf_get_option( 'copper_option_ids', array() );
-
-		foreach( $data as $field => $value ) {
-
-			if( $field == 'email' ) {
-
-				$update_data['emails'] = array( array( 'email' => $value, 'category' => 'work' ) );
-
-			} elseif( $field == 'number' ) {
-
-				$updata_data['phone_numbers'] = array( array( 'number' => $value, 'category' => 'work' ) );
-
-			} elseif( $field == 'street' || $field == 'city' || $field == 'state' || $field == 'postal_code' || $field == 'country' ) {
-
-				if( ! isset( $update_data['address'] ) ) {
-					$update_data['address'] = array();
-				}
-
-				$update_data['address'][$field] = $value;
-
-			} elseif( is_int( $field ) ) {
-
-				// Custom fields
-				if( ! isset( $update_data['custom_fields'] ) ) {
-					$update_data['custom_fields'] = array();
-				}
-
-				// Convert dropdown options to their IDs
-				if ( isset( $option_ids[ $value ] ) ) {
-					$value = $option_ids[ $value ];
-				}
-
-				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
-
-			} else {
-
-				$update_data[ $field ] = $value;
-
-			}
-
-		}
-
-		$update_data['name'] = $update_data['first_name'] . ' ' . $update_data['last_name']; // Copper requires a name
-
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = json_encode( $update_data );
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people';
+		$request  = 'https://api.copper.com/developer_api/v1/people';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -682,63 +728,20 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
+		if ( $map_meta_fields ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		$update_data = array();
+		$update_data = $this->format_contact_api_payload( $data );
 
-		$option_ids = wpf_get_option( 'copper_option_ids', array() );
+		$params           = $this->params;
+		$params['method'] = 'PUT';
+		$params['body']   = json_encode( $update_data );
 
-		foreach( $data as $field => $value ) {
-
-			if( $field == 'email' ) {
-
-				$update_data['emails'] = array( array( 'email' => $value, 'category' => 'work' ) );
-
-			} elseif( $field == 'number' ) {
-
-				$updata_data['phone_numbers'] = array( array( 'number' => $value, 'category' => 'work' ) );
-
-			} elseif( $field == 'street' || $field == 'city' || $field == 'state' || $field == 'postal_code' || $field == 'country' ) {
-
-				if( ! isset( $update_data['address'] ) ) {
-					$update_data['address'] = array();
-				}
-
-				$update_data['address'][$field] = $value;
-
-			} elseif( is_int( $field ) ) {
-
-				// Custom fields
-				if( ! isset( $update_data['custom_fields'] ) ) {
-					$update_data['custom_fields'] = array();
-				}
-
-				// Convert dropdown options to their IDs
-				if ( isset( $option_ids[ $value ] ) ) {
-					$value = $option_ids[ $value ];
-				}
-
-				$update_data['custom_fields'][] = array( 'custom_field_definition_id' => $field, 'value' => $value );
-
-
-			} else {
-
-				$update_data[ $field ] = $value;
-
-			}
-
-		}
-
-		$params = $this->params;
-		$params['method'] 	= 'PUT';
-		$params['body'] = json_encode( $update_data );
-
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -761,18 +764,18 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$request  = 'https://api.prosperworks.com/developer_api/v1/people/' . $contact_id;
+		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
 		$contact_fields = wpf_get_option( 'contact_fields' );
-		$response      	= json_decode( wp_remote_retrieve_body( $response ) );
+		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $response ) ) {
+		if ( empty( $response ) ) {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Copper.' );
 		}
 
@@ -780,7 +783,7 @@ class WPF_Copper {
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if ( $field_data['active'] != true ) {
+			if ( ! $field_data['active'] ) {
 				continue;
 			}
 
@@ -796,17 +799,19 @@ class WPF_Copper {
 				$user_meta[ $field_id ] = $response->phone_numbers[0]->{ $field_data['crm_field'] };
 			}
 
-			// Address parts
+			// Address parts.
 
-			foreach ( $response->address as $key => $value ) {
+			if ( ! empty( $response->address ) ) {
 
-				if ( $key == $field_data['crm_field'] && ! empty( $value ) ) {
-					$user_meta[ $field_id ] = $value;
+				foreach ( $response->address as $key => $value ) {
+
+					if ( $key == $field_data['crm_field'] && ! empty( $value ) ) {
+						$user_meta[ $field_id ] = $value;
+					}
 				}
-
 			}
 
-			// Custom fields
+			// Custom fields.
 
 			if ( ! empty( $response->custom_fields ) ) {
 
@@ -814,25 +819,33 @@ class WPF_Copper {
 
 					if ( $field->custom_field_definition_id == $field_data['crm_field'] && ! empty( $field->value ) ) {
 
-						// Dropdowns
-
 						if ( is_numeric( $field->value ) ) {
+
+							// Dropdowns.
 
 							$key = array_search( $field->value, $option_ids );
 
 							if ( false !== $key ) {
 								$field->value = $key;
 							}
+						} elseif ( is_array( $field->value ) ) {
 
+							// Multiselects.
+
+							foreach ( $field->value as $i => $value ) {
+
+								$key = array_search( $value, $option_ids );
+
+								if ( false !== $key ) {
+									$field->value[ $i ] = $key;
+								}
+							}
 						}
 
 						$user_meta[ $field_id ] = $field->value;
 					}
-
 				}
-
 			}
-
 		}
 
 		return $user_meta;
@@ -855,28 +868,28 @@ class WPF_Copper {
 
 		$contact_ids = array();
 
-		$tag = array('tags' => $tag);
+		$tag = array( 'tags' => $tag );
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = json_encode( $tag );
 
-		$url     = 'https://api.prosperworks.com/developer_api/v1/people/search';
+		$url     = 'https://api.copper.com/developer_api/v1/people/search';
 		$results = wp_safe_remote_post( $url, $params );
 
-		if( is_wp_error( $results ) ) {
+		if ( is_wp_error( $results ) ) {
 			return $results;
 		}
 
 		$body_json = json_decode( $results['body'], true );
 
-		//Does not work because no way of telling how many contacts have a certain tag 
+		//Does not work because no way of telling how many contacts have a certain tag
 
 		// if (isset($body_json[199])) {
 		// 	$tag = array('tags' => $tag, 'page_size' => 200, 'page_number' => $page_number);
 		// 	$params = $this->params;
-		// 	$params['body'] = json_encode( $tag );	
+		//  $params['body'] = json_encode( $tag );
 
-		// 	$url     = 'https://api.prosperworks.com/developer_api/v1/people/search'];
+		// 	$url     = 'https://api.copper.com/developer_api/v1/people/search'];
 		// 	$results = wp_safe_remote_get( $url, $this->params );
 		// }
 
@@ -901,32 +914,32 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$access_key = wpf_get_option('access_key');
+		$access_key = wpf_get_option( 'access_key' );
 
 		$data = array(
-			'target'    => get_home_url(),
-			'type'		=> 'person',
-			'event' 	=> 'update',
-			'secret'	=> array(
-				'secret'	=> $type,
-				'key'		=> $access_key
-			)
+			'target' => get_home_url(),
+			'type'   => 'person',
+			'event'  => 'update',
+			'secret' => array(
+				'secret' => $type,
+				'key'    => $access_key,
+			),
 		);
 
-		$request      		= 'https://api.prosperworks.com/developer_api/v1/webhooks';
-		$params           	= $this->params;
-		$params['method'] 	= 'POST';
-		$params['body']  	= json_encode($data);
+		$request          = 'https://api.copper.com/developer_api/v1/webhooks';
+		$params           = $this->params;
+		$params['method'] = 'POST';
+		$params['body']   = json_encode( $data );
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$result = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if(is_object($result)) {
+		if ( is_object( $result ) ) {
 			return $result->id;
 		} else {
 			return false;
@@ -947,13 +960,13 @@ class WPF_Copper {
 			$this->get_params();
 		}
 
-		$request                = 'https://api.prosperworks.com/developer_api/v1/webhooks/' . $rule_id;
-		$params           		= $this->params;
-		$params['method'] 		= 'DELETE';
+		$request          = 'https://api.copper.com/developer_api/v1/webhooks/' . $rule_id;
+		$params           = $this->params;
+		$params['method'] = 'DELETE';
 
-		$response     		    = wp_safe_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 

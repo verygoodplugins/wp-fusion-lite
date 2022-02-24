@@ -29,7 +29,7 @@ class WPF_ConvertFox {
 
 		$this->slug     = 'convertfox';
 		$this->name     = 'Gist';
-		$this->supports = array( 'add_fields', 'add_tags' );
+		$this->supports = array( 'add_fields', 'add_tags', 'events', 'leads' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -67,13 +67,13 @@ class WPF_ConvertFox {
 
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( ! empty( $payload ) ) {
+		if ( ! empty( $payload ) ) {
 			$post_data['contact_id'] = $payload->contact->id;
 		}
 
@@ -88,18 +88,17 @@ class WPF_ConvertFox {
 	 * @return HTTP Response
 	 */
 
-	public function handle_http_response( $response, $args, $url ) {	
+	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'getgist') !== false && strpos($url, '?email=') === false) {
+		if ( strpos( $url, 'getgist' ) !== false && strpos( $url, '?email=' ) === false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->errors ) ) {
+			if ( isset( $body_json->errors ) ) {
 
 				$response = new WP_Error( 'error', $body_json->errors[0]->message );
 
 			}
-
 		}
 
 		return $response;
@@ -186,7 +185,7 @@ class WPF_ConvertFox {
 			$url      = 'https://api.getgist.com/contacts/' . $contact_id;
 			$response = wp_safe_remote_get( $url, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -214,12 +213,12 @@ class WPF_ConvertFox {
 		}
 
 		$this->params = array(
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'timeout'     => 20,
-			'headers'     => array( 
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 20,
+			'headers'    => array(
 				'Authorization' => 'Bearer ' . $api_key,
-				'Content-Type'  => 'application/json'
-			)
+				'Content-Type'  => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -243,16 +242,16 @@ class WPF_ConvertFox {
 			$this->get_params( $api_key );
 		}
 
-		$request  = "https://api.getgist.com/tags";
+		$request  = 'https://api.getgist.com/tags';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $body_json->errors ) ) {
+		if ( isset( $body_json->errors ) ) {
 			return new WP_Error( 'error', 'Unauthorized. Make sure you\'re using an <strong>Access Token</strong> which can be found in Settings >> API and Integrations >> Access Token in your Convertfox account.' );
 		}
 
@@ -298,10 +297,10 @@ class WPF_ConvertFox {
 
 		$available_tags = array();
 
-		$request  = "https://api.getgist.com/tags";
+		$request  = 'https://api.getgist.com/tags';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -341,10 +340,10 @@ class WPF_ConvertFox {
 
 		$custom_fields = array();
 
-		$request    = "https://api.getgist.com/contacts?page=1&per_page=1";
-		$response   = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.getgist.com/contacts?page=1&per_page=1';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -354,19 +353,20 @@ class WPF_ConvertFox {
 
 			foreach ( $body_json['contacts'] as $field_data ) {
 
-					foreach ($field_data['custom_properties'] as $key => $value) {
+				foreach ( $field_data['custom_properties'] as $key => $value ) {
 
-						$custom_fields[ $key ] = $key;
+					$custom_fields[ $key ] = $key;
 
 				}
-
 			}
-
 		}
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields ); 
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -388,14 +388,14 @@ class WPF_ConvertFox {
 		}
 
 		$contact_info = array();
-		$request      = "https://api.getgist.com/contacts?email=" . urlencode( $email_address );
+		$request      = 'https://api.getgist.com/contacts?email=' . urlencode( $email_address );
 		$response     = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['contact'] ) ) {
 			return false;
@@ -418,11 +418,11 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$tags 		= array();
-		$request    = 'https://api.getgist.com/contacts/' . $contact_id;
-		$response   = wp_safe_remote_get( $request, $this->params );
+		$tags     = array();
+		$request  = 'https://api.getgist.com/contacts/' . $contact_id;
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -439,8 +439,8 @@ class WPF_ConvertFox {
 		// Check if we need to update the available tags list
 		$available_tags = wpf_get_option( 'available_tags', array() );
 
-		foreach( $tags as $tag_name ) {
-			if( !isset( $available_tags[ $tag_name ] ) ) {
+		foreach ( $tags as $tag_name ) {
+			if ( ! isset( $available_tags[ $tag_name ] ) ) {
 				$available_tags[ $tag_name ] = $tag_name;
 			}
 		}
@@ -464,24 +464,23 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$url 		= 'https://api.getgist.com/tags';
-		$params 	= $this->params;
+		$url    = 'https://api.getgist.com/tags';
+		$params = $this->params;
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
 			$update_data = (object) array(
 				'contacts' => array( (object) array( 'id' => $contact_id ) ),
-				'name'	   => $tag
+				'name'     => $tag,
 			);
 
 			$params['body'] = json_encode( $update_data );
 
 			$response = wp_safe_remote_post( $url, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -501,24 +500,28 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
-		$url 		= 'https://api.getgist.com/tags';
-		$params 	= $this->params;
+		$url    = 'https://api.getgist.com/tags';
+		$params = $this->params;
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
 			$update_data = (object) array(
-				'contacts' => array( (object) array( 'id' => $contact_id, 'untag' => true ) ),
-				'name'	   => $tag
+				'contacts' => array(
+					(object) array(
+						'id'    => $contact_id,
+						'untag' => true,
+					),
+				),
+				'name'     => $tag,
 			);
 
 			$params['body'] = json_encode( $update_data );
 
 			$response = wp_safe_remote_post( $url, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -532,7 +535,7 @@ class WPF_ConvertFox {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data, $map_meta_fields = true, $lead = false ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
@@ -544,7 +547,7 @@ class WPF_ConvertFox {
 
 		// Fix names
 
-		if( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
+		if ( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
 
 			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
 
@@ -554,29 +557,30 @@ class WPF_ConvertFox {
 		}
 
 		$update_data = (object) array(
-			'custom_properties' => array()
+			'custom_properties' => array(),
 		);
 
-		// Gist needs a user ID to create a User, otherwise they'll be created as a Lead
+		// Gist needs a user ID to create a User, otherwise they'll be created as a Lead.
 
-		if( isset( $data['user_id'] ) ) {
+		if ( isset( $data['user_id'] ) ) {
 
 			$update_data->user_id = $data['user_id'];
 
-		} elseif ( $user = get_user_by( 'email', $data['email'] ) ) {
+		} elseif ( get_user_by( 'email', $data['email'] ) ) {
+
+			$user = get_user_by( 'email', $data['email'] );
 
 			$update_data->user_id = $user->ID;
-
 		}
 
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			foreach( $convertfox_fields as $meta_key => $field_data ) {
+			foreach ( $convertfox_fields as $meta_key => $field_data ) {
 
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 
 					// If it's a built in field
 					$update_data->{$crm_field} = $value;
@@ -584,7 +588,6 @@ class WPF_ConvertFox {
 					continue 2;
 
 				}
-
 			}
 
 			// Custom fields
@@ -592,12 +595,16 @@ class WPF_ConvertFox {
 
 		}
 
-		$params           = $this->params;
-		$params['body']   = json_encode( $update_data );
+		if ( $lead === true ) {
+			$update_data->type = 'lead';
+		}
+
+		$params         = $this->params;
+		$params['body'] = json_encode( $update_data );
 
 		$response = wp_safe_remote_post( 'https://api.getgist.com/contacts', $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -614,63 +621,50 @@ class WPF_ConvertFox {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data, $map_meta_fields = true, $lead = false ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		// Maybe send user ID
-
-		if ( isset( $data['user_id'] ) ) {
-			$user_id = $data['user_id'];
-		} else {
-			$user_id = wp_fusion()->user->get_user_id( $contact_id );
 		}
 
 		if ( $map_meta_fields == true ) {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
 		// Need email address for updates
 
-		if( ! isset( $data['email'] ) ) {
+		if ( ! isset( $data['email'] ) ) {
 
 			$data['email'] = $this->get_email_from_cid( $contact_id );
 
 			if ( is_wp_error( $data['email'] ) ) {
 				return $data['email'];
 			}
-
 		}
 
 		// Fix names
 
-		if( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
+		if ( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
 			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
 		}
 
 		$update_data = (object) array(
-			'id'	  => $contact_id,
-			'custom_properties' => array()
+			'id'                => $contact_id,
+			'custom_properties' => array(),
 		);
-
-		if ( ! empty( $user_id ) ) {
-			$update_data->user_id = $user_id;
-		}
 
 		// Load built in fields to get field types and subtypes
 		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			foreach( $convertfox_fields as $meta_key => $field_data ) {
+			foreach ( $convertfox_fields as $meta_key => $field_data ) {
 
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 
 					// If it's a built in field
 					$update_data->{$crm_field} = $value;
@@ -678,7 +672,6 @@ class WPF_ConvertFox {
 					continue 2;
 
 				}
-
 			}
 
 			// Custom fields
@@ -686,12 +679,16 @@ class WPF_ConvertFox {
 
 		}
 
-		$params           = $this->params;
-		$params['body']   = json_encode( $update_data );
+		if ( $lead === true ) {
+			$update_data->type = 'lead';
+		}
+
+		$params         = $this->params;
+		$params['body'] = json_encode( $update_data );
 
 		$response = wp_safe_remote_post( 'https://api.getgist.com/contacts', $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -714,7 +711,7 @@ class WPF_ConvertFox {
 		$url      = 'https://api.getgist.com/contacts/' . $contact_id;
 		$response = wp_safe_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -724,20 +721,20 @@ class WPF_ConvertFox {
 
 		// Explode name into first name and last name
 
-		$exploded_name = explode(' ', $body_json['contact']['name']);
+		$exploded_name                      = explode( ' ', $body_json['contact']['name'] );
 		$body_json['contact']['first_name'] = $exploded_name[0];
 		unset( $exploded_name[0] );
-		$body_json['contact']['last_name'] = implode(' ', $exploded_name);
+		$body_json['contact']['last_name'] = implode( ' ', $exploded_name );
 
 		$user_meta = array();
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if( ! isset( $field_data['crm_field'] ) ) {
+			if ( ! isset( $field_data['crm_field'] ) ) {
 				continue;
 			}
 
-			if( isset( $body_json['contact'][ $field_data['crm_field'] ] ) && $field_data['active'] == true ) {
+			if ( isset( $body_json['contact'][ $field_data['crm_field'] ] ) && $field_data['active'] == true ) {
 
 				// First level fields
 				$user_meta[ $field_id ] = $body_json['contact'][ $field_data['crm_field'] ];
@@ -745,18 +742,15 @@ class WPF_ConvertFox {
 			} else {
 
 				// Custom fields
-				foreach( $body_json['contact']['custom_properties'] as $custom_key => $custom_value ) {
+				foreach ( $body_json['contact']['custom_properties'] as $custom_key => $custom_value ) {
 
-					if( $custom_key == $field_data['crm_field'] && $field_data['active'] == true ) {
+					if ( $custom_key == $field_data['crm_field'] && $field_data['active'] == true ) {
 
 						$user_meta[ $field_id ] = $custom_value;
 
 					}
-
 				}
-
 			}
-
 		}
 
 		return $user_meta;
@@ -778,15 +772,15 @@ class WPF_ConvertFox {
 		}
 
 		$contact_ids = array();
-		$page = 1;
-		$proceed = true;
+		$page        = 1;
+		$proceed     = true;
 
-		while($proceed == true) {
+		while ( $proceed == true ) {
 
 			$url      = 'https://api.getgist.com/contacts?page=' . $page . '&tags=' . $tag;
 			$response = wp_safe_remote_get( $url, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
@@ -796,16 +790,128 @@ class WPF_ConvertFox {
 				$contact_ids[] = $contact->id;
 			}
 
-			if(count($body_json->contacts) < 50) {
+			if ( count( $body_json->contacts ) < 50 ) {
 				$proceed = false;
 			} else {
 				$page++;
 			}
-
 		}
 
 		return $contact_ids;
 
+	}
+
+
+	/**
+	 * Gets lead ID for a user based on email address.
+	 *
+	 * @since  3.38.36
+	 *
+	 * @param  string $email_address The email address.
+	 * @return int    Contact ID
+	 */
+	public function get_lead_id( $email_address ) {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$contact_info = array();
+		$request      = 'https://api.getgist.com/contacts?email=' . urlencode( $email_address );
+		$response     = wp_safe_remote_get( $request, $this->params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( $response['body'], true );
+
+		if ( empty( $body_json['contact'] ) ) {
+			return false;
+		}
+
+		return $body_json['contact']['id'];
+
+	}
+
+	/**
+	 * Adds a new lead.
+	 *
+	 * @since  3.38.36
+	 *
+	 * @param array $data            The lead data.
+	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @return string The lead ID.
+	 */
+	public function add_lead( $data, $map_meta_fields = true ) {
+
+		return $this->add_contact( $data, $map_meta_fields, $lead = true );
+
+	}
+
+
+	/**
+	 * Upadates a lead.
+	 *
+	 * @since  3.38.36
+	 *
+	 * @param array $data            The lead data.
+	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @return string The lead ID.
+	 */
+	public function update_lead( $data, $map_meta_fields = true ) {
+
+		return $this->update_contact( $data, $map_meta_fields, $lead = true );
+
+	}
+
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the Gist site tracking API.
+	 *
+	 * @since  3.38.28
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		if ( empty( $email_address ) && ! wpf_is_user_logged_in() ) {
+			// Tracking only works if WP Fusion knows who the contact is.
+			return;
+		}
+
+		// Get the email address to track.
+		if ( empty( $email_address ) ) {
+			$user          = wpf_get_current_user();
+			$email_address = $user->user_email;
+		}
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$data = array(
+			'email'      => $email_address,
+			'event_name' => $event . ' - ' . $event_data,
+			'properties' => array(
+				'manual_record' => false,
+				'recorded_from' => 'wp-fusion-lite',
+			),
+		);
+
+		$params         = $this->params;
+		$params['body'] = wp_json_encode( $data );
+		$response       = wp_safe_remote_post( 'https://api.getgist.com/events', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
 	}
 
 }

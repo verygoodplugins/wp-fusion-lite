@@ -52,7 +52,7 @@ class WPF_Drip {
 
 		$this->slug     = 'drip';
 		$this->name     = 'Drip';
-		$this->supports = array( 'add_tags', 'add_fields', 'safe_add_fields' );
+		$this->supports = array( 'add_tags', 'add_fields', 'events' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -88,6 +88,22 @@ class WPF_Drip {
 		if ( ! empty( $account_id ) ) {
 			$this->edit_url = 'https://www.getdrip.com/' . $account_id . '/subscribers/%s';
 		}
+	}
+
+	/**
+	 * Formats any custom user entered field IDs for the Drip API.
+	 *
+	 * @since  3.38.41
+	 *
+	 * @param  string $field  The field name.
+	 * @return string The formatted field name.
+	 */
+	public function format_custom_field_key( $field ) {
+
+		$field = sanitize_title( $field );
+
+		return str_replace( '-', '_', $field );
+
 	}
 
 	/**
@@ -192,19 +208,19 @@ class WPF_Drip {
 
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id'])) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
 		$drip_payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if ( isset($drip_payload->event) && ($drip_payload->event == 'subscriber.applied_tag' || $drip_payload->event == 'subscriber.removed_tag' || $drip_payload->event == 'subscriber.updated_custom_field' || $drip_payload->event == 'subscriber.updated_email_address') ) {
+		if ( isset( $drip_payload->event ) && ( $drip_payload->event == 'subscriber.applied_tag' || $drip_payload->event == 'subscriber.removed_tag' || $drip_payload->event == 'subscriber.updated_custom_field' || $drip_payload->event == 'subscriber.updated_email_address' ) ) {
 
 			// Admin settings webhooks
 			$post_data['contact_id'] = sanitize_key( $drip_payload->data->subscriber->id );
 			return $post_data;
 
-		} elseif( isset($drip_payload->subscriber) ) {
+		} elseif ( isset( $drip_payload->subscriber ) ) {
 
 			// Automations / rules triggers
 			$post_data['contact_id'] = sanitize_key( $drip_payload->subscriber->id );
@@ -234,21 +250,21 @@ class WPF_Drip {
 			return;
 		}
 
-		$account_id = wpf_get_option('drip_account');
+		$account_id = wpf_get_option( 'drip_account' );
 
-		echo "<!-- Drip (via WP Fusion) -->";
+		echo '<!-- Drip (via WP Fusion) -->';
 		echo '<script type="text/javascript">';
-		echo "var _dcq = _dcq || [];";
-		echo "var _dcs = _dcs || {};";
+		echo 'var _dcq = _dcq || [];';
+		echo 'var _dcs = _dcs || {};';
 		echo "_dcs.account = '" . esc_js( $account_id ) . "';";
 
-		echo "(function() {";
+		echo '(function() {';
 		echo "var dc = document.createElement('script');";
 		echo "dc.type = 'text/javascript'; dc.async = true;";
 		echo "dc.src = '//tag.getdrip.com/" . esc_js( $account_id ) . ".js';";
 		echo "var s = document.getElementsByTagName('script')[0];";
-		echo "s.parentNode.insertBefore(dc, s);";
-		echo "})();";
+		echo 's.parentNode.insertBefore(dc, s);';
+		echo '})();';
 
 		// Identify visitor
 
@@ -256,7 +272,7 @@ class WPF_Drip {
 
 			$userdata = wp_get_current_user();
 
-			if( empty( $userdata ) && doing_wpf_auto_login() ) {
+			if ( empty( $userdata ) && doing_wpf_auto_login() ) {
 
 				$user_email = get_user_meta( wpf_get_current_user_id(), 'user_email', true );
 
@@ -270,13 +286,12 @@ class WPF_Drip {
 
 			$found = false;
 
-			foreach( $_COOKIE as $key => $value ) {
+			foreach ( $_COOKIE as $key => $value ) {
 
 				if ( strpos( $key, 'drip_client' ) !== false ) {
 					$found = true;
 					break;
 				}
-
 			}
 
 			if ( false === $found ) {
@@ -287,11 +302,10 @@ class WPF_Drip {
 				echo '}]);';
 
 			}
-
 		}
 
-		echo "</script>";
-		echo "<!-- end Drip -->";
+		echo '</script>';
+		echo '<!-- end Drip -->';
 
 	}
 
@@ -304,14 +318,17 @@ class WPF_Drip {
 
 	public function get_email_from_cid( $contact_id ) {
 
-		if(empty($contact_id))
+		if ( empty( $contact_id ) ) {
 			return false;
+		}
 
-		$users = get_users( array(
-			'meta_key'   => 'drip_contact_id',
-			'meta_value' => $contact_id,
-			'fields'     => array( 'user_email' )
-		) );
+		$users = get_users(
+			array(
+				'meta_key'   => 'drip_contact_id',
+				'meta_value' => $contact_id,
+				'fields'     => array( 'user_email' ),
+			)
+		);
 
 		if ( ! empty( $users ) ) {
 
@@ -325,7 +342,7 @@ class WPF_Drip {
 				'post_status' => array( 'wc-processing', 'wc-completed' ),
 				'fields'      => 'ids',
 				'meta_key'    => 'drip_contact_id',
-				'meta_value'  => $contact_id
+				'meta_value'  => $contact_id,
 			);
 
 			$orders = get_posts( $args );
@@ -337,17 +354,18 @@ class WPF_Drip {
 				return $order->get_billing_email();
 
 			}
-
 		}
 
 		$this->connect();
 
 		// Try and get CID from Drip
 
-		$result = $this->app->fetch_subscriber( array(
-			'account_id'    => $this->account_id,
-			'subscriber_id' => $contact_id
-		) );
+		$result = $this->app->fetch_subscriber(
+			array(
+				'account_id'    => $this->account_id,
+				'subscriber_id' => $contact_id,
+			)
+		);
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -391,21 +409,23 @@ class WPF_Drip {
 
 			$accounts = $app->get_accounts();
 
-			if( is_wp_error( $accounts ) ) {
+			if ( is_wp_error( $accounts ) ) {
 				return $accounts;
 			}
 
 			$valid_id = false;
-			foreach ( $accounts as $account ) {
-				if ( $account['id'] == $account_id ) {
-					$valid_id = true;
+
+			if ( ! empty( $accounts ) ) {
+				foreach ( $accounts as $account ) {
+					if ( $account['id'] == $account_id ) {
+						$valid_id = true;
+					}
 				}
 			}
 
 			if ( $valid_id == false ) {
 				return new WP_Error( 'error', __( 'Access denied: Your API token doesn\'t have access to this account.', 'wp-fusion-lite' ) );
 			}
-
 		}
 
 		$this->account_id = $account_id;
@@ -454,7 +474,7 @@ class WPF_Drip {
 		$url      = 'https://api.getdrip.com/v2/' . $this->account_id . '/tags/';
 		$response = $this->app->make_request( $url );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -504,7 +524,7 @@ class WPF_Drip {
 		$url      = 'https://api.getdrip.com/v2/' . $this->account_id . '/custom_field_identifiers/';
 		$response = $this->app->make_request( $url );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -544,11 +564,16 @@ class WPF_Drip {
 
 		$this->connect();
 
-		$result = $this->app->fetch_subscriber( array( 'account_id' => $this->account_id, 'email' => $email_address ) );
+		$result = $this->app->fetch_subscriber(
+			array(
+				'account_id' => $this->account_id,
+				'email'      => $email_address,
+			)
+		);
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 
-			if( $result->get_error_message() == 'The resource you requested was not found' ) {
+			if ( $result->get_error_message() == 'The resource you requested was not found' ) {
 
 				// If no contact with that email
 				return false;
@@ -558,11 +583,18 @@ class WPF_Drip {
 				return $result;
 
 			}
-
 		}
 
 		if ( empty( $result ) || ! isset( $result['id'] ) ) {
 			return false;
+		}
+
+		// If the lookup worked then they aren't inactive.
+
+		$user = get_user_by( 'email', $email_address );
+
+		if ( $user ) {
+			delete_user_meta( $user->ID, 'drip_inactive' );
 		}
 
 		return $result['id'];
@@ -581,12 +613,14 @@ class WPF_Drip {
 
 		$this->connect();
 
-		$result = $this->app->fetch_subscriber( array(
-			'account_id'    => $this->account_id,
-			'subscriber_id' => $contact_id
-		) );
+		$result = $this->app->fetch_subscriber(
+			array(
+				'account_id'    => $this->account_id,
+				'subscriber_id' => $contact_id,
+			)
+		);
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
@@ -606,7 +640,6 @@ class WPF_Drip {
 			if ( ! isset( $available_tags[ $tag ] ) ) {
 				$available_tags[ $tag ] = $tag;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -630,7 +663,7 @@ class WPF_Drip {
 			return $email;
 		}
 
-		if( $email == false ) {
+		if ( $email == false ) {
 			return false;
 		}
 
@@ -638,16 +671,17 @@ class WPF_Drip {
 
 		foreach ( $tags as $tag ) {
 
-			$result = $this->app->tag_subscriber( array(
-				'account_id' => $this->account_id,
-				'email'      => $email,
-				'tag'        => $tag
-			) );
+			$result = $this->app->tag_subscriber(
+				array(
+					'account_id' => $this->account_id,
+					'email'      => $email,
+					'tag'        => $tag,
+				)
+			);
 
-			if( is_wp_error( $result ) ) {
+			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
-
 		}
 
 		return true;
@@ -676,16 +710,17 @@ class WPF_Drip {
 
 		foreach ( $tags as $tag ) {
 
-			$result = $this->app->untag_subscriber( array(
-				'account_id' => $this->account_id,
-				'email'      => $email,
-				'tag'        => $tag
-			) );
+			$result = $this->app->untag_subscriber(
+				array(
+					'account_id' => $this->account_id,
+					'email'      => $email,
+					'tag'        => $tag,
+				)
+			);
 
-			if( is_wp_error( $result ) ) {
+			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
-
 		}
 
 		return true;
@@ -711,15 +746,27 @@ class WPF_Drip {
 		$email = $data['email'];
 		unset( $data['email'] );
 
+		// Fixes user entered field key formats to avoid 422 errors.
+
+		foreach ( $data as $key => $value ) {
+
+			$newkey = $this->format_custom_field_key( $key );
+
+			if ( $key !== $newkey ) {
+				unset( $data[ $key ] );
+				$data[ $newkey ] = $value;
+			}
+		}
+
 		$params = array(
 			'account_id'    => $this->account_id,
 			'email'         => $email,
-			'custom_fields' => $data
+			'custom_fields' => $data,
 		);
 
 		$result = $this->app->create_or_update_subscriber( $params );
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
@@ -749,6 +796,18 @@ class WPF_Drip {
 		if ( isset( $data['email'] ) ) {
 			$provided_email = $data['email'];
 			unset( $data['email'] );
+		}
+
+		// Fixes user entered field key formats to avoid 422 errors.
+
+		foreach ( $data as $key => $value ) {
+
+			$newkey = $this->format_custom_field_key( $key );
+
+			if ( $key !== $newkey ) {
+				unset( $data[ $key ] );
+				$data[ $newkey ] = $value;
+			}
 		}
 
 		$params = array(
@@ -785,14 +844,18 @@ class WPF_Drip {
 			return $result;
 		}
 
-		if ( $result['status'] != 'active' ) {
+		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
-			$user_id = wp_fusion()->user->get_user_id( $contact_id );
+		if ( ! empty( $result['status'] ) && 'active' !== $result['status'] ) {
 			wpf_log( 'notice', $user_id, 'Person has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
 
-			if ( false !== $user_id ) {
+			if ( ! empty( $user_id ) ) {
 				update_user_meta( $user_id, 'drip_inactive', true );
 			}
+		} elseif ( ! empty( $user_id ) ) {
+
+			// If they were inactive.
+			delete_user_meta( $user_id, 'drip_inactive' );
 		}
 
 		// Check if we need to change the email address
@@ -805,8 +868,9 @@ class WPF_Drip {
 
 			if ( is_wp_error( $result ) ) {
 
-				// This isn't a serious error so we'll ignore it
-				if ( strpos( $result->get_error_message(), 'New email is already subscribed' ) !== false ) {
+				// This isn't a serious error so we'll ignore it.
+				if ( strpos( $result->get_error_message(), 'New email is already subscribed' ) !== false || strpos( $result->get_error_message(), 'Unprocessable Entity' ) !== false ) {
+					wpf_log( 'notice', wpf_get_current_user_id(), 'Failed to update subscriber email address from ' . $old_email . ' to ' . $params['new_email'] . ', because there is already a subscriber with the new email address. This can usually be ignored, but you may want to consider manually merging the duplicate subscribers in Drip.' );
 					return true;
 				}
 
@@ -818,13 +882,12 @@ class WPF_Drip {
 				$params = array(
 					'account_id' => $this->account_id,
 					'id'         => $contact_id,
-					'action'     => 'Email Changed'
+					'action'     => 'Email Changed',
 				);
 
 				$this->app->record_event( $params );
 
 			}
-
 		}
 
 		return true;
@@ -842,10 +905,12 @@ class WPF_Drip {
 
 		$this->connect();
 
-		$result = $this->app->fetch_subscriber( array(
-			'account_id'    => $this->account_id,
-			'subscriber_id' => $contact_id
-		) );
+		$result = $this->app->fetch_subscriber(
+			array(
+				'account_id'    => $this->account_id,
+				'subscriber_id' => $contact_id,
+			)
+		);
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -863,6 +928,9 @@ class WPF_Drip {
 			if ( empty( $field_data['crm_field'] ) ) {
 				continue;
 			}
+
+			// Fix formatting differences between user entered fields and those stored in Drip.
+			$field_data['crm_field'] = $this->format_custom_field_key( $field_data['crm_field'] );
 
 			if ( $field_data['active'] == true && isset( $result[ $field_data['crm_field'] ] ) ) {
 
@@ -891,27 +959,82 @@ class WPF_Drip {
 		$this->connect();
 
 		$contact_ids = array();
+		$page        = 1;
+		$continue    = true;
 
-		// Load all subscribers
-		$url      = 'https://api.getdrip.com/v2/' . $this->account_id . '/subscribers/?tags=' . urlencode($tag) . '&per_page=1000';
-		$result = $this->app->make_request( $url );
+		// Load all subscribers.
 
-		if( is_wp_error( $result ) ) {
-			return $result;
-		}
+		while ( $continue ) {
 
-		$result = json_decode( $result['buffer'] );
+			$url    = 'https://api.getdrip.com/v2/' . $this->account_id . '/subscribers/?tags=' . rawurlencode( $tag ) . '&status=all&per_page=1000&page=' . $page;
+			$result = $this->app->make_request( $url );
 
-		if ( empty( $result->subscribers ) ) {
-			return false;
-		}
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
 
-		foreach ( $result->subscribers as $subscriber ) {
-			$contact_ids[] = $subscriber->id;
+			$result = json_decode( $result['buffer'] );
+
+			if ( ! empty( $result->subscribers ) ) {
+
+				foreach ( $result->subscribers as $subscriber ) {
+					$contact_ids[] = $subscriber->id;
+				}
+			}
+
+			if ( count( $result->subscribers ) < 1000 ) {
+				$continue = false;
+			} else {
+				$page++;
+			}
 		}
 
 		return $contact_ids;
 
+	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the Drip site tracking API.
+	 *
+	 * @since  3.38.16
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		if ( empty( $email_address ) && ! wpf_is_user_logged_in() ) {
+			// Tracking only works if WP Fusion knows who the contact is.
+			return;
+		}
+
+		$this->connect();
+
+		// Get the email address to track.
+		if ( empty( $email_address ) ) {
+			$user          = wpf_get_current_user();
+			$email_address = $user->user_email;
+		}
+
+		$data = array(
+			'account_id' => $this->account_id,
+			'action'     => $event,
+			'email'      => $email_address,
+			'properties' => array( 'data' => $event_data ),
+		);
+
+		$result = $this->app->record_event( $data );
+
+		if ( is_wp_error( $result ) ) {
+			wpf_log( 'error', 0, 'Error tracking event: ' . $result->get_error_message() );
+			return $result;
+		}
+
+		return true;
 	}
 
 }

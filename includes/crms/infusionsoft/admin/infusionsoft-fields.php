@@ -101,6 +101,31 @@ $infusionsoft_fields['phone_number'] = array(
 	'crm_field' => 'Phone1',
 );
 
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 1 Extension',
+	'crm_field' => 'Phone1Ext',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 1 Type',
+	'crm_field' => 'Phone1Type',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 2',
+	'crm_field' => 'Phone2',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 2 Extension',
+	'crm_field' => 'Phone2Ext',
+);
+
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Phone 2 Type',
+	'crm_field' => 'Phone2Type',
+);
+
 $infusionsoft_fields['company'] = array(
 	'crm_label' => 'Company',
 	'crm_field' => 'Company',
@@ -270,4 +295,36 @@ $infusionsoft_fields[] = array(
 $infusionsoft_fields[] = array(
 	'crm_label' => 'Language',
 	'crm_field' => 'Language',
+);
+
+
+$infusionsoft_social_fields = array(
+	array(
+		'crm_label' => 'Facebook',
+		'crm_field' => 'Facebook',
+	),
+	array(
+		'crm_label' => 'Twitter',
+		'crm_field' => 'Twitter',
+	),
+	array(
+		'crm_label' => 'LinkedIn',
+		'crm_field' => 'LinkedIn',
+	),
+	array(
+		'crm_label' => 'Instagram',
+		'crm_field' => 'Instagram',
+	),
+	array(
+		'crm_label' => 'Snapchat',
+		'crm_field' => 'Snapchat',
+	),
+	array(
+		'crm_label' => 'YouTube',
+		'crm_field' => 'YouTube',
+	),
+	array(
+		'crm_label' => 'Pinterest',
+		'crm_field' => 'Pinterest',
+	),
 );

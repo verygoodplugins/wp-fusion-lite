@@ -61,17 +61,7 @@ class WPF_Admin_Notices {
 				continue;
 			}
 
-			echo '<div id="' . esc_attr( $id ) . '-notice" data-notice="' . esc_attr( $id ) . '" class="notice notice-warning wpf-notice is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
-
-		}
-
-		if ( wpf_get_option( 'staging_mode' ) ) {
-
-			echo '<div class="notice notice-warning wpf-notice"><p>';
-
-			printf( esc_html__( '<strong>Heads up:</strong> WP Fusion is currently in Staging Mode. No data will be sent to or loaded from %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) );
-
-			echo '</p></div>';
+			echo '<div id="' . esc_attr( $id ) . '-notice" data-notice="' . esc_attr( $id ) . '" class="notice notice-warning wpf-notice is-dismissible"><p>' . wp_kses_post( $message ) . '</p></div>';
 
 		}
 

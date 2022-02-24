@@ -1,10 +1,10 @@
 === WP Fusion Lite - Marketing Automation for WordPress ===
 Contributors: verygoodplugins
-Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier
+Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 5.8
-Stable tag: 3.38.2
+Tested up to: 5.9.1
+Stable tag: 3.38.44
 
 WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
 
@@ -38,7 +38,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 
 = Benefits =
 
-* ⚡ Replace Zapier, Integromat, and other integration tools. WP Fusion gives you an direct data sync direct between your site and your CRM, with no delays or limits.
+* ⚡ Replace Zapier, Integromat, and other integration tools. WP Fusion gives you a direct data sync between your site and your CRM, with no delays or limits.
 
 * 🔒 Create easy to manage membership sites with drip-released content using timers and logic in your CRM.
 
@@ -75,6 +75,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * AgileCRM
 * Autopilot
 * Autonami
+* Bento
 * BirdSend
 * Capsule
 * ConvertKit
@@ -87,7 +88,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * FluentCRM (same site or REST API)
 * GetResponse
 * Gist
-* Groundhogg
+* Groundhogg (same site or REST API)
 * Growmatik
 * HighLevel
 * HubSpot
@@ -104,6 +105,8 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * MailPoet
 * Maropost
 * Mautic
+* Microsoft Dynamics 365
+* MooSend
 * NationBuilder
 * Ontraport
 * Platform.ly
@@ -183,14 +186,169 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 == Changelog ==
 
-= 3.38.2 = 8/18/2021 =
+= 3.38.44 - 2/24/2022 =
+
+##### New CRMs
+
+* Added [Bento marketing automation](https://wpfusion.com/go/bento/) integration
+* Added [Groundhogg (REST API)](https://wpfusion.com/tutorials/running-a-headless-crm-with-wp-fusion-and-groundhogg/) CRM integration
+* Added [Microsoft Dynamics 365](https://wpfusion.com/documentation/installation-guides/how-to-connect-dynamics-365-marketing-to-wordpress/) CRM integration
+* Added [MooSend](https://wpfusion.com/documentation/installation-guides/how-to-connect-moosend-to-wordpress/) integration
+
+
+##### New Features
+
+* Added - With FluentCRM, Groundhogg, HubSpot, Infusionsoft, and Ontraport you can now type new tag names into the Select Tag(s) dropdown, and if the tag doesn't exist WP Fusion can send an API call to create the new tag
+* Added links to the logs to go directly to the CRM contact record for each user
+* Added `IN` and `NOT IN` comparisons [to the `user_meta_if` shortcode](https://wpfusion.com/documentation/getting-started/shortcodes/#in-and-not-in)
+* Added [`timezone-offset` attribute](https://wpfusion.com/documentation/getting-started/shortcodes/#user-meta-formatting-timezone-offset) to `user_meta` shortcode
+* Added IP Address field to Contact Fields list
+* Added View In CRM link to the user action links on the All Users list in the admin
+* Added Status section to WP Fusion settings with status and debug information about the plugin
+* Added link to admin user profile to view the logs for that user
+* Added Export to CSV button to Activity Logs
+* Added user search field to the logs table
+* Added option to prefix usermeta keys with the current blog prefix to avoid sharing contact IDs and tags across sub-sites on multisite installs (can be enabled from the Advanced settings tab)
+* Added logging for when a date failed to sync to the CRM because the input date format couldn't be converted to a timestamp
+
+* Added [Emercury site tracking](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#emercury)
+* Added support for [custom objects with HubSpot](https://wpfusion.com/documentation/crm-specific-docs/custom-objects-with-hubspot/)
+* Added notice to HubSpot integration about enabling marketing contacts for the WP Fusion app
+* Added Phone 1 Extension, Phone 1 Type, Phone 2, Phone 2 Extension, Phone 2 Type fields for sync with Infusionsoft
+* Added social fields for sync with Infusionsoft / Keap (click Refresh Available Fields to load them)
+* Added support for syncing to Date/Time fields with Keap and Infusionsoft
+* Added dynamic tagging support to Mailchimp integration (requires resetting the settings for existing installs)
+* **Added Salesforce OAuth integration - Salesforce users will need to go to the WP Fusion settings page one time and grant OAuth permissions to use the new API**
+
+
+##### Improvements
+
+* Tested for WordPress 5.9
+* Improved - [Staging site detection](https://wpfusion.com/documentation/tutorials/staging-sites/) will now prompt you whether to recognize the new site URL as the main site vs. staying in staging mode (similar to WooCommerce Subscriptions)
+* Improved - Filter Queries will now be bypassed when DOING_CRON is set to true
+* Improved - When using Filter Queries - Advanced, posts protected by taxonomy terms will be properly excluded
+* Improved performance with checking post access against taxonomy term restrictions
+* Improved - Logs will now show "user-login" as the source when data was synced due to Login Meta Sync or Login Tags Sync
+* Improved - Auto login will set a cookie `wordpress_logged_in_wpfusioncachebuster` which should bypass caching on most configurations
+* Improved - If the full WP Fusion is activated, the WP Fusion Lite plugin will be automatically deactivated
+* Improved - Removed some redundant data in the logs when HTTP API logging is enabled
+* Improved - HTTP API logging will now show JSON-decoded request and response bodies where applicable
+* Improved - HTML tags will be removed when exporting the activity logs to .csv
+* Improved - When resetting the main settings page, the cached contact IDs and tags will be deleted for all users (this fixes "Invalid contact ID" errors when switching between CRM accounts)
+* Improved - Stopped ending auto-login sessions on registration (`user_register` hook)
+* Improved - Select Tags boxes in Appearance >> Menus editor will now lazy load their tags, for improved menu editing performance
+* Improved - If a field type is set to "raw" an empty value loaded over the CRM will erase the value saved in WordPress
+* Improved - If a field type is set to multiselect and it is stored as a comma-separated text value, the value will be synced as an array with supported CRMs
+* Improved - If a page using an auto-login query string (?cid=) is refreshed, for example due to a form submission, this will no longer force reload the contact's tags from the CRM
+* Improved - Dates displayed with the [[user_meta]] shortcode will now use the site's current timezone
+
+* Improved - ActiveCampaign integration now fully uses the WordPress HTTP API instead of the ActiveCampaign PHP SDK
+* Improved ActiveCampaign error handling so that it now looks at the response code instead of message (some errors were not being caught properly with non-English accounts)
+* Improved - ActiveCampaign HTTP timeout extended to 20 seconds (instead of 15)
+* Improved Autonami error handling
+* Improved - Added a notice to the logs when a new ConvertKit subscriber is being created with a random tag due to no default tag being set
+* Added support for loading multiselect data from Copper
+* Improved logging with Drip, when an email address is changed to an address that already has a subscriber record
+* Improved - A successful API response from Drip for a subscriber will remove the Inactive badge in the admin
+* Improved - Stopped syncing user ID when updating Gist subscribers (should cause records to get merged less often)
+* Improved HubSpot error handling
+* Improved - Read-only tags and lists (i.e. with HubSpot) will no longer show up in Apply Tags dropdowns (only Required Tags dropdowns)
+* Improved - HubSpot's site tracking script is now disabled on the WooCommerce My Account page, to prevent the script from trying to sync account edits with the CRM
+* Improved - When creating a new lead in Kartra, the user's IP address will be sent by default
+* Improved Mailchimp API performance for applying and removing tags
+* Improved Mailchimp API performance when loading available tags
+* Improved Mailchimp contact ID lookup — will now only return exact matches (fixes an issue where tags would be applied to the wrong contact when using sub-inboxes with Gmail)
+* Improved - Mailchimp Audience select box is moved to the Setup tab and fields and tags can be loaded for a new audience without having to save the settings first
+* Improved - Mailchimp setup will now show a warning if you try to connect and there are no audiences in your account
+* Improved logging of authentication errors with Salesforce
+* Improved Zoho error handling and made error messages clearer
+
+
+##### Bug Fixes
+
+* Fixed - Outgoing API calls to remove and apply the same tag in the same request will be ignored (fixes issue of tag changes getting processed out of order in the CRM)
+* Fixed PHP warning calling wp_fusion()->user->get_user_meta() when not logged in
+* Fixed fatal error loading the `role` field with an array value (now the first array value will be used as the role)
+* Fixed the Prevent Reapplying Tags setting not working if at least one of the tags to be applied was new
+* Fixed PHP notice "wpdb::prepare was called incorrectly" when checking taxonomy term access rules on posts
+* Fixed HTML not saving in the Default Restricted Content Message since 3.38.0
+* Fixed special characters getting synced to the CRM HTML encoded since 3.38.0
+* Fixed apply tags via AJAX endpoints resulting in a 403 error since 3.38.0
+* Fixed empty date fields being synced as 0 which could evaluate to January 1st 1970 in some CRMs
+* Fixed date values before 1970 not being synced correctly
+* Fixed access checks sometimes failing when using tag names with HTML special characters in them
+* Fixed tags with > and < symbols getting loaded from the CRM HTML-encoded
+* Fixed PHP warning in class WPF_User when registering a new user with no first or last name
+* Fixed PHP warning in the admin when editing a page that has child pages
+* Fixed - Removed `wp_kses_post()` on restricted content message (was breaking login forms)
+* Fixed `http_request_failed` errors from the WordPress HTTP API not being logged as errors
+* Fixed JavaScript error with Resync Tags button on admin user profile
+* Fixed serialized data not being unserialized during a Push User Meta operation
+* Fixed links not displaying in the activity logs since 3.38.0
+
+* Fixed import by tag with ActiveCampaign sometimes importing contacts with the wrong tag ID when the search string matched multiple tags
+* Fixed ActiveCampaign multiselect fields loaded as text being prepended/appended by ||
+* Fixed `Fatal error: Cannot declare class AC_Connector` since 3.38.0
+* Fixed updated Copper API URL
+* Fixed multiselect data not syncing to Copper
+* Fixed checkbox data not syncing to Copper
+* Fixed 422 error with Drip when trying to sync data into a field that had a dash or space in the field ID
+* Fixed an empty API response from Drip marking users as Inactive
+* Fixed import tool with Drip not importing unsubscribed subscribers
+* Fixed import tool with Drip not importing more than 1000 subscribers
+* Fixed issue syncing tags with Emercury for subscribers that had upper case letters in their email address
+* Fixed PHP warning in Emercury integration
+* Fixed update contact method not working with FluentCRM (REST API)
+* Fixed Import Users tool not working with FluentCRM (same site)
+* Fixed initial REST authentication (Groundhogg, FluentCRM, Autonami) sometimes breaking if there was a trailing slash at the end of the REST URL
+* Fixed "contact data not found" error receiving Groundhogg REST webhooks
+* Fixed "The tags must be an array." error message with HighLevel when using Create Tag(s) from Value
+* Fixed checkbox fields not syncing with HubSpot
+* Fixed fatal error in HubSpot integration when using site tracking and an API error was encountered trying to get the tracking ID
+* Fixed `wpf_infusionsoft_safe_tags` filter not stripping invalid characters out of tag category names
+* Fixed - Infusionsoft integration will force all numeric values to sync as text to get around "java.lang.Integer cannot be cast to java.lang.String" errors
+* Fixed countries with e-acute symbol in their name not syncing to the Country field with Infusionsoft
+* Fixed Infusionsoft not loading more than 1000 available tags per category
+* Fixed Intercom rejecting new subscribers without a last name
+* Fixed PHP warning loading subscriber with no tags from Intercom
+* Fixed updates to existing contacts not working with Klaviyo
+* Fixed deleted tags in Mailchimp not being removed from the dropdowns in WP Fusion
+* Fixed Incomplete Address error with Mailchimp when syncing United States of America as the country, but not specifying a state
+* Fixed 5 second timeout loading a contact with Maropost (increased to 20s)
+* Maropost bugfixes
+* Fixed - Updated Maropost API calls to use SSL API endpoint
+* Fixed Ontraport integration not creating new contacts with missing emails (even though Ontraport allows contacts to not have an email address)
+* Fixed - Salesforce dates will now be formatted using gmdate() instead of date() (fixes some time zone issues)
+* Fixed error syncing array values with Sendinblue
+* Fixed Sendinblue error "attributes should be an object" when syncing data without any custom fields
+
+
+
+##### Developer
+
+* Developers - The active CRM object is now passed by reference via the `wp_fusion_init_crm` action and [can be operated on](https://wpfusion.com/documentation/advanced-developer-tutorials/how-to-use-a-custom-client-id-for-authentication/#using-a-custom-client-id-and-authorization-url)
+* Developers - The process lock time for the background worker will now respect the site's PHP `max_execution_time`. The lock time will be the max time + 30 seconds.
+* Developers: Data loaded from the CRM will now be passed through `wp_kses_post()` instead of `sanitize_text_field()` (since 3.38), to permit syncing HTML inside of custom fields
+* Developers - Added filter `wpf_query_filter_cache_time`
+* Developers - Added filter `wpf_restricted_terms_for_user`
+* Developers - Added filter `wpf_taxonomy_rules`
+* Developers: Added filter `wpf_wp_kses_allowed_html`
+* Developers - Added constants `WPF_CONTACT_ID_META_KEY` and `WPF_TAGS_META_KEY`
+* Developers - Added function `wpf_get_current_user_email()`
+* Developers - Added function `wpf_clean_tags()` (same as `wpf_clean()` but allows special characters)
+* Developers - Fixed missing second argument `$force_update` in `wpf_get_contact_id()`
+* Developers: Fixed `wpf_get_contact_id()` sometimes returning an empty string instead of `false` when a contact record wasn't found
+
+
+
+= 3.38.2 - 8/18/2021 =
 
 * Fixed error `Call to undefined function get_current_screen()` since 3.38.0 when performing some admin actions
 * Fixed auto-login links not working since 3.38.0
 * Fixed initial default field mapping not being stored after setup until the settings were saved the first time
 * Developers: Removed WPF_* prefix from 3rd party CRM SDK classes (to comply with wordpress.org plugin guidelines)
 
-= 3.38.0 = 8/13/2021 =
+= 3.38.0 - 8/13/2021 =
 
 * Big cleanup and refactoring with improvements for security, internationalization, and documentation
 * Added View in CRM URL for Jetpack CRM

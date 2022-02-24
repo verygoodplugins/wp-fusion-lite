@@ -1,6 +1,6 @@
 <?php
 
-class AC_List_ extends ActiveCampaign_API {
+class AC_List_ extends ActiveCampaign {
 
 	public $version;
 	public $url_base;

@@ -9,7 +9,7 @@ class WPF_FluentCRM_REST {
 	 * @since 3.37.14
 	 */
 
-	public $supports = array();
+	public $supports;
 
 	/**
 	 * API authentication parameters and headers.
@@ -50,6 +50,7 @@ class WPF_FluentCRM_REST {
 		$this->slug      = 'fluentcrm-rest';
 		$this->name      = 'FluentCRM';
 		$this->menu_name = 'FluentCRM (REST API)';
+		$this->supports  = array('add_tags_api');
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -136,6 +137,7 @@ class WPF_FluentCRM_REST {
 		$this->params = array(
 			'timeout'    => 15,
 			'user-agent' => 'WP Fusion; ' . home_url(),
+			'sslverify'  => false,
 			'headers'    => array(
 				'Content-Type'  => 'application/json',
 				'Accept'        => 'application/json',
@@ -162,7 +164,7 @@ class WPF_FluentCRM_REST {
 
 		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
 
-			if ( 404 == wp_remote_retrieve_response_code( $response ) || empty( wp_remote_retrieve_body( $response ) ) ) {
+			if ( 404 === wp_remote_retrieve_response_code( $response ) || empty( wp_remote_retrieve_body( $response ) ) ) {
 
 				$response = new WP_Error( 'error', 'No response was returned. You may need to <a href="https://wordpress.org/support/article/using-permalinks/#mod_rewrite-pretty-permalinks" target="_blank">enable pretty permalinks</a>.' );
 
@@ -202,10 +204,10 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  string        $url      The api url.
-	 * @param  string        $username The application username.
-	 * @param  string        $password The application password.
-	 * @param  bool          $test     Whether to validate the credentials.
+	 * @param  string $url      The api url.
+	 * @param  string $username The application username.
+	 * @param  string $password The application password.
+	 * @param  bool   $test     Whether to validate the credentials.
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 */
 
@@ -361,7 +363,7 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  string       $email_address The email address to look up.
+	 * @param  string $email_address The email address to look up.
 	 * @return int|WP_Error The contact ID in the CRM.
 	 */
 	public function get_contact_id( $email_address ) {
@@ -384,13 +386,44 @@ class WPF_FluentCRM_REST {
 	}
 
 
+	/**
+	 * Creates a new tag in FluentCRM and returns the ID.
+	 *
+	 * @since  3.38.42
+	 *
+	 * @param  string $tag_name The tag name.
+	 * @return int    $tag_id the tag id returned from API.
+	 */
+	public function add_tag( $tag_name ) {
+		$body = array(
+			'title' => $tag_name,
+			'slug'  => $tag_name,
+		);
+
+		$params         = $this->get_params();
+		$params['body'] = json_encode( $body );
+
+		$request  = $this->url . '/tags';
+		$response = wp_safe_remote_post( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$tag_id = $response->lists->id;
+
+		return $tag_id;
+	}
+
 
 	/**
 	 * Gets all tags currently applied to the contact in the CRM.
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  int            $contact_id The contact ID to load the tags for.
+	 * @param  int $contact_id The contact ID to load the tags for.
 	 * @return array|WP_Error The tags currently applied to the contact in the CRM.
 	 */
 	public function get_tags( $contact_id ) {
@@ -420,9 +453,9 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  array         $tags       A numeric array of tags to apply to the
-	 *                                   contact.
-	 * @param  int           $contact_id The contact ID to apply the tags to.
+	 * @param  array $tags       A numeric array of tags to apply to the
+	 *                           contact.
+	 * @param  int   $contact_id The contact ID to apply the tags to.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
 	public function apply_tags( $tags, $contact_id ) {
@@ -452,9 +485,9 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  array         $tags       A numeric array of tags to remove from
-	 *                                   the contact.
-	 * @param  int           $contact_id The contact ID to remove the tags from.
+	 * @param  array $tags       A numeric array of tags to remove from
+	 *                           the contact.
+	 * @param  int   $contact_id The contact ID to remove the tags from.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
 	public function remove_tags( $tags, $contact_id ) {
@@ -486,10 +519,10 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  array        $data            An associative array of contact
-	 *                                       fields and field values.
-	 * @param  bool         $map_meta_fields Whether to map WordPress meta keys
- *                                       to CRM field keys.
+	 * @param  array $data            An associative array of contact
+	 *                                fields and field values.
+	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys
+	 *                                to CRM field keys.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
 	public function add_contact( $data, $map_meta_fields = true ) {
@@ -542,11 +575,11 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  int           $contact_id      The ID of the contact to update.
-	 * @param  array         $data            An associative array of contact
-	 *                                        fields and field values.
-	 * @param  bool          $map_meta_fields Whether to map WordPress meta keys
-	 *                                        to CRM field keys.
+	 * @param  int   $contact_id      The ID of the contact to update.
+	 * @param  array $data            An associative array of contact
+	 *                                fields and field values.
+	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys
+	 *                                to CRM field keys.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
@@ -574,11 +607,12 @@ class WPF_FluentCRM_REST {
 			}
 		}
 
-		$params         = $this->get_params();
-		$params['body'] = json_encode( array( 'subscriber' => $data ) );
+		$params           = $this->get_params();
+		$params['body']   = json_encode( array( 'subscriber' => $data ) );
+		$params['method'] = 'PUT';
 
 		$request  = $this->url . '/subscribers/' . $contact_id;
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -595,7 +629,7 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  int            $contact_id The ID of the contact to load.
+	 * @param  int $contact_id The ID of the contact to load.
 	 * @return array|WP_Error User meta data that was returned.
 	 */
 	public function load_contact( $contact_id ) {

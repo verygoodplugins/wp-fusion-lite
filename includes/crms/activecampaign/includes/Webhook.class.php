@@ -1,6 +1,6 @@
 <?php
 
-class AC_Webhook extends ActiveCampaign_API {
+class AC_Webhook extends ActiveCampaign {
 
 	public $version;
 	public $url_base;

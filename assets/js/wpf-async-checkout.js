@@ -2,7 +2,7 @@
 
 		var sent = false;
 
-		console.log( 'WPF DEBUG: Async checkout script loaded.' );
+		// console.log( 'WPF DEBUG: Async checkout script loaded.' );
 
 		function getParameterByName( name, url ) {
 			name = name.replace(/[\[\]]/g, '\\$&');
@@ -15,8 +15,8 @@
 
 		var handleAsyncOrder = function ( event, request, settings ) {
 
-			console.log( 'WPF DEBUG: handleAsyncOrder running with request:' );
-			console.dir( request );
+			// console.log( 'WPF DEBUG: handleAsyncOrder running with request:' );
+			// console.dir( request );
 
 			$( document ).unbind( 'ajaxSuccess', handleAsyncOrder );
 
@@ -38,7 +38,7 @@
 
 		$('form.checkout').on( 'checkout_place_order', function( e ) {
 
-			console.log( 'WPF DEBUG: Binding to ajaxsuccess.' );
+			// console.log( 'WPF DEBUG: Binding to ajaxsuccess.' );
 
 			$( document ).on( 'ajaxSuccess', handleAsyncOrder );
 		});
@@ -50,7 +50,7 @@
 
 		if ( typeof wpf_async.pendingOrderKey !== 'undefined' ) {
 
-			console.log('WPF DEBUG: not undefined! proceed');
+			// console.log('WPF DEBUG: not undefined! proceed');
 
 			sent = true;
 
@@ -59,7 +59,7 @@
 				'key'    : wpf_async.pendingOrderKey,
 			};
 
-			console.dir( data );
+			// console.dir( data );
 
 			$.post( wpf_async.ajaxurl, data );
 

@@ -150,14 +150,17 @@ class WPF_CRM_Base {
 	}
 
 	/**
-	 * When resetting the WPF settings page, the old CRM gets loaded before the save_options() function runs on the init hook to clear out the settings
-	 * For lack of a better solution, we'll check here to see if the settings are being reset, and if so load all CRMs so the next one can be selectec
+	 * When resetting the WPF settings page, the old CRM gets loaded before the
+	 * save_options() function runs on the init hook to clear out the settings
+	 * For lack of a better solution, we'll check here to see if the settings
+	 * are being reset, and if so load all CRMs so the next one can be selected.
 	 *
-	 * @access  private
-	 * @since   3.35.3
-	 * @return  bool Doing Reset
+	 * @access private
+	 *
+	 * @since  3.35.3
+	 *
+	 * @return bool  Doing Reset
 	 */
-
 	private function doing_reset() {
 
 		if ( ! empty( $_POST ) && isset( $_POST['wpf_options'] ) && ! empty( $_POST['wpf_options']['reset_options'] ) ) {
@@ -291,8 +294,8 @@ class WPF_CRM_Base {
 
 	public function map_meta_fields( $user_meta ) {
 
-		if ( ! is_array( $user_meta ) ) {
-			return false;
+		if ( ! is_array( $user_meta ) || empty( $user_meta ) ) {
+			return array();
 		}
 
 		$update_data = array();
@@ -315,6 +318,14 @@ class WPF_CRM_Base {
 					$field_data['type'] = 'text';
 				}
 
+				if ( 'datepicker' === $field_data['type'] ) {
+
+					// We'd been using date and datepicker interchangeably up until
+					// 3.38.11, which is confusing. We'll just use "date" going forward.
+
+					$field_data['type'] = 'date';
+				}
+
 				$value = apply_filters( 'wpf_format_field_value', $user_meta[ $field ], $field_data['type'], $field_data['crm_field'] );
 
 				if ( 'raw' === $field_data['type'] ) {
@@ -332,6 +343,11 @@ class WPF_CRM_Base {
 				} elseif ( 0 === $value || '0' === $value ) {
 
 					$update_data[ $field_data['crm_field'] ] = 0;
+
+				} elseif ( empty( $value ) && ! empty( $user_meta[ $field ] ) && 'date' === $field_data['type'] ) {
+
+					// Date conversion failed.
+					wpf_log( 'notice', wpf_get_current_user_id(), 'Failed to create timestamp from value <code>' . $user_meta[ $field ] . '</code>. Try setting the field type to <code>text</code> instead, or fixing the format of the input date.' );
 
 				} elseif ( ! empty( $value ) ) {
 
@@ -443,6 +459,27 @@ class WPF_CRM_Base {
 	 */
 	public function get_contact_edit_url( $contact_id ) {
 
+		if ( empty( $contact_id ) ) {
+			return false;
+		}
+
+		if ( in_array( 'web_id', $this->crm->supports ) ) {
+
+			// Mailchimp and Bento.
+
+			$user_id = wpf_get_user_id( $contact_id );
+
+			if ( ! $user_id ) {
+				return false;
+			}
+
+			$contact_id = get_user_meta( $user_id, wp_fusion()->crm->slug . '_web_id', true );
+
+			if ( empty( $contact_id ) ) {
+				return false;
+			}
+		}
+
 		if ( isset( $this->crm->edit_url ) && ! empty( $this->crm->edit_url ) ) {
 			return sprintf( $this->crm->edit_url, $contact_id );
 		} else {
@@ -465,9 +502,14 @@ class WPF_CRM_Base {
 				$value = strtotime( $value );
 			}
 
-			// absint() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning.
+			// intval() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning.
+			// can't use absint(), since dates less than 1/1/70 are negatibe numbers.
 
-			return absint( $value );
+			if ( ! empty( $value ) ) {
+				$value = intval( $value );
+			}
+
+			return $value;
 
 		} elseif ( false !== strpos( $field, 'add_tag_' ) ) {
 
@@ -485,7 +527,7 @@ class WPF_CRM_Base {
 				// Any formatting of arrays is now handled in the CRM integration class.
 
 				if ( ! is_array( $value ) ) { // If it's being synced as multiselect but it's not an array.
-					$value = array( $value );
+					$value = array_map( 'trim', explode( ',', $value ) );
 				}
 
 				// Don't sync multidimensional arrays.

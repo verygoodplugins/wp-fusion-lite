@@ -60,9 +60,8 @@ class WPF_Maropost_Admin {
 
 		$is_config['maropost_header'] = array(
 			'title'   => __( 'Maropost Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$is_config['account_id'] = array(
@@ -73,7 +72,6 @@ class WPF_Maropost_Admin {
 			'section' => 'setup'
 		);
 
-
 		$is_config['maropost_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion-lite' ),
 			'desc'        => __( 'Find your API key under connections in your account settings on Maropost.', 'wp-fusion-lite' ),
@@ -82,7 +80,6 @@ class WPF_Maropost_Admin {
 			'class'       => 'api_key',
 			'post_fields' => array( 'account_id', 'maropost_key', 'mp_list'  )
 		);
-
 
 		if( $settings['connection_configured'] == true && wpf_get_option('crm') == 'maropost') {
 
@@ -95,7 +92,6 @@ class WPF_Maropost_Admin {
 
 			);
 		}
-		
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $is_config );
 
@@ -164,8 +160,8 @@ class WPF_Maropost_Admin {
 		check_ajax_referer( 'wpf_settings_nonce' );
 
 		$account_id = sanitize_text_field( $_POST['account_id'] );
-		$api_key 	= sanitize_text_field( $_POST['maropost_key'] );
-		$mp_list    = sanitize_text_field( $_POST['mp_list'] );
+		$api_key    = sanitize_text_field( $_POST['maropost_key'] );
+		$mp_list    = isset( $_POST['mp_list'] ) ? sanitize_text_field( $_POST['mp_list'] ) : '';
 
 		$connection = $this->crm->connect( $account_id, $api_key, true );
 

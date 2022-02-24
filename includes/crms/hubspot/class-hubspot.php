@@ -53,7 +53,7 @@ class WPF_HubSpot {
 
 		$this->slug     = 'hubspot';
 		$this->name     = 'HubSpot';
-		$this->supports = array();
+		$this->supports = array( 'events', 'add_tags_api' );
 
 		// OAuth
 		$this->client_id     = '959bd865-5a24-4a43-a8bf-05a69c537938';
@@ -95,11 +95,7 @@ class WPF_HubSpot {
 
 		$trackid = wpf_get_option( 'site_tracking_id' );
 
-		if ( empty( $trackid ) ) {
-			$trackid = $this->get_tracking_id();
-		}
-
-		if ( ! empty( $trackid ) ) {
+		if ( ! empty( $trackid ) && ! is_wp_error( $trackid ) ) {
 			$this->edit_url = 'https://app.hubspot.com/contacts/' . $trackid . '/contact/%d/';
 		}
 
@@ -128,15 +124,22 @@ class WPF_HubSpot {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
+		if ( 'date' === $field_type ) {
 
-			// Dates are in milliseconds since the epoch so if the timestamp isn't already in ms we'll multiply x 1000 here
-			if ( $value < 1000000000000 ) {
-				$value = date( 'U', strtotime( 'today', $value ) ) * 1000;
+			// Dates are in milliseconds since the epoch so if the timestamp isn't already in ms we'll multiply x 1000 here.
+			if ( ! empty( $value ) && $value < 1000000000000 ) {
+				$value = gmdate( 'U', strtotime( 'today', $value ) ) * 1000;
 			}
 
 			return $value;
 
+		} elseif ( 'checkbox' === $field_type ) {
+
+			if ( ! empty( $value ) ) {
+				return 'true';
+			} else {
+				return 'false';
+			}
 		} elseif ( is_array( $value ) ) {
 
 			return implode( ';', array_filter( $value ) );
@@ -225,11 +228,15 @@ class WPF_HubSpot {
 		$refresh_token = wpf_get_option( 'hubspot_refresh_token' );
 
 		$params = array(
-			'body' => array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type' => 'application/x-www-form-urlencoded',
+			),
+			'body'       => array(
 				'grant_type'    => 'refresh_token',
 				'client_id'     => $this->client_id,
 				'client_secret' => $this->client_secret,
-				'redirect_uri'  => get_admin_url() . './options-general.php?page=wpf-settings&crm=hubspot',
+				'redirect_uri'  => get_admin_url() . '/options-general.php?page=wpf-settings&crm=hubspot',
 				'refresh_token' => $refresh_token,
 			),
 		);
@@ -404,11 +411,10 @@ class WPF_HubSpot {
 
 				foreach ( $response->lists as $list ) {
 
-					if ( $list->listType == 'STATIC' ) {
+					if ( 'STATIC' == $list->listType ) {
 						$category = 'Static Lists';
 					} else {
 						$category = 'Active Lists (Read Only)';
-						//$list->name .= ' (read only)';
 					}
 
 					$available_tags[ $list->listId ] = array(
@@ -482,6 +488,36 @@ class WPF_HubSpot {
 
 		return $crm_fields;
 
+	}
+
+
+
+	/**
+	 * Creates a new tag(list) in HubSpot and returns the ID.
+	 *
+	 * @since  3.38.42
+	 *
+	 * @param  string $tag_name The tag name.
+	 * @return int    $tag_id the tag id returned from API.
+	 */
+	public function add_tag( $tag_name ) {
+		$params         = $this->get_params();
+		$data           = array(
+			'name' => $tag_name,
+		);
+		$params['body'] = wp_json_encode( $data );
+
+		$request  = 'https://api.hubapi.com/contacts/v1/lists';
+		$response = wp_safe_remote_post( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$tag_id = $response->listId;
+		return $tag_id;
 	}
 
 
@@ -822,7 +858,7 @@ class WPF_HubSpot {
 			return;
 		}
 
-		wpf_log( 'info', 0, 'Starting site tracking session for contact ID ' . $contact_id . ' with email ' . $customer_email . '.' );
+		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $customer_email . '.' );
 
 		setcookie( 'wpf_guest', $customer_email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
 
@@ -842,6 +878,11 @@ class WPF_HubSpot {
 			return;
 		}
 
+		// Stop HubSpot messing with WooCommerce account page (sending email changes automatically).
+		if ( function_exists( 'is_account_page' ) && is_account_page() ) {
+			return;
+		}
+
 		$trackid = wpf_get_option( 'site_tracking_id' );
 
 		if ( empty( $trackid ) ) {
@@ -855,12 +896,7 @@ class WPF_HubSpot {
 
 			// This will also merge historical tracking data that was accumulated before a visitor registered.
 
-			if ( isset( $_COOKIE['wpf_guest'] ) ) {
-				$email = sanitize_email( wp_unslash( $_COOKIE['wpf_guest'] ) );
-			} else {
-				$user  = wp_get_current_user();
-				$email = $user->user_email;
-			}
+			$email = wpf_get_current_user_email();
 
 			echo '<script>';
 			echo 'var _hsq = window._hsq = window._hsq || [];';
@@ -900,5 +936,172 @@ class WPF_HubSpot {
 		return $body_json->portalId;
 
 	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the HubSpot engagements API.
+	 *
+	 * @since  3.38.16
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		// Get the email address to track.
+
+		if ( empty( $email_address ) ) {
+			$email_address = wpf_get_current_user_email();
+		}
+
+		if ( false === $email_address ) {
+			return; // can't track without an email.
+		}
+
+		// Get the contact ID to track.
+		$contact_id = $this->get_contact_id( $email_address );
+
+		if ( ! $contact_id ) {
+			return;
+		}
+
+		$body = array(
+			'engagement'   => array(
+				'active'  => true,
+				'ownerId' => $contact_id,
+				'type'    => 'NOTE',
+			),
+			'associations' => array(
+				'contactIds' => array( $contact_id ),
+			),
+			'metadata'     => array(
+				'title' => $event,
+				'body'  => '<b>' . $event . '</b><br>' . nl2br( $event_data ),
+			),
+
+		);
+
+		$params             = $this->params;
+		$params['body']     = wp_json_encode( $body );
+		$params['blocking'] = false;
+
+		$request  = 'https://api.hubapi.com/engagements/v1/engagements';
+		$response = wp_safe_remote_post( $request, $params );
+
+		return true;
+	}
+
+	/**
+	 * Creates a new custom object.
+	 *
+	 * @since 3.38.30
+	 *
+	 * @param array  $properties     The properties.
+	 * @param string $object_type_id The object type ID.
+	 * @return int|WP_Error Object ID if success, WP_Error if failed.
+	 */
+	public function add_object( $properties, $object_type_id ) {
+
+		if ( ! defined( 'HUBSPOT_API_KEY' ) ) {
+			return new WP_Error( 'error', 'HubSpot API key not defined. See https://wpfusion.com/documentation/crm-specific-docs/hubspot-custom-objects/' );
+		}
+
+		$properties = array(
+			'properties' => $properties,
+		);
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $properties );
+
+		unset( $params['headers']['Authorization'] ); // Remove the OAuth params so they don't conflict with the API key param.
+
+		$response = wp_safe_remote_post( 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '?hapikey=' . HUBSPOT_API_KEY, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return $response->id;
+
+	}
+
+	/**
+	 * Updates a new custom object.
+	 *
+	 * @since  3.38.30
+	 *
+	 * @param  int    $object_id      The object ID to update.
+	 * @param  array  $properties     The properties.
+	 * @param  string $object_type_id The object type ID.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function update_object( $object_id, $properties, $object_type_id ) {
+
+		if ( ! defined( 'HUBSPOT_API_KEY' ) ) {
+			return new WP_Error( 'error', 'HubSpot API key not defined. See https://wpfusion.com/documentation/crm-specific-docs/hubspot-custom-objects/' );
+		}
+
+		$properties = array(
+			'properties' => $properties,
+		);
+
+		$params           = $this->get_params();
+		$params['body']   = wp_json_encode( $properties );
+		$params['method'] = 'PATCH';
+
+		unset( $params['headers']['Authorization'] ); // Remove the OAuth params so they don't conflict with the API key param.
+
+		$response = wp_safe_remote_request( 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '/' . $object_id . '/?hapikey=' . HUBSPOT_API_KEY, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
+
+	}
+
+	/**
+	 * Loads a custom object.
+	 *
+	 * @since  3.38.30
+	 *
+	 * @param  int    $object_id      The object ID to update.
+	 * @param  string $object_type_id The object type ID.
+	 * @param  array  $properties     The properties to load.
+	 * @return array|WP_Error Object array if success, WP_Error if failed.
+	 */
+	public function load_object( $object_id, $object_type_id, $properties ) {
+
+		if ( ! defined( 'HUBSPOT_API_KEY' ) ) {
+			return new WP_Error( 'error', 'HubSpot API key not defined. See https://wpfusion.com/documentation/crm-specific-docs/hubspot-custom-objects/' );
+		}
+
+		$params = $this->get_params();
+		unset( $params['headers']['Authorization'] ); // Remove the OAuth params so they don't conflict with the API key param.
+
+		$request = 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '/' . $object_id . '/?hapikey=' . HUBSPOT_API_KEY;
+
+		foreach ( $properties as $property ) {
+			$request .= '&properties=' . $property;
+		}
+
+		$response = wp_safe_remote_get( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		return $response;
+
+	}
+
 
 }

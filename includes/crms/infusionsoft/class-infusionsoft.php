@@ -40,8 +40,8 @@ class WPF_Infusionsoft_iSDK {
 
 		$this->slug      = 'infusionsoft';
 		$this->name      = 'Infusionsoft';
-		$this->menu_name = 'Infusionsoft';
-		$this->supports  = array();
+		$this->menu_name = 'Infusionsoft / Keap';
+		$this->supports  = array( 'add_tags_api' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -91,6 +91,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$cookies[] = 'is_aff';
 		$cookies[] = 'is_affcode';
+		$cookies[] = 'affiliate';
 
 		return $cookies;
 
@@ -105,7 +106,7 @@ class WPF_Infusionsoft_iSDK {
 
 	public function generate_password( $password ) {
 
-		if(is_admin()) {
+		if ( is_admin() ) {
 			$password = substr( $password, 0, 16 );
 		}
 
@@ -171,14 +172,14 @@ class WPF_Infusionsoft_iSDK {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( !is_array( $value ) & strpos($value, '&') !== false  ) {
-			$value = str_replace('&', '&amp;', $value);
+		if ( ! is_array( $value ) && strpos( $value, '&' ) !== false ) {
+			$value = str_replace( '&', '&amp;', $value );
 		}
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
+		if ( 'date' === $field_type && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
-			$date = date( "Ymd\T00:00:00", $value );
+			// Adjust formatting for date fields.
+			$date = date( 'Ymd\TH:i:s', $value );
 
 			return $date;
 
@@ -190,19 +191,18 @@ class WPF_Infusionsoft_iSDK {
 
 			$countries = include dirname( __FILE__ ) . '/includes/countries.php';
 
-			if( isset( $countries[$value] ) ) {
+			if ( isset( $countries[ $value ] ) ) {
 
-				return $countries[$value];
+				return $countries[ $value ];
 
 			} else {
 
 				return $value;
 
 			}
-
 		} else {
 
-			return $value;
+			return strval( $value ); // fixes "Error adding: java.lang.Integer cannot be cast to java.lang.String".
 
 		}
 
@@ -248,7 +248,7 @@ class WPF_Infusionsoft_iSDK {
 
 			default:
 				// In case no matching datatype is found, fall back to plain text
-				return "Text";
+				return 'Text';
 		}
 
 	}
@@ -283,7 +283,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$result = $app->cfgCon( $app_name, $api_key, 'off' );
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 			$this->error = $result;
 			return new WP_Error( 'error', __( $result->get_error_message() . '. Please verify your connection details are correct.', 'wp-fusion-lite' ) );
 		}
@@ -330,7 +330,7 @@ class WPF_Infusionsoft_iSDK {
 			return $this->error;
 		}
 
-		// Retrieve tag categories
+		// Retrieve tag categories.
 
 		$fields = array( 'CategoryName', 'Id' );
 		$query  = array( 'Id' => '%' );
@@ -340,44 +340,69 @@ class WPF_Infusionsoft_iSDK {
 		$categories = $this->app->dsQuery( 'ContactGroupCategory', 1000, 0, $query, $fields );
 
 		if ( is_wp_error( $categories ) ) {
-			return $categories;
+			wpf_log( 'error', 0, $categories->get_error_message() . '.<br /><br />The categories have not been loaded.', array( 'source' => 'infusionsoft' ) );
+			return false;
 		}
 
 		$fields = array( 'Id', 'GroupName', 'GroupCategoryId' );
 
 		foreach ( $categories as $category ) {
 
-			// Retrieve tags
-			$query  = array( 'GroupCategoryId' => $category['Id'] );
-			$result = $this->app->dsQuery( 'ContactGroup', 1000, 0, $query, $fields );
+			// Retrieve tags.
 
-			if ( is_wp_error( $result ) ) {
-				wpf_log( 'error', wpf_get_current_user_id(), $result->get_error_message() . '.<br /><br />The tags from the <strong>' . $category['CategoryName'] . '</strong> category have not been loaded.', array( 'source' => 'infusionsoft' ) );
-				continue;
+			$page    = 0;
+			$proceed = true;
+
+			while ( $proceed ) {
+
+				$query  = array( 'GroupCategoryId' => $category['Id'] );
+				$result = $this->app->dsQuery( 'ContactGroup', 1000, $page, $query, $fields );
+
+				if ( is_wp_error( $result ) ) {
+					wpf_log( 'error', 0, $result->get_error_message() . '.<br /><br />The tags from the <strong>' . $category['CategoryName'] . '</strong> category have not been loaded.', array( 'source' => 'infusionsoft' ) );
+					continue;
+				}
+
+				foreach ( $result as $tag ) {
+					$tags[ $tag['Id'] ]['label']    = sanitize_text_field( $tag['GroupName'] );
+					$tags[ $tag['Id'] ]['category'] = sanitize_text_field( $category['CategoryName'] );
+				}
+
+				if ( count( $result ) < 1000 ) {
+					$proceed = false;
+				} else {
+					$page++;
+				}
 			}
-
-			foreach ( $result as $tag ) {
-				$tags[ $tag['Id'] ]['label']    = sanitize_text_field( $tag['GroupName'] );
-				$tags[ $tag['Id'] ]['category'] = sanitize_text_field( $category['CategoryName'] );
-			}
-
 		}
 
-		// For tags with no category
-		$query  = array( 'GroupCategoryId' => '' );
-		$result = $this->app->dsQuery( 'ContactGroup', 1000, 0, $query, $fields );
+		// For tags with no category.
 
-		if ( is_wp_error( $result ) ) {
+		$page    = 0;
+		$proceed = true;
 
-			wpf_log( 'error', wpf_get_current_user_id(), $result->get_error_message() . '.<br /><br />Tags with <strong>no category</strong> have not been loaded.', array( 'source' => 'infusionsoft' ) );
+		while ( $proceed ) {
 
-		} else {
+			$query  = array( 'GroupCategoryId' => '' );
+			$result = $this->app->dsQuery( 'ContactGroup', 1000, $page, $query, $fields );
 
-			foreach ( $result as $tag ) {
-				$tags[ $tag['Id'] ]['label']    = sanitize_text_field( $tag['GroupName'] );
-				$tags[ $tag['Id'] ]['category'] = 'No Category';
+			if ( is_wp_error( $result ) ) {
+
+				wpf_log( 'error', 0, $result->get_error_message() . '.<br /><br />Tags with <strong>no category</strong> have not been loaded.', array( 'source' => 'infusionsoft' ) );
+
+			} else {
+
+				foreach ( $result as $tag ) {
+					$tags[ $tag['Id'] ]['label']    = sanitize_text_field( $tag['GroupName'] );
+					$tags[ $tag['Id'] ]['category'] = 'No Category';
+				}
 			}
 
+			if ( count( $result ) < 1000 ) {
+				$proceed = false;
+			} else {
+				$page++;
+			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $tags );
@@ -432,11 +457,52 @@ class WPF_Infusionsoft_iSDK {
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		// Social fields
+		$social_fields = array();
+
+		foreach ( $infusionsoft_social_fields as $index => $data ) {
+			$social_fields[ $data['crm_field'] ] = $data['crm_label'];
+		}
+
+		asort( $social_fields );
+
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+			'Social Fields'   => $social_fields,
+		);
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
 
+	}
+
+
+	/**
+	 * Creates a new tag in Infusionsoft and returns the ID.
+	 *
+	 * @since  3.38.42
+	 *
+	 * @param  string $tag_name The tag name.
+	 * @return int    $tag_id the tag id returned from API.
+	 */
+	public function add_tag( $tag_name ) {
+		if ( is_wp_error( $this->connect() ) ) {
+			return $this->error;
+		}
+
+		$response = $this->app->dsAdd(
+			'ContactGroup',
+			array(
+				'GroupName' => $tag_name,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return $response;
 	}
 
 
@@ -488,8 +554,8 @@ class WPF_Infusionsoft_iSDK {
 			return $this->error;
 		}
 
-		$fields  = array( 'Groups' );
-		$query   = array( 'Id' => $contact_id );
+		$fields = array( 'Groups' );
+		$query  = array( 'Id' => $contact_id );
 		$result = $this->app->dsQuery( 'Contact', 1000, 0, $query, $fields );
 
 		if ( is_wp_error( $result ) ) {
@@ -533,24 +599,21 @@ class WPF_Infusionsoft_iSDK {
 
 				// If CID changed
 
-				if( strpos($result->get_error_message(), 'Error loading contact') !== false ) {
+				if ( strpos( $result->get_error_message(), 'Error loading contact' ) !== false ) {
 
-					$user_id = wp_fusion()->user->get_user_id($contact_id);
+					$user_id    = wp_fusion()->user->get_user_id( $contact_id );
 					$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
 
-					if( ! empty( $contact_id ) ) {
+					if ( ! empty( $contact_id ) ) {
 
 						$this->apply_tags( $tags, $contact_id );
 						break;
 
 					}
-
 				} else {
 					return $result;
 				}
-
 			}
-
 		}
 
 		return true;
@@ -579,27 +642,100 @@ class WPF_Infusionsoft_iSDK {
 
 				// If CID changed
 
-				if( strpos($result->get_error_message(), 'Error loading contact') !== false ) {
+				if ( strpos( $result->get_error_message(), 'Error loading contact' ) !== false ) {
 
-					$user_id = wp_fusion()->user->get_user_id($contact_id);
+					$user_id    = wp_fusion()->user->get_user_id( $contact_id );
 					$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
 
-					if( ! empty( $contact_id ) ) {
+					if ( ! empty( $contact_id ) ) {
 
 						$this->remove_tags( $tags, $contact_id );
 						break;
 
 					}
-
 				} else {
 					return $result;
 				}
-
 			}
-
 		}
 
 		return true;
+
+	}
+
+	/**
+	 * Extract social media fields from contact data so it dees not throw an
+	 * error while adding/updating contact.
+	 *
+	 * @since  3.38.35
+	 *
+	 * @param  array $data   The update data.
+	 * @return array The modified update data.
+	 */
+	private function extract_social_fields( $data ) {
+
+		$crm_fields = wp_fusion()->settings->get( 'crm_fields' );
+
+		if ( ! isset( $crm_fields['Social Fields'] ) ) {
+			return array();
+		}
+
+		return array_intersect_key( $data, $crm_fields['Social Fields'] );
+	}
+
+	/**
+	 * Add social accounts to a contact.
+	 *
+	 * @since  3.38.35
+	 *
+	 * @param  array $data       The update data.
+	 * @param  int   $contact_id The contact ID.
+	 */
+	private function add_social_accounts( $data, $contact_id ) {
+
+		$fields = array( 'AccountType', 'AccountName', 'Id' );
+		$query  = array( 'ContactId' => $contact_id );
+		$result = $this->app->dsQuery( 'SocialAccount', 1000, 0, $query, $fields );
+
+		foreach ( $data as $key => $value ) {
+
+			foreach ( $result as $row ) {
+
+				// See if it exists.
+
+				if ( $key === $row['AccountType'] ) {
+
+					if ( $value !== $row['AccountName'] ) { // Only update it if it's changed.
+
+						$this->app->dsUpdate(
+							'SocialAccount',
+							$row['Id'],
+							array(
+								'ContactId'   => $contact_id,
+								'AccountName' => $value,
+								'AccountType' => $key,
+							)
+						);
+
+					}
+
+					continue 2;
+
+				}
+			}
+
+			// No matches found. Add.
+
+			$this->app->dsAdd(
+				'SocialAccount',
+				array(
+					'ContactId'   => $contact_id,
+					'AccountName' => $value,
+					'AccountType' => $key,
+				)
+			);
+
+		}
 
 	}
 
@@ -622,6 +758,12 @@ class WPF_Infusionsoft_iSDK {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
+		// The social fields use their own API.
+		$social_data = $this->extract_social_fields( $data );
+
+		// If we try to sync social data with the main data we'll get an error.
+		$data = array_diff( $data, $social_data );
+
 		// addCon instead of addWithDupCheck because addWithDupCheck has random errors with custom fields
 		$contact_id = $this->app->addCon( $data );
 
@@ -630,6 +772,10 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		$this->app->optIn( $data['Email'] );
+
+		if ( ! empty( $social_data ) ) {
+			$this->add_social_accounts( $social_data, $contact_id );
+		}
 
 		return $contact_id;
 
@@ -653,19 +799,25 @@ class WPF_Infusionsoft_iSDK {
 			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
+
+		// The social fields use their own API.
+		$social_data = $this->extract_social_fields( $data );
+
+		// If we try to sync social data with the main data we'll get an error.
+		$data = array_diff( $data, $social_data );
 
 		$result = $this->app->updateCon( $contact_id, $data );
 
 		if ( is_wp_error( $result ) ) {
 
-			if( strpos($result->get_error_message(), 'Record not found') !== false ) {
+			if ( strpos( $result->get_error_message(), 'Record not found' ) !== false ) {
 
-				// If CID changed, try and update
+				// If CID changed, try and update.
 
-				$user_id = wp_fusion()->user->get_user_id($contact_id);
+				$user_id    = wp_fusion()->user->get_user_id( $contact_id );
 				$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
 
 				if ( $contact_id !== false ) {
@@ -678,13 +830,11 @@ class WPF_Infusionsoft_iSDK {
 					$contact_id = $this->add_contact( $data, false );
 
 				}
-
 			} else {
 
 				return $result;
 
 			}
-
 		}
 
 		if ( isset( $data['Email'] ) ) {
@@ -696,6 +846,10 @@ class WPF_Infusionsoft_iSDK {
 
 			$this->app->optIn( $data['Email'] );
 
+		}
+
+		if ( ! empty( $social_data ) ) {
+			$this->add_social_accounts( $social_data, $contact_id );
 		}
 
 		do_action( 'wpf_contact_updated', $contact_id );
@@ -716,16 +870,26 @@ class WPF_Infusionsoft_iSDK {
 
 		$return_fields = array();
 		$field_map     = array();
+		$social_map    = array();
 
-		foreach ( wpf_get_option( 'contact_fields' ) as $field_id => $field_data ) {
+		// Load social fields.
 
-			if ( $field_data['active'] == true && ! empty( $field_data['crm_field'] ) ) {
+		require dirname( __FILE__ ) . '/admin/infusionsoft-fields.php';
+		$social_crm_fields = array_column( $infusionsoft_social_fields, 'crm_field' );
+
+		foreach ( wpf_get_option( 'contact_fields', array() ) as $field_id => $field_data ) {
+
+			if ( $field_data['active'] && ! empty( $field_data['crm_field'] ) ) {
+
+				if ( in_array( $field_data['crm_field'], $social_crm_fields ) ) {
+					$social_map[ $field_id ] = $field_data['crm_field'];
+					continue;
+				}
 
 				$return_fields[]        = $field_data['crm_field'];
 				$field_map[ $field_id ] = $field_data['crm_field'];
 
 			}
-
 		}
 
 		if ( empty( $return_fields ) ) {
@@ -764,6 +928,28 @@ class WPF_Infusionsoft_iSDK {
 
 		}
 
+		// Load social user meta if it exist
+		if ( ! empty( $social_map ) ) {
+			$social_fields = array( 'AccountType', 'AccountName' );
+			$social_query  = array( 'ContactId' => $contact_id );
+			$social_result = $this->app->dsQuery( 'SocialAccount', 1000, 0, $social_query, $social_fields );
+			if ( is_wp_error( $social_result ) ) {
+				return $social_result;
+			}
+
+			foreach ( $social_map as $user_meta_key => $infusionsoft_key ) {
+				foreach ( $social_result as $social_value ) {
+					if ( strtolower( $social_value['AccountType'] ) === strtolower( $infusionsoft_key ) ) {
+						$field_data = $social_value['AccountName'];
+					} else {
+						continue;
+					}
+
+					$user_meta[ $user_meta_key ] = $field_data;
+				}
+			}
+		}
+
 		return $user_meta;
 
 	}
@@ -782,18 +968,18 @@ class WPF_Infusionsoft_iSDK {
 			return $this->error;
 		}
 
-		$contact_ids    = array();
-		$return_fields  = array( 'Contact.Id' );
+		$contact_ids   = array();
+		$return_fields = array( 'Contact.Id' );
 
 		$proceed = true;
-		$page = 0;
+		$page    = 0;
 
-		while($proceed == true) {
+		while ( $proceed == true ) {
 
-			$results = $this->app->dsQuery( "ContactGroupAssign", 1000, $page, array( 'GroupId' => $tag ), $return_fields );
+			$results = $this->app->dsQuery( 'ContactGroupAssign', 1000, $page, array( 'GroupId' => $tag ), $return_fields );
 
-			if ( is_wp_error( $result ) ) {
-				return $result;
+			if ( is_wp_error( $results ) ) {
+				return $results;
 			}
 
 			foreach ( $results as $id => $result ) {
@@ -802,10 +988,9 @@ class WPF_Infusionsoft_iSDK {
 
 			$page++;
 
-			if(count($results) < 1000) {
+			if ( count( $results ) < 1000 ) {
 				$proceed = false;
 			}
-
 		}
 
 		return $contact_ids;

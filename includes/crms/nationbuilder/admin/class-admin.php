@@ -36,6 +36,30 @@ class WPF_NationBuilder_Admin {
 	}
 
 	/**
+	 * Gets the OAuth URL for the initial connection.
+	 *
+	 * If we're using the WP Fusion app, send the request through wpfusion.com,
+	 * otherwise allow a custom app.
+	 *
+	 * @since  3.38.44
+	 *
+	 * @return string The URL.
+	 */
+	public function get_oauth_url() {
+
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
+
+		$args = array(
+			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings' ),
+			'action'   => "wpf_get_{$this->slug}_token",
+			'slug'     => 'unknown',
+		);
+
+		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
+
+	}
+
+	/**
 	 * Hooks to run when this CRM is selected as active
 	 *
 	 * @access  public
@@ -116,14 +140,12 @@ class WPF_NationBuilder_Admin {
 
 		$new_settings['nationbuilder_header'] = array(
 			'title'   => __( 'NationBuilder Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['nationbuilder_slug'] = array(
 			'title'   => __( 'Nation Slug', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
 			'desc'    => 'Your slug is found in your NationBuilder URL, like https://{slug}.nationbuilder.com/',
@@ -132,16 +154,14 @@ class WPF_NationBuilder_Admin {
 		if ( empty( $options['nationbuilder_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['nationbuilder_auth'] = array(
-				'std'     => 0,
-				'type'    => 'heading',
+				'title'   => __( 'Authorize', 'wp-fusion-lite' ),
+				'type'    => 'oauth_authorize',
 				'section' => 'setup',
+				'url'     => $this->get_oauth_url(),
+				'name'    => $this->name,
+				'slug'    => $this->slug,
+				'dis'     => true,
 			);
-
-			$new_settings['nationbuilder_auth']['desc']  = '<table class="form-table"><tr>';
-			$new_settings['nationbuilder_auth']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
-			$new_settings['nationbuilder_auth']['desc'] .= '<td><a id="nationbuilder-auth-btn" class="button button-disabled" href="https://wpfusion.com/parse-nationbuilder-oauth.php?redirect=' . urlencode( get_admin_url() . './options-general.php?page=wpf-settings' ) . '&action=wpf_get_nationbuilder_token&client_id=' . $this->crm->client_id . '&slug=unknown">Authorize with NationBuilder</a><br /><span class="description">You\'ll be taken to NationBuilder to authorize WP Fusion and generate access keys for this site.</td>';
-			$new_settings['nationbuilder_auth']['desc'] .= '</tr></table></div>';
-
 		} else {
 
 			$new_settings['nationbuilder_token'] = array(
@@ -150,6 +170,7 @@ class WPF_NationBuilder_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'nationbuilder_token', 'nationbuilder_slug' ),
+				'desc'        => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
 			);
 
 		}
@@ -197,7 +218,7 @@ class WPF_NationBuilder_Admin {
 
 	public function show_field_nationbuilder_header_begin( $id, $field ) {
 
-		echo '</table>';
+		//echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 

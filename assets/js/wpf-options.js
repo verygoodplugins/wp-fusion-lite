@@ -271,7 +271,7 @@ jQuery(document).ready(function($){
 		// Start export stage
 
 		var startBatch = function( button, action, args = false ) {
-
+			
 			button.attr('disabled', 'disabled');
 
 			button.html('<span class="dashicons dashicons-update-alt wpf-spin"></span>' + wpf_ajax.strings.beginningProcessing.replace( 'ACTIONTITLE', action.title ));
@@ -310,10 +310,33 @@ jQuery(document).ready(function($){
 			}
 
 	        var button = $(this);
-	        var action = { 'action' : $('input[name=export_options]:checked').val(), 'title' : $('input[name=export_options]:checked').attr('data-title') }
+	        var action = { 'action' : $('input[name=export_options]:checked').val(), 'title' : $('input[name=export_options]:checked').attr('data-title') };
+			var args = {skip_processed:$('input[name=skip_already_processed]:checked').val()};
 
-			startBatch(button, action);
+			startBatch(button, action, args);
 
+		});
+
+		// Skip already processed.
+		$('.wpf-export-option input[type="radio"]').on('change', function() {
+
+			if( parseInt($(this).attr('process_again')) !== 1 ){
+				$('.skip-processed-container input[type="checkbox"]').prop( "checked", true );
+				$('.skip-processed-container').hide();
+				return;
+			}
+			var option_title = $(this).attr('data-title').toLowerCase();
+			
+			$('.skip-processed-container label').html($('.skip-processed-container label').html().replace('[placeholder]',option_title));
+
+			$( '.skip-processed-container i' ).tipTip({
+				'content': $('.skip-processed-container i').attr('data-tip').replace('[placeholder]',option_title),
+				'fadeIn': 50,
+				'fadeOut': 50,
+				'delay': 200,
+				'defaultPosition': 'right',
+			});
+			$('.skip-processed-container').show();
 		});
 
 		//
@@ -440,7 +463,7 @@ jQuery(document).ready(function($){
 							button.find('span.dashicons').removeClass('wpf-spin');
 							button.find('span.text').html( 'Complete' );
 
-							$('#wpf-settings-notices').html( '<div class="updated"><p>' + wpf_ajax.strings.connectionSuccess.replace( 'CRMNAME', $( crmContainer ).attr('data-name') ) + '</p></div>' );
+							$(crmContainer).find('#connection-output').html( '<div class="updated"><p>' + wpf_ajax.strings.connectionSuccess.replace( 'CRMNAME', $( crmContainer ).attr('data-name') ) + '</p></div>' );
 
 						});
 
@@ -478,7 +501,10 @@ jQuery(document).ready(function($){
 			postFields = $(crmContainer).find('#test-connection').attr('data-post-fields').split(',');
 
 			$(postFields).each(function(index, el) {
-				data[el] = $('input#' + el).val();
+
+				if ( $('#' + el).length ) {
+					data[el] = $('#' + el).val();
+				}
 			});
 
 			// Test the CRM connection
@@ -495,6 +521,8 @@ jQuery(document).ready(function($){
 					button.find('span.text').html( 'Retry' );
 
 				} else {
+
+					$(crmContainer).find('div.error').remove();
 
 					$('#connection_configured').val('1'); // connection is configured
 					$('#wpf-needs-setup').slideUp(400);
@@ -551,7 +579,7 @@ jQuery(document).ready(function($){
 
 		});
 
-		function paramReplace(name, string, value) {
+		function paramReplace( name, string, value ) {
 			// Find the param with regex
 			// Grab the first character in the returned string (should be ? or &)
 			// Replace our href string with our new value, passing on the name and delimeter
@@ -584,23 +612,58 @@ jQuery(document).ready(function($){
 
 		});
 
+
 		//
-		// Fill URL into link (FluentCRM)
+		// Dynamics 365 crm url
 		//
 
-		$('#fluentcrm_rest_url').on('input', function(event) {
+		$('#dynamics_365_rest_url').on('input', function(event) {
+			let dyn_input = $(this).val();
+			let url;
+			try {
+				url = new URL(dyn_input);
+			} catch (_) {
+				$("a#dynamics-365-auth-btn").removeClass('button-primary').addClass('button-disabled');
+				return false;  
+			}
+			let host = url.host.split('.');
+			if(host.slice(Math.max(host.length - 2, 0)).join('.') != 'dynamics.com'){
+				$("a#dynamics-365-auth-btn").removeClass('button-primary').addClass('button-disabled');
+				return false;
+			}
+			
+			let newUrl = paramReplace( 'rest_url', $("a#dynamics-365-auth-btn").attr('href'), encodeURIComponent( dyn_input ) );
+
+			$("a#dynamics-365-auth-btn").attr('href', newUrl);
+
+			$("a#dynamics-365-auth-btn").removeClass('button-disabled').addClass('button-primary');
+
+		});
+
+
+		//
+		// Fill URL into link (FluentCRM, Groundhogg)
+		//
+
+		$('input.wp-rest-url').on('input', function(event) {
+
+
+			var crmContainer = $(this).closest('.crm-config');
+			var crm = crmContainer.attr('data-crm');
 			
 			if( $(this).val().length && $(this).val().includes( 'https://' ) ) {
 
-				var url = $(this).val() + '/wp-admin/authorize-application.php?app_name=WP+Fusion+-+' + wpf_ajax.sitetitle + '&success_url=' + wpf_ajax.optionsurl + '%26crm=fluentcrm';
+				var url = $(this).val().replace(/\/?$/, '/');
 
-				$("a#fluentcrm_rest-auth-btn").attr('href', url);
+				url = url + 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' + wpf_ajax.sitetitle + '&success_url=' + wpf_ajax.optionsurl + '%26crm=' + crm;
 
-				$("a#fluentcrm_rest-auth-btn").removeClass('button-disabled').addClass('button-primary');
+				crmContainer.find("a.rest-auth-btn").attr('href', url);
+
+				crmContainer.find("a.rest-auth-btn").removeClass('button-disabled').addClass('button-primary');
 
 			} else {
 
-				$("a#fluentcrm_rest-auth-btn").removeClass('button-primary').addClass('button-disabled');
+				crmContainer.find("a.rest-auth-btn").removeClass('button-primary').addClass('button-disabled');
 
 			}
 

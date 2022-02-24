@@ -72,12 +72,23 @@ function initializeTagsSelect(target) {
 
 			if( jQuery.inArray('add_tags', wpf_admin.crm_supports) > -1 ) {
 
-				// For CRMs that support adding new tags via API
+				// For CRMs that use strings as tags / they don't need to be created before they can be used.
 
 				selectArgs.tags = true;
-
+				
 				selectArgs.insertTag = function(data, tag){
 					tag.text = tag.text + " (" + wpf_admin.strings.addNew + ")"
+					data.push(tag);
+				};
+				
+			} else if( jQuery.inArray('add_tags_api', wpf_admin.crm_supports) > -1 ) {
+				
+				// For CRMs that support adding new tags via API
+				
+				selectArgs.tags = true;
+				selectArgs.insertTag = function(data, tag){
+					tag.text = tag.text + " (" + wpf_admin.strings.addNew + ")"
+					tag.fromAPI = true;
 					data.push(tag);
 				};
 
@@ -143,6 +154,39 @@ function initializeTagsSelect(target) {
 			// Initialize the select4!
 
 			jQuery(this).select4( selectArgs );
+
+			jQuery(this).on('select4:select', function(e) {
+
+				// Check if a new tag from API is added.
+
+				if( e.params.data.fromAPI ) {
+
+					var that = jQuery(this);
+					that.next().find( 'span.select4-selection' ).append('<i id="wpf-select4-tags-loading" class="fa fa-spinner fa-spin"></i>');
+
+					var data = {
+						'action'	  : 'add_tags_api',
+						'_ajax_nonce' : wpf_admin.nonce,
+						'tag'         : e.params.data,
+					}
+					
+					jQuery.post(ajaxurl, data, function(response) {
+
+						jQuery('#wpf-select4-tags-loading').remove();
+
+						if( response.success === true ){
+
+							that.find( '[value="'+e.params.data.id+'"]' ).replaceWith('<option selected value="' + response.data.tag_id + '">' + response.data.tag_name + '</option>');
+
+						} else {
+
+							alert( 'Error adding tag: ' + response.data[0].message );
+							that.find('[value="' + e.params.data.id + '"]').remove();
+						}
+
+					});
+				}
+			});;
 
 			// Prevent same tag in multiple selects if specified
 
@@ -232,8 +276,7 @@ jQuery(document).ready(function($){
 	// Redirect select
 
 	if( $("select.select4-select-page").length ) {
-
-		$("select.select4-select-page").select4({
+		var select_page_options  = {
 			allowClear: true,
 			minimumInputLength: 3,
 			ajax: {
@@ -251,7 +294,15 @@ jQuery(document).ready(function($){
 					return query;
     			}
     		}
-		});
+		};
+		if($("select.select4-select-page").hasClass('select4-allow-adding')){
+			select_page_options.tags = true;
+			select_page_options.insertTag = function(data, tag){
+				tag.text = tag.text + " (add URL)"
+				data.push(tag);
+			};
+		}
+		$("select.select4-select-page").select4(select_page_options);
 		
 	}
 
@@ -272,6 +323,35 @@ jQuery(document).ready(function($){
 		'delay': 200,
 		'defaultPosition': 'bottom',
 	});
+
+
+	// Logs User dropdown
+	if( $("select.select4-users-log").length ) {
+
+		$("select.select4-users-log").select4({
+			allowClear: true,
+			// placeholder: "Search for users",
+			minimumInputLength: 3,
+			width: '225px',
+			ajax: {
+    			url: ajaxurl,
+    			dataType: 'json',
+    			type: 'POST',
+    			delay: 250,
+    			cache: true,
+    			data: function( params ) {
+    				var query = {
+						search: params.term,
+						action: 'wpf_get_log_users'
+					}
+
+					return query;
+    			}
+    		}
+		});
+		
+	}
+
 
 	// CRM field select
 
@@ -534,16 +614,15 @@ jQuery(document).ready(function($){
 	//
 
 	// on in/out/role change, hide/show the roles
-	$('#menu-to-edit').on('change', 'select.wpf-nav-menu', function() {
+	$('#menu-to-edit').on('change', 'select.wpf-nav-menu,.nav_item_options-which_users select', function() {
 
-		if( $(this).val() === '1' ){
-
+		if( $(this).val() === '1' || $(this).val() === 'logged_in' ){
 			initializeTagsSelect('#menu-to-edit');
-			$(this).closest('.wpf_nav_menu_field').next('.wpf_nav_menu_tags_field').slideDown();
+			$(this).parents('li.menu-item').find('.wpf_nav_menu_tags_field').slideDown();
 
 		} else {
 
-			$(this).closest('.wpf_nav_menu_field').next('.wpf_nav_menu_tags_field').slideUp();
+			$(this).parents('li.menu-item').find('.wpf_nav_menu_tags_field').slideUp();
 
 		}
 	});
@@ -625,8 +704,6 @@ jQuery(document).ready(function($){
 					$('#wpf-tags-row').remove();
 
 				} else {
-
-					response = JSON.parse(response);
 
 					// Set contact ID
 					$('td#contact-id').html(response.contact_id);

@@ -117,7 +117,7 @@ class WPF_EngageBay {
 			return;
 		}
 
-		wpf_log( 'info', 0, 'Starting site tracking session for contact ID ' . $contact_id . ' with email ' . $email . '.' );
+		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $email . '.' );
 
 		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
 
@@ -143,15 +143,7 @@ class WPF_EngageBay {
 		}
 
 		$domain = wpf_get_option( 'engagebay_domain' );
-
-		if ( wpf_is_user_logged_in() ) {
-			$user  = wpf_get_current_user();
-			$email = $user->user_email;
-		} elseif ( isset( $_COOKIE['wpf_guest'] ) ) {
-			$email = sanitize_email( wp_unslash( $_COOKIE['wpf_guest'] ) );
-		} else {
-			$email = '';
-		}
+		$email  = wpf_get_current_user_email();
 
 		echo '<script type="text/javascript" >';
 		echo 'var EhAPI = EhAPI || {}; EhAPI.after_load = function(){';

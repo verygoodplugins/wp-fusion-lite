@@ -314,10 +314,13 @@ class WPF_ActiveCampaign_Admin {
 
 		$lists = array();
 
-		foreach ( $result->lists as $list_object ) {
+		if ( ! empty( $result->lists ) ) {
 
-			$lists[] = $list_object->listid;
+			foreach ( $result->lists as $list_object ) {
 
+				$lists[] = $list_object->listid;
+
+			}
 		}
 
 		update_user_meta( $user_id, 'activecampaign_lists', $lists );

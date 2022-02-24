@@ -62,16 +62,26 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			add_action( $this->cron_hook_identifier, array( $this, 'handle_cron_healthcheck' ) );
 			add_filter( 'cron_schedules', array( $this, 'schedule_cron_healthcheck' ), 50 );
+
+			if ( wpf_get_option( 'enable_cron' ) ) {
+				$this->schedule_event();
+			}
 		}
 
 
 		/**
 		 * Dispatch
 		 *
-		 * @access public
+		 * @since  3.0.0
+		 * @since  3.38.31 Will now return true if the process is already running.
+		 *
 		 * @return array Response from wp_remote_post
 		 */
 		public function dispatch() {
+
+			if ( $this->is_process_running() ) {
+				return true;
+			}
 
 			// Schedule the cron healthcheck.
 			$this->schedule_event();
@@ -106,7 +116,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			$key = $this->generate_key();
 
-			if ( count( $this->data ) > 1 ) {
+			if ( count( $this->data ) > 10 ) {
 
 				// Save status for health check. Don't track status on quick-add from Woo orders etc.
 
@@ -201,7 +211,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 *
 		 * @return string
 		 */
-		protected function generate_key( $length = 24 ) {
+		protected function generate_key( $length = 48 ) {
 			$unique  = md5( microtime() . wp_rand() );
 			$prepend = $this->identifier . '_';
 
@@ -331,7 +341,14 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		protected function lock_process() {
 			$this->start_time = time(); // Set start time of current process.
 
-			$lock_duration = ( property_exists( $this, 'queue_lock_time' ) ) ? $this->queue_lock_time : 60; // 1 minute
+			$lock_duration = 60; // 1 minute.
+
+			$max_time = ini_get( 'max_execution_time' );
+
+			if ( $max_time > 30 ) {
+				$lock_duration = $max_time + 30;
+			}
+
 			$lock_duration = apply_filters( $this->identifier . '_queue_lock_time', $lock_duration );
 
 			set_site_transient( $this->identifier . '_process_lock', microtime(), $lock_duration );
@@ -606,7 +623,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return mixed
 		 */
 		public function schedule_cron_healthcheck( $schedules ) {
-			$interval = apply_filters( $this->identifier . '_cron_interval', 5 );
+			$interval = apply_filters( $this->identifier . '_cron_interval', wpf_get_option( 'cron_interval', 5 ) );
 
 			if ( property_exists( $this, 'cron_interval' ) ) {
 				$interval = apply_filters( $this->identifier . '_cron_interval', $this->cron_interval_identifier );
@@ -630,11 +647,13 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		public function handle_cron_healthcheck() {
 
 			if ( $this->is_process_running() ) {
+
 				// Background process already running.
 				exit;
 			}
 
 			if ( $this->is_queue_empty() ) {
+
 				// No data to process.
 				$this->clear_scheduled_event();
 				exit;
@@ -660,7 +679,8 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		protected function clear_scheduled_event() {
 			$timestamp = wp_next_scheduled( $this->cron_hook_identifier );
 
-			if ( $timestamp ) {
+			if ( $timestamp && ! wpf_get_option( 'enable_cron' ) ) {
+				// Only unschedule it if we're not doing the cron task all the time.
 				wp_unschedule_event( $timestamp, $this->cron_hook_identifier );
 			}
 		}
@@ -676,8 +696,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			if ( ! $this->is_queue_empty() ) {
 
 				$this->delete( $key );
-
-				wp_clear_scheduled_hook( $this->cron_hook_identifier );
+				$this->clear_scheduled_event();
 
 				delete_site_option( 'wpfb_status_' . $key );
 				delete_site_transient( 'wpfb_cancel_' . $key );
@@ -702,25 +721,19 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		protected function task( $item ) {
 
-			$operation = str_replace( 'wpf_batch_', '', $item[0] );
-
 			if ( ! defined( 'DOING_WPF_BATCH_TASK' ) ) {
 				define( 'DOING_WPF_BATCH_TASK', $item[0] );
 			}
 
-			// Disable turbo for bulk processes
+			// Disable turbo for bulk processes.
 			wp_fusion()->crm = wp_fusion()->crm_base->crm_no_queue;
 
-			if ( isset( $item['action'] ) ) {
+			// 0 is the action hook and 1 is the array of args.
 
-				do_action_ref_array( $item['action'], $item['args'] );
-
-			} else {
-
-				// New minified method
-
+			if ( has_action( 'wpf_batch_' . $item[0] ) ) {
 				do_action_ref_array( 'wpf_batch_' . $item[0], $item[1] );
-
+			} else {
+				do_action_ref_array( $item[0], $item[1] );
 			}
 
 			$sleep = apply_filters( 'wpf_batch_sleep_time', 0 );

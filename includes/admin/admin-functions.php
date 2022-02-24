@@ -23,6 +23,8 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		'no_dupes'    => array(),
 		'class'       => '',
 		'return'      => false,
+		'read_only'   => false, // should read only tags / lists be shown as options.
+		'lazy_load'   => false,
 	);
 
 	$args = wp_parse_args( $args, $defaults );
@@ -59,7 +61,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 		foreach ( $args['setting'] as $i => $value ) {
 
-			if ( ! is_numeric( $value ) ) {
+			if ( ! is_numeric( $value ) && ! empty( $value ) && ! is_array( $value ) ) {
 
 				// If the tag is stored as a name, and we're able to find a numeric ID, update it
 
@@ -74,8 +76,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		}
 	}
 
-	// If there are more than 1000 total tags, we'll lazy-load them
-	$lazy_load = false;
+	// If there are more than 1000 total tags, we'll lazy-load them.
 
 	if ( count( $available_tags ) > 1000 ) {
 
@@ -86,7 +87,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 			}
 		}
 
-		$lazy_load = true;
+		$args['lazy_load'] = true;
 
 	}
 
@@ -102,7 +103,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		echo ' multiple="multiple"';
 		echo ' id="' . esc_attr( $field_id ) . '"';
 		echo ' data-limit="' . (int) $args['limit'] . '"';
-		echo ( true == $lazy_load ? ' data-lazy-load="true"' : '' );
+		echo ( true == $args['lazy_load'] ? ' data-lazy-load="true"' : '' );
 		echo ' class="select4-wpf-tags ' . esc_attr( $args['class'] ) . '"';
 		echo ' name="' . esc_attr( $args['meta_name'] ) . ( ! is_null( $args['field_id'] ) ? '[' . esc_attr( $args['field_id'] ) . ']' : '' ) . '[]"';
 		echo ( ! empty( $args['no_dupes'] ) ? ' data-no-dupes="' . esc_attr( implode( ',', $args['no_dupes'] ) ) . '"' : '' );
@@ -122,11 +123,18 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 		foreach ( $tag_categories as $tag_category ) {
 
+			// (read only) lists with HubSpot.
+
+			if ( false !== strpos( $tag_category, 'Read Only' ) && false === $args['read_only'] ) {
+				continue;
+			}
+
 			echo '<optgroup label="' . esc_attr( $tag_category ) . '">';
 
 			foreach ( $available_tags as $id => $field_data ) {
 
-				// (read only) lists with HubSpot.
+				// If we are showing read only lists/tags, add a badge to indicate it.
+
 				if ( strpos( $tag_category, 'Read Only' ) !== false ) {
 					$field_data['label'] .= '<small>(' . esc_html__( 'read only', 'wp-fusion-lite' ) . ')</small>';
 				}
@@ -265,32 +273,21 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 		// Check to see if new custom fields have been added.
 		if ( ! empty( $setting ) && ! isset( $field_check[ $setting ] ) ) {
 
-			// Lowercase and remove spaces (for Drip).
-			if ( in_array( 'safe_add_fields', wp_fusion()->crm->supports ) ) {
-
-				$setting_value = strtolower( str_replace( ' ', '', $setting ) );
-
-			} else {
-
-				$setting_value = $setting;
-
-			}
-
-			echo '<option value="' . esc_attr( $setting_value ) . '" selected="selected">' . esc_html( $setting ) . '</option>';
+			echo '<option value="' . esc_attr( $setting ) . '" selected="selected">' . esc_html( $setting ) . '</option>';
 
 			if ( isset( $crm_fields['Custom Fields'] ) ) {
 
-				$crm_fields['Custom Fields'][ $setting_value ] = $setting;
+				$crm_fields['Custom Fields'][ $setting ] = $setting;
 
 			} else {
-				$crm_fields[ $setting_value ] = $setting;
+				$crm_fields[ $setting ] = $setting;
 			}
 
 			wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 			// Save safe crm field to DB.
 			$contact_fields                               = wpf_get_option( 'contact_fields' );
-			$contact_fields[ $field_sub_id ]['crm_field'] = $setting_value;
+			$contact_fields[ $field_sub_id ]['crm_field'] = $setting;
 			wp_fusion()->settings->set( 'contact_fields', $contact_fields );
 
 		}

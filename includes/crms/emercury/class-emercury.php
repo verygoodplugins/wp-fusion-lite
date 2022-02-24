@@ -90,6 +90,9 @@ class WPF_Emercury {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
+		// Add tracking code to header.
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+
 	}
 
 
@@ -480,11 +483,15 @@ class WPF_Emercury {
 		if ( is_wp_error( $this->connect() ) ) {
 			return false;
 		}
-
+        
+        $email_address = strtolower($email_address);
+        
 		$response = $this->app->getSubscribers( $emercury_list, $email_address );
 
-		if ( $response['code'] == 'ok' && isset( $response['message']->subscribers->subscriber->email ) && (string) $response['message']->subscribers->subscriber->email === $email_address ) {
-			$contact_id = $emercury_list . '_' . $response['message']->subscribers->subscriber->email;
+		if ( $response['code'] == 'ok' && isset( $response['message']->subscribers->subscriber->email ) && (string) strtolower($response['message']->subscribers->subscriber->email) === $email_address ) {
+			$contact_id = $emercury_list . '_' . strtolower($response['message']->subscribers->subscriber->email);
+		} else {
+			$contact_id = false;
 		}
 
 		// Parse response for contact ID here.
@@ -503,6 +510,8 @@ class WPF_Emercury {
 	 */
 
 	public function get_tags( $contact_id ) {
+	    
+	    $tags = array();
 
 		list( $emercury_list, $email_address ) = explode( '_', $contact_id );
 
@@ -628,7 +637,7 @@ class WPF_Emercury {
 		}
 
 		if ( $response['code'] == 'ok' && isset( $response['message']->subscribers->subscriber->email ) ) {
-			$contact_id = $emercury_list . '_' . $response['message']->subscribers->subscriber->email;
+			$contact_id = $emercury_list . '_' . strtolower($response['message']->subscribers->subscriber->email);
 		}
 
 		// Get new contact ID out of response
@@ -758,6 +767,75 @@ class WPF_Emercury {
 		// Iterate over the contacts returned in the response and build an array such that $contact_ids = array(1,3,5,67,890);
 
 		return $contact_ids;
+
+	}
+
+	/**
+	 * Gets tracking ID for site tracking script.
+	 *
+	 * @since  3.38.14
+	 *
+	 * @return int   Tracking ID.
+	 */
+	public function get_tracking_id() {
+
+		if ( is_wp_error( $this->connect() ) ) {
+			return false;
+		}
+
+		$response = $this->app->getTrackingCode();
+
+		if ( ! empty( $response ) && ! empty( $response['message'] ) ) {
+
+			$code = strval( $response['message']->code );
+
+			wp_fusion()->settings->set( 'site_tracking_id', $code );
+			return $code;
+
+		} else {
+			return false;
+		}
+
+	}
+
+	/**
+	 * Output tracking code.
+	 *
+	 * @since 3.38.14
+	 */
+	public function tracking_code_output() {
+
+		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
+			return;
+		}
+
+		$trackid = wpf_get_option( 'site_tracking_id' );
+
+		echo '<!-- Start of Emercury.net Tracking Code via WP Fusion -->';
+		echo '<script>';
+		echo '!function(e, t, n, o, p, i, a) {';
+		echo 'e[o] || ((p = e[o] = function() {';
+		echo 'p.process ? p.process.apply(p, arguments) : p.queue.push(arguments)';
+		echo '}).queue = [], p.t = +new Date, (i = t.createElement(n)).async = 1, i.src = "https://tracking.emercury.net/em.analytics.js?t=1.0.1", (a = t.getElementsByTagName(n)[0]).parentNode.insertBefore(i, a))';
+		echo '}(window, document, "script", "emer");';
+		echo 'emer("init", "' . esc_js( $trackid ) . '");';
+		echo 'emer("event", "pageload");';
+
+		if ( wpf_is_user_logged_in() || isset( $_COOKIE['wpf_guest'] ) ) {
+
+			// This will also merge historical tracking data that was accumulated before a visitor registered.
+
+			$email = wpf_get_current_user_email();
+
+			echo 'var identity = {';
+			echo 'email : "' . esc_js( $email ) . '"';
+			echo '}' . PHP_EOL;
+		}
+
+		echo 'emer("param", "auth", {identity : identity});';
+		echo '</script>';
+
+		echo '<!-- End of Emercury.net Tracking Code via WP Fusion -->';
 
 	}
 

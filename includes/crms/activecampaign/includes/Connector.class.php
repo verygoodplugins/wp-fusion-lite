@@ -204,13 +204,17 @@ class AC_Connector {
 				return $response;
 			}
 
+			if ( empty( $response ) ) {
+				$response = 'Unknown error, empty response.';
+			}
+
 			// something went wrong
 			return new WP_Error( 'error', 'Error performing ActiveCampaign API call <strong>' . $method . '</strong>. Response: ' . $response );
 			//return "An unexpected problem occurred with the API request. Some causes include: invalid JSON or XML returned. Here is the actual response from the server: ---- " . $response;
 		}
 
 		if ( $this->debug ) {
-			echo "<textarea style='height: 300px; width: 600px;'>" . $debug_str1 . "</textarea>";
+			error_log( print_r( $debug_str1, true ) );
 		}
 
 //		header("HTTP/1.1 " . $http_code);

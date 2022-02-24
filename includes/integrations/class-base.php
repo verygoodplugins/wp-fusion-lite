@@ -2,9 +2,29 @@
 
 abstract class WPF_Integrations_Base {
 
-	public $slug;
+	/**
+	 * The slug name for WP Fusion's module tracking.
+	 *
+	 * @since 1.0.0
+	 * @var string $slug
+	 */
 
+	public $slug;
+	/**
+	 * The plugin name for WP Fusion's module tracking.
+	 *
+	 * @since 1.0.0
+	 * @var string $name
+	 */
 	public $name;
+
+	/**
+	 * The link to the documentation on the WP Fusion website.
+	 *
+	 * @since 3.38.14
+	 * @var string $docs_url
+	 */
+	public $docs_url;
 
 	public function __construct() {
 
@@ -105,14 +125,7 @@ abstract class WPF_Integrations_Base {
 
 		// Log whether we're creating or updating a contact, with edit link.
 		if ( false !== $contact_id ) {
-
-			$url = wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
-
-			if ( false !== $url ) {
-				$log_text .= ' Updating existing contact <a href="' . $url . '" target="_blank">#' . $contact_id . '</a>: ';
-			} else {
-				$log_text .= ' Updating existing contact #' . $contact_id . ': ';
-			}
+			$log_text .= ' Updating existing contact #' . $contact_id . ': ';
 		} else {
 			$log_text .= ' Creating new contact: ';
 		}
@@ -126,7 +139,6 @@ abstract class WPF_Integrations_Base {
 			if ( ! is_wp_error( $contact_id ) ) {
 				do_action( 'wpf_guest_contact_created', $contact_id, $email_address );
 			}
-
 		} else {
 
 			wp_fusion()->crm->update_contact( $contact_id, $update_data );

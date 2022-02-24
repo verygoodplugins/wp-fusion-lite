@@ -66,6 +66,8 @@ class WPF_HubSpot_Admin {
 
 		}
 
+		$notices['marketing-consent'] = sprintf( __( '<strong>Heads up!</strong> If you haven\'t done so already, we recommend %1$senabling marketing contacts%2$s for the WP Fusion integration in HubSpot.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-hubspot-to-wordpress/#marketing-contacts" target="_blank">', '</a>' );
+
 		return $notices;
 
 	}
@@ -84,7 +86,11 @@ class WPF_HubSpot_Admin {
 			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
 
 			$params = array(
-				'body' => array(
+				'user-agent' => 'WP Fusion; ' . home_url(),
+				'headers'    => array(
+					'Content-Type' => 'application/x-www-form-urlencoded',
+				),
+				'body'       => array(
 					'grant_type'    => 'authorization_code',
 					'client_id'     => $this->crm->client_id,
 					'client_secret' => $this->crm->client_secret,
@@ -103,17 +109,20 @@ class WPF_HubSpot_Admin {
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if ( isset( $body->error ) ) {
+			if ( ! isset( $body->access_token ) ) {
+
+				wpf_log( 'error', 0, 'Error requesting access token: <pre>' . print_r( $body, true ) . '</pre>' );
 				return false;
+
+			} else {
+
+				wp_fusion()->settings->set( 'hubspot_token', $body->access_token );
+				wp_fusion()->settings->set( 'hubspot_refresh_token', $body->refresh_token );
+				wp_fusion()->settings->set( 'crm', $this->slug );
+
+				wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
+				exit;
 			}
-
-			wp_fusion()->settings->set( 'hubspot_token', $body->access_token );
-			wp_fusion()->settings->set( 'hubspot_refresh_token', $body->refresh_token );
-			wp_fusion()->settings->set( 'crm', $this->slug );
-
-			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
-			exit;
-
 		}
 
 	}
@@ -136,29 +145,26 @@ class WPF_HubSpot_Admin {
 			'section' => 'setup',
 		);
 
-		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // auth URL must be HTTPs, even if the site isn't
-		$auth_url  = 'https://app.hubspot.com/oauth/authorize?redirect_uri=' . urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&client_id=' . $this->crm->client_id . '&scope=contacts%20oauth&optional_scope=automation%20e-commerce';
-		$auth_url  = apply_filters( 'wpf_hubspot_auth_url', $auth_url );
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // auth URL must be HTTPs, even if the site isn't.
+
+		$auth_url = 'https://wpfusion.com/oauth/?redirect=' . urlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=hubspot' ) . '&action=wpf_get_hubspot_token&client_id=' . $this->crm->client_id;
+		$auth_url = apply_filters( 'wpf_hubspot_auth_url', $auth_url );
 
 		if ( empty( $options['hubspot_token'] ) && ! isset( $_GET['code'] ) ) {
 
-			$new_settings['hubspot_header']['desc']  = '<table class="form-table"><tr>';
-			$new_settings['hubspot_header']['desc'] .= '<th scope="row"><label>' . esc_html__( 'Authorize', 'wp-fusion-lite' ) . '</label></th>';
-			$new_settings['hubspot_header']['desc'] .= '<td><a class="button button-primary" href="' . esc_url( $auth_url ) . '">' . esc_html__( 'Authorize with HubSpot', 'wp-fusion-lite' ) . '</a><br />';
-			$new_settings['hubspot_header']['desc'] .= '<span class="description">' . esc_html__( 'You\'ll be taken to HubSpot to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ) . '</td>';
-			$new_settings['hubspot_header']['desc'] .= '</tr></table>';
-
-			if ( ! is_ssl() ) {
-				$new_settings['hubspot_header']['desc'] .= '<p class="wpf-notice notice notice-error">' . esc_html__( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the HubSpot API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ) . '</p>';
-			}
-
-			$new_settings['hubspot_header']['desc'] .= '</div><table class="form-table">';
+			$new_settings['hubspot_auth'] = array(
+				'title'   => __( 'Authorize', 'wp-fusion-lite' ),
+				'type'    => 'oauth_authorize',
+				'section' => 'setup',
+				'url'     => $auth_url,
+				'name'    => $this->name,
+				'slug'    => $this->slug,
+			);
 
 		} else {
 
 			$new_settings['hubspot_token'] = array(
 				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'std'     => '',
 				'type'    => 'text',
 				'section' => 'setup',
 			);
@@ -189,13 +195,11 @@ class WPF_HubSpot_Admin {
 
 	public function register_settings( $settings, $options ) {
 
-		// Add site tracking option
+		// Add site tracking option.
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
 			'title'   => __( 'HubSpot Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => '',
-			'std'     => '',
 			'type'    => 'heading',
 			'section' => 'main',
 		);
@@ -203,7 +207,6 @@ class WPF_HubSpot_Admin {
 		$site_tracking['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enable <a target="_blank" href="https://knowledge.hubspot.com/articles/kcs_article/account/how-does-hubspot-track-visitors">HubSpot site tracking</a>.', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);

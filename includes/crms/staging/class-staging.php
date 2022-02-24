@@ -159,7 +159,7 @@ class WPF_Staging {
 
 		$user = get_user_by( 'email', $email_address );
 
-		$staging_id = get_user_meta( $user->ID, wp_fusion()->crm->slug . '_contact_id', true );
+		$staging_id = get_user_meta( $user->ID, WPF_CONTACT_ID_META_KEY, true );
 
 		if( ! empty( $staging_id ) ) {
 			return $staging_id;
@@ -181,7 +181,7 @@ class WPF_Staging {
 
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
-		$staging_tags = get_user_meta( $user_id, wp_fusion()->crm->slug . '_tags', true );
+		$staging_tags = get_user_meta( $user_id, WPF_TAGS_META_KEY, true );
 
 		if( ! empty( $staging_tags ) ) {
 

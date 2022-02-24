@@ -39,6 +39,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Autonami
 * Autopilot
 * BirdSend
+* Bento
 * Capsule
 * ConvertKit
 * Copper
@@ -48,10 +49,10 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Emercury
 * EngageBay
 * Flexie
-* FluentCRM (Same site and REST API)
+* FluentCRM (Same site or REST API)
 * GetResponse
 * Gist
-* Groundhogg
+* Groundhogg (Same site or REST API)
 * Growmatik
 * HighLevel
 * HubSpot
@@ -67,6 +68,8 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Mailjet
 * MailPoet
 * Maropost
+* Microsoft Dynamics 365
+* Moosend
 * Mautic
 * NationBuilder
 * Ontraport
@@ -86,7 +89,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 
 ## Installation ##
 
-For detailed setup instructions, visit the official [Documentation](https://wpfusion.com/documentation/) page.
+For detailed setup instructions for each CRM, visit the official [Documentation](https://wpfusion.com/documentation/getting-started/installation-guide/) page.
 
 1. You can clone the GitHub repository: `https://github.com/verygoodplugins/wp-fusion-lite.git`
 2. Or download it directly as a ZIP file: `https://github.com/verygoodplugins/wp-fusion-lite/archive/master.zip`

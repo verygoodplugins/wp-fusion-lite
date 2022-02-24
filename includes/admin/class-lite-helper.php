@@ -18,7 +18,8 @@ class WPF_Lite_Helper {
 	 */
 	public function __construct() {
 
-		add_action( 'wp_fusion_init', array( $this, 'init' ) );
+		add_action( 'init', array( $this, 'init' ) );
+		add_action( 'init', array( $this, 'handle_webhooks' ) );
 
 	}
 
@@ -53,7 +54,38 @@ class WPF_Lite_Helper {
 
 		add_action( 'show_field_contact_fields_end', array( $this, 'contact_fields_upgrade_message' ), 10, 2 );
 
+		add_action( 'wpf_user_created', array( $this, 'count_new_user_syncs' ) );
+		add_filter( 'wpf_compatibility_notices', array( $this, 'total_syncs_notice' ) );
+
 		add_action( 'wpf_settings_page_title', array( $this, 'title_upgrade_message' ) );
+
+		// OAuth URLs.
+
+		foreach ( wp_fusion()->crm_base->available_crms as $slug => $crm ) {
+			if ( 'salesforce' === $slug ) {
+				add_filter( "wpf_{$slug}_init_auth_url", array( $this, 'auth_url' ) );
+			} else {
+				add_filter( "wpf_{$slug}_auth_url", array( $this, 'auth_url' ) );
+			}
+		}
+
+	}
+
+	/**
+	 * Log a notice if a webhook is received.
+	 *
+	 * @since 3.38.33
+	 */
+	public function handle_webhooks() {
+
+		if ( isset( $_REQUEST['wpf_action'] ) ) {
+
+			$message = 'Webhook received but WP Fusion Lite does not support <a href="https://wpfusion.com/documentation/webhooks/' . wp_fusion()->crm->slug . '-webhooks/" target="_blank">' . wp_fusion()->crm->name . ' webhooks</a>. Please upgrade to the full version of WP Fusion to sync data bidirectionally with your CRM.';
+
+			wpf_log( 'error', 0, $message, array( 'source' => 'api' ) );
+			wp_die( $message );
+
+		}
 
 	}
 
@@ -701,6 +733,42 @@ class WPF_Lite_Helper {
 	}
 
 	/**
+	 * Count each new user synced to the CRM.
+	 *
+	 * @since  3.38.44
+	 *
+	 * @return mixed HTML output.
+	 */
+	public function count_new_user_syncs() {
+
+		$syncs = wpf_get_option( 'total_users_synced', 0 );
+		$syncs++;
+
+		wp_fusion()->settings->set( 'total_users_synced', $syncs );
+
+	}
+
+	/**
+	 * Displays a review prompt after syncing 10 users to the CRM.
+	 *
+	 * @since  3.38.44
+	 *
+	 * @param  array $notices The notices.
+	 * @return array The notices.
+	 */
+	public function total_syncs_notice( $notices ) {
+
+		if ( wpf_get_option( 'total_users_synced' ) > 10 ) {
+
+			$notices['total-synced'] = sprintf( __( '<strong>Congratulations!</strong> You\'ve successfully synced %1$d new user registrations to %2$s with WP Fusion! 🎉 Have a second? %3$sLeave us a review &rarr;%4$s ⭐⭐⭐⭐⭐', 'wp-fusion-lite' ), intval( wpf_get_option( 'total_users_synced' ) ), esc_html( wp_fusion()->crm->name ), '<a href="https://wordpress.org/plugins/wp-fusion-lite/#reviews" target="_blank">', '</a>' );
+
+		}
+
+		return $notices;
+
+	}
+
+	/**
 	 * Show upgrade notice across top of settings page.
 	 *
 	 * @since 3.37.17
@@ -717,6 +785,20 @@ class WPF_Lite_Helper {
 			echo '</div>';
 
 		}
+
+	}
+
+	/**
+	 * Use the non-authenticated endpoint for Lite plugin OAuth setup.
+	 *
+	 * @since  3.38.44
+	 *
+	 * @param  string $url    The auth url.
+	 * @return string The auth URL.
+	 */
+	public function auth_url( $url ) {
+
+		return add_query_arg( 'l', true, $url );
 
 	}
 

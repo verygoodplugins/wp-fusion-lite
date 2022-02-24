@@ -30,8 +30,6 @@ class WPF_AJAX {
 
 	public function apply_tags() {
 
-		check_ajax_referer( 'wpf_ajax_nonce' );
-
 		if ( ! isset( $_POST['tags'] ) ) {
 			wp_die();
 		}
@@ -77,8 +75,6 @@ class WPF_AJAX {
 
 	public function remove_tags() {
 
-		check_ajax_referer( 'wpf_ajax_nonce' );
-
 		if ( ! isset( $_POST['tags'] ) ) {
 			wp_die();
 		}
@@ -123,8 +119,6 @@ class WPF_AJAX {
 	 */
 
 	public function update_user() {
-
-		check_ajax_referer( 'wpf_ajax_nonce' );
 
 		if ( ! isset( $_POST['data'] ) ) {
 			wp_die();
@@ -192,7 +186,6 @@ class WPF_AJAX {
 
 			$localize_data = array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'wpf_ajax_nonce' ),
 			);
 
 			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', $localize_data );

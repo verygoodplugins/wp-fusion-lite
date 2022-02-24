@@ -156,6 +156,20 @@ class WPF_Emercury_API {
 		return $this->sendRequest( $xml );
 	}
 
+	public function getTrackingCode() {
+		$this->checkApiParameters();
+		$xml = '<?xml version="1.0" encoding="utf-8" ?>
+			<request>
+					<method>getTrackingCode</method>
+					<user mail="' . $this->apiEmail . '" API_key="' . $this->apiKey . '" />
+					<parameters>
+					   <create>true</create>
+					</parameters>
+			</request>';
+
+		return $this->sendRequest( $xml );
+	}
+
 	public function updateSubscribers( $data, $list_id ) {
 		$this->checkApiParameters();
 

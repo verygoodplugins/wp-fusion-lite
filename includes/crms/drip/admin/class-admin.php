@@ -116,17 +116,15 @@ class WPF_Drip_Admin {
 
 		$new_settings['drip_header'] = array(
 			'title'   => __( 'Drip Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['drip_account'] = array(
 			'title'   => __( 'Account ID', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter the Account ID for your Drip account (find it under Settings >> Site Setup >> 3rd Party Integrations).', 'wp-fusion-lite' ),
-			'std'     => '',
+			'desc'    => __( 'Enter the Account ID for your Drip account (find it under Settings > Account > General Info).', 'wp-fusion-lite' ),
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['drip_token'] = array(
@@ -135,7 +133,7 @@ class WPF_Drip_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'drip_account', 'drip_token' )
+			'post_fields' => array( 'drip_account', 'drip_token' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );

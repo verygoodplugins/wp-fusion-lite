@@ -29,7 +29,7 @@ class WPF_FluentCRM {
 		$this->slug      = 'fluentcrm';
 		$this->name      = 'FluentCRM';
 		$this->menu_name = 'FluentCRM (This Site)';
-		$this->supports  = array( 'add_lists' );
+		$this->supports  = array('add_tags_api');
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -181,7 +181,7 @@ class WPF_FluentCRM {
 	public function sync_tags() {
 
 		$all_tags       = FluentCrmApi( 'tags' )->all();
-		$available_tags = [];
+		$available_tags = array();
 		foreach ( $all_tags as $tag ) {
 			$available_tags[ $tag->id ] = $tag->title;
 		}
@@ -202,7 +202,7 @@ class WPF_FluentCRM {
 
 	public function sync_lists() {
 		$lists           = FluentCrmApi( 'lists' )->all();
-		$available_lists = [];
+		$available_lists = array();
 		foreach ( $lists as $list ) {
 			$available_lists[ $list->id ] = $list->title;
 		}
@@ -370,6 +370,31 @@ class WPF_FluentCRM {
 
 
 	/**
+	 * Creates a new tag in FluentCRM and returns the ID.
+	 *
+	 * @since  3.38.42
+	 *
+	 * @param  string $tag_name The tag name.
+	 * @return int    $tag_id the tag id returned from API.
+	 */
+	public function add_tag( $tag_name ) {
+		$data  = array(
+			'title' => $tag_name,
+			'slug'  => $tag_name,
+		);
+		$model = FluentCrmApi( 'tags' )->getInstance();
+		$tag   = $model->updateOrCreate( $data );
+
+		$attributes = $tag->getAttributes();
+
+		$tag_id = $attributes['id'];
+
+		return $tag_id;
+	}
+
+
+
+	/**
 	 * Update contact
 	 *
 	 * @access public
@@ -417,15 +442,15 @@ class WPF_FluentCRM {
 
 		$user_meta = array();
 
-		// Map contact fields
+		// Map contact fields.
 		$contact_fields = wpf_get_option( 'contact_fields' );
 
-		// Standard fields
+		// Standard fields.
 		foreach ( $fields as $field_name => $value ) {
 
 			foreach ( $contact_fields as $meta_key => $field_data ) {
 
-				if ( isset( $field_data['crm_field'] ) && $field_data['crm_field'] == $field_name && true == $field_data['active'] ) {
+				if ( $field_data['active'] && $field_data['crm_field'] === $field_name ) {
 					$user_meta[ $meta_key ] = $value;
 				}
 			}
@@ -446,9 +471,9 @@ class WPF_FluentCRM {
 
 		$model = FluentCrmApi( 'contacts' )->getInstance();
 
-		$contact_ids = $model->filterByTags( [ $tag_id ] )->get()->pluck( 'id' );
+		$contact_ids = $model->filterByTags( array( $tag_id ) )->get()->pluck( 'id' );
 
-		return $contact_ids;
+		return $contact_ids->all();
 	}
 
 	/**
@@ -549,8 +574,8 @@ class WPF_FluentCRM {
 	 * @return array The custom fields.
 	 */
 	private function get_custom_fields() {
-		$all_custom_fields = fluentcrm_get_option( 'contact_custom_fields', [] );
-		$custom_fields     = [];
+		$all_custom_fields = fluentcrm_get_option( 'contact_custom_fields', array() );
+		$custom_fields     = array();
 		if ( $all_custom_fields ) {
 			foreach ( $all_custom_fields as $item ) {
 				$custom_fields[ $item['slug'] ] = $item['label'];

@@ -68,7 +68,7 @@ class WPF_User_Profile {
 				$edit_url = wp_fusion()->user->get_contact_edit_url( $user_id );
 
 				if ( false !== $edit_url ) {
-					$contact_id = '<a href="' . $edit_url . '" target="_blank">' . $contact_id . '</a>';
+					$contact_id = '<a href="' . $edit_url . '" target="_blank">#' . $contact_id . '</a>';
 				}
 
 				$message = sprintf( __( '<strong>Success:</strong> User was added to %1$s with contact ID %2$s.' ), wp_fusion()->crm->name, $contact_id );
@@ -90,7 +90,15 @@ class WPF_User_Profile {
 
 			wp_fusion()->user->push_user_meta( $user_id );
 
-			$message = sprintf( __( '<strong>Success:</strong> Synced user meta to %1$s.' ), esc_html( wp_fusion()->crm->name ) );
+			$contact_id = wpf_get_contact_id( $user_id );
+
+			$edit_url = wp_fusion()->user->get_contact_edit_url( $user_id );
+
+			if ( false !== $edit_url ) {
+				$contact_id = '<a href="' . $edit_url . '" target="_blank">#' . $contact_id . '</a>';
+			}
+
+			$message = sprintf( __( '<strong>Success:</strong> Synced user meta to %1$s contact ID %2$s.' ), esc_html( wp_fusion()->crm->name ), $contact_id );
 
 		} elseif ( 'show_meta' === $action ) {
 
@@ -124,8 +132,8 @@ class WPF_User_Profile {
 			// Prevent it from running more than once on a profile update.
 			unset( $_POST['wpf_tags_field_edited'] );
 
-			if ( isset( $_POST[ wp_fusion()->crm->slug . '_tags' ] ) ) {
-				$posted_tags = array_map( 'sanitize_text_field', wp_unslash( $_POST[ wp_fusion()->crm->slug . '_tags' ] ) );
+			if ( isset( $_POST[ WPF_TAGS_META_KEY ] ) ) {
+				$posted_tags = array_map( 'sanitize_text_field', wp_unslash( $_POST[ WPF_TAGS_META_KEY ] ) );
 			} else {
 				$posted_tags = array();
 			}
@@ -278,112 +286,123 @@ class WPF_User_Profile {
 		}
 
 		?>
-		<h3><?php esc_html_e( 'WP Fusion', 'wp-fusion-lite' ); ?></h3>
 
-		<table class="form-table">
+		<div id="wp-fusion-user-profile-settings">
 
-			<?php do_action( 'wpf_user_profile_before_table_rows', $user ); ?>
+		<h2><?php echo wpf_logo_svg(); ?> <?php esc_html_e( 'WP Fusion', 'wp-fusion-lite' ); ?></h2>
 
-			<tr>
-				<th><label for="contact_id"><?php printf( esc_html__( '%s Contact ID', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></label></th>
-				<td id="contact-id">
-					<?php $contact_id = wp_fusion()->user->get_contact_id( $user->ID ); ?>
+			<table class="form-table">
 
-					<?php if ( false !== $contact_id ) : ?>
+				<?php do_action( 'wpf_user_profile_before_table_rows', $user ); ?>
 
-						<?php if ( is_wp_error( $contact_id ) ) : ?>
+				<tr>
+					<th><label for="contact_id"><?php printf( esc_html__( '%s Contact ID', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></label></th>
+					<td id="contact-id">
+						<?php $contact_id = wp_fusion()->user->get_contact_id( $user->ID ); ?>
 
-							<strong>Error:</strong> <?php echo wp_kses_post( wpf_print_r( $contact_id ) ); ?>
+						<?php if ( false !== $contact_id ) : ?>
 
-						<?php else : ?>
+							<?php if ( is_wp_error( $contact_id ) ) : ?>
 
-							<?php echo esc_html( $contact_id ); ?>
+								<strong>Error:</strong> <?php echo wp_kses_post( wpf_print_r( $contact_id ) ); ?>
 
-							<?php $edit_url = wp_fusion()->user->get_contact_edit_url( $user->ID ); ?>
+							<?php else : ?>
 
-							<?php if ( false !== $edit_url ) : ?>
+								<?php echo esc_html( $contact_id ); ?>
 
-								- <a href="<?php echo esc_url( $edit_url ); ?>" target="_blank"><?php printf( esc_html__( 'View in %s', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?> &rarr;</a>
+								<?php $edit_url = wp_fusion()->user->get_contact_edit_url( $user->ID ); ?>
+
+								<?php if ( false !== $edit_url ) : ?>
+
+									- <a href="<?php echo esc_url( $edit_url ); ?>" target="_blank"><?php printf( esc_html__( 'View in %s', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?> &rarr;</a>
+
+								<?php endif; ?>
+
+								<?php do_action( 'wpf_user_profile_after_contact_id', $user->ID ); ?>
 
 							<?php endif; ?>
 
-							<?php do_action( 'wpf_user_profile_after_contact_id', $user->ID ); ?>
+						<?php else : ?>
+
+							<?php printf( esc_html__( 'No %s contact record found.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?>
+
+							<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=register' ) ) ); ?>">
+								<?php esc_html_e( 'Create new contact', 'wp-fusion-lite' ); ?>.
+							</a>
 
 						<?php endif; ?>
+					</td>
+				</tr>
+				<?php if ( wp_fusion()->user->get_contact_id( $user->ID ) ) : ?>
 
-					<?php else : ?>
+					<tr id="wpf-tags-row">
+						<th><label for="wpf_tags"><?php printf( esc_html__( '%s Tags', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></label></th>
+						<td id="wpf-tags-td">
 
-						<?php printf( esc_html__( 'No %s contact record found.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?>
+							<?php
 
-						<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=register' ) ) ); ?>">
-							<?php esc_html_e( 'Create new contact', 'wp-fusion-lite' ); ?>.
-						</a>
+							$args = array(
+								'setting'   => wp_fusion()->user->get_tags( $user->ID ),
+								'meta_name' => WPF_TAGS_META_KEY,
+								'disabled'  => true,
+								'read_only' => true,
+							);
 
-					<?php endif; ?>
-				</td>
-			</tr>
-			<?php if ( wp_fusion()->user->get_contact_id( $user->ID ) ) : ?>
+							wpf_render_tag_multiselect( $args );
 
-				<tr id="wpf-tags-row">
-					<th><label for="wpf_tags"><?php printf( esc_html__( '%s Tags', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></label></th>
-					<td id="wpf-tags-td">
+							?>
 
-						<?php
+							<input type="hidden" id="wpf-tags-field-edited" name="wpf_tags_field_edited" value="0" />
+							<p class="description"><?php esc_html_e( 'These tags are currently applied to the user in', 'wp-fusion-lite' ); ?> <?php echo esc_html( wp_fusion()->crm->name ); ?> <a id="wpf-profile-edit-tags" href="#"><?php esc_html_e( 'Edit Tags', 'wp-fusion-lite' ); ?></a></p>
 
-						$args = array(
-							'setting'   => wp_fusion()->user->get_tags( $user->ID ),
-							'meta_name' => wp_fusion()->crm->slug . '_tags',
-							'disabled'  => true,
-						);
+						</td>
+					</tr>
+				<?php endif; ?>
+				<tr>
+					<th><label for="resync_contact"><?php esc_html_e( 'Resync Tags', 'wp-fusion-lite' ); ?></label></th>
+					<td>
 
-						wpf_render_tag_multiselect( $args );
-
-						?>
-
-						<input type="hidden" id="wpf-tags-field-edited" name="wpf_tags_field_edited" value="0" />
-						<p class="description"><?php esc_html_e( 'These tags are currently applied to the user in', 'wp-fusion-lite' ); ?> <?php echo esc_html( wp_fusion()->crm->name ); ?> <a id="wpf-profile-edit-tags" href="#"><?php esc_html_e( 'Edit Tags', 'wp-fusion-lite' ); ?></a></p>
+						<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID; ?>"><?php esc_html_e( 'Resync Tags', 'wp-fusion-lite' ); ?></a>
+						<p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and look up the contact again by email address in %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></p>
 
 					</td>
 				</tr>
-			<?php endif; ?>
-			<tr>
-				<th><label for="resync_contact"><?php esc_html_e( 'Resync Tags', 'wp-fusion-lite' ); ?></label></th>
-				<td>
 
-					<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID; ?>"><?php esc_html_e( 'Resync Tags', 'wp-fusion-lite' ); ?></a>
-					<p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and load from the %s contact record.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></p>
+				<tr>
+					<th><label for="resync_contact"><?php esc_html_e( 'Additional Actions', 'wp-fusion-lite' ); ?></label></th>
+					<td>
 
-				</td>
-			</tr>
+						<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=push' ) ) ); ?>">
+							<?php esc_html_e( 'Push User Meta', 'wp-fusion-lite' ); ?>
+						</a>
 
-			<tr>
-				<th><label for="resync_contact"><?php esc_html_e( 'Additional Actions', 'wp-fusion-lite' ); ?></label></th>
-				<td>
+						<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php printf( esc_attr__( 'Extracts any enabled meta fields from the database and syncs them to %s.', 'wp-fusion-lite' ), esc_attr( wp_fusion()->crm->name ) ); ?>"></span> | 
 
-					<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=push' ) ) ); ?>">
-						<?php esc_html_e( 'Push User Meta', 'wp-fusion-lite' ); ?>
-					</a>
+						<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=pull' ) ) ); ?>">
+							<?php esc_html_e( 'Pull User Meta', 'wp-fusion-lite' ); ?>
+						</a>
 
-					<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php printf( esc_attr__( 'Extracts any enabled meta fields from the database and syncs them to %s.', 'wp-fusion-lite' ), esc_attr( wp_fusion()->crm->name ) ); ?>"></span> | 
+						<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php printf( esc_attr__( 'Loads any enabled meta fields from %s and saves them to the user record.', 'wp-fusion-lite' ), esc_attr( wp_fusion()->crm->name ) ); ?>"></span> | 
 
-					<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=pull' ) ) ); ?>">
-						<?php esc_html_e( 'Pull User Meta', 'wp-fusion-lite' ); ?>
-					</a>
+						<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=show_meta' ) ) ); ?>">
+							<?php esc_html_e( 'Show User Meta', 'wp-fusion-lite' ); ?>
+						</a>
 
-					<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php printf( esc_attr__( 'Loads any enabled meta fields from %s and saves them to the user record.', 'wp-fusion-lite' ), esc_attr( wp_fusion()->crm->name ) ); ?>"></span> | 
+						<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php esc_html_e( 'Displays all metadata found in the database for this user.', 'wp-fusion-lite' ); ?>"></span> |
 
-					<a href="<?php echo esc_url( add_query_arg( '_wpnonce', wp_create_nonce( 'wpf_profile_action' ), admin_url( 'user-edit.php?user_id=' . $user->ID . '&wpf_profile_action=show_meta' ) ) ); ?>">
-						<?php esc_html_e( 'Show User Meta', 'wp-fusion-lite' ); ?>
-					</a>
+						<a href="<?php echo esc_url( admin_url( 'tools.php?page=wpf-settings-logs&user=' . $user->ID ) ); ?>">
+							<?php esc_html_e( 'View Logs', 'wp-fusion-lite' ); ?> &rarr;
+						</a>
 
-					<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php esc_html_e( 'Displays all metadata found in the database for this user.', 'wp-fusion-lite' ); ?>"></span> 
+					</td>
+				</tr>
 
-				</td>
-			</tr>
+				<?php do_action( 'wpf_user_profile_after_table_rows', $user ); ?>
 
-			<?php do_action( 'wpf_user_profile_after_table_rows', $user ); ?>
+			</table>
 
-		</table>
+		</div>
+
 		<?php
 	}
 }

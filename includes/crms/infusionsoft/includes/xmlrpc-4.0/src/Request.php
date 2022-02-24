@@ -259,7 +259,7 @@ class Request {
 		xml_set_object( $parser, $xmlRpcParser );
 
 		if ( $returnType == 'phpvals' ) {
-		 	xml_set_element_handler( $parser, 'xmlrpc_se', 'xmlrpc_ee_fast' );
+			xml_set_element_handler( $parser, 'xmlrpc_se', 'xmlrpc_ee_fast' );
 		} else {
 			xml_set_element_handler( $parser, 'xmlrpc_se', 'xmlrpc_ee' );
 		}
@@ -269,7 +269,7 @@ class Request {
 
 		// See if special characters need to be removed from tags & fields (for Hoang)
 
-		if ( apply_filters( 'wpf_infusionsoft_safe_tags', false ) && strpos( $data, 'GroupCategoryId') !== false ) {
+		if ( apply_filters( 'wpf_infusionsoft_safe_tags', false ) && ( strpos( $data, 'GroupCategoryId') !== false || strpos( $data, 'CategoryName') !== false ) ) {
 			$data = preg_replace('/[^A-Za-z0-9\-\<\>\s\"\=\/\?\.\_]/', '', $data);
 		}
 

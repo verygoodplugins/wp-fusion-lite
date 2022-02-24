@@ -111,7 +111,7 @@ class WPF_Zoho {
 				$domain = $location;
 			}
 
-			$this->edit_url = 'https://crm.zoho.' . $location . '/crm/' . $org_id . '/tab/Contacts/%d';
+			$this->edit_url = 'https://crm.zoho.' . $domain . '/crm/' . $org_id . '/tab/Contacts/%d';
 		}
 	}
 
@@ -184,7 +184,7 @@ class WPF_Zoho {
 
 	public function get_params( $access_token = null ) {
 
-		// Get saved data from DB
+		// Get saved data from DB.
 		if ( empty( $access_token ) ) {
 			$access_token = wpf_get_option( 'zoho_token' );
 		}
@@ -266,40 +266,58 @@ class WPF_Zoho {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if ( isset( $body_json->code ) && $body_json->code == 'INVALID_TOKEN' ) {
+			if ( isset( $body_json->code ) ) {
 
-				$access_token = $this->refresh_token();
+				// Codes.
 
-				if ( is_wp_error( $access_token ) ) {
-					return $access_token;
+				if ( 'INVALID_TOKEN' === $body_json->code ) {
+
+					$access_token = $this->refresh_token();
+
+					if ( is_wp_error( $access_token ) ) {
+						return $access_token;
+					}
+
+					$args['headers']['Authorization'] = 'Zoho-oauthtoken ' . $access_token;
+
+					$response = wp_safe_remote_request( $url, $args );
+
+				} elseif ( 'INVALID_DATA' === $body_json->code || 'MANDATORY_NOT_FOUND' === $body_json->code ) {
+
+					$response = new WP_Error( 'error', '<strong>Invalid Data</strong> error: <strong>' . $body_json->message . '</strong>.' );
+
+				} else {
+
+					$response = new WP_Error( 'error', '<strong>' . $body_json->code . '</strong>: ' . $body_json->message . '.' );
+
 				}
-
-				$args['headers']['Authorization'] = 'Zoho-oauthtoken ' . $access_token;
-
-				$response = wp_safe_remote_request( $url, $args );
-
-			} elseif ( isset( $body_json->code ) && ( $body_json->code == 'INVALID_DATA' || $body_json->code == 'MANDATORY_NOT_FOUND' ) ) {
-
-				$response = new WP_Error( 'error', '<strong>Invalid Data</strong> error: <strong>' . $body_json->message . '</strong>.' );
-
 			} elseif ( ! empty( $body_json->data ) && isset( $body_json->data[0]->code ) && ( $body_json->data[0]->code == 'INVALID_DATA' || $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) ) {
 
-				if ( $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) {
+				if ( 'MANDATORY_NOT_FOUND' === $body_json->data[0]->code ) {
 
 					$message = 'Mandatory field not found: <pre>' . wpf_print_r( $body_json, true ) . '</pre>';
 
-				} elseif ( $body_json->data[0]->code == 'INVALID_DATA' ) {
+				} elseif ( 'INVALID_DATA' === $body_json->data[0]->code ) {
 
-					$message  = 'Invalid data passed for field.';
-					$message .= '<br /><br />';
-					$message .= 'This error normally means that you tried to update a Zoho field with invalid data. For example syncing multi-select data to a text field.<br /><br />';
-					$message .= 'It can also mean you synced multi-select or picklist data, but one or more of the options sent over the API didn\'t match the allowed options inside Zoho.';
+					$code = 'error';
 
-					$message .= '<pre>' . wpf_print_r( $body_json, true ) . '</pre>';
+					if ( ( isset( $body_json->data[0]->details->api_name ) && 'Contact_Name' === $body_json->data[0]->details->api_name ) || 'the id given seems to be invalid' === $body_json->data[0]->message ) {
+
+						$code    = 'not_found';
+						$message = 'Invalid contact ID. It looks like this contact record has been deleted or merged. Please resync the user\'s contact ID from their admin user profile and try again.';
+
+					} else {
+						$message  = 'Invalid data passed for field.';
+						$message .= '<br /><br />';
+						$message .= 'This error normally means that you tried to update a Zoho field with invalid data. For example syncing multi-select data to a text field.';
+						$message .= 'It can also mean you synced multi-select or picklist data, but one or more of the options sent over the API didn\'t match the allowed options inside Zoho.';
+					}
+
+					$message .= '<br /><br /><strong>API response from Zoho:</strong><pre>' . wpf_print_r( $body_json, true ) . '</pre>';
 
 				}
 
-				$response = new WP_Error( 'error', $message );
+				$response = new WP_Error( $code, $message );
 
 			} elseif ( wp_remote_retrieve_response_code( $response ) == 429 ) {
 
@@ -565,7 +583,7 @@ class WPF_Zoho {
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( empty( $body_json ) ) {
+		if ( empty( $body_json ) || empty( $body_json->data ) ) {
 			return false;
 		}
 

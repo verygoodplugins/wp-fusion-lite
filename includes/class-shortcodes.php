@@ -229,9 +229,10 @@ class WPF_Shortcodes {
 
 		$atts = shortcode_atts(
 			array(
-				'field'       => '',
-				'date-format' => '',
-				'format'      => '',
+				'field'           => '',
+				'date-format'     => '',
+				'format'          => '',
+				'timezone-offset' => '0',
 			),
 			$atts
 		);
@@ -293,15 +294,20 @@ class WPF_Shortcodes {
 
 		if ( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {
 
-			if ( is_numeric( $value ) ) {
+			if ( ! is_numeric( $value ) ) {
 
-				$value = gmdate( $atts['date-format'], $value );
-
-			} else {
-
-				$value = gmdate( $atts['date-format'], strtotime( $value ) );
+				$value = strtotime( $value );
 
 			}
+
+			if ( ! empty( $atts['timezone-offset'] ) ) {
+				$value += intval( $atts['timezone-offset'] ) * 60;
+			}
+
+			// At this point the date is in GMT, let's switch it to local timezone for display.
+
+			$value = get_date_from_gmt( gmdate( 'Y-m-d H:i:s', $value ), $atts['date-format'] );
+
 		}
 
 		if ( 'ucwords' === $atts['format'] ) {
@@ -477,6 +483,20 @@ class WPF_Shortcodes {
 				break;
 			case '>=':
 				$show_content = $meta_value >= $value;
+				break;
+			case 'IN':
+				if ( is_array( $meta_value ) ) {
+					$show_content = in_array( $value, $meta_value, true );
+				} else {
+					$show_content = ( false === strpos( $meta_value, $value ) ? false : true );
+				}
+				break;
+			case 'NOT IN':
+				if ( is_array( $meta_value ) ) {
+					$show_content = ! in_array( $value, $meta_value, true );
+				} else {
+					$show_content = ( false === strpos( $meta_value, $value ) ? true : false );
+				}
 				break;
 			default:
 				$show_content = $meta_value === $value;

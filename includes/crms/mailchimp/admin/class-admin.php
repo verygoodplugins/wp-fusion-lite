@@ -77,9 +77,8 @@ class WPF_MailChimp_Admin {
 
 		$new_settings['mailchimp_header'] = array(
 			'title'   => __( 'MailChimp Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['mailchimp_key'] = array(
@@ -88,8 +87,21 @@ class WPF_MailChimp_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'mailchimp_key' )
+			'post_fields' => array( 'mailchimp_key', 'mc_default_list' ),
 		);
+
+		if ( $settings['connection_configured'] && wpf_get_option( 'crm' ) === $this->slug ) {
+
+			$new_settings['mc_default_list'] = array(
+				'title'       => __( 'MailChimp Audience', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select an audience to use for WP Fusion. If you change the audience, you\'ll need to click Refresh Available Tags & Fields (above) to update the available dropdown options.', 'wp-fusion-lite' ),
+				'type'        => 'select',
+				'placeholder' => 'Select Audience',
+				'section'     => 'setup',
+				'choices'     => isset( $options['mc_lists'] ) ? $options['mc_lists'] : array(),
+			);
+
+		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
@@ -107,27 +119,14 @@ class WPF_MailChimp_Admin {
 
 	public function register_settings( $settings, $options ) {
 
-		if ( ! isset( $options['mc_lists'] ) ) {
-			$options['mc_lists'] = array();
-		}
-
-		$new_settings = array();
-
-		$new_settings['mc_default_list'] = array(
-			'title'       => __( 'MailChimp Audience', 'wp-fusion-lite' ),
-			'desc'        => __( 'Select an audience to use for WP Fusion. If you change the audience, you\'ll need to Resynchronize from the Setup tab to update your available fields and tags.', 'wp-fusion-lite' ),
-			'type'        => 'select',
-			'placeholder' => 'Select Audience',
-			'section'     => 'main',
-			'choices'     => $options['mc_lists'],
-		);
-
-		$new_settings['mc_optin'] = array(
-			'title'   => __( 'Double Optin', 'wp-fusion-lite' ),
-			'desc'    => __( 'Send an optin confirmation email from MailChimp when new subscribers are added to your audience.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'std'     => false,
-			'section' => 'main',
+		$new_settings = array(
+			'mc_optin' => array(
+				'title'   => __( 'Double Optin', 'wp-fusion-lite' ),
+				'desc'    => __( 'Send an optin confirmation email from MailChimp when new subscribers are added to your audience.', 'wp-fusion-lite' ),
+				'type'    => 'checkbox',
+				'std'     => false,
+				'section' => 'main',
+			),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
@@ -194,6 +193,14 @@ class WPF_MailChimp_Admin {
 		$api_key      = sanitize_text_field( $_POST['mailchimp_key'] );
 		$key_exploded = explode( '-', $api_key );
 		$data_server  = $key_exploded[1];
+
+		// Maybe they've changed the list before clicking test.
+
+		if ( ! empty( $_POST['mc_default_list'] ) && wpf_get_option( 'mc_default_list' ) !== $_POST['mc_default_list'] ) {
+
+			wp_fusion()->settings->set( 'mc_default_list', sanitize_text_field( wp_unslash( $_POST['mc_default_list'] ) ) );
+
+		}
 
 		$connection = $this->crm->connect( $data_server, $api_key, true );
 

@@ -53,7 +53,6 @@ class WPF_Autonami_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'handle_rest_authentication' ) );
-		add_action( 'wpf_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
 	}
 
@@ -65,43 +64,10 @@ class WPF_Autonami_Admin {
 
 	public function init() {
 
-		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 
 	}
 
-	public function enqueue_scripts() {
-
-		?>
-		<script>
-			var bwf_wp_fusion_params = {
-				optionsurl: '<?php echo esc_url( admin_url( 'options-general.php?page=wpf-settings' ) ); ?>',
-				sitetitle: '<?php echo esc_js( urlencode( get_bloginfo( 'name' ) ) ); ?>',
-			};
-			
-			jQuery(document).ready(function ($) {
-				$('#autonami_url').on('input', function (event) {
-
-					if ($(this).val().length && $(this).val().includes('https://')) {
-						var url = $(this).val();
-						url = url.replace(/\/$/, "");
-						url = url + '/wp-admin/authorize-application.php?app_name=WP+Fusion+-+' + bwf_wp_fusion_params.sitetitle + '&success_url=' + bwf_wp_fusion_params.optionsurl + '%26crm=autonami';
-
-						$("a#autonami-auth-btn").attr('href', url);
-
-						$("a#autonami-auth-btn").removeClass('button-disabled').addClass('button-primary');
-
-					} else {
-
-						$("a#autonami-auth-btn").removeClass('button-primary').addClass('button-disabled');
-
-					}
-
-				});
-			});
-		</script>
-		<?php
-
-	}
 
 	/**
 	 * Handle REST API authentication.
@@ -110,7 +76,7 @@ class WPF_Autonami_Admin {
 	 */
 	public function handle_rest_authentication() {
 
-		if ( isset( $_GET['site_url'] ) && isset( $_GET['crm'] ) && 'autonami' == $_GET['crm'] ) {
+		if ( isset( $_GET['site_url'] ) && isset( $_GET['crm'] ) && $this->slug == $_GET['crm'] ) {
 
 			$url      = esc_url( urldecode( $_GET['site_url'] ) );
 			$username = sanitize_text_field( urldecode( $_GET['user_login'] ) );
@@ -153,6 +119,7 @@ class WPF_Autonami_Admin {
 			'title'   => __( 'URL', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup',
+			'class'   => 'wp-rest-url',
 			'desc'    => __( 'Enter the URL to your website where Autonami is installed (must be https://).', 'wp-fusion-lite' ),
 		);
 
@@ -160,17 +127,15 @@ class WPF_Autonami_Admin {
 			$new_settings['autonami_url']['desc'] .= '<br /><br /><strong>' . sprintf( __( 'If you are trying to connect to Autonami on this site, enter %s for the URL.', 'wp-fusion-lite' ), '<code>' . home_url() . '</code>' ) . '</strong>';
 		}
 
-		// TODO here add additional desc
-
 		if ( empty( $options['autonami_url'] ) ) {
 			$href  = '#';
-			$class = 'button button-disabled';
+			$class = 'button button-disabled rest-auth-btn';
 		} else {
-			$href  = trailingslashit( $options['autonami_url'] ) . 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' . urlencode( get_bloginfo( 'name' ) ) . '&success_url=' . admin_url( 'options-general.php?page=wpf-settings' ) . '%26crm=autonami';
-			$class = 'button';
+			$href  = trailingslashit( $options['autonami_url'] ) . 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' . urlencode( get_bloginfo( 'name' ) ) . '&success_url=' . admin_url( 'options-general.php?page=wpf-settings' ) . '%26crm=' . $this->slug;
+			$class = 'button rest-auth-btn';
 		}
 
-		$new_settings['autonami_url']['desc'] .= '<br /><br /><a id="autonami-auth-btn" class="' . sanitize_html_class( $class ) . '" href="' . esc_url( $href ) . '">' . __( 'Authorize with Autonami', 'wp-fusion-lite' ) . '</a>';
+		$new_settings['autonami_url']['desc'] .= '<br /><br /><a id="autonami-auth-btn" class="' . esc_attr( $class ) . '" href="' . esc_url( $href ) . '">' . __( 'Authorize with Autonami', 'wp-fusion-lite' ) . '</a>';
 		$new_settings['autonami_url']['desc'] .= '<span class="description">' . __( 'You can click the Authorize button to be taken to the Autonami site and generate an application password automatically.', 'wp-fusion-lite' ) . '</span>';
 
 		$new_settings['autonami_username'] = array(

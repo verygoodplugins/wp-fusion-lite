@@ -95,13 +95,13 @@ class WPF_Autonami {
 
 		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
 
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
 			if ( empty( wp_remote_retrieve_body( $response ) ) ) {
 
 				$response = new WP_Error( 'error', 'No response was returned. You may need to <a href="https://wordpress.org/support/article/using-permalinks/#mod_rewrite-pretty-permalinks" target="_blank">enable pretty permalinks</a>.' );
 
-			} elseif ( wp_remote_retrieve_response_code( $response ) > 204 ) {
-
-				$body = json_decode( wp_remote_retrieve_body( $response ) );
+			} elseif ( wp_remote_retrieve_response_code( $response ) > 204 || ( isset( $body->code ) && $body->code > 204 ) ) {
 
 				if ( ! empty( $body->code ) ) {
 
@@ -215,6 +215,7 @@ class WPF_Autonami {
 		$this->params = array(
 			'timeout'    => 15,
 			'user-agent' => 'WP Fusion; ' . home_url(),
+			'sslverify'  => false,
 			'headers'    => array(
 				'Content-Type'  => 'application/json',
 				'Accept'        => 'application/json',

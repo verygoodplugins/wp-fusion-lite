@@ -59,7 +59,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 		$is_config['infusionsoft_header'] = array(
 			'title'   => __( 'Infusionsoft Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup'
 		);
@@ -67,7 +66,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 		$is_config['app_name'] = array(
 			'title'   => __( 'Application Name', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter the name of your Infusionsoft application (i.e. "ab123").', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
@@ -99,7 +97,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 		$new_settings['api_call'] = array(
 			'title'   => __( 'API Call', 'wp-fusion-lite' ),
 			'desc'    => __( 'Check this box to make an API call when a profile is updated. See <a target="_blank" href="https://wpfusion.com/documentation/tutorials/infusionsoft-api-goals/">the documentation</a> for more info.', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main',
 			'unlock'  => array( 'api_call_integration', 'api_call_name' )
@@ -110,12 +107,11 @@ class WPF_Infusionsoft_iSDK_Admin {
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$new_settings['api_call_name'] = array(
 			'title'   => __( 'Call Name', 'wp-fusion-lite' ),
-			'desc'    => '',
 			'std'     => 'contactUpdated',
 			'type'    => 'text',
 			'section' => 'main'
@@ -123,16 +119,13 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 		$new_settings['site_tracking_header'] = array(
 			'title'   => __( 'Infusionsoft Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => '',
-			'std'     => '',
 			'type'    => 'heading',
 			'section' => 'main'
 		);
 
 		$new_settings['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://help.infusionsoft.com/userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-infusionsoft-tracking-code-into-your-website">Infusionsoft site tracking</a>.', 'wp-fusion-lite' ),
-			'std'     => 0,
+			'desc'    => __( 'Enable <a target="_blank" href="https://help.infusionsoft.com/userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-infusionsoft-tracking-code-into-your-website">Infusionsoft site tracking</a>.', 'wp-fusion-lite' ),'std'     => 0,
 			'type'    => 'checkbox',
 			'section' => 'main'
 		);

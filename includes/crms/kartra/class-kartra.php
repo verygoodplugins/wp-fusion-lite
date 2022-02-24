@@ -617,6 +617,10 @@ class WPF_Kartra {
 			}
 		}
 
+		if ( ! isset( $data['ip'] ) ) {
+			$data['ip'] = wp_fusion()->user->get_ip();
+		}
+
 		$params                    = $this->params;
 		$params['body']['lead']    = $data;
 		$params['body']['actions'] = array(

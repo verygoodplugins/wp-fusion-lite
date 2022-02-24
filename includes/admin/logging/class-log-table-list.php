@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! class_exists( 'WP_List_Table' ) ) {
-	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
 class WPF_Log_Table_List extends WP_List_Table {
@@ -33,6 +33,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		);
 
 	}
+
 
 	/**
 	 * Display level dropdown
@@ -171,7 +172,16 @@ class WPF_Log_Table_List extends WP_List_Table {
 			return sprintf( __( '(deleted user %d)', 'wp-fusion-lite' ), absint( $log['user'] ) );
 		}
 
-		return '<a href="' . esc_url( get_edit_user_link( $log['user'] ) ) . '" target="_blank">' . esc_html( $userdata->data->user_login ) . '</a>';
+		$ret = '<a href="' . esc_url( get_edit_user_link( $log['user'] ) ) . '" target="_blank">' . esc_html( $userdata->data->user_login ) . '</a>';
+
+		$contact_id = wp_fusion()->user->get_contact_id( $log['user'] );
+		$edit_url   = wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
+
+		if ( $edit_url ) {
+			$ret .= ' (<a title="' . sprintf( esc_attr__( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . ' &raquo;" href="' . esc_url( $edit_url ) . '" target="_blank">#' . esc_html( $contact_id ) . '</a>)';
+		}
+
+		return $ret;
 	}
 
 	/**
@@ -183,6 +193,26 @@ class WPF_Log_Table_List extends WP_List_Table {
 	public function column_message( $log ) {
 
 		$output = $log['message'];
+
+		// Add links to edit contact in CRM, if supported.
+
+		if ( false !== strpos( $output, ' contact #' ) ) {
+
+			preg_match( '/(?<=contact #)\w*/', $output, $contact_id );
+
+			if ( ! empty( $contact_id ) ) {
+
+				$contact_id = $contact_id[0];
+
+				$url = wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
+
+				if ( false !== $url ) {
+					$output = preg_replace( '/#\w*/', '<a href="' . $url . '" target="_blank">#' . $contact_id . '</a>', $output );
+				}
+			}
+		}
+
+		// Make the log context readable.
 
 		if ( ! empty( $log['context'] ) ) {
 
@@ -280,6 +310,9 @@ class WPF_Log_Table_List extends WP_List_Table {
 			),
 			'strike' => array(),
 			'br'     => array(),
+			'a'      => array(
+				'href' => true,
+			),
 		);
 
 		return wp_kses( $output, $allowed_tags );
@@ -374,7 +407,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 				}
 			}
 
-			$sources = array_unique( $sources );
+			$sources = array_filter( array_unique( $sources ) );
 
 			sort( $sources );
 
@@ -405,67 +438,21 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 */
 	protected function user_dropdown() {
 
-		// Memory safety catch.
+		$selected_user = isset( $_REQUEST['user'] ) ? absint( $_REQUEST['user'] ) : '';
 
-		echo '<div id="users-memory-check"><br /><br />';
-		echo wp_kses_post( __( '<p>If you can read this then your site ran out of memory while building the dropdown of log users.</p><p>You can fix this by clicking <strong>Flush All Logs</strong> above, or by increasing your available memory.</p>', 'wp-fusion-lite' ) );
-		echo '</p>';
-
-		if ( function_exists( 'ini_get' ) ) {
-			$memory_limit = ini_get( 'memory_limit' );
-			echo '<p>' . esc_html( 'Current memory limit:', 'wp-fusion-lite' ) . '<code>' . esc_html( $memory_limit ) . '</code></p>';
-		}
-		echo '</p></div>';
-
-		global $wpdb;
-
-		$users = $wpdb->get_col(
-			"
-			SELECT DISTINCT user
-			FROM {$wpdb->prefix}wpf_logging
-			WHERE user != ''
-			ORDER BY user ASC
-		"
-		);
-
-		if ( ! empty( $users ) ) {
-
-			$selected_user = isset( $_REQUEST['user'] ) ? absint( $_REQUEST['user'] ) : '';
-			$users_list    = array();
-
-			foreach ( $users as $u ) {
-				$userdata = get_userdata( $u );
-				if ( is_object( $userdata ) ) {
-					$users_list[ $u ] = esc_html( $userdata->data->user_login );
+		?>
+			<label for="filter-by-user" class="screen-reader-text"><?php esc_html_e( 'Filter by user', 'wp-fusion-lite' ); ?></label>
+			<select class="select4-users-log" name="user" id="filter-by-user">
+				<option value=""><?php esc_html_e( 'All users', 'wp-fusion-lite' ); ?></option>
+				<?php
+				if ( ! empty( $selected_user ) ) {
+						$user = get_user_by( 'id', $selected_user );
+						echo '<option selected value="' . esc_attr( $user->ID ) . '">' . esc_html( $user->user_login ) . '</option>';
 				}
-			}
+				?>
+			</select>
 
-			natcasesort( $users_list );
-
-			?>
-				<label for="filter-by-user" class="screen-reader-text"><?php esc_html_e( 'Filter by user', 'wp-fusion-lite' ); ?></label>
-				<select name="user" id="filter-by-user">
-
-					<option<?php selected( $selected_user, '' ); ?> value=""><?php esc_html_e( 'All users', 'wp-fusion-lite' ); ?></option>
-
-					<?php
-					foreach ( $users_list as $user_id => $user_login ) {
-
-						printf(
-							'<option%1$s value="%2$s">%3$s</option>',
-							selected( $selected_user, $user_id, false ),
-							esc_attr( $user_id ),
-							esc_html( $user_login )
-						);
-					}
-					?>
-				</select>
-
-			<?php
-		}
-
-		// If we've gotten this far then we can hide the warning.
-		echo '<style type="text/css"> div#users-memory-check { display: none; } </style>';
+		<?php
 
 	}
 
@@ -579,7 +566,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 	protected function get_items_query_order() {
 		$valid_orders = array( 'level', 'source', 'timestamp', 'user' );
 		if ( ! empty( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], $valid_orders ) ) {
-			//$by = wc_clean( $_REQUEST['orderby'] );
+			// $by = wc_clean( $_REQUEST['orderby'] );
 			$by = esc_attr( $_REQUEST['orderby'] );
 		} else {
 			$by = 'timestamp';

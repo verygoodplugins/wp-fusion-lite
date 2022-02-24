@@ -28,6 +28,7 @@ class WPF_SendinBlue {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * Not working, get_contact_id() returns an email but the edit URL uses a different variable
+	 *
 	 * @var string
 	 */
 
@@ -44,7 +45,7 @@ class WPF_SendinBlue {
 
 		$this->slug     = 'sendinblue';
 		$this->name     = 'Sendinblue';
-		$this->supports = array();
+		$this->supports = array( 'events' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -69,7 +70,6 @@ class WPF_SendinBlue {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		// $this->edit_url = 'https://app.sendinblue.com/contact/index/%d';
-
 	}
 
 	/**
@@ -120,9 +120,7 @@ class WPF_SendinBlue {
 					$post_data['contact_id'] = $updated_email;
 
 				}
-
 			}
-
 		}
 
 		return $post_data;
@@ -174,10 +172,13 @@ class WPF_SendinBlue {
 					$value = '+1' . $value;
 
 				}
-
 			}
 
 			return $value;
+
+		} elseif ( is_array( $value ) ) {
+
+			return implode( ', ', array_filter( $value ) );
 
 		} elseif ( is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
 
@@ -482,7 +483,7 @@ class WPF_SendinBlue {
 			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
 			$params           = $this->params;
 			$params['method'] = 'POST';
-			$params['body']   = json_encode( array( 'emails' => [ $contact_id ] ) );
+			$params['body']   = json_encode( array( 'emails' => array( $contact_id ) ) );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -517,7 +518,7 @@ class WPF_SendinBlue {
 			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/remove';
 			$params           = $this->params;
 			$params['method'] = 'POST';
-			$params['body']   = json_encode( array( 'emails' => [ $contact_id ] ) );
+			$params['body']   = json_encode( array( 'emails' => array( $contact_id ) ) );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -604,7 +605,7 @@ class WPF_SendinBlue {
 			return false;
 		}
 
-		// Email address changes
+		// Email address changes.
 
 		if ( isset( $data['email'] ) && strtolower( $data['email'] ) != strtolower( $contact_id ) ) {
 
@@ -617,10 +618,13 @@ class WPF_SendinBlue {
 				update_user_meta( $user_id, 'sendinblue_contact_id', $data['email'] );
 
 			}
-
 		}
 
 		unset( $data['email'] );
+
+		if ( empty( $data ) ) {
+			return;
+		}
 
 		$post_data = array( 'attributes' => $data );
 
@@ -719,5 +723,46 @@ class WPF_SendinBlue {
 		return $contact_ids;
 
 	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the Sendinblue site tracking API.
+	 *
+	 * @since  3.38.16
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		// Get the email address to track.
+
+		if ( empty( $email_address ) ) {
+			$email_address = wpf_get_current_user_email();
+		}
+
+		if ( false === $email_address ) {
+			return; // can't track without an email.
+		}
+
+		$body = array(
+			'email'     => $email_address,
+			'event'     => $event,
+			'eventdata' => (object) array( 'details' => $event_data ),
+		);
+
+		$request                     = 'https://in-automate.sendinblue.com/api/v2/trackEvent';
+		$params                      = $this->get_params();
+		$params['body']              = wp_json_encode( $body );
+		$params['headers']['ma-key'] = $params['headers']['api-key'];
+		$parms['blocking']           = false;
+		$response                    = wp_safe_remote_post( $request, $params );
+
+		return true;
+	}
+
 
 }
