@@ -287,7 +287,7 @@ class WPF_ConvertKit {
 		$response = wp_safe_remote_post(
 			'https://api.convertkit.com/v3/automations/hooks', array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
-				'body'    => json_encode( $data ),
+				'body'    => wp_json_encode( $data ),
 				'method'  => 'POST',
 			)
 		);
@@ -322,7 +322,7 @@ class WPF_ConvertKit {
 		$result = wp_safe_remote_request(
 			'https://api.convertkit.com/v3/automations/hooks/' . $rule_id, array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
-				'body'    => json_encode( $data ),
+				'body'    => wp_json_encode( $data ),
 				'method'  => 'DELETE',
 			)
 		);
@@ -608,7 +608,7 @@ class WPF_ConvertKit {
 		);
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', $params );
 
@@ -657,15 +657,7 @@ class WPF_ConvertKit {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return null;
-		}
+	public function add_contact( $data ) {
 
 		if ( empty( $data['email_address'] ) ) {
 			return false;
@@ -705,7 +697,7 @@ class WPF_ConvertKit {
 		$post_data['fields'] = $data;
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $post_data );
+		$params['body'] = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/tags/' . $assign_tags[0] . '/subscribe', $params );
 
@@ -730,15 +722,7 @@ class WPF_ConvertKit {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$post_data = array( 'api_secret' => $this->api_secret );
 
@@ -756,7 +740,7 @@ class WPF_ConvertKit {
 		$post_data['fields'] = $data;
 
 		$params           = $this->get_params();
-		$params['body']   = json_encode( $post_data );
+		$params['body']   = wp_json_encode( $post_data );
 		$params['method'] = 'PUT';
 
 		$response = wp_safe_remote_request( 'https://api.convertkit.com/v3/subscribers/' . $contact_id, $params );

@@ -51,7 +51,7 @@ class WP_Fusion_Options {
 	protected $settings;
 
 	// Protected so child class can update post_data if needed
-	protected $post_data;
+	public $post_data;
 
 	// Optional variable to contain additional pages to register
 	private $subpages;
@@ -217,7 +217,7 @@ class WP_Fusion_Options {
 
 		// Get array of form data
 		if ( isset( $_POST[ $this->option_group ] ) ) {
-			$this->post_data = $_POST[ $this->option_group ];
+			$this->post_data = wp_unslash( $_POST[ $this->option_group ] );
 		} else {
 			$this->post_data = array();
 		}
@@ -226,9 +226,12 @@ class WP_Fusion_Options {
 
 		$settings = $this->settings;
 
-		// Beydefault $_POST ignores checkboxes with no value set, so we need to iterate through
-		// all defined checkboxes and set their value to 0 if they haven't been set in the input
-		if ( isset( $this->checkboxes ) ) {
+		// Beydefault $_POST ignores checkboxes with no value set, so we need to
+		// iterate through all defined checkboxes and set their value to 0 if
+		// they haven't been set in the input. We'll only do this after the
+		// connection is configured to avoid messing up default values added by
+		// integrations that depend on the setup being complete.
+		if ( isset( $this->checkboxes ) && ! empty( $this->post_data['connection_configured'] ) ) {
 			foreach ( $this->checkboxes as $id ) {
 				if ( ! isset( $this->post_data[ $id ] ) || $this->post_data[ $id ] != '1' ) {
 					$this->post_data[ $id ] = 0;
@@ -620,6 +623,8 @@ class WP_Fusion_Options {
 		wp_enqueue_style( 'fontawesome', $this->selfpath . 'css/font-awesome.min.css' );
 		wp_enqueue_style( 'options-css', $this->selfpath . 'css/options.css' );
 
+		wp_dequeue_script( 'premmerce-permalink-settings-script' ); // fixes conflict with the nonce and action getting wiped out in Premmerce Permalink Manager for WooCommerce.
+
 		// Enqueue TinyMCE editor
 		if ( isset( $this->fields['editor'] ) ) {
 			wp_print_scripts( 'editor' );
@@ -766,7 +771,9 @@ class WP_Fusion_Options {
 
 				<ul class="nav nav-tabs">
 					<?php $isfirst = true; ?>
-				<?php foreach ( $page['sections'] as $section_slug => $section ) { ?>
+				<?php foreach ( $page['sections'] as $section_slug => $section ) {
+
+					?>
 
 						<?php if ( ! is_array( $section ) ) : ?>
 
@@ -1127,7 +1134,7 @@ class WP_Fusion_Options {
 			echo '<h3 class="title">' . esc_html( $field['title'] ) . '</h3>';
 		}
 
-		echo '<p' . ( $field['class'] ? ' class="' . esc_attr( $field['class'] ) . '"' : '' ) . '>' . wp_kses_post( $field['desc'] ) . '</p>';
+		echo '<p' . ( $field['class'] ? ' class="' . esc_attr( $field['class'] ) . '"' : '' ) . '>' . $field['desc'] . '</p>'; // yes $field['desc'] should be escaped but we sometimes need to output SVG content (such as in the webhooks section overview), and I can't find the right config for wp_kses_allowed_html. Please forgive me...
 	}
 
 	/**

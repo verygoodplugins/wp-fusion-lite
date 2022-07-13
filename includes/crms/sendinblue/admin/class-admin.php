@@ -41,6 +41,7 @@ class WPF_SendinBlue_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -58,9 +59,8 @@ class WPF_SendinBlue_Admin {
 
 		$new_settings['sendinblue_header'] = array(
 			'title'   => __( 'SendinBlue Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['sendinblue_key'] = array(
@@ -103,6 +103,47 @@ class WPF_SendinBlue_Admin {
 		}
 
 		return $options;
+
+	}
+
+
+	/**
+	 * Add Sendinblue specific settings.
+	 *
+	 * @since  3.40.5
+	 *
+	 * @param  array $settings The settings.
+	 * @param  array $options  The options in the database.
+	 * @return array The settings.
+	 */
+	public function register_settings( $settings, $options ) {
+
+		$site_tracking = array();
+
+		$site_tracking['site_tracking_header'] = array(
+			'title'   => __( 'Sendinblue Site Tracking', 'wp-fusion-lite' ),
+			'url'     => 'https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#sendinblue',
+			'type'    => 'heading',
+			'section' => 'main',
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable Sendinblue site tracking scripts.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+		);
+
+		$site_tracking['site_tracking_key'] = array(
+			'title'   => __( 'Tracking Client Key', 'wp-fusion-lite' ),
+			'desc'    => __( 'Your tracking <code>client_key</code> can be found in the Tracking Code <a href="https://automation.sendinblue.com/parameters" target="_blank">in the Automation settings of your Sendinblue account</a>. For example: <code>l7u0448l6oipghl8v7k92</code>', 'wp-fusion-lite' ),
+			'type'    => 'text',
+			'section' => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
+
+		return $settings;
 
 	}
 

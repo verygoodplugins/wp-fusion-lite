@@ -218,7 +218,7 @@ class WPF_Log_Handler {
 
 		if ( wpf_get_option( 'logging_badge', true ) && ( ! isset( $_GET['page'] ) || 'wpf-settings-logs' !== $_GET['page'] ) ) {
 
-			$errors_count = wpf_get_option( 'logs_unseen_errors', 0 );
+			$errors_count = get_option( 'wpf_logs_unseen_errors', 0 );
 
 			if ( $errors_count ) {
 
@@ -257,8 +257,7 @@ class WPF_Log_Handler {
 	public function clear_errors_count() {
 
 		if ( wpf_get_option( 'logging_badge', true ) ) {
-			delete_option( 'wpf_logs_unseen_errors' ); // pre-3.38.31
-			wp_fusion()->settings->set( 'logs_unseen_errors', 0 );
+			delete_option( 'wpf_logs_unseen_errors' );
 		}
 
 	}
@@ -332,7 +331,7 @@ class WPF_Log_Handler {
 
 		if ( wpf_get_option( 'logging_badge', true ) ) {
 
-			$errors_count = wpf_get_option( 'logs_unseen_errors', 0 );
+			$errors_count = get_option( 'wpf_logs_unseen_errors', 0 );
 
 			if ( $errors_count ) {
 
@@ -603,9 +602,9 @@ class WPF_Log_Handler {
 		}
 
 		// Filter out irrelevant meta fields and show any field format changes (don't do it when loading data).
-		if ( ! empty( $context['meta_array'] ) && ! did_action( 'wpf_pre_pull_user_meta' ) ) {
+		if ( ! empty( $context['meta_array'] ) ) {
 
-			$contact_fields = wpf_get_option( 'contact_fields' );
+			$contact_fields = wpf_get_option( 'contact_fields', array() );
 
 			foreach ( $context['meta_array'] as $key => $data ) {
 
@@ -614,20 +613,29 @@ class WPF_Log_Handler {
 					continue;
 				}
 
-				if ( ! isset( $contact_fields[ $key ]['type'] ) ) {
-					$contact_fields[ $key ]['type'] = 'text';
-				}
+				if ( ! did_action( 'wpf_pre_pull_user_meta' ) ) {
 
-				$filtered_value = apply_filters( 'wpf_format_field_value', $data, $contact_fields[ $key ]['type'], $contact_fields[ $key ]['crm_field'] );
+					// If we're sending data to the CRM, also log what might have changed.
 
-				if ( $data != $filtered_value ) {
+					if ( ! isset( $contact_fields[ $key ]['type'] ) ) {
+						$contact_fields[ $key ]['type'] = 'text';
+					}
 
-					// Store what happened to the data so we can show a little more context in the logs.
-					$context['meta_array'][ $key ] = array(
-						'original' => $data,
-						'new'      => $filtered_value,
-						'type'     => $contact_fields[ $key ]['type'],
-					);
+					$filtered_value = apply_filters( 'wpf_format_field_value', $data, $contact_fields[ $key ]['type'], $contact_fields[ $key ]['crm_field'] );
+
+					if ( $data !== $filtered_value ) {
+
+						// Store what happened to the data so we can show a little more context in the logs.
+						$context['meta_array'][ $key ] = array(
+							'original' => $data,
+							'new'      => $filtered_value,
+							'type'     => $contact_fields[ $key ]['type'],
+						);
+
+						if ( 'date' === $contact_fields[ $key ]['type'] && false === $filtered_value ) {
+							wpf_log( 'notice', $user, 'Unable to convert date value <strong>' . $data . '</strong> into a timestamp (using <code>strtotime()</code>).', array( 'source' => wp_fusion()->crm->slug ) );
+						}
+					}
 				}
 			}
 		} elseif ( ! empty( $context['meta_array'] ) && did_action( 'wpf_pre_pull_user_meta' ) ) {
@@ -655,13 +663,13 @@ class WPF_Log_Handler {
 		}
 
 		// Track errors.
-		if ( 'error' == $level && wpf_get_option( 'logging_badge', true ) ) {
+		if ( 'error' === $level && wpf_get_option( 'logging_badge', true ) ) {
 
-			$count = wpf_get_option( 'logs_unseen_errors', 0 );
+			$count = get_option( 'wpf_logs_unseen_errors', 0 );
 
 			$count++;
 
-			wp_fusion()->settings->set( 'logs_unseen_errors', $count );
+			update_option( 'wpf_logs_unseen_errors', $count );
 
 		}
 
@@ -878,6 +886,11 @@ class WPF_Log_Handler {
 					continue;
 				}
 
+				if ( 'edit_user' === $trace['function'] ) {
+					$found_integrations[] = 'user-profile';
+					continue;
+				}
+
 				foreach ( $slugs as $slug ) {
 
 					if ( empty( $slug ) ) {
@@ -886,7 +899,7 @@ class WPF_Log_Handler {
 
 					if ( strpos( $trace['file'], 'class-' . $slug ) !== false ) {
 
-						// Remove the "class"
+						// Remove the "class".
 
 						$slug = str_replace( 'class-', '', $slug );
 

@@ -524,7 +524,6 @@ jQuery(document).ready(function($){
 
 					$(crmContainer).find('div.error').remove();
 
-					$('#connection_configured').val('1'); // connection is configured
 					$('#wpf-needs-setup').slideUp(400);
 					var total = parseFloat(button.attr('data-total-users'));
 					syncTags(button, total, crmContainer);
@@ -664,6 +663,24 @@ jQuery(document).ready(function($){
 			} else {
 
 				crmContainer.find("a.rest-auth-btn").removeClass('button-primary').addClass('button-disabled');
+
+			}
+
+		});
+
+		//
+		// Salesforce topics
+		// 
+
+		$('#salesforce.crm-config input[type="radio"]').on('change', function() {
+
+			if ( $(this).val() == 'Picklist' ) {
+
+				$( '#sf_tag_picklist' ).closest( 'tr' ).removeClass( 'disabled' );
+
+			} else {
+
+				$( '#sf_tag_picklist' ).closest( 'tr' ).addClass( 'disabled' );
 
 			}
 

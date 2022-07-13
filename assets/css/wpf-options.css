@@ -9,7 +9,7 @@
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
 }
 
-#wpf-pro img {
+#wpf-pro img#pro-logo {
     margin: 0 15px 0 0;
     width: 36px;
     float: left;
@@ -183,6 +183,10 @@ form#wpf-settings .settings_page_wpf-settings-tab-content {
 
 form#wpf-settings #setup .form-table {
 	margin-top: 0px;
+}
+
+form#wpf-settings .form-table th {
+	padding: 20px 10px 20px 0;
 }
 
 button.btn-verifying i.fa {
@@ -456,6 +460,7 @@ th.sync {
 #wp-restricted_message-wrap {
 	width: 60%;
 	min-width: 600px;
+	margin-bottom: 6px;
 }
 
 #wpf-settings i.wpf-tip {

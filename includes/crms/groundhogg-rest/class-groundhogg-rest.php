@@ -492,17 +492,11 @@ class WPF_Groundhogg_REST {
 	 *
 	 * @since  3.38.10
 	 *
-	 * @param  array $data            An associative array of contact
-	 *                                fields and field values.
-	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys
-	 *                                to CRM field keys.
+	 * @param  array $data An associative array of contact fields and
+	 *                     field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$fields = wpf_get_option( 'crm_fields' );
 
@@ -578,18 +572,12 @@ class WPF_Groundhogg_REST {
 	 *
 	 * @since  3.38.10
 	 *
-	 * @param  int   $contact_id      The ID of the contact to update.
-	 * @param  array $data            An associative array of contact
-	 *                                fields and field values.
-	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys
-	 *                                to CRM field keys.
+	 * @param  int   $contact_id The ID of the contact to update.
+	 * @param  array $data       An associative array of contact
+	 *                           fields and field values.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$fields = wpf_get_option( 'crm_fields' );
 

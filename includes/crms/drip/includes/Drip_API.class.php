@@ -537,7 +537,7 @@ class Drip_API {
 				unset( $params['__req'] );
 				$url .= '?' . http_build_query( $params );
 			} elseif ( $req_method == self::POST || $req_method == self::DELETE ) {
-				$params_str = is_array( $params ) ? json_encode( $params ) : $params;
+				$params_str = is_array( $params ) ? wp_json_encode( $params ) : $params;
 				curl_setopt( $ch, CURLOPT_POSTFIELDS, $params_str );
 			}
 		}

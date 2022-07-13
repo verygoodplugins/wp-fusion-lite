@@ -372,7 +372,7 @@ class WPF_Quentn {
 		}
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $tags );
+		$params['body']   = wp_json_encode( $tags );
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_url . 'contact/' . $contact_id . '/terms';
@@ -401,7 +401,7 @@ class WPF_Quentn {
 		}
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $tags );
+		$params['body']   = wp_json_encode( $tags );
 		$params['method'] = 'DELETE';
 
 		$request  = $this->api_url . 'contact/' . $contact_id . '/terms';
@@ -423,18 +423,14 @@ class WPF_Quentn {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
 		$params         = $this->params;
-		$params['body'] = json_encode( array( 'contact' => $data ) );
+		$params['body'] = wp_json_encode( array( 'contact' => $data ) );
 
 		$request  = $this->api_url . 'contact';
 		$response = wp_safe_remote_post( $request, $params );
@@ -456,22 +452,14 @@ class WPF_Quentn {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
-
 		$params           = $this->params;
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_url . 'contact/' . $contact_id;

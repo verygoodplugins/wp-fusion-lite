@@ -410,7 +410,7 @@ class WPF_BirdSend {
 		$body = array( 'tags' => $tags );
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $body );
+		$params['body']   = wp_json_encode( $body );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id . '/tags';
 		$response = wp_safe_remote_post( $request, $params );
@@ -461,14 +461,10 @@ class WPF_BirdSend {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$update_data = array(
@@ -479,7 +475,7 @@ class WPF_BirdSend {
 		unset( $update_data['fields']['email'] );
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/';
 		$response = wp_safe_remote_post( $request, $params );
@@ -501,18 +497,10 @@ class WPF_BirdSend {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		$update_data = array(
@@ -531,7 +519,7 @@ class WPF_BirdSend {
 
 		$params           = $this->params;
 		$params['method'] = 'PATCH';
-		$params['body']   = json_encode( $update_data );
+		$params['body']   = wp_json_encode( $update_data );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id;
 		$response = wp_safe_remote_request( $request, $params );

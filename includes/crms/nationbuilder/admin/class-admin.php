@@ -52,7 +52,7 @@ class WPF_NationBuilder_Admin {
 		$args = array(
 			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings' ),
 			'action'   => "wpf_get_{$this->slug}_token",
-			'slug'     => 'unknown',
+			'slug'     => wpf_get_option( 'nationbuilder_slug', 'unknown' ),
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
@@ -103,7 +103,7 @@ class WPF_NationBuilder_Admin {
 					'Content-Type' => 'application/json',
 					'Accept'       => 'application/json',
 				),
-				'body'       => json_encode( $body ),
+				'body'       => wp_json_encode( $body ),
 			);
 
 			$response = wp_safe_remote_post( 'https://' . $slug . '.nationbuilder.com/oauth/token', $params );
@@ -218,7 +218,7 @@ class WPF_NationBuilder_Admin {
 
 	public function show_field_nationbuilder_header_begin( $id, $field ) {
 
-		//echo '</table>';
+		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 

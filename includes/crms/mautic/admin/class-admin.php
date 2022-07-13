@@ -59,7 +59,6 @@ class WPF_Mautic_Admin {
 
 		$new_settings['mautic_header'] = array(
 			'title'   => __( 'Mautic Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 			'desc'	  => __( 'Before attempting to connect to Mautic, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' )
@@ -70,7 +69,6 @@ class WPF_Mautic_Admin {
 		$new_settings['mautic_url'] = array(
 			'title'   => __( 'URL', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter the URL for your Mautic account (like https://app.mautic.net/).', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
@@ -78,7 +76,6 @@ class WPF_Mautic_Admin {
 		$new_settings['mautic_username'] = array(
 			'title'   => __( 'Username', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter the Username for your Mautic account.', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup'
 		);
@@ -141,7 +138,7 @@ class WPF_Mautic_Admin {
 			'desc'    => sprintf( __( 'For more information on these settings, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#mautic" target="_blank">', '</a>' ),
 			'std'     => '',
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking'] = array(

@@ -39,8 +39,6 @@ class WPF_MailEngine {
 		$this->name     = 'MailEngine';
 		$this->supports = array();
 
-		$this->override_filters = true;
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
@@ -56,6 +54,7 @@ class WPF_MailEngine {
 	 */
 
 	public function init() {
+		remove_all_filters( 'wpf_format_field_value' ); // removes the base filtering in WPF_CRM_Base.
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 	}
 
@@ -482,14 +481,10 @@ class WPF_MailEngine {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $contact_data, $map_meta_fields = true ) {
+	public function add_contact( $contact_data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
 		}
 
 		$userdata = array(
@@ -531,14 +526,10 @@ class WPF_MailEngine {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $contact_data, $map_meta_fields = true, $tags = array() ) {
+	public function update_contact( $contact_id, $contact_data, $tags = array() ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
 		}
 
 		$userdata = array(

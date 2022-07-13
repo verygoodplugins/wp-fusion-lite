@@ -170,7 +170,7 @@ class WPF_Platformly {
 			'body'		=> array(
 				'api_key' 	=> $api_key,
 				'action'	=> $action,
-				'value'		=> json_encode( $value )
+				'value'		=> wp_json_encode( $value )
 			)
 		);
 
@@ -497,11 +497,7 @@ class WPF_Platformly {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$project = wpf_get_option( 'platformly_project', false );
 
@@ -528,11 +524,7 @@ class WPF_Platformly {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$project = wpf_get_option( 'platformly_project', false );
 
@@ -545,7 +537,7 @@ class WPF_Platformly {
 		$response = $this->request( 'update_contact', $data );
 
 		if( is_wp_error( $response ) ) {
-			
+
 			if( $response->get_error_message() == 'The action was not processed.' ) {
 
 				// Email address changes

@@ -2,7 +2,6 @@
 
 class WPF_Groundhogg {
 
-
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
@@ -451,7 +450,7 @@ class WPF_Groundhogg {
 			}
 		}
 
-		// Advanced Meta
+		// Advanced Meta.
 
 		if ( class_exists( 'GroundhoggBetterMeta\Tab_Api\Fields' ) ) {
 
@@ -562,14 +561,10 @@ class WPF_Groundhogg {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! empty( $data['user_id'] ) ) {
 			$user_id = $data['user_id'];
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		// If we're creating a contact from a user, pass that through
@@ -650,15 +645,7 @@ class WPF_Groundhogg {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 
@@ -672,6 +659,7 @@ class WPF_Groundhogg {
 		unset( $data['first_name'] );
 		unset( $data['last_name'] );
 		unset( $data['email'] );
+
 		foreach ( $data as $key => $value ) {
 
 			$contact->update_meta( $key, $value );

@@ -24,7 +24,7 @@ class WPF_Salesforce {
 	 * Lets outside functions override the object type (Leads for example)
 	 */
 
-	public $object_type;
+	public $object_type = 'Contact';
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -33,7 +33,6 @@ class WPF_Salesforce {
 	 */
 
 	public $tag_type = 'Topic';
-
 
 
 	/**
@@ -61,10 +60,16 @@ class WPF_Salesforce {
 		$this->client_id     = '3MVG9CEn_O3jvv0xMf5rhesocm_5czidz9CFtu_qNZ2V0Zw.bmL0LTRRylD5fhkAKYwGxRDDRXjV4TOowpNmg';
 		$this->client_secret = '9BB0BD5237B1EA6ED8AFE2618053BDB181459DD61AB3B49567A8BA5013C35D76';
 
-		$this->object_type = 'Contact';
+		// Figure out what kinds of tags we're using.
 
-		if ( wpf_get_option( 'sf_tag_type', 'Topics' ) != 'Topics' ) {
+		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
+
+		if ( 'Topics' !== $tag_type ) {
 			$this->tag_type = 'Tag';
+		}
+
+		if ( 'Picklist' === $tag_type ) {
+			$this->supports[] = 'add_tags';
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 ); // up here so it can run when testing the connection.
@@ -90,11 +95,35 @@ class WPF_Salesforce {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 		add_action( 'wpf_api_fail', array( $this, 'api_success' ), 10, 2 );
+		add_filter( 'wpf_get_setting_sf_tag_picklist', array( $this, 'get_setting_sf_tag_picklist' ) );
 
 		$instance_url = wpf_get_option( 'sf_instance_url' );
 		if ( ! empty( $instance_url ) ) {
 			$this->edit_url = trailingslashit( $instance_url ) . 'lightning/r/Contact/%s/view';
 		}
+	}
+
+	/**
+	 * Due to some poor planning a long time ago, crm_field type settings are
+	 * stored as an array, but it makes it way easier to work with if the value
+	 * is a string. This modifies the field value when it's called by
+	 * wpf_get_option().
+	 *
+	 * @since 3.39.4
+	 *
+	 * @param array $setting The setting.
+	 * @return string|bool The setting.
+	 */
+	public function get_setting_sf_tag_picklist( $setting ) {
+
+		if ( ! empty( $setting['crm_field'] ) ) {
+			$setting = $setting['crm_field'];
+		} else {
+			$setting = false;
+		}
+
+		return $setting;
+
 	}
 
 	/**
@@ -105,10 +134,6 @@ class WPF_Salesforce {
 	 */
 
 	public function format_post_data( $post_data ) {
-
-		if ( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
-		}
 
 		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
 
@@ -123,8 +148,6 @@ class WPF_Salesforce {
 		if ( $notifications_count == 1 ) {
 
 			$post_data['contact_id'] = sanitize_text_field( (string) $data->Notification[0]->sObject->children( 'urn:sobject.enterprise.soap.sforce.com' )->Id );
-
-			return $post_data;
 
 		} else {
 
@@ -186,18 +209,13 @@ class WPF_Salesforce {
 
 				wpf_log( 'info', 0, 'Adding contact ID <strong>' . $contact_id . '</strong> to import queue (' . $key . ' of ' . $notifications_count . ').', array( 'source' => 'api' ) );
 
-				wp_fusion()->batch->process->push_to_queue(
-					array(
-						'action' => 'wpf_batch_import_users',
-						'args'   => array( $contact_id, $args ),
-					)
-				);
+				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $args ) ) );
 
 			}
 
 			wp_fusion()->batch->process->save()->dispatch();
 
-			wp_die( '<h3>Success</h3>Multiple contacts detected. Added to import queue.', 'Success', 200 );
+			do_action( 'wpf_api_success', false, false ); // this calls WPF_Salesforce::api_success(), sends the success message, and dies.
 
 		}
 
@@ -453,10 +471,13 @@ class WPF_Salesforce {
 	/**
 	 * Test the connection.
 	 *
-	 * @access  public
-	 * @return  bool
+	 * @since  3.2.0
+	 *
+	 * @param  string $instance_url The instance url.
+	 * @param  string $access_token The access token.
+	 * @param  bool   $test         Whether to test the connection.
+	 * @return bool|WP_Error The connection result.
 	 */
-
 	public function connect( $instance_url = null, $access_token = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -517,7 +538,7 @@ class WPF_Salesforce {
 
 		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
 
-		if ( $tag_type == 'Topics' ) {
+		if ( 'Topics' === $tag_type ) {
 
 			$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20Topic' );
 
@@ -543,6 +564,33 @@ class WPF_Salesforce {
 					$available_tags[ $tag->Id ] = $tag->Name;
 				}
 			}
+		} elseif ( 'Picklist' === $tag_type ) {
+
+			$request  = $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/describe/';
+			$response = wp_safe_remote_get( $request, $this->params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $response->fields as $field ) {
+
+				if ( wpf_get_option( 'sf_tag_picklist' ) === $field->name ) {
+
+					if ( 'multipicklist' !== $field->type ) {
+						return new WP_Error( 'error', 'The selected field ' . $field->name . ' is not a <code>multipicklist</code> field.' );
+					}
+
+					foreach ( $field->{'picklistValues'} as $value ) {
+						$available_tags[ $value->label ] = $value->label;
+					}
+
+					break;
+				}
+			}
+
 		} else {
 
 			$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20TagDefinition' );
@@ -653,7 +701,7 @@ class WPF_Salesforce {
 
 		// Allow using a different field than email address for lookups.
 
-		$lookup_field = wp_fusion()->crm_base->get_crm_field( 'user_email', 'Email' );
+		$lookup_field = wp_fusion()->crm->get_crm_field( 'user_email', 'Email' );
 
 		$lookup_field = apply_filters( 'wpf_salesforce_lookup_field', $lookup_field );
 
@@ -699,7 +747,7 @@ class WPF_Salesforce {
 
 		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
 
-		if ( $tag_type == 'Topics' ) {
+		if ( 'Topics' === $tag_type ) {
 
 			$query_args = array( 'q' => "SELECT TopicId from TopicAssignment WHERE EntityId = '" . $contact_id . "'" );
 
@@ -720,9 +768,23 @@ class WPF_Salesforce {
 			}
 
 			foreach ( $response->records as $tag ) {
+				$contact_tags[] = $tag->{'TopicId'};
+			}
 
-				$contact_tags[] = $tag->TopicId;
+		} elseif ( 'Picklist' === $tag_type ) {
 
+			$tags_field = wpf_get_option( 'sf_tag_picklist' );
+
+			$response = wp_safe_remote_get( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $body->{ $tags_field } ) ) {
+				$contact_tags = explode( ';', $body->{ $tags_field } );
 			}
 		} else {
 
@@ -782,7 +844,7 @@ class WPF_Salesforce {
 
 		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
 
-		if ( $tag_type == 'Topics' ) {
+		if ( 'Topics' === $tag_type ) {
 
 			foreach ( $tags as $tag_id ) {
 
@@ -791,14 +853,30 @@ class WPF_Salesforce {
 					'TopicId'  => $tag_id,
 				);
 
-				$params['body'] = json_encode( $body );
+				$params['body'] = wp_json_encode( $body );
 
 				$response = wp_safe_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/TopicAssignment/', $params );
 
-				if ( is_wp_error( $response ) ) {
-					return $response;
-				}
 			}
+		} elseif ( 'Picklist' === $tag_type ) {
+
+			$current_tags = $this->get_tags( $contact_id );
+
+			if ( is_wp_error( $current_tags ) ) {
+				$current_tags = array(); // if loading them failed for some reason.
+			}
+
+			$tags  = array_merge( $current_tags, $tags );
+			$tags  = implode( ';', array_filter( $tags ) );
+			$field = wpf_get_option( 'sf_tag_picklist' );
+
+			$data = array( $field => $tags );
+
+			$params['body']   = wp_json_encode( $data );
+			$params['method'] = 'PATCH';
+
+			$response = wp_safe_remote_request( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $params );
+
 		} else {
 
 			foreach ( $tags as $tag_id ) {
@@ -811,14 +889,15 @@ class WPF_Salesforce {
 					'Name'   => $label,
 				);
 
-				$params['body'] = json_encode( $body );
+				$params['body'] = wp_json_encode( $body );
 
 				$response = wp_safe_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/ContactTag/', $params );
 
-				if ( is_wp_error( $response ) ) {
-					return $response;
-				}
 			}
+		}
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		return true;
@@ -836,10 +915,10 @@ class WPF_Salesforce {
 		$params               = $this->get_params();
 		$sf_tag_ids_to_remove = array();
 
-		// First get the tag relationship IDs
+		// First get the tag type.
 		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
 
-		if ( $tag_type == 'Topics' ) {
+		if ( 'Topics' === $tag_type ) {
 
 			$query_args = array( 'q' => "SELECT Id, TopicId from TopicAssignment WHERE EntityId = '" . $contact_id . "'" );
 			$request    = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
@@ -876,6 +955,22 @@ class WPF_Salesforce {
 					}
 				}
 			}
+		} elseif ( 'Picklist' === $tag_type ) {
+
+			$current_tags = $this->get_tags( $contact_id );
+
+			$tags = array_diff( $current_tags, $tags );
+
+			$tags = implode( ';', array_filter( $tags ) );
+
+			$data = array(
+				wpf_get_option( 'sf_tag_picklist' ) => $tags,
+			);
+
+			$params['body']   = wp_json_encode( $data );
+			$params['method'] = 'PATCH';
+
+			$response = wp_safe_remote_request( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $params );
 		} else {
 
 			$query_args = array( 'q' => "SELECT Id, TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
@@ -927,15 +1022,11 @@ class WPF_Salesforce {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		$params = $this->get_params();
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		// LastName is required to create a new contact
+		// LastName is required to create a new contact.
 		if ( $this->object_type == 'Contact' && ! isset( $data['LastName'] ) ) {
 			$data['LastName'] = 'unknown';
 		}
@@ -946,7 +1037,7 @@ class WPF_Salesforce {
 			$data['accountId'] = $default_account;
 		}
 
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 		$response       = wp_safe_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/', $params );
 
 		if ( is_wp_error( $response ) ) {
@@ -966,19 +1057,11 @@ class WPF_Salesforce {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		$params = $this->get_params();
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return true;
-		}
-
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PATCH';
 
 		$response = wp_safe_remote_request( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $params );

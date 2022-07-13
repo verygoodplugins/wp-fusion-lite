@@ -126,9 +126,24 @@ class WPF_HubSpot {
 
 		if ( 'date' === $field_type ) {
 
-			// Dates are in milliseconds since the epoch so if the timestamp isn't already in ms we'll multiply x 1000 here.
-			if ( ! empty( $value ) && $value < 1000000000000 ) {
-				$value = gmdate( 'U', strtotime( 'today', $value ) ) * 1000;
+			// Dates are in milliseconds since the epoch so if the timestamp
+			// isn't already in ms we'll multiply x 1000 here. Can't use
+			// gmdate() because we need local time.
+
+			if ( ! empty( $value ) && is_numeric( $value ) && $value < 1000000000000 ) {
+
+				if ( $value % DAY_IN_SECONDS !== 0 ) {
+					// If the date is a timestamp, do the timezone offset and then reset it to midnight.
+					$value += (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+					$value  = strtotime( 'today', $value );
+				}
+
+				// Check if it's within the valid range, otherwise we can get an invalid properties error.
+				if ( $value > ( time() + 1000 * YEAR_IN_SECONDS ) || $value < ( time() - 1000 * YEAR_IN_SECONDS ) ) {
+					return false;
+				}
+
+				$value = $value * 1000;
 			}
 
 			return $value;
@@ -287,6 +302,26 @@ class WPF_HubSpot {
 				}
 			} elseif ( ( isset( $body_json->status ) && $body_json->status == 'error' ) || isset( $body_json->errorType ) ) {
 
+				// Sometimes adding a contact throws an Already Exists error, not sure why. We'll just re-do it with an update and return the ID.
+
+				if ( isset( $body_json->error ) && 'CONTACT_EXISTS' === $body_json->error ) {
+
+					$contact_id = $body_json->{'identityProfile'}->vid;
+
+					$response = wp_safe_remote_post( "https://api.hubapi.com/contacts/v1/contact/vid/{$contact_id}/profile", $args );
+
+					if ( is_wp_error( $response ) ) {
+						return $response;
+					}
+
+					// Fake the response to make it look like we just added a contact.
+
+					$response['body'] = wp_json_encode( array( 'vid' => $contact_id ) );
+
+					return $response;
+
+				}
+
 				$message = $body_json->message;
 
 				// Contextual help
@@ -300,13 +335,19 @@ class WPF_HubSpot {
 				if ( isset( $body_json->validationResults ) ) {
 
 					$message .= '<ul>';
-
 					foreach ( $body_json->validationResults as $result ) {
-
 						$message .= '<li>' . $result->message . '</li>';
-
 					}
+					$message .= '</ul>';
 
+				}
+
+				if ( isset( $body_json->errors ) ) {
+
+					$message .= '<ul>';
+					foreach ( $body_json->errors as $error ) {
+						$message .= '<li>' . $error->message . '</li>';
+					}
 					$message .= '</ul>';
 
 				}
@@ -534,13 +575,14 @@ class WPF_HubSpot {
 			$this->get_params();
 		}
 
-		// One contact can have multiple emails in HubSpot, so in theory one user can be linked to multiple contacts
+		// One contact can have multiple emails in HubSpot, so in theory one user can be linked to multiple contacts.
 
-		$request  = 'https://api.hubapi.com/contacts/v1/contact/email/' . urlencode( $email_address ) . '/profile';
+		$request  = 'https://api.hubapi.com/contacts/v1/contact/email/' . rawurlencode( $email_address ) . '/profile';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if ( is_wp_error( $response ) && $response->get_error_message() == 'contact does not exist' ) {
+		if ( is_wp_error( $response ) && false !== strpos( $response->get_error_message(), 'contact does not exist' ) ) {
 
+			// not found, okay.
 			return false;
 
 		} elseif ( is_wp_error( $response ) ) {
@@ -619,7 +661,7 @@ class WPF_HubSpot {
 		foreach ( $tags as $tag ) {
 
 			$params         = $this->params;
-			$params['body'] = json_encode( array( 'vids' => array( $contact_id ) ) );
+			$params['body'] = wp_json_encode( array( 'vids' => array( $contact_id ) ) );
 
 			$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/add';
 			$response = wp_safe_remote_post( $request, $params );
@@ -649,7 +691,7 @@ class WPF_HubSpot {
 		foreach ( $tags as $tag ) {
 
 			$params         = $this->params;
-			$params['body'] = json_encode( array( 'vids' => array( $contact_id ) ) );
+			$params['body'] = wp_json_encode( array( 'vids' => array( $contact_id ) ) );
 
 			$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/remove';
 			$response = wp_safe_remote_post( $request, $params );
@@ -671,15 +713,7 @@ class WPF_HubSpot {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$properties = array();
 
@@ -690,8 +724,8 @@ class WPF_HubSpot {
 			);
 		}
 
-		$params         = $this->params;
-		$params['body'] = json_encode( array( 'properties' => $properties ) );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( array( 'properties' => $properties ) );
 
 		$request  = 'https://api.hubapi.com/contacts/v1/contact';
 		$response = wp_safe_remote_post( $request, $params );
@@ -713,19 +747,7 @@ class WPF_HubSpot {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$properties = array();
 
@@ -736,8 +758,8 @@ class WPF_HubSpot {
 			);
 		}
 
-		$params         = $this->params;
-		$params['body'] = json_encode( array( 'properties' => $properties ) );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( array( 'properties' => $properties ) );
 
 		$request  = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
 		$response = wp_safe_remote_post( $request, $params );
@@ -782,7 +804,7 @@ class WPF_HubSpot {
 				if ( 'multiselect' == $field_data['type'] && ! empty( $value ) ) {
 					$value = explode( ';', $value );
 				} elseif ( ( 'datepicker' == $field_data['type'] || 'date' == $field_data['type'] ) && is_numeric( $value ) ) {
-					$value /= 1000; // Convert milliseconds back to seconds
+					$value /= 1000; // Convert milliseconds back to seconds.
 				}
 
 				$user_meta[ $field_id ] = $value;
@@ -849,7 +871,7 @@ class WPF_HubSpot {
 
 	public function guest_checkout_complete( $contact_id, $customer_email ) {
 
-		if ( wpf_get_option( 'site_tracking' ) == false ) {
+		if ( wpf_get_option( 'site_tracking' ) == false || defined( 'DOING_WPF_BATCH_TASK' ) || wpf_is_user_logged_in() ) {
 			return;
 		}
 

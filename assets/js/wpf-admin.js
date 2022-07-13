@@ -562,54 +562,6 @@ jQuery(document).ready(function($){
 	});
 
 	//
-	// Bulk Edit tool
-	//
-
-	$( '#bulk_edit' ).on( 'click', function(event) {
-
-		// define the bulk edit row
-		var $bulk_row = $( '#bulk-edit' );
-		
-		// get the selected post ids that are being edited
-		var post_ids = new Array();
-		$bulk_row.find( '#bulk-titles' ).children().each( function() {
-			post_ids.push( $( this ).attr( 'id' ).replace( /^(ttle)/i, '' ) );
-		});
-		
-		// get the custom fields
-
-		var wpf_settings = {};
-		$('[name^="wpf-settings"]').each(function(index, el) {
-
-			var name = $(this).attr( 'name' ).replace( 'wpf-settings', '' ).replace(/\[/g, '').replace(/\]/g, '');
-
-			if($(this).is(':checkbox') && $(this).is(':checked')) {
-				wpf_settings[name] = 1;
-			} else if($(this).is(':checkbox')) {
-				wpf_settings[name] = 0;
-			} else {
-				wpf_settings[name] = $(this).val();
-			}
-
-		});
-		
-		// save the data
-		$.ajax({
-			url: ajaxurl, // this is a variable that WordPress has already defined for us
-			type: 'POST',
-			async: false,
-			cache: false,
-			data: {
-				action: 'wpf_bulk_edit_save', // this is the name of our WP AJAX function that we'll set up next
-				post_ids: post_ids, // and these are the 2 parameters we're passing to our function
-				wpf_settings: wpf_settings,
-			}
-		});
-		
-	});
-
-
-	//
 	// Admin menu editor
 	//
 

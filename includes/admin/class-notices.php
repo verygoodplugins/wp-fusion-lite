@@ -78,10 +78,11 @@ class WPF_Admin_Notices {
 		check_ajax_referer( 'wpf_settings_nonce' );
 
 		if ( isset( $_POST['id'] ) ) {
-			$id = absint( $_POST['id'] );
-		}
 
-		wp_fusion()->settings->set( "dismissed_{$id}", true );
+			$id = sanitize_text_field( wp_unslash( $_POST['id'] ) );
+			wp_fusion()->settings->set( "dismissed_{$id}", true );
+
+		}
 
 		wp_die();
 

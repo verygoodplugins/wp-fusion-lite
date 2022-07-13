@@ -435,7 +435,7 @@ class WPF_Copper {
 		$email = array( 'email' => $email_address );
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $email );
+		$params['body'] = wp_json_encode( $email );
 
 		$request  = 'https://api.copper.com/developer_api/v1/people/fetch_by_email';
 		$response = wp_safe_remote_post( $request, $params );
@@ -527,7 +527,7 @@ class WPF_Copper {
 		$tags = array( 'tags' => $new_tags );
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $tags );
+		$params['body']   = wp_json_encode( $tags );
 		$params['method'] = 'PUT';
 
 		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
@@ -572,7 +572,7 @@ class WPF_Copper {
 		$tags = array( 'tags' => $new_tags );
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $tags );
+		$params['body']   = wp_json_encode( $tags );
 		$params['method'] = 'PUT';
 
 		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
@@ -687,20 +687,16 @@ class WPF_Copper {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
 		$update_data = $this->format_contact_api_payload( $data );
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.copper.com/developer_api/v1/people';
 		$response = wp_safe_remote_post( $request, $params );
@@ -722,21 +718,17 @@ class WPF_Copper {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$update_data = $this->format_contact_api_payload( $data );
 
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $update_data );
+		$params['body']   = wp_json_encode( $update_data );
 
 		$request  = 'https://api.copper.com/developer_api/v1/people/' . $contact_id;
 		$response = wp_safe_remote_post( $request, $params );
@@ -871,7 +863,7 @@ class WPF_Copper {
 		$tag = array( 'tags' => $tag );
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $tag );
+		$params['body'] = wp_json_encode( $tag );
 
 		$url     = 'https://api.copper.com/developer_api/v1/people/search';
 		$results = wp_safe_remote_post( $url, $params );
@@ -887,7 +879,7 @@ class WPF_Copper {
 		// if (isset($body_json[199])) {
 		// 	$tag = array('tags' => $tag, 'page_size' => 200, 'page_number' => $page_number);
 		// 	$params = $this->params;
-		//  $params['body'] = json_encode( $tag );
+		//  $params['body'] = wp_json_encode( $tag );
 
 		// 	$url     = 'https://api.copper.com/developer_api/v1/people/search'];
 		// 	$results = wp_safe_remote_get( $url, $this->params );
@@ -929,7 +921,7 @@ class WPF_Copper {
 		$request          = 'https://api.copper.com/developer_api/v1/webhooks';
 		$params           = $this->params;
 		$params['method'] = 'POST';
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $request, $params );
 

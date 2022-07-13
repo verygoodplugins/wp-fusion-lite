@@ -2,7 +2,6 @@
 
 class WPF_ZeroBSCRM {
 
-
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
@@ -323,11 +322,7 @@ class WPF_ZeroBSCRM {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		global $zbs;
 
@@ -348,15 +343,7 @@ class WPF_ZeroBSCRM {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		global $zbs;
 

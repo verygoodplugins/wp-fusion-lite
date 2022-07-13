@@ -100,7 +100,7 @@ class WPF_BirdSend_Admin {
 					'Content-Type' => 'application/json',
 					'Accept'       => 'application/json',
 				),
-				'body'       => json_encode( $body ),
+				'body'       => wp_json_encode( $body ),
 			);
 
 			$response = wp_safe_remote_post( 'https://api.birdsend.co/oauth/token', $params );

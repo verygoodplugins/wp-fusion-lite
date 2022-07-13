@@ -61,7 +61,8 @@ class WPF_Lite_Helper {
 
 		// OAuth URLs.
 
-		foreach ( wp_fusion()->crm_base->available_crms as $slug => $crm ) {
+		foreach ( wp_fusion()->crm->available_crms as $slug => $crm ) {
+
 			if ( 'salesforce' === $slug ) {
 				add_filter( "wpf_{$slug}_init_auth_url", array( $this, 'auth_url' ) );
 			} else {
@@ -213,6 +214,12 @@ class WPF_Lite_Helper {
 	 */
 	public function meta_fields_woocommerce( $meta_fields ) {
 
+		// The WooCommerce Fattureincloud Premium plugin has a fatal error when we try
+		// to get the address fields since it tries to access the current customer, and
+		// there isn't one.
+
+		remove_filter( 'woocommerce_billing_fields', 'Billing_Fields_woofc', 10, 3); 
+
 		$woocommerce_fields = WC()->countries->get_address_fields( '', 'billing_' );
 
 		// Cleanup.
@@ -345,26 +352,27 @@ class WPF_Lite_Helper {
 
 		echo '<p class="form-field"><label><strong>Product</strong></label></p>';
 
-		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Apply tags when<br />purchased', 'wp-fusion-lite' ) . '</label>';
-		wpf_render_tag_multiselect();
+		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html__( 'Apply tags when purchased', 'wp-fusion-lite' ) . '</label>';
 
-		echo '<br /><span style="margin-left: 0px;" class="description show_if_variable">Tags for product variations can be configured within the Variations tab.</span>';
+		wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags' ) );
 
-		echo '</p>';
-
-		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Apply tags when<br />refunded', 'wp-fusion-lite' );
-		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr_e( 'The tags specified above for \'Apply tags when purchased\' will automatically be removed if an order is refunded.', 'wp-fusion-lite' ) . '"></span>';
-		echo '</label>';
-
-		wpf_render_tag_multiselect();
+		echo '<br /><span style="margin-left: 0px;" class="description show_if_variable">' . esc_html__( 'Tags for product variations can be configured within the variations tab.', 'wp-fusion-lite' ) . '</span>';
 
 		echo '</p>';
 
-		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Apply tags when transaction failed', 'wp-fusion-lite' );
-		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr_e( 'A contact record will be created and these tags will be applied when an initial transaction on an order fails.<br /><br />Note that this may create problems since WP Fusion normally doesn\'t create a contact record until a successful payment is received.<br /><br />In almost all cases it\'s preferable to use abandoned cart tracking instead of failed transaction tagging.', 'wp-fusion-lite' ) . '"></span>';
+		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html__( 'Apply tags when refunded', 'wp-fusion-lite' );
+		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'The tags specified above for \'Apply tags when purchased\' will automatically be removed if an order is refunded.', 'wp-fusion-lite' ) . '"></span>';
 		echo '</label>';
 
-		wpf_render_tag_multiselect();
+		wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_refunded' ) );
+
+		echo '</p>';
+
+		echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html__( 'Apply tags when transaction failed', 'wp-fusion-lite' );
+		echo ' <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'A contact record will be created and these tags will be applied when an initial transaction on an order fails.<br /><br />Note that this may create problems since WP Fusion normally doesn\'t create a contact record until a successful payment is received.<br /><br />In almost all cases it\'s preferable to use abandoned cart tracking instead of failed transaction tagging.', 'wp-fusion-lite' ) . '"></span>';
+		echo '</label>';
+
+		wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_failed' ) );
 
 		echo '</p>';
 
@@ -378,44 +386,44 @@ class WPF_Lite_Helper {
 
 			echo '<p class="form-field"><label><strong>Subscription</strong></label></p>';
 
-			echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html_e( 'Remove tags', 'wp-fusion-lite' ) . '</label>';
+			echo '<p class="form-field"><label for="wpf-apply-tags-woo">' . esc_html__( 'Remove tags', 'wp-fusion-lite' ) . '</label>';
 			echo '<input class="checkbox" type="checkbox" id="wpf-remove-tags-woo" name="wpf-settings-woo[remove_tags]" value="1" />';
-			echo '<span class="description">' . esc_html_e( 'Remove original tags (above) when the subscription is cancelled, put on hold, expires, or is switched', 'wp-fusion-lite' ) . '.</span>';
+			echo '<span class="description">' . esc_html__( 'Remove original tags (above) when the subscription is cancelled, put on hold, expires, or is switched', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Payment failed
 			echo '<p class="form-field"><label>Payment failed</label>';
-			wpf_render_tag_multiselect();
-			echo '<span class="description">' . esc_html_e( 'Apply these tags when a renewal payment fails', 'wp-fusion-lite' ) . '.</span>';
+			wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_payfail' ) );
+			echo '<span class="description">' . esc_html__( 'Apply these tags when a renewal payment fails', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Cancelled
 			echo '<p class="form-field"><label>Cancelled</label>';
-			wpf_render_tag_multiselect();
-			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription is cancelled', 'wp-fusion-lite' ) . '.</span>';
+			wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_cancelled' ) );
+			echo '<span class="description">' . esc_html__( 'Apply these tags when a subscription is cancelled', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Put on hold
 			echo '<p class="form-field"><label>Put on hold</label>';
-			wpf_render_tag_multiselect();
-			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription is put on hold', 'wp-fusion-lite' ) . '.</span>';
+			wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_hold' ) );
+			echo '<span class="description">' . esc_html__( 'Apply these tags when a subscription is put on hold', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Expires
 			echo '<p class="form-field"><label>Pending cancellation</label>';
-			wpf_render_tag_multiselect();
-			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription has been cancelled by the user but there is still time remaining in the subscription', 'wp-fusion-lite' ) . '.</span>';
+			wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_pending_cancel' ) );
+			echo '<span class="description">' . esc_html__( 'Apply these tags when a subscription has been cancelled by the user but there is still time remaining in the subscription', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			// Expires
 			echo '<p class="form-field"><label>Expired</label>';
-			wpf_render_tag_multiselect();
-			echo '<span class="description">' . esc_html_e( 'Apply these tags when a subscription expires', 'wp-fusion-lite' ) . '.</span>';
+			wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_expired' ) );
+			echo '<span class="description">' . esc_html__( 'Apply these tags when a subscription expires', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			echo '<p class="form-field"><label>Free trial over</label>';
-			wpf_render_tag_multiselect();
-			echo '<span class="description">' . esc_html_e( 'Apply these tags when free trial ends', 'wp-fusion-lite' ) . '.</span>';
+			wpf_render_tag_multiselect( array( 'field_id' => 'apply_tags_trial_over' ) );
+			echo '<span class="description">' . esc_html__( 'Apply these tags when free trial ends', 'wp-fusion-lite' ) . '.</span>';
 			echo '</p>';
 
 			echo '</div>';
@@ -438,7 +446,7 @@ class WPF_Lite_Helper {
 
 		}
 
-		echo '<p>' . sprintf( esc_html__( '<strong>Upgrade WP Fusion today</strong> and automate your WooCommerce marketing with %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</p>';
+		echo '<p>' . sprintf( esc_html__( '%1$sUpgrade WP Fusion today%2$s and automate your WooCommerce marketing with %3$s.', 'wp-fusion-lite' ), '<strong>', '</strong>', esc_html( wp_fusion()->crm->name ) ) . '</p>';
 
 		echo '<div class="buttonwrapper">';
 		echo '<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_source=free-plugin&utm_medium=woocommerce&utm_campaign=free-plugin" target="_blank">Learn More</a>';
@@ -780,7 +788,7 @@ class WPF_Lite_Helper {
 		if ( wpf_get_option( 'connection_configured' ) ) {
 
 			echo '<div id="wpf-pro">';
-			echo '<img src="' . esc_url( WPF_DIR_URL . '/assets/img/logo-sm-trans.png' ) . '">';
+			echo '<img id="pro-logo" src="' . esc_url( WPF_DIR_URL . '/assets/img/logo-sm-trans.png' ) . '">';
 			echo '<strong>You are using the free version of WP Fusion.</strong> For an even deeper integration with ' . esc_html( wp_fusion()->crm->name ) . ', consider <a href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=header&utm_campaign=free-plugin" target="_blank">upgrading to one of our paid plans</a> 🚀';
 			echo '</div>';
 

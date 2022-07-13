@@ -37,42 +37,19 @@ class WPF_Staging {
 	 * @param string $method The method.
 	 * @param array  $args   The arguments.
 	 */
-
 	public function __call( $method, $args ) {
 
-		wpf_log( 'notice', wpf_get_current_user_id(), 'Staging mode enabled, method ' . $method . '.' );
+		wpf_log(
+			'notice',
+			wpf_get_current_user_id(),
+			'Staging mode enabled (URL ' . get_site_url() . '). Method ' . $method . ':',
+			array(
+				'source' => wp_fusion()->crm->slug,
+				'args'   => $args,
+			)
+		);
+
 		return false;
-
-	}
-
-	/**
-	 * Sets up hooks specific to this CRM
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function init() {}
-
-	/**
-	 * Set connection configured to true if staging is in use
-	 *
-	 * @access  public
-	 * @return  void
-	 */
-
-	public function set_connection_configured() {
-
-		if( is_admin() && isset( $_POST['wpf_options']['crm'] ) && $_POST['wpf_options']['crm'] == $this->slug ) {
-
-			if( empty( $_POST['wpf_options']['connection_configured'] ) ) {
-
-				$_POST['wpf_options']['connection_configured'] = true;
-				$this->sync();
-
-			}
-
-		}
 
 	}
 
@@ -121,11 +98,7 @@ class WPF_Staging {
 
 	public function sync_tags() {
 
-		$available_tags = wpf_get_option( 'available_tags', array() );
-
-		wp_fusion()->settings->set( 'available_tags', $available_tags );
-
-		return $available_tags;
+		return wpf_get_option( 'available_tags', array() );
 
 	}
 
@@ -139,11 +112,7 @@ class WPF_Staging {
 
 	public function sync_crm_fields() {
 
-		$crm_fields = wpf_get_option( 'crm_fields', array() );
-
-		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
-
-		return $crm_fields;
+		return wpf_get_option( 'crm_fields', array() );
 
 	}
 
@@ -161,7 +130,7 @@ class WPF_Staging {
 
 		$staging_id = get_user_meta( $user->ID, WPF_CONTACT_ID_META_KEY, true );
 
-		if( ! empty( $staging_id ) ) {
+		if ( ! empty( $staging_id ) ) {
 			return $staging_id;
 		} else {
 			return false;
@@ -183,14 +152,10 @@ class WPF_Staging {
 
 		$staging_tags = get_user_meta( $user_id, WPF_TAGS_META_KEY, true );
 
-		if( ! empty( $staging_tags ) ) {
-
+		if ( ! empty( $staging_tags ) ) {
 			return $staging_tags;
-
 		} else {
-
-			return false;
-
+			return array();
 		}
 
 	}
@@ -230,9 +195,9 @@ class WPF_Staging {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
-		// Generate a random contact ID
+		// Generate a random contact ID.
 		return 'staging_' . substr( md5( microtime() . wp_rand() ), 0, 10 );
 
 	}
@@ -245,7 +210,7 @@ class WPF_Staging {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		return true;
 

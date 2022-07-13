@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.38.44
+ * Version: 3.40.12
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.38.44' );
+define( 'WP_FUSION_VERSION', '3.40.12' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -60,14 +60,16 @@ final class WP_Fusion_Lite {
 	/**
 	 * Manages configured CRMs
 	 *
-	 * @var WPF_CRM_Base
 	 * @since 2.0
+	 * @since 3.40 No longer in use, maintained for backwards compatibility.
+	 *
+	 * @var   WPF_CRM_Base
 	 */
 	public $crm_base;
 
 
 	/**
-	 * Access to the currently selected CRM
+	 * Access to the currently selected CRM.
 	 *
 	 * @var crm
 	 * @since 2.0
@@ -292,21 +294,6 @@ final class WP_Fusion_Lite {
 
 	}
 
-
-	/**
-	 * Fires when WP Fusion has loaded.
-	 *
-	 * When developing addons, use this hook to initialize any functionality
-	 * that depends on WP Fusion.
-	 *
-	 * @since 3.37.14
-	 *
-	 * @link  https://wpfusion.com/documentation/actions/wp_fusion_init/
-	 */
-	public function init() {
-		do_action( 'wp_fusion_init' );
-	}
-
 	/**
 	 * Fires when WP Fusion is deactivated.
 	 *
@@ -338,7 +325,7 @@ final class WP_Fusion_Lite {
 		if ( ! $this->is_full_version() ) {
 
 			if ( ! function_exists( 'is_plugin_active' ) ) {
-				require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+				require_once ABSPATH . '/wp-admin/includes/plugin.php';
 			}
 
 			// If the full version has been installed, deactivate this one.
@@ -389,63 +376,64 @@ final class WP_Fusion_Lite {
 		return apply_filters(
 			'wpf_crms',
 			array(
-				'infusionsoft'    => 'WPF_Infusionsoft_iSDK',
-				'activecampaign'  => 'WPF_ActiveCampaign',
-				'ontraport'       => 'WPF_Ontraport',
-				'drip'            => 'WPF_Drip',
-				'convertkit'      => 'WPF_ConvertKit',
-				'agilecrm'        => 'WPF_AgileCRM',
-				'salesforce'      => 'WPF_Salesforce',
-				'mautic'          => 'WPF_Mautic',
-				'intercom'        => 'WPF_Intercom',
-				//'aweber'         => 'WPF_AWeber',
-				'mailerlite'      => 'WPF_MailerLite',
-				'capsule'         => 'WPF_Capsule',
-				'zoho'            => 'WPF_Zoho',
-				'kartra'          => 'WPF_Kartra',
-				'userengage'      => 'WPF_UserEngage',
-				'convertfox'      => 'WPF_ConvertFox',
-				'salesflare'      => 'WPF_Salesflare',
-				//'vtiger'         => 'WPF_Vtiger',
-				'flexie'          => 'WPF_Flexie',
-				'tubular'         => 'WPF_Tubular',
-				'maropost'        => 'WPF_Maropost',
-				'mailchimp'       => 'WPF_MailChimp',
-				'sendinblue'      => 'WPF_SendinBlue',
-				'hubspot'         => 'WPF_HubSpot',
-				'platformly'      => 'WPF_Platformly',
-				'drift'           => 'WPF_Drift',
-				'staging'         => 'WPF_Staging',
-				'autopilot'       => 'WPF_Autopilot',
-				'customerly'      => 'WPF_Customerly',
-				'copper'          => 'WPF_Copper',
-				'nationbuilder'   => 'WPF_NationBuilder',
-				'groundhogg'      => 'WPF_Groundhogg',
-				'mailjet'         => 'WPF_Mailjet',
-				'sendlane'        => 'WPF_Sendlane',
-				'getresponse'     => 'WPF_GetResponse',
-				'mailpoet'        => 'WPF_MailPoet',
-				'klaviyo'         => 'WPF_Klaviyo',
-				'birdsend'        => 'WPF_BirdSend',
-				'zerobscrm'       => 'WPF_ZeroBSCRM',
-				'mailengine'      => 'WPF_MailEngine',
-				'klick-tipp'      => 'WPF_KlickTipp',
-				'sendfox'         => 'WPF_SendFox',
-				'quentn'          => 'WPF_Quentn',
-				//'loopify'        => 'WPF_Loopify',
-				'wp-erp'          => 'WPF_WP_ERP',
-				'engagebay'       => 'WPF_EngageBay',
-				'fluentcrm'       => 'WPF_FluentCRM',
-				'growmatik'       => 'WPF_Growmatik',
-				'highlevel'       => 'WPF_HighLevel',
-				'emercury'        => 'WPF_Emercury',
-				'fluentcrm-rest'  => 'WPF_FluentCRM_REST',
-				'pulsetech'       => 'WPF_PulseTechnologyCRM',
-				'autonami'        => 'WPF_Autonami',
-				'bento'           => 'WPF_Bento',
-				'dynamics-365'    => 'WPF_Dynamics_365',
-				'groundhogg-rest' => 'WPF_Groundhogg_REST',
-				'moosend'         => 'WPF_MooSend',
+				'infusionsoft'     => 'WPF_Infusionsoft_iSDK',
+				'activecampaign'   => 'WPF_ActiveCampaign',
+				'ontraport'        => 'WPF_Ontraport',
+				'drip'             => 'WPF_Drip',
+				'convertkit'       => 'WPF_ConvertKit',
+				'agilecrm'         => 'WPF_AgileCRM',
+				'salesforce'       => 'WPF_Salesforce',
+				'mautic'           => 'WPF_Mautic',
+				'intercom'         => 'WPF_Intercom',
+				// 'aweber'         => 'WPF_AWeber',
+				'mailerlite'       => 'WPF_MailerLite',
+				'capsule'          => 'WPF_Capsule',
+				'zoho'             => 'WPF_Zoho',
+				'kartra'           => 'WPF_Kartra',
+				'userengage'       => 'WPF_UserEngage',
+				'convertfox'       => 'WPF_ConvertFox',
+				'salesflare'       => 'WPF_Salesflare',
+				// 'vtiger'         => 'WPF_Vtiger',
+				'flexie'           => 'WPF_Flexie',
+				'tubular'          => 'WPF_Tubular',
+				'maropost'         => 'WPF_Maropost',
+				'mailchimp'        => 'WPF_MailChimp',
+				'sendinblue'       => 'WPF_SendinBlue',
+				'hubspot'          => 'WPF_HubSpot',
+				'platformly'       => 'WPF_Platformly',
+				'drift'            => 'WPF_Drift',
+				'staging'          => 'WPF_Staging',
+				'autopilot'        => 'WPF_Autopilot',
+				'customerly'       => 'WPF_Customerly',
+				'copper'           => 'WPF_Copper',
+				'nationbuilder'    => 'WPF_NationBuilder',
+				'groundhogg'       => 'WPF_Groundhogg',
+				'mailjet'          => 'WPF_Mailjet',
+				'sendlane'         => 'WPF_Sendlane',
+				'getresponse'      => 'WPF_GetResponse',
+				'mailpoet'         => 'WPF_MailPoet',
+				'klaviyo'          => 'WPF_Klaviyo',
+				'birdsend'         => 'WPF_BirdSend',
+				'zerobscrm'        => 'WPF_ZeroBSCRM',
+				'mailengine'       => 'WPF_MailEngine',
+				'klick-tipp'       => 'WPF_KlickTipp',
+				'sendfox'          => 'WPF_SendFox',
+				'quentn'           => 'WPF_Quentn',
+				// 'loopify'        => 'WPF_Loopify',
+				'wp-erp'           => 'WPF_WP_ERP',
+				'engagebay'        => 'WPF_EngageBay',
+				'fluentcrm'        => 'WPF_FluentCRM',
+				'growmatik'        => 'WPF_Growmatik',
+				'highlevel'        => 'WPF_HighLevel',
+				'emercury'         => 'WPF_Emercury',
+				'fluentcrm-rest'   => 'WPF_FluentCRM_REST',
+				'pulsetech'        => 'WPF_PulseTechnologyCRM',
+				'autonami'         => 'WPF_Autonami',
+				'bento'            => 'WPF_Bento',
+				'dynamics-365'     => 'WPF_Dynamics_365',
+				'groundhogg-rest'  => 'WPF_Groundhogg_REST',
+				'moosend'          => 'WPF_MooSend',
+				'constant-contact' => 'WPF_Constant_Contact',
 			)
 		);
 
@@ -524,6 +512,8 @@ final class WP_Fusion_Lite {
 
 	}
 
+
+
 	/**
 	 * Initialize the CRM object based on the currently configured options
 	 *
@@ -531,8 +521,26 @@ final class WP_Fusion_Lite {
 	 */
 	public function init_crm() {
 
-		self::$instance->crm_base = new WPF_CRM_Base();
-		self::$instance->crm      = self::$instance->crm_base->crm;
+		self::$instance->crm      = new WPF_CRM_Base();
+		self::$instance->crm_base = self::$instance->crm; // backwards compatibility with pre 3.40 integrations.
+
+		do_action( 'wpf_crm_loaded' );
+
+		return self::$instance->crm;
+
+	}
+
+	/**
+	 * Fires when WP Fusion has loaded.
+	 *
+	 * When developing addons, use this hook to initialize any functionality
+	 * that depends on WP Fusion.
+	 *
+	 * @since 3.37.14
+	 *
+	 * @link  https://wpfusion.com/documentation/actions/wp_fusion_init/
+	 */
+	public function init() {
 
 		/**
 		 * Init CRM.
@@ -548,8 +556,17 @@ final class WP_Fusion_Lite {
 
 		do_action_ref_array( 'wp_fusion_init_crm', array( &self::$instance->crm ) );
 
-		return self::$instance->crm;
+		/**
+		 * Init.
+		 *
+		 * WP Fusion is ready.
+		 *
+		 * @since 3.37.14
+		 *
+		 * @link  https://wpfusion.com/documentation/actions/wp_fusion_init/
+		 */
 
+		do_action( 'wp_fusion_init' );
 	}
 
 	/**
@@ -626,7 +643,6 @@ final class WP_Fusion_Lite {
 		}
 
 	}
-
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

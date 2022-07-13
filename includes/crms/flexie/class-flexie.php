@@ -328,7 +328,6 @@ class WPF_Flexie {
 
 	public function get_tags( $contact_id ) {
 
-
 		$this->connect();
 
 		$contact_info = array();
@@ -442,14 +441,9 @@ class WPF_Flexie {
 	 */
 
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		$this->connect();
-
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
 
 		$request 		= $this->url . 'api/contacts/new?apikey=' . $this->api_key;
 		$params = array(
@@ -484,17 +478,9 @@ class WPF_Flexie {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		$this->connect();
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-	
-		if( empty( $data ) ) {
-			return false;
-		}
 
 		$request      		= $this->url . 'api/contacts/' . $contact_id . '?apikey=' . $this->api_key;
 		$params = array(

@@ -529,7 +529,7 @@ class WPF_EngageBay {
 		$tags = $this->convert_associative_tags( $tags );
 
 		$params                            = $this->params;
-		$params['body']                    = 'tags=' . json_encode( $tags );
+		$params['body']                    = 'tags=' . wp_json_encode( $tags );
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
 
 		$request  = $this->api_url . $this->add_tags_str . $contact_id;
@@ -599,20 +599,16 @@ class WPF_EngageBay {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
 		$data = $this->format_contact_api_payload( $data );
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$request  = $this->api_url . $this->add_contact_str;
 		$response = wp_safe_remote_post( $request, $params );
@@ -638,18 +634,10 @@ class WPF_EngageBay {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		$data = $this->format_contact_api_payload( $data );
@@ -658,7 +646,7 @@ class WPF_EngageBay {
 		$data['id'] = $contact_id;
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_url . $this->update_partial_str;
@@ -821,7 +809,7 @@ class WPF_EngageBay {
 		$params['body'] = array(
 			'page_size'   => 10000,
 			'sort_key'    => '-created_time',
-			'filter_json' => json_encode( $filter ),
+			'filter_json' => wp_json_encode( $filter ),
 		);
 
 		$response = wp_safe_remote_post( $request, $params );
@@ -970,7 +958,7 @@ class WPF_EngageBay {
 			$contact_data['properties'][] = array(
 				'type'  => 'SYSTEM',
 				'name'  => 'address',
-				'value' => json_encode( $address_data ),
+				'value' => wp_json_encode( $address_data ),
 			);
 
 		}

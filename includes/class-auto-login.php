@@ -37,8 +37,7 @@ class WPF_Auto_Login {
 		add_action( 'clear_auto_login_metadata', array( $this, 'clear_auto_login_metadata' ) );
 
 		// End the session when someone logs in.
-		add_action( 'wp_login', array( $this, 'end_auto_login' ), 1 );
-		add_action( 'wp_authenticate', array( $this, 'end_auto_login' ), 1 );
+		add_action( 'set_logged_in_cookie', array( $this, 'end_auto_login' ), 1 );
 		add_action( 'wp_logout', array( $this, 'end_auto_login' ), 1 );
 
 		add_action( 'wpf_get_tags_start', array( $this, 'unhook_tags_modified' ), 1 );
@@ -379,19 +378,16 @@ class WPF_Auto_Login {
 
 
 	/**
-	 * Ends session on user login or logout
+	 * Ends session on user login or logout.
 	 *
-	 * @access public
-	 * @return void
+	 * @since 2.9
+	 * @since 3.39.4 Moved to set_logged_in_cookie hook.
 	 */
-
 	public function end_auto_login() {
 
-		if ( ! empty( $_COOKIE['wpf_contact'] ) ) {
+		if ( doing_wpf_auto_login() ) {
 
-			$contact_data = array_map( 'sanitize_text_field', json_decode( wp_unslash( $_COOKIE['wpf_contact'] ), true ) );
-
-			$this->clear_auto_login_metadata( $contact_data['user_id'] );
+			$this->clear_auto_login_metadata( $this->auto_login_user['user_id'] );
 			$this->auto_login_user = false;
 
 			if ( ! headers_sent() ) {

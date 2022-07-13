@@ -2,7 +2,6 @@
 
 class WPF_FluentCRM_Admin {
 
-
 	private $slug;
 	private $name;
 	private $crm;

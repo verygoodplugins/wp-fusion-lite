@@ -1,4 +1,4 @@
--
+
 body > .select4-container--open {
 	z-index: 999999; 
 }
@@ -107,7 +107,7 @@ img.tips {
 }
 
 #tiptip_holder {
-	max-width: 250px !important;
+	max-width: 300px !important;
 	display: none;
 	z-index: 8675309;
 	position: absolute;
@@ -115,6 +115,10 @@ img.tips {
 
 	/*rtl:ignore*/
 	left: 0;
+}
+
+#tiptip_holder #tiptip_content {
+	max-width: 300px !important;
 }
 
 #tiptip_holder a {
@@ -534,6 +538,14 @@ i#wpf-select4-tags-loading {
 	width: 100%;
 }
 
+/* Status metabox */
+
+#wpf-status.postbox span.dashicons {
+	text-decoration: none;
+    vertical-align: middle;
+    font-size: 16px;
+}
+
 /* PMPro */
 
 body.memberships_page_pmpro-discountcodes .select4-container {
@@ -663,6 +675,22 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 
 .pum-field-select.select4-wpf-tags-wrapper input.select4-search__field {
 	height: 28px;
+}
+
+/* WPPayForm Pro */
+
+.payform_editor_wrapper .el-select.el-select--medium {
+	width: 100%;
+	max-width: 100%;
+}
+
+.payform_editor_wrapper .el-select.el-select--medium .el-select__input.is-medium {
+	background: transparent;
+	border: none;
+}
+
+.payform_editor_wrapper .el-select.el-select--XXXX {
+	width: 300px;
 }
 
 /* wpForo / Private Messages / Generic */

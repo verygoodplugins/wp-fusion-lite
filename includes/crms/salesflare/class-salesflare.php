@@ -341,7 +341,7 @@ class WPF_Salesflare {
 			$request      		= 'https://api.salesflare.com/contacts/' . $contact_id;
 			$params           	= $this->params;
 			$params['method'] 	= 'PUT';
-			$params['body']  	= json_encode(array('tags' => array(array('name' => $tag_name))));
+			$params['body']  	= wp_json_encode(array('tags' => array(array('name' => $tag_name))));
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -374,7 +374,7 @@ class WPF_Salesflare {
 			$request                = 'https://api.salesflare.com/contacts/'.$contact_id;
 			$params           		= $this->params;
 			$params['method'] 		= 'PUT';
-			$params['body']  		= json_encode(array('tags' => array(array('id' => $tag, '_dirty' => true, '_deleted' => true))));
+			$params['body']  		= wp_json_encode(array('tags' => array(array('id' => $tag, '_dirty' => true, '_deleted' => true))));
 
 			$response     		    = wp_safe_remote_post( $request, $params );
 
@@ -396,14 +396,10 @@ class WPF_Salesflare {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$update_data = array();
@@ -439,7 +435,6 @@ class WPF_Salesflare {
 								$found_address = false;
 								foreach( $update_data['addresses'] as $i => $address ) {
 
-
 									if( $address['type'] == $exploded_field[1] ) {
 
 										$found_address = true;
@@ -470,7 +465,7 @@ class WPF_Salesflare {
 		$url              = 'https://api.salesflare.com/contacts';
 		$params           = $this->params;
 		$params['method'] = 'POST';
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -491,18 +486,10 @@ class WPF_Salesflare {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if( empty( $data ) ) {
-			return false;
 		}
 
 		$update_data = array( '_dirty' => true );
@@ -581,7 +568,7 @@ class WPF_Salesflare {
 		$url              = 'https://api.salesflare.com/contacts/' . $contact_id;
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $update_data );
+		$params['body']   = wp_json_encode( $update_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 

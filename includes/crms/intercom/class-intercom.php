@@ -454,7 +454,7 @@ class WPF_Intercom {
 
 		foreach ( $tags as $tag ) {
 
-			$params['body'] = json_encode(
+			$params['body'] = wp_json_encode(
 				array(
 					'name'  => $tag,
 					'users' => array( array( 'id' => $contact_id ) ),
@@ -489,7 +489,7 @@ class WPF_Intercom {
 
 		foreach ( $tags as $tag ) {
 
-			$params['body'] = json_encode(
+			$params['body'] = wp_json_encode(
 				array(
 					'name'  => $tag,
 					'users' => array(
@@ -520,11 +520,7 @@ class WPF_Intercom {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true, $lead = false ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data, $lead = false ) {
 
 		// General cleanup and restructuring.
 
@@ -593,13 +589,12 @@ class WPF_Intercom {
 	 *
 	 * @since  3.38.36
 	 *
-	 * @param array $data            The lead data.
-	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @param  array $data   The lead data.
 	 * @return string The lead ID.
 	 */
-	public function add_lead( $data, $map_meta_fields = true ) {
+	public function add_lead( $data ) {
 
-		return $this->add_contact( $data, $map_meta_fields, $lead = true );
+		return $this->add_contact( $data, $lead = true );
 
 	}
 
@@ -610,17 +605,9 @@ class WPF_Intercom {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true, $lead = false ) {
+	public function update_contact( $contact_id, $data, $lead = false ) {
 
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
-
-		// General cleanup and restructuring
+		// General cleanup and restructuring.
 
 		$body = array( 'id' => $contact_id );
 
@@ -677,13 +664,13 @@ class WPF_Intercom {
 	 *
 	 * @since  3.38.36
 	 *
-	 * @param array $data            The lead data.
-	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @param  string $contact_id The contact ID.
+	 * @param  array  $data       The lead data.
 	 * @return string The lead ID.
 	 */
-	public function update_lead( $data, $map_meta_fields = true ) {
+	public function update_lead( $contact_id, $data ) {
 
-		return $this->update_contact( $data, $map_meta_fields, $lead = true );
+		return $this->update_contact( $contact_id, $data, $lead = true );
 
 	}
 

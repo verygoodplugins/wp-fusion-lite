@@ -308,7 +308,7 @@ class WPF_Ontraport {
 
 						if ( ! empty( $data['id'] ) ) {
 
-							$args['body'] = json_encode( $data );
+							$args['body'] = wp_json_encode( $data );
 
 							return wp_safe_remote_request( $url, $args );
 						}
@@ -327,7 +327,7 @@ class WPF_Ontraport {
 
 						if ( ! empty( $data['contact_id'] ) ) {
 
-							$args['body'] = json_encode( $data );
+							$args['body'] = wp_json_encode( $data );
 
 							return wp_safe_remote_request( $url, $args );
 						}
@@ -617,7 +617,7 @@ class WPF_Ontraport {
 
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $post_data );
+		$params['body']   = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
 
@@ -650,7 +650,7 @@ class WPF_Ontraport {
 
 		$params           = $this->params;
 		$params['method'] = 'DELETE';
-		$params['body']   = json_encode( $post_data );
+		$params['body']   = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( 'https://api.ontraport.com/1/objects/tag', $params );
 
@@ -670,14 +670,10 @@ class WPF_Ontraport {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		// Referral data.
@@ -724,18 +720,10 @@ class WPF_Ontraport {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		// Referral data
@@ -752,7 +740,7 @@ class WPF_Ontraport {
 
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 
 		$request  = 'https://api.ontraport.com/1/objects';
 		$response = wp_safe_remote_post( $request, $params );

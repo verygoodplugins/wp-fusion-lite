@@ -189,6 +189,20 @@ class WPF_ActiveCampaign {
 
 				$response = new WP_Error( $body->code, $body->message . ': ' . $body->error );
 
+			} elseif ( isset( $body->result_code ) && 0 === $body->result_code ) {
+
+				if ( false !== strpos( $body->result_message, 'Invalid contact ID' ) || false !== strpos( $body->result_message, 'Contact does not exist' ) ) {
+					$code = 'not_found';
+				} else {
+					$code = 'error';
+				}
+
+				$response = new WP_Error( $code, $body->result_message );
+
+			} elseif ( 403 === $code ) {
+
+				$response = new WP_Error( 'error', 'Access denied (403). This usually means your ActiveCampaign API key is invalid, at Settings &raquo; WP Fusion &raquo; Setup.' );
+
 			} elseif ( 404 === $code ) {
 
 				$response = new WP_Error( 'not_found', $body->message );
@@ -530,7 +544,7 @@ class WPF_ActiveCampaign {
 
 
 	/**
-	 * Gets all tags currently applied to the user, also update the list of available tags. This uses the old API since the v3 API only uses tag IDs
+	 * Gets all tags currently applied to the contact, also update the list of available tags. This uses the old API since the v3 API only uses tag IDs
 	 *
 	 * @access public
 	 * @return void
@@ -660,11 +674,7 @@ class WPF_ActiveCampaign {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		// Get lists.
 		$lists = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'ac_lists', array() ) );
@@ -711,15 +721,7 @@ class WPF_ActiveCampaign {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		// Allow filtering.
 		$lists = apply_filters( 'wpf_update_contact_lists', array() );
@@ -732,6 +734,9 @@ class WPF_ActiveCampaign {
 
 		$data['id']        = $contact_id;
 		$data['overwrite'] = 0;
+
+		// you can pass $data['status[1]'] = 1; to re-subscribe an unsubscribed contact to a list. [1] is the ID of the list.
+		// for this to work you must also have $data['p[1]'] = 1;. See example at 
 
 		$request = add_query_arg(
 			array(
@@ -785,6 +790,10 @@ class WPF_ActiveCampaign {
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $response ) ) {
+			return false;
+		}
 
 		$user_meta = array();
 
@@ -1113,7 +1122,7 @@ class WPF_ActiveCampaign {
 			)
 		);
 
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$response = wp_safe_remote_post( $this->api_url . 'api/3/ecomCustomers', $params );
 
@@ -1121,7 +1130,17 @@ class WPF_ActiveCampaign {
 
 		if ( is_wp_error( $response ) ) {
 
-			wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message(), array( 'source' => 'wpf-ecommerce' ) );
+			if ( 'related_missing' === $response->get_error_code() ) {
+
+				// Connection was deleted or is invalid.
+				delete_option( 'wpf_ac_connection_id' );
+
+				wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message() . ' It looks like the connection ID ' . $connection_id . ' was deleted. Please re-enable Deep Data via the WP Fusion settings.', array( 'source' => 'wpf-ecommerce' ) );
+
+			} else {
+				wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message(), array( 'source' => 'wpf-ecommerce' ) );
+			}
+
 			return false;
 
 		}

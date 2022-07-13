@@ -197,6 +197,14 @@ class WPF_Batch {
 		if ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
 			$this->process->dispatch();
 		}
+		
+		if(!is_array($status)){
+			$status = array(
+				'total'=>0,
+				'remaining'=>0,
+				'key'=>0
+			);
+		}
 
 		$total     = absint( $status['total'] );
 		$remaining = absint( $status['remaining'] );
@@ -250,6 +258,8 @@ class WPF_Batch {
 			die();
 		}
 
+		reset( $objects ); // fix the pointer in cases where objects might have been removed by the filter.
+
 		$operations = $this->get_export_options();
 
 		// This one we'll hardcode since it doesn't show up in the usual list.
@@ -258,7 +268,18 @@ class WPF_Batch {
 			'title' => 'Contacts',
 		);
 
-		wpf_log( 'info', 0, sprintf( __( 'Beginning %1$s batch operation on %2$d %3$s.', 'wp-fusion-lite' ), '<strong>' . $operations[ $hook ]['label'] . '</strong>', count( $objects ), strtolower( $operations[ $hook ]['title'] ) ), array( 'source' => 'batch-process' ) );
+		wpf_log(
+			'info',
+			0,
+			sprintf(
+				// translators: 1: Operation title, 2: Count of records to be processed, 3: Type of records being processed ("users", "orders", etc).
+				__( 'Beginning %1$s batch operation on %2$d %3$s.', 'wp-fusion-lite' ),
+				'<strong>' . $operations[ $hook ]['label'] . '</strong>',
+				count( $objects ),
+				strtolower( $operations[ $hook ]['title'] )
+			),
+			array( 'source' => 'batch-process' )
+		);
 
 		// Int IDs are smaller in the DB than strings, but sometimes we'll still need to use strings (i.e. Drip subscriber IDs).
 		if ( is_numeric( $objects[0] ) ) {

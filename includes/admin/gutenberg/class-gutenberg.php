@@ -22,6 +22,10 @@ class Main {
 
 	public function __construct() {
 
+		if ( ! wpf_get_option( 'restrict_content', true ) ) {
+			return;
+		}
+		
 		// Load Assets
 		add_action( 'enqueue_block_editor_assets', array( $this, 'editor_assets' ) ); // Load Editor Assets
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );        // Load Admin Assets

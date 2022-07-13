@@ -5,7 +5,7 @@ class WPF_Drip {
 	// Unsubscribes:
 	// When someone unsubscribes get_contact_id() will return Not Found unless the peson has been reactivated
 	// update_contact() will work but will return the "status" indicating they're unsubscribed
-	// apply_tags() does work
+	// apply_tags() does work.
 
 	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
@@ -100,7 +100,7 @@ class WPF_Drip {
 	 */
 	public function format_custom_field_key( $field ) {
 
-		$field = sanitize_title( $field );
+		$field = str_replace( ' ', '_', $field );
 
 		return str_replace( '-', '_', $field );
 
@@ -216,14 +216,18 @@ class WPF_Drip {
 
 		if ( isset( $drip_payload->event ) && ( $drip_payload->event == 'subscriber.applied_tag' || $drip_payload->event == 'subscriber.removed_tag' || $drip_payload->event == 'subscriber.updated_custom_field' || $drip_payload->event == 'subscriber.updated_email_address' ) ) {
 
-			// Admin settings webhooks
+			// Admin settings webhooks.
 			$post_data['contact_id'] = sanitize_key( $drip_payload->data->subscriber->id );
+			$post_data['tags']       = array_map( 'sanitize_text_field', $drip_payload->data->subscriber->tags );
+
 			return $post_data;
 
 		} elseif ( isset( $drip_payload->subscriber ) ) {
 
-			// Automations / rules triggers
+			// Automations / rules triggers.
 			$post_data['contact_id'] = sanitize_key( $drip_payload->subscriber->id );
+			$post_data['tags']       = array_map( 'sanitize_text_field', $drip_payload->subscriber->tags );
+
 			return $post_data;
 
 		} else {
@@ -735,13 +739,9 @@ class WPF_Drip {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		$this->connect();
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
 
 		$email = $data['email'];
 		unset( $data['email'] );
@@ -781,17 +781,9 @@ class WPF_Drip {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		$this->connect();
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
 
 		if ( isset( $data['email'] ) ) {
 			$provided_email = $data['email'];

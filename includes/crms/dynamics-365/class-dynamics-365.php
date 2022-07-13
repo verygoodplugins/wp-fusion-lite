@@ -337,9 +337,14 @@ class WPF_Dynamics_365 {
 
 
 	/**
-	 * Gets all available tags and saves them to options.
+	 * Gets all available lists and saves them to options.
+	 * 
+	 * At the moment we are using Static Marketing Lists for segmentation but I'm
+	 * open to adding options for additional list types in a future update.
 	 *
 	 * @since  3.38.43
+	 *
+	 * @link https://docs.microsoft.com/en-us/dynamics365/marketing/segments-vs-lists
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 */
@@ -609,16 +614,10 @@ class WPF_Dynamics_365 {
 	 *
 	 * @since  3.38.43
 	 *
-	 * @param  array $data            The contact data.
-	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys to CRM
-	 *                                field keys.
+	 * @param  array $data   The contact data.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$request                     = $this->url . '/contacts/';
 		$params                      = $this->get_params();
@@ -647,14 +646,9 @@ class WPF_Dynamics_365 {
 	 * @param  int   $contact_id      The ID of the contact to update.
 	 * @param  array $data            An associative array of contact fields
 	 *                                and field values.
-	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys to CRM
-	 *                                field keys.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$request          = $this->url . '/contacts(' . $contact_id . ')';
 		$params           = $this->get_params();

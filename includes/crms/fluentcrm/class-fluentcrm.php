@@ -51,9 +51,11 @@ class WPF_FluentCRM {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
-		// Don't watch FluentCRM for changes if staging mode is active
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
-		if ( true == wpf_get_option( 'staging_mode' ) || ! defined( 'FLUENTCRM' ) ) {
+		// Don't watch FluentCRM for changes if staging mode is active.
+
+		if ( wpf_is_staging_mode() || ! defined( 'FLUENTCRM' ) ) {
 			return;
 		}
 
@@ -110,7 +112,28 @@ class WPF_FluentCRM {
 
 	}
 
+	/**
+	 * Gets the contact ID and tags out of webhook payloads.
+	 *
+	 * @since  3.39.4
+	 *
+	 * @param  array $post_data The POSTed data from the webhook.
+	 * @return array The populated POST data.
+	 */
+	public function format_post_data( $post_data ) {
 
+		$payload = json_decode( stripslashes( file_get_contents( 'php://input' ) ) );
+
+		if ( ! is_object( $payload ) ) {
+			return false;
+		}
+
+		$post_data['contact_id'] = absint( $payload->id );
+		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
+
+		return $post_data;
+
+	}
 
 	/**
 	 * Adjust field formatting
@@ -224,11 +247,17 @@ class WPF_FluentCRM {
 	 */
 
 	public function sync_crm_fields() {
-		$built_in_fields = FluentCrmApi( 'contacts' )->getInstance()->mappables();
+
+		$built_in_fields           = FluentCrmApi( 'contacts' )->getInstance()->mappables();
+		$built_in_fields['status'] = 'Status';
+		$custom_fields             = $this->get_custom_fields();
+
+		asort( $built_in_fields );
+		asort( $custom_fields );
 
 		$crm_fields = array(
 			'Standard Fields' => $built_in_fields,
-			'Custom Fields'   => $this->get_custom_fields(),
+			'Custom Fields'   => $custom_fields,
 		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
@@ -333,11 +362,7 @@ class WPF_FluentCRM {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$custom_fields = $this->get_custom_fields();
 		$custom_data   = array_filter( \FluentCrm\Includes\Helpers\Arr::only( $data, array_keys( $custom_fields ) ) );
@@ -354,6 +379,10 @@ class WPF_FluentCRM {
 
 		$model = FluentCrmApi( 'contacts' )->getInstance();
 
+		// Prevent looping.
+		remove_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
+		remove_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
+
 		$contact = $model->updateOrCreate( $data );
 
 		/*
@@ -364,6 +393,9 @@ class WPF_FluentCRM {
 		if ( 'pending' == $contact->status ) {
 			$contact->sendDoubleOptinEmail();
 		}
+
+		add_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
+		add_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
 
 		return $contact->id;
 	}
@@ -401,13 +433,10 @@ class WPF_FluentCRM {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$custom_fields = $this->get_custom_fields();
-		$custom_data   = array_filter( \FluentCrm\Includes\Helpers\Arr::only( $data, array_keys( $custom_fields ) ) );
+		$custom_data   = array_intersect_key( $data, $custom_fields );
 
 		$model = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -415,10 +444,27 @@ class WPF_FluentCRM {
 			return new WP_Error( 'error', 'No contact ID #' . $contact_id . ' found in FluentCRM.' );
 		}
 
-		$model->fill( $data )->save();
-		if ( $custom_data ) {
-			$model->syncCustomFieldValues( $custom_data, false );
+		// Prevent looping.
+		remove_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
+		remove_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
+
+		try {
+
+			$model->fill( $data )->save();
+
+		} catch ( Exception $e ) {
+
+			// For example updating a contact with the email of another contact.
+			return new WP_Error( 'error', $e->getMessage() );
+
 		}
+
+		if ( $custom_data ) {
+			$model->syncCustomFieldValues( $custom_data, true );
+		}
+
+		add_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
+		add_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
 
 		return $model->id;
 	}

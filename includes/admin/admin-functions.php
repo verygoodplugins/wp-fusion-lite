@@ -57,7 +57,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 	}
 
 	// Maybe convert setting from tag names to IDs if CRM has been switched.
-	if ( ! empty( $args['setting'] ) && is_array( wp_fusion()->crm->supports ) && ! in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+	if ( ! empty( $args['setting'] ) && ! in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 		foreach ( $args['setting'] as $i => $value ) {
 
@@ -157,7 +157,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 			// Added the following is_numeric() check for 3.29.1 to fix "5DD - Customer" tag causing "5" tag to be selected.
 			// Tag less than 10 so that tag IDs still show up and can be replaced after switching to a CRM with dynamic tagging
-			// if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) && is_numeric( $tag ) && $tag < 10 ) {
+			// if ( in_array( 'add_tags', wp_fusion()->crm->supports ) && is_numeric( $tag ) && $tag < 10 ) {
 			// continue;
 			// }
 			// ^ Removed in v3.34.8 in favor of $id = strval( $id );..
@@ -170,7 +170,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		}
 
 		// Maybe output any new tags that have been entered for this setting, but aren't yet stored with available_tags.
-		if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+		if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 			foreach ( $args['setting'] as $tag ) {
 
@@ -251,7 +251,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 	}
 
 	// Save custom added fields to the DB.
-	if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_fields', wp_fusion()->crm->supports ) ) {
+	if ( in_array( 'add_fields', wp_fusion()->crm->supports ) ) {
 
 		$field_check = array();
 
@@ -293,7 +293,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 		}
 	}
 
-	if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+	if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 		echo '<optgroup label="Tagging">';
 

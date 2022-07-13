@@ -175,7 +175,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		$ret = '<a href="' . esc_url( get_edit_user_link( $log['user'] ) ) . '" target="_blank">' . esc_html( $userdata->data->user_login ) . '</a>';
 
 		$contact_id = wp_fusion()->user->get_contact_id( $log['user'] );
-		$edit_url   = wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
+		$edit_url   = wp_fusion()->crm->get_contact_edit_url( $contact_id );
 
 		if ( $edit_url ) {
 			$ret .= ' (<a title="' . sprintf( esc_attr__( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . ' &raquo;" href="' . esc_url( $edit_url ) . '" target="_blank">#' . esc_html( $contact_id ) . '</a>)';
@@ -204,10 +204,10 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 				$contact_id = $contact_id[0];
 
-				$url = wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
+				$url = wp_fusion()->crm->get_contact_edit_url( $contact_id );
 
 				if ( false !== $url ) {
-					$output = preg_replace( '/#\w*/', '<a href="' . $url . '" target="_blank">#' . $contact_id . '</a>', $output );
+					$output = preg_replace( '/contact\ #\w*/', 'contact <a href="' . $url . '" target="_blank">#' . $contact_id . '</a>', $output );
 				}
 			}
 		}
@@ -244,7 +244,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 						$output .= '<strike>' . $value['original'] . '</strike> ';
 						$output .= '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-right" data-tip="' . $text . '"></span>';
 
-					} elseif ( is_array( $value ) && isset( $value['original'] ) ) {
+					} elseif ( is_array( $value ) && array_key_exists( 'original', $value ) ) {
 
 						$text = sprintf(
 							/* translators: %1$s crm name %2$s field format */
@@ -256,6 +256,8 @@ class WPF_Log_Table_List extends WP_List_Table {
 						// print_r arrays / original value.
 						if ( is_array( $value['original'] ) || is_object( $value['original'] ) ) {
 							$value['original'] = '<pre>' . wpf_print_r( $value['original'], true ) . '</pre>';
+						} elseif ( empty( $value['original'] ) ) {
+							$value['original'] = '<code>0</code>';
 						}
 
 						// print_r arrays / new value.
@@ -492,6 +494,38 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * @global wpdb $wpdb
 	 */
 	public function prepare_items() {
+
+		if ( ! empty( $_REQUEST['_wp_http_referer'] ) ) {
+
+			// Cleans up the logs URL when filtering entries to make it easier
+			// to read / link to. Doing it here to avoid having to run the
+			// queries twice.
+			//
+			// @since 3.38.45.
+
+			$args = array(
+				'_wp_http_referer',
+				'_wpnonce',
+				'filter-action',
+				'wpf_logs_submit',
+			);
+
+			if ( isset( $_GET['paged'] ) && '1' === $_GET['paged'] ) {
+				$args[] = 'paged'; // don't need this if it's 1.
+			}
+
+			foreach ( $_GET as $key => $val ) {
+				if ( empty( $val ) ) {
+					$args[] = $key;
+				}
+			}
+
+			if ( ! headers_sent() ) {
+				wp_safe_redirect( remove_query_arg( $args, wp_unslash( esc_url_raw( $_SERVER['REQUEST_URI'] ) ) ) );
+				exit;
+			}
+		}
+
 		global $wpdb;
 
 		$this->prepare_column_headers();
@@ -590,6 +624,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * @return string Prepared WHERE clause for items query.
 	 */
 	protected function get_items_query_where() {
+
 		global $wpdb;
 
 		$where_conditions = array();
@@ -610,12 +645,12 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		if ( ! empty( $_REQUEST['startdate'] ) ) {
 			$where_conditions[] = 'timestamp > %s';
-			$where_values[]     = absint( $_REQUEST['startdate'] );
+			$where_values[]     = sanitize_text_field( $_REQUEST['startdate'] );
 		}
 
 		if ( ! empty( $_REQUEST['enddate'] ) ) {
 			$where_conditions[] = 'timestamp < %s';
-			$where_values[]     = absint( $_REQUEST['enddate'] );
+			$where_values[]     = sanitize_text_field( $_REQUEST['enddate'] );
 		}
 
 		if ( ! empty( $where_conditions ) ) {

@@ -69,6 +69,9 @@ class WPF_SendinBlue {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		// Add tracking code to header.
+		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+
 		// $this->edit_url = 'https://app.sendinblue.com/contact/index/%d';
 	}
 
@@ -207,6 +210,56 @@ class WPF_SendinBlue {
 			return $value;
 
 		}
+
+	}
+
+
+	/**
+	 * Output tracking code.
+	 *
+	 * @since 3.40.5
+	 *
+	 * @return mixed The HTML code output.
+	 */
+	public function tracking_code_output() {
+
+		if ( ! wpf_get_option( 'site_tracking' ) ) {
+			return;
+		}
+
+		$tracking_id = wpf_get_option( 'site_tracking_key' );
+
+		if ( empty( $tracking_id ) ) {
+			return;
+		}
+
+		echo '<script type="text/javascript">';
+		echo '(function() {';
+		echo '	window.sib = {';
+		echo '        equeue: [],';
+		echo '        client_key: "' . esc_js( $tracking_id ) . '"';
+		echo '    };';
+		if ( wpf_is_user_logged_in() ) {
+			echo 'window.sib.email_id = "' . esc_js( wpf_get_current_user_email() ) . '";';
+		}
+		echo '    window.sendinblue = {};';
+		echo '    for (var j = ["track", "identify", "trackLink", "page"], i = 0; i < j.length; i++) {';
+		echo '    (function(k) {';
+		echo '        window.sendinblue[k] = function() {';
+		echo '            var arg = Array.prototype.slice.call(arguments);';
+		echo '            (window.sib[k] || function() {';
+		echo '                    var t = {};';
+		echo '                    t[k] = arg;';
+		echo '                    window.sib.equeue.push(t);';
+		echo '                })(arg[0], arg[1], arg[2], arg[3]);';
+		echo '            };';
+		echo '        })(j[i]);';
+		echo '    }';
+		echo '    var n = document.createElement("script"),';
+		echo '        i = document.getElementsByTagName("script")[0];';
+		echo '    n.type = "text/javascript", n.id = "sendinblue-js", n.async = !0, n.src = "https://sibautomation.com/sa.js?key=" + window.sib.client_key, i.parentNode.insertBefore(n, i), window.sendinblue.page();';
+		echo '})();';
+		echo '</script>';
 
 	}
 
@@ -483,7 +536,7 @@ class WPF_SendinBlue {
 			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
 			$params           = $this->params;
 			$params['method'] = 'POST';
-			$params['body']   = json_encode( array( 'emails' => array( $contact_id ) ) );
+			$params['body']   = wp_json_encode( array( 'emails' => array( $contact_id ) ) );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -518,7 +571,7 @@ class WPF_SendinBlue {
 			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/remove';
 			$params           = $this->params;
 			$params['method'] = 'POST';
-			$params['body']   = json_encode( array( 'emails' => array( $contact_id ) ) );
+			$params['body']   = wp_json_encode( array( 'emails' => array( $contact_id ) ) );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -540,19 +593,7 @@ class WPF_SendinBlue {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return null;
-		}
+	public function add_contact( $data ) {
 
 		if ( empty( $data['email'] ) ) {
 			return false;
@@ -569,8 +610,8 @@ class WPF_SendinBlue {
 		}
 
 		$url            = 'https://api.sendinblue.com/v3/contacts';
-		$params         = $this->params;
-		$params['body'] = json_encode( $post_data );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -580,7 +621,11 @@ class WPF_SendinBlue {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return strtolower( $post_data['email'] );
+		if ( isset( $body->id ) ) {
+			return strtolower( $post_data['email'] );
+		} else {
+			return new WP_Error( 'error', 'Unknown error adding contact:<pre>' . wpf_print_r( $body, true ) . '</pre>' );
+		}
 
 	}
 
@@ -591,19 +636,7 @@ class WPF_SendinBlue {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		// Email address changes.
 
@@ -630,9 +663,9 @@ class WPF_SendinBlue {
 
 		$url                     = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
 		$post_data['attributes'] = $data;
-		$params                  = $this->params;
+		$params                  = $this->get_params();
 		$params['method']        = 'PUT';
-		$params['body']          = json_encode( $post_data );
+		$params['body']          = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -748,6 +781,12 @@ class WPF_SendinBlue {
 			return; // can't track without an email.
 		}
 
+		$key = wpf_get_option( 'site_tracking_key' );
+
+		if ( empty( $key ) ) {
+			wpf_log( 'notice', wpf_get_current_user_id(), 'To track events with Sendinblue you must first <a href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#sendinblue" target="_blank">add your client key to the settings</a>.' );
+		}
+
 		$body = array(
 			'email'     => $email_address,
 			'event'     => $event,
@@ -757,8 +796,8 @@ class WPF_SendinBlue {
 		$request                     = 'https://in-automate.sendinblue.com/api/v2/trackEvent';
 		$params                      = $this->get_params();
 		$params['body']              = wp_json_encode( $body );
-		$params['headers']['ma-key'] = $params['headers']['api-key'];
-		$parms['blocking']           = false;
+		$params['headers']['ma-key'] = $key;
+		$params['blocking']          = false;
 		$response                    = wp_safe_remote_post( $request, $params );
 
 		return true;

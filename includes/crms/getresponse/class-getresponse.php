@@ -447,7 +447,7 @@ class WPF_GetResponse {
 
 		$request        = 'https://api.getresponse.com/v3/contacts/' . $contact_id . '/tags';
 		$params         = $this->params;
-		$params['body'] = json_encode( $apply_tags );
+		$params['body'] = wp_json_encode( $apply_tags );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -482,14 +482,10 @@ class WPF_GetResponse {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$list = wpf_get_option( 'getresponse_list' );
@@ -552,7 +548,7 @@ class WPF_GetResponse {
 
 		$url            = 'https://api.getresponse.com/v3/contacts';
 		$params         = $this->params;
-		$params['body'] = json_encode( $contact_data );
+		$params['body'] = wp_json_encode( $contact_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -579,14 +575,10 @@ class WPF_GetResponse {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		if ( empty( $data ) ) {
@@ -621,7 +613,7 @@ class WPF_GetResponse {
 
 		$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
 		$params         = $this->params;
-		$params['body'] = json_encode( $contact_data );
+		$params['body'] = wp_json_encode( $contact_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 

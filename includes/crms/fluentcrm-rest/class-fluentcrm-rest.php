@@ -72,7 +72,6 @@ class WPF_FluentCRM_REST {
 
 	public function init() {
 
-		// Error handling
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
 		$url = wpf_get_option( 'fluentcrm_rest_url' );
@@ -401,7 +400,7 @@ class WPF_FluentCRM_REST {
 		);
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = $this->url . '/tags';
 		$response = wp_safe_remote_post( $request, $params );
@@ -467,7 +466,7 @@ class WPF_FluentCRM_REST {
 		);
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = $this->url . '/subscribers/sync-segments';
 		$response = wp_safe_remote_post( $request, $params );
@@ -499,7 +498,7 @@ class WPF_FluentCRM_REST {
 		);
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = $this->url . '/subscribers/sync-segments';
 		$response = wp_safe_remote_post( $request, $params );
@@ -519,21 +518,15 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  array $data            An associative array of contact
-	 *                                fields and field values.
-	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys
-	 *                                to CRM field keys.
+	 * @param  array $data   An associative array of contact fields and
+	 *                       field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$fields = wpf_get_option( 'crm_fields' );
 
-		// Custom fields go in their own key
+		// Custom fields go in their own key.
 
 		foreach ( $data as $key => $value ) {
 
@@ -555,7 +548,7 @@ class WPF_FluentCRM_REST {
 		}
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$request  = $this->url . '/subscribers';
 		$response = wp_safe_remote_post( $request, $params );
@@ -575,22 +568,16 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  int   $contact_id      The ID of the contact to update.
-	 * @param  array $data            An associative array of contact
-	 *                                fields and field values.
-	 * @param  bool  $map_meta_fields Whether to map WordPress meta keys
-	 *                                to CRM field keys.
+	 * @param  int   $contact_id The ID of the contact to update.
+	 * @param  array $data       An associative array of contact fields
+	 *                           and field values.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$fields = wpf_get_option( 'crm_fields' );
 
-		// Custom fields go in their own key
+		// Custom fields go in their own key.
 
 		foreach ( $data as $key => $value ) {
 
@@ -608,7 +595,7 @@ class WPF_FluentCRM_REST {
 		}
 
 		$params           = $this->get_params();
-		$params['body']   = json_encode( array( 'subscriber' => $data ) );
+		$params['body']   = wp_json_encode( array( 'subscriber' => $data ) );
 		$params['method'] = 'PUT';
 
 		$request  = $this->url . '/subscribers/' . $contact_id;

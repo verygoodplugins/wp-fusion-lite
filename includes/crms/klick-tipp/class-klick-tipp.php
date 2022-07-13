@@ -320,14 +320,10 @@ class WPF_KlickTipp {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( is_wp_error( $this->connect() ) ) {
 			return new WP_Error( 'error', $this->app->get_last_error() );
-		}
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$email = $data['email'];
@@ -351,18 +347,10 @@ class WPF_KlickTipp {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( is_wp_error( $this->connect() ) ) {
 			return new WP_Error( 'error', $this->app->get_last_error() );
-		}
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		if ( isset( $data['email'] ) ) {

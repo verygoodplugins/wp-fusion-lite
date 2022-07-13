@@ -131,14 +131,14 @@ class WPF_MailChimp {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		// Fix for country
-		if ( $value == 'United States' ) {
-			$value == 'United States of America';
+		// Fix for country.
+		if ( 'United States' === $value ) {
+			$value = 'United States of America';
 		}
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'date' === $field_type && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
+			// Adjust formatting for date fields.
 			$date = date( 'm/d/Y', $value );
 
 			return $date;
@@ -576,6 +576,7 @@ class WPF_MailChimp {
 		$data = array( 'tags' => array() );
 
 		foreach ( $tags as $tag ) {
+
 			$data['tags'][] = array(
 				'name'   => $tag,
 				'status' => 'active',
@@ -584,7 +585,7 @@ class WPF_MailChimp {
 
 		$request        = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -621,7 +622,7 @@ class WPF_MailChimp {
 
 		$request        = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -640,11 +641,7 @@ class WPF_MailChimp {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		// Put address fields in their places.
 		foreach ( $data as $key => $value ) {
@@ -689,11 +686,12 @@ class WPF_MailChimp {
 			unset( $payload['merge_fields'] );
 		}
 
-		$url            = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/';
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $payload );
+		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . md5( strtolower( $data['email_address'] ) );
+		$params           = $this->get_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode( $payload );
 
-		$response = wp_safe_remote_post( $url, $params );
+		$response = wp_safe_remote_request( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -719,15 +717,7 @@ class WPF_MailChimp {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		// Put address fields in their places
 		foreach ( $data as $key => $value ) {
@@ -767,7 +757,7 @@ class WPF_MailChimp {
 		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
 		$params           = $this->get_params();
 		$params['method'] = 'PATCH';
-		$params['body']   = json_encode(
+		$params['body']   = wp_json_encode(
 			array(
 				'email_address' => $email_address,
 				'merge_fields'  => $data,
@@ -851,6 +841,27 @@ class WPF_MailChimp {
 	 */
 
 	public function load_contacts( $tag ) {
+
+		// We need the tag ID for this.
+
+		if ( ! is_numeric( $tag ) ) {
+
+			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/tag-search/?name=' . rawurlencode( $tag );
+			$response = wp_safe_remote_get( $url, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( empty( $body->tags ) ) {
+				return new WP_Error( 'error', 'No tag found with name ' . $tag );
+			}
+
+			$tag = $body->tags[0]->id;
+
+		}
 
 		$contact_ids = array();
 

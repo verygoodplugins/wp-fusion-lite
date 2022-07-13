@@ -588,14 +588,9 @@ class WPF_MooSend {
 	 * @since 3.38.42
 	 *
 	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$update_data = array(
 			'Email' => $data['email'],
@@ -660,17 +655,12 @@ class WPF_MooSend {
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
 	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$update_data = array(
-			'Email' => isset( $data['email'] ) ? $data['email'] : wp_fusion()->crm_base->get_email_from_cid( $contact_id ),
+			'Email' => isset( $data['email'] ) ? $data['email'] : wp_fusion()->crm->get_email_from_cid( $contact_id ),
 		);
 
 		// Names.

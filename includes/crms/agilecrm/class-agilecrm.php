@@ -306,7 +306,7 @@ class WPF_AgileCRM {
 			$contact_data['properties'][] = array(
 				'type'  => 'SYSTEM',
 				'name'  => 'address',
-				'value' => json_encode( $address_data ),
+				'value' => wp_json_encode( $address_data ),
 			);
 
 		}
@@ -685,7 +685,7 @@ class WPF_AgileCRM {
 
 		$nparams           = $this->params;
 		$nparams['method'] = 'PUT';
-		$nparams['body']   = json_encode( $contact_json );
+		$nparams['body']   = wp_json_encode( $contact_json );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/edit/tags';
 		$response = wp_safe_remote_request( $request, $nparams );
@@ -733,7 +733,7 @@ class WPF_AgileCRM {
 
 		$nparams           = $this->params;
 		$nparams['method'] = 'PUT';
-		$nparams['body']   = json_encode( $contact_json );
+		$nparams['body']   = wp_json_encode( $contact_json );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/delete/tags';
 		$response = wp_safe_remote_request( $request, $nparams );
@@ -755,20 +755,16 @@ class WPF_AgileCRM {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
 		$data = apply_filters( 'wpf_pre_send_contact_data', $data );
 
 		$nparams         = $this->params;
-		$nparams['body'] = json_encode( $data );
+		$nparams['body'] = wp_json_encode( $data );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts';
 		$response = wp_safe_remote_post( $request, $nparams );
@@ -791,14 +787,10 @@ class WPF_AgileCRM {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		if ( empty( $data ) ) {
@@ -810,7 +802,7 @@ class WPF_AgileCRM {
 
 		$nparams           = $this->params;
 		$nparams['method'] = 'PUT';
-		$nparams['body']   = json_encode( $data );
+		$nparams['body']   = wp_json_encode( $data );
 
 		$request  = 'https://' . $this->domain . '.agilecrm.com/dev/api/contacts/edit-properties';
 		$response = wp_safe_remote_request( $request, $nparams );
@@ -940,7 +932,7 @@ class WPF_AgileCRM {
 
 			$params['body'] = array(
 				'page_size'  => 1000,
-				'filterJson' => json_encode( $filter ),
+				'filterJson' => wp_json_encode( $filter ),
 			);
 
 			if ( $cursor ) {

@@ -58,6 +58,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * HubSpot
 * Infusionsoft
 * Intercom
+* Jetpack CRM
 * Kartra
 * Klaviyo
 * Klick-Tipp
@@ -84,7 +85,6 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Tubular
 * UserEngage
 * WP ERP
-* ZeroBS CRM
 * Zoho
 
 ## Installation ##

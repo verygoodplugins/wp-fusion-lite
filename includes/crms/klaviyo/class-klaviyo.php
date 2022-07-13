@@ -36,7 +36,7 @@ class WPF_Klaviyo {
 	 */
 
 	public $edit_url = false;
-	
+
 	/**
 	 * Get things started
 	 *
@@ -385,7 +385,7 @@ class WPF_Klaviyo {
 			'profiles' => array( (object) array( 'email' => $email ) ),
 		);
 
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		foreach ( $tags as $tag_id ) {
 
@@ -422,7 +422,7 @@ class WPF_Klaviyo {
 		);
 
 		$params['method'] = 'DELETE';
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 
 		foreach ( $tags as $tag_id ) {
 
@@ -446,15 +446,7 @@ class WPF_Klaviyo {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		// Klavio doesn't allow the $ sign when adding a contact
 		foreach( $data as $key => $value ) {
@@ -482,8 +474,8 @@ class WPF_Klaviyo {
 		}
 
 		$request        = 'https://a.klaviyo.com/api/v2/list/' . $assign_list . '/members';
-		$params         = $this->params;
-		$params['body'] = json_encode( array( 'profiles' => array( $data ) ) );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( array( 'profiles' => array( $data ) ) );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -504,23 +496,11 @@ class WPF_Klaviyo {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
-
-		$data['api_key']  = $this->key;
-		$params           = $this->params;
+		$params           = $this->get_params();
 		$params['method'] = 'PUT';
+		$data['api_key']  = $this->key;
 		$request          = 'https://a.klaviyo.com/api/v1/person/' . $contact_id;
 
 		$request  = add_query_arg( $data, $request );

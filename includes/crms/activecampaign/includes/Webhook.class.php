@@ -83,7 +83,7 @@ class AC_Webhook extends ActiveCampaign {
 		$format = $params_["output"];
 
 		if ( $format == "json" ) {
-			return json_encode( $_POST );
+			return wp_json_encode( $_POST );
 		}
 
 	}

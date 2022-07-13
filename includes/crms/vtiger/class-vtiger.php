@@ -472,14 +472,10 @@ class WPF_Vtiger {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		// @todo make dynamic
@@ -490,7 +486,7 @@ class WPF_Vtiger {
 		$params['body'] = array(
 			'operation'		=> 'create',
 			'sessionName'	=> $this->session,
-			'element'		=> json_encode( $data ),
+			'element'		=> wp_json_encode( $data ),
 			'elementType'	=> $this->element_type
 		);
 
@@ -513,18 +509,10 @@ class WPF_Vtiger {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if( empty( $data ) ) {
-			return false;
 		}
 
 		$data['id'] 				= $contact_id;
@@ -535,7 +523,7 @@ class WPF_Vtiger {
 		$params['body'] = array(
 			'operation'		=> 'update',
 			'sessionName'	=> $this->session,
-			'element'		=> json_encode( $data ),
+			'element'		=> wp_json_encode( $data ),
 		);
 
 		$response = wp_safe_remote_post( $this->domain, $params );

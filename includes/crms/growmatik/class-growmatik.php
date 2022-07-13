@@ -249,13 +249,12 @@ class WPF_Growmatik {
 	 *
 	 * @param string $contact_id      Growmatic user id.
 	 * @param array  $contact_data    Data to push as new user data.
-	 * @param bool   $map_meta_fields Whether or not fields need to be mapped.
 	 * @return bool|WP_Error True on success, WP Error object on failure.
 	 */
-	private function update_contact_basic_attributes( $contact_id, $contact_data, $map_meta_fields ) {
+	private function update_contact_basic_attributes( $contact_id, $contact_data ) {
 
 		$contact_data['id'] = $contact_id;
-		$response           = $this->add_contact( $contact_data, $map_meta_fields );
+		$response           = $this->add_contact( $contact_data );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -579,15 +578,10 @@ class WPF_Growmatik {
 	 * @since 3.36.0
 	 *
 	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
 
-	public function add_contact( $contact_data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
-		}
+	public function add_contact( $contact_data ) {
 
 		$params  = $this->get_params( false );
 		$request = $this->url . '/contact/';
@@ -621,11 +615,10 @@ class WPF_Growmatik {
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
 	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 
-	public function update_contact( $contact_id, $contact_data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $contact_data ) {
 
 		$attributes = $this->get_user_attributes();
 
@@ -645,7 +638,7 @@ class WPF_Growmatik {
 			}
 		}
 		// Update user data and custom attributes separately.
-		$update_basics  = $this->update_contact_basic_attributes( $contact_id, $contact_basic_data, $map_meta_fields );
+		$update_basics  = $this->update_contact_basic_attributes( $contact_id, $contact_basic_data );
 		$update_customs = $this->update_contact_custom_attributes( $contact_id, $contact_custom_data );
 
 		return ( $update_basics && $update_customs );

@@ -118,6 +118,17 @@ class WPF_Upgrades {
 
 	}
 
+	/**
+	 * Set the access control system on by default.
+	 *
+	 * @since 3.39.0
+	 */
+	public static function v_3_39_0() {
+
+		wp_fusion()->settings->set( 'restrict_content', true );
+
+	}
+
 }
 
 new WPF_Upgrades();

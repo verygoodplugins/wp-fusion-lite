@@ -178,7 +178,7 @@ class WPF_Bento {
 
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
-			$date = date( 'm/d/Y H:i:s', $value );
+			$date = gmdate( 'c', $value );
 
 			return $date;
 
@@ -250,6 +250,10 @@ class WPF_Bento {
 			if ( isset( $body_json->success ) && false == $body_json->success ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
+
+			} elseif ( 401 === $response_code ) {
+
+				return new WP_Error( 'error', 'Invalid API key.' );
 
 			} elseif ( 429 === $response_code ) {
 
@@ -607,15 +611,10 @@ class WPF_Bento {
 	 *
 	 * @since 3.38.4
 	 *
-	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
+	 * @param array $data    An associative array of contact fields and field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		// Bento can't create a subscriber with custom fields.
 
@@ -639,8 +638,10 @@ class WPF_Bento {
 		// Get new contact ID out of response.
 		$contact_id = $body->data->attributes->uuid;
 
+		unset( $data['email'] );
+
 		// If there are custom fields in addition to email, send those in a separate request.
-		if ( count( $data ) > 1 ) {
+		if ( ! empty( $data ) ) {
 			$this->update_contact( $contact_id, $data, false );
 		}
 
@@ -655,19 +656,18 @@ class WPF_Bento {
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
 	 * @param array $data            An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$body = array(
 			'site_uuid' => wpf_get_option( 'site_uuid' ),
 			'command'   => array(),
 		);
+
+		if ( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
+			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
+		}
 
 		foreach ( $data as $field => $value ) {
 
@@ -775,6 +775,8 @@ class WPF_Bento {
 
 		if ( is_object( json_decode( $event_data ) ) ) {
 			$details = json_decode( $event_data );
+		} elseif ( is_array( $event_data ) ) {
+			$details = (object) $event_data;
 		} else {
 			$details = (object) array(
 				'name' => $event,

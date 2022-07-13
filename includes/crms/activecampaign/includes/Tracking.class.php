@@ -114,7 +114,7 @@ class AC_Tracking extends ActiveCampaign {
 			$visit_data = array_merge( $visit_data, $post_data["visit"] );
 		}
 		if ( $visit_data ) {
-			$post_data["visit"] = json_encode( $visit_data );
+			$post_data["visit"] = wp_json_encode( $visit_data );
 		}
 		$response = $this->curl( $request_url, $post_data, "POST", "tracking_log" );
 

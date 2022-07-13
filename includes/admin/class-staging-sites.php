@@ -37,7 +37,7 @@ class WPF_Staging_Sites {
 	 */
 	public function maybe_activate_staging_mode( $value ) {
 
-		if ( $this->is_duplicate_site() ) {
+		if ( $this->is_duplicate_site() || ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) ) {
 			return true;
 		}
 
@@ -106,6 +106,10 @@ class WPF_Staging_Sites {
 			$is_duplicate = false;
 		} else {
 			$is_duplicate = true;
+		}
+
+		if ( ! empty( $GLOBALS['_wp_switched_stack'] ) ) {
+			$is_duplicate = false; // if we've switched to another blog.
 		}
 
 		return apply_filters( 'wpf_is_duplicate_site', $is_duplicate );

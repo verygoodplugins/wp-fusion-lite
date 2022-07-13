@@ -222,7 +222,7 @@ class WPF_Zoho_Admin {
 
 	public function add_default_fields( $options ) {
 
-		if ( $options['connection_configured'] == true ) {
+		if ( ! empty( $options['connection_configured'] ) ) {
 
 			require_once dirname( __FILE__ ) . '/zoho-fields.php';
 

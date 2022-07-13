@@ -487,7 +487,7 @@ class WPF_Maropost {
 
 		$request                           = 'https://api.maropost.com/accounts/' . $this->account_id . '/add_remove_tags.json?auth_token=' . $this->api_key;
 		$params['headers']['Content-Type'] = 'application/json';
-		$params['body']                    = json_encode(
+		$params['body']                    = wp_json_encode(
 			array(
 				'tags' => array(
 					'email'    => $email,
@@ -524,7 +524,7 @@ class WPF_Maropost {
 		$email = $this->get_email_from_cid( $contact_id );
 
 		$request                           = 'https://api.maropost.com/accounts/' . $this->account_id . '/add_remove_tags.json?auth_token=' . $this->api_key;
-		$params['body']                    = json_encode(
+		$params['body']                    = wp_json_encode(
 			array(
 				'tags' => array(
 					'email'       => $email,
@@ -553,14 +553,10 @@ class WPF_Maropost {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$crm_fields = wpf_get_option( 'crm_fields' );
@@ -581,7 +577,7 @@ class WPF_Maropost {
 
 		$url            = 'https://api.maropost.com/accounts/' . $this->account_id . '/lists/' . $this->list_id . '/contacts.json?auth_token=' . $this->api_key;
 		$params         = $this->params;
-		$params['body'] = json_encode( $field_data );
+		$params['body'] = wp_json_encode( $field_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -604,15 +600,7 @@ class WPF_Maropost {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$crm_fields = wpf_get_option( 'crm_fields' );
 		$send       = false;
@@ -644,7 +632,7 @@ class WPF_Maropost {
 			$params = $this->get_params();
 
 			$url              = 'https://api.maropost.com/accounts/' . $this->account_id . '/contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
-			$params['body']   = json_encode( $field_data );
+			$params['body']   = wp_json_encode( $field_data );
 			$params['method'] = 'PUT';
 
 			$response = wp_safe_remote_post( $url, $params );

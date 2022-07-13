@@ -469,7 +469,7 @@ class WPF_Autonami {
 			'tags' => $prepared_data,
 		);
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = $this->url . '/contacts/' . $contact_id . '/tags';
 		$response = wp_safe_remote_post( $request, $params );
@@ -500,7 +500,7 @@ class WPF_Autonami {
 
 		$params           = $this->get_params();
 		$params['method'] = 'DELETE';
-		$params['body']   = json_encode( $body );
+		$params['body']   = wp_json_encode( $body );
 
 		$request = $this->url . '/contacts/' . $contact_id . '/tags';
 		;
@@ -518,20 +518,13 @@ class WPF_Autonami {
 	/**
 	 * Adds a new contact.
 	 *
-	 * @param array $data An associative array of contact
-	 *                                       fields and field values.
-	 * @param bool $map_meta_fields Whether to map WordPress meta keys
-	 *                                       to CRM field keys.
-	 *
-	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 * @since  3.37.14
 	 *
+	 * @param  array        $data   An associative array of contact fields and
+	 *                              field values.
+	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$contact_data = array(
 			'email'      => $data['email'],
@@ -542,7 +535,7 @@ class WPF_Autonami {
 		);
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $contact_data );
+		$params['body'] = wp_json_encode( $contact_data );
 
 		$request  = $this->url . '/contacts';
 		$response = wp_safe_remote_post( $request, $params );
@@ -568,21 +561,14 @@ class WPF_Autonami {
 	/**
 	 * Updates an existing contact record.
 	 *
-	 * @param int $contact_id The ID of the contact to update.
-	 * @param array $data An associative array of contact
-	 *                                        fields and field values.
-	 * @param bool $map_meta_fields Whether to map WordPress meta keys
-	 *                                        to CRM field keys.
-	 *
-	 * @return bool|WP_Error Error if the API call failed.
 	 * @since  3.37.14
 	 *
+	 * @param  int           $contact_id The ID of the contact to update.
+	 * @param  array         $data       An associative array of contact fields
+	 *                                   and field values.
+	 * @return bool|WP_Error Error if the API call failed.
 	 */
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$contact_data = array(
 			'fields' => $data,
@@ -590,7 +576,7 @@ class WPF_Autonami {
 		);
 
 		$params         = $this->get_params();
-		$params['body'] = json_encode( $contact_data );
+		$params['body'] = wp_json_encode( $contact_data );
 
 		$request  = $this->url . '/contacts/' . $contact_id . '/fields';
 		$response = wp_safe_remote_post( $request, $params );

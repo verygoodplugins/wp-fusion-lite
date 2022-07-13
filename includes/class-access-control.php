@@ -35,6 +35,10 @@ class WPF_Access_Control {
 
 	public function __construct() {
 
+		if ( ! wpf_get_option( 'restrict_content', true ) ) {
+			return;
+		}
+
 		add_filter( 'wp_get_nav_menu_items', array( $this, 'hide_menu_items' ), 10, 3 );
 
 		// Query / archive filtering
@@ -67,12 +71,13 @@ class WPF_Access_Control {
 		if ( wpf_get_option( 'return_after_login' ) ) {
 
 			$priority = wpf_get_option( 'return_after_login_priority', 10 );
-			add_action( 'wp_login', array( $this, 'return_after_login' ), absint( $priority ), 2 );
+			add_action( 'wp_login', array( $this, 'return_after_login' ), absint( $priority ) );
+			add_action( 'wpf_started_auto_login', array( $this, 'return_after_login' ) );
 
 		}
 
 		// Check to see if a page is protected but no redirect is specified, and there's no content area
-		add_filter( 'the_content', array( $this, 'test_the_content' ) );
+ 		add_filter( 'the_content', array( $this, 'test_the_content' ) );
 		add_action( 'wp_footer', array( $this, 'maybe_doing_it_wrong' ) );
 
 	}
@@ -180,7 +185,7 @@ class WPF_Access_Control {
 
 			$settings = $this->get_post_access_meta( $post_id );
 
-			if ( empty( $settings ) ) {
+			if ( empty( array_filter( $settings ) ) ) {
 
 				// If no settings are set.
 				$can_access = true;
@@ -224,7 +229,7 @@ class WPF_Access_Control {
 		}
 
 		/**
-		 * Determined whether a user can access a post.
+		 * Determine whether a user can access a post.
 		 *
 		 * @since 1.0.0
 		 *
@@ -236,6 +241,9 @@ class WPF_Access_Control {
 		 */
 
 		$can_access = apply_filters( 'wpf_user_can_access', $can_access, $user_id, $post_id );
+
+		// Cache the result for cases where we need to check the same post ID in
+		// a single page load, this will save a few database hits.
 
 		$this->cache_can_access( $post_id, $can_access );
 
@@ -528,9 +536,7 @@ class WPF_Access_Control {
 
 		// Allow bypassing redirect.
 
-		$bypass = apply_filters( 'wpf_begin_redirect', false, wpf_get_current_user_id() );
-
-		if ( $bypass ) {
+		if ( apply_filters( 'wpf_begin_redirect', false, wpf_get_current_user_id() ) ) {
 			return true;
 		}
 
@@ -726,13 +732,13 @@ class WPF_Access_Control {
 
 	public function get_restricted_content_message( $post_id = false ) {
 
+		if ( empty( $post_id ) ) {
+			$post_id = get_the_ID();
+		}
+
 		$message = false;
 
 		if ( wpf_get_option( 'per_post_messages' ) ) {
-
-			if ( empty( $post_id ) ) {
-				$post_id = get_the_ID();
-			}
 
 			$settings = get_post_meta( $post_id, 'wpf-settings', true );
 
@@ -744,9 +750,13 @@ class WPF_Access_Control {
 		}
 
 		if ( false === $message ) {
-
 			$message = wpf_get_option( 'restricted_message' );
+		}
 
+		$extended = get_extended( get_post_field( 'post_content', $post_id, 'display' ) );
+
+		if ( ! empty( $extended['extended'] ) ) {
+			$message = $extended['main'] . trim( preg_replace( '/\[the_excerpt .*\]/', '', $message ) ); // Remove any [the_excerpt] shortcodes.
 		}
 
 		$content = do_shortcode( stripslashes( $message ) );
@@ -1618,18 +1628,15 @@ class WPF_Access_Control {
 	 * @return void
 	 */
 
-	public function return_after_login( $user_login, $user = false ) {
+	public function return_after_login( $user_login ) {
 
 		if ( wp_doing_ajax() ) {
 			return; // Don't try to do a redirect during an AJAX request.
 		}
 
-		if ( false === $user ) {
-			$user = get_user_by( 'login', $user_login );
-		}
-
 		if ( isset( $_COOKIE['wpf_return_to_override'] ) ) {
 
+			$user    = get_user_by( 'login', $user_login );
 			$post_id = absint( $_COOKIE['wpf_return_to_override'] );
 			$url     = get_permalink( $post_id );
 
@@ -1646,6 +1653,7 @@ class WPF_Access_Control {
 
 		if ( isset( $_COOKIE['wpf_return_to'] ) ) {
 
+			$user    = get_user_by( 'login', $user_login ); // Since WordPress 6.0 wp_get_current_user() no longer works at this point.
 			$post_id = absint( $_COOKIE['wpf_return_to'] );
 			$url     = get_permalink( $post_id );
 

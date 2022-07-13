@@ -401,7 +401,7 @@ class WPF_Mailjet {
 		$request          = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
 		$params           = $this->params;
 		$params['method'] = 'POST';
-		$params['body']   = json_encode( array( 'ContactsLists' => $object_tags ) );
+		$params['body']   = wp_json_encode( array( 'ContactsLists' => $object_tags ) );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -439,7 +439,7 @@ class WPF_Mailjet {
 		$request          = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
 		$params           = $this->params;
 		$params['method'] = 'POST';
-		$params['body']   = json_encode( array( 'ContactsLists' => $object_tags ) );
+		$params['body']   = wp_json_encode( array( 'ContactsLists' => $object_tags ) );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -459,18 +459,10 @@ class WPF_Mailjet {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return null;
 		}
 
 		$post_data = array();
@@ -489,7 +481,7 @@ class WPF_Mailjet {
 
 		$url            = 'https://api.mailjet.com/v3/REST/contact';
 		$params         = $this->params;
-		$params['body'] = json_encode( $post_data );
+		$params['body'] = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -514,7 +506,7 @@ class WPF_Mailjet {
 			$url              = 'https://api.mailjet.com/v3/REST/contactdata/' . $body->Data[0]->ID;
 			$params           = $this->params;
 			$params['method'] = 'PUT';
-			$params['body']   = json_encode( $meta_data );
+			$params['body']   = wp_json_encode( $meta_data );
 
 			$response = wp_safe_remote_post( $url, $params );
 
@@ -534,18 +526,10 @@ class WPF_Mailjet {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		$post_data                            = array();
@@ -564,7 +548,7 @@ class WPF_Mailjet {
 		$url              = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id;
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $post_data );
+		$params['body']   = wp_json_encode( $post_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -587,7 +571,7 @@ class WPF_Mailjet {
 			$url              = 'https://api.mailjet.com/v3/REST/contactdata/' . $contact_id;
 			$params           = $this->params;
 			$params['method'] = 'PUT';
-			$params['body']   = json_encode( $meta_data );
+			$params['body']   = wp_json_encode( $meta_data );
 
 			$response = wp_safe_remote_post( $url, $params );
 

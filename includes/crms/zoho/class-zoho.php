@@ -37,13 +37,6 @@ class WPF_Zoho {
 	public $object_type;
 
 	/**
-	 * Bypass the field filtering in WPF_CRM_Base so multiselects get sent as arrays
-	 */
-
-	public $override_filters;
-
-
-	/**
 	 * Lets us link directly to editing a contact record.
 	 * @var string
 	 */
@@ -73,8 +66,6 @@ class WPF_Zoho {
 
 		$this->object_type = 'Contacts';
 
-		$this->override_filters = true;
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
@@ -94,6 +85,8 @@ class WPF_Zoho {
 	 */
 
 	public function init() {
+
+		remove_all_filters( 'wpf_format_field_value' ); // removes the base filtering in WPF_CRM_Base.
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
@@ -695,17 +688,13 @@ class WPF_Zoho {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		// Set layout
+		// Set layout.
 
 		$layout = wpf_get_option( 'zoho_layout' );
 
@@ -727,7 +716,7 @@ class WPF_Zoho {
 		}
 
 		$params         = $this->params;
-		$params['body'] = json_encode( array( 'data' => array( $data ) ) );
+		$params['body'] = wp_json_encode( array( 'data' => array( $data ) ) );
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type;
 		$response = wp_safe_remote_post( $request, $params );
@@ -749,22 +738,10 @@ class WPF_Zoho {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
-		}
-
-		$params           = $this->params;
-		$params['body']   = json_encode( array( 'data' => array( $data ) ) );
+		$params           = $this->get_params();
+		$params['body']   = wp_json_encode( array( 'data' => array( $data ) ) );
 		$params['method'] = 'PUT';
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;

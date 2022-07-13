@@ -58,8 +58,7 @@ if ( ! function_exists( 'wpf_user_can_access' ) ) {
 	function wpf_user_can_access( $post_id = false, $user_id = false ) {
 
 		if ( false === $post_id ) {
-			global $post;
-			$post_id = $post->ID;
+			$post_id = get_the_ID();
 		}
 
 		return wp_fusion()->access->user_can_access( $post_id, $user_id );
@@ -102,7 +101,15 @@ if ( ! function_exists( 'wpf_get_current_user' ) ) {
 
 	function wpf_get_current_user() {
 
-		return wp_fusion()->user->get_current_user();
+		if ( wp_fusion()->user ) {
+
+			return wp_fusion()->user->get_current_user();
+
+		} else {
+
+			return wp_get_current_user();
+
+		}
 
 	}
 }
@@ -155,14 +162,16 @@ function wpf_get_contact_id( $user_id = false, $force_update = false ) {
  * Gets the CRM tags from WordPress user ID.
  *
  * @since  3.36.26
+ * @since  3.39.2 Added second parameter $force.
  *
- * @param  int   $user_id The user ID to search by.
+ * @param  int  $user_id The user ID to search by.
+ * @param  bool $force   Whether or not to force-refresh the tags via an API
+ *                       call.
  * @return array The user's tags in the CRM.
  */
+function wpf_get_tags( $user_id = false, $force = false ) {
 
-function wpf_get_tags( $user_id = false ) {
-
-	return wp_fusion()->user->get_tags( $user_id );
+	return wp_fusion()->user->get_tags( $user_id, $force );
 
 }
 
@@ -264,7 +273,7 @@ if ( ! function_exists( 'wpf_get_tag_label' ) ) {
 
 function wpf_get_crm_field( $meta_key, $default = false ) {
 
-	return wp_fusion()->crm_base->get_crm_field( $meta_key, $default );
+	return wp_fusion()->crm->get_crm_field( $meta_key, $default );
 
 }
 
@@ -279,7 +288,7 @@ function wpf_get_crm_field( $meta_key, $default = false ) {
 
 function wpf_is_field_active( $meta_key ) {
 
-	return wp_fusion()->crm_base->is_field_active( $meta_key );
+	return wp_fusion()->crm->is_field_active( $meta_key );
 
 }
 
@@ -295,7 +304,7 @@ function wpf_is_field_active( $meta_key ) {
 
 function wpf_get_field_type( $meta_key, $default = 'text' ) {
 
-	return wp_fusion()->crm_base->get_field_type( $meta_key, $default );
+	return wp_fusion()->crm->get_field_type( $meta_key, $default );
 
 }
 
@@ -310,7 +319,7 @@ function wpf_get_field_type( $meta_key, $default = 'text' ) {
 
 function wpf_is_pseudo_field( $meta_key ) {
 
-	return wp_fusion()->crm_base->is_pseudo_field( $meta_key );
+	return wp_fusion()->crm->is_pseudo_field( $meta_key );
 
 }
 
@@ -325,7 +334,24 @@ function wpf_is_pseudo_field( $meta_key ) {
 
 function wpf_get_lookup_field() {
 
-	return wp_fusion()->crm_base->get_lookup_field();
+	return wp_fusion()->crm->get_lookup_field();
+
+}
+
+/**
+ * Is WP Fusion currently in staging mode?
+ *
+ * @since  3.39.5
+ *
+ * @return bool  Whether or not we're in staging mode.
+ */
+function wpf_is_staging_mode() {
+
+	if ( wpf_get_option( 'staging_mode' ) || ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) ) {
+		return true;
+	} else {
+		return false;
+	}
 
 }
 
@@ -388,10 +414,12 @@ function wpf_admin_override() {
 	// Don't use user_can() here, it creates a memory leak with WPML for some reason.
 
 	if ( wpf_get_option( 'exclude_admins' ) && current_user_can( 'manage_options' ) ) {
-		return true;
+		$override = true;
 	} else {
-		return false;
+		$override = false;
 	}
+
+	return apply_filters( 'wpf_admin_override', $override );
 
 }
 

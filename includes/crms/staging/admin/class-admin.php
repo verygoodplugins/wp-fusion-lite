@@ -40,7 +40,6 @@ class WPF_Staging_Admin {
 
 		$new_settings['staging_header'] = array(
 			'title'   => __( 'Staging', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 			'desc'	  => 'This is equivalent to activating "Staging Mode" from the Advanced settings tab. WP Fusion will function as normal, but no API calls will be sent. </p><p>Tags and other actions will be applied to a local buffer, and will be erased when staging mode is disabled.'

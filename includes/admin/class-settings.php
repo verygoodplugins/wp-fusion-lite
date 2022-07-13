@@ -255,6 +255,12 @@ class WPF_Settings {
 			update_option( 'wpf_crm_fields', $value, false );
 		}
 
+		if ( ! empty( $GLOBALS['_wp_switched_stack'] ) ) {
+			// Don't save the main settings if we've switched to another blog.
+			// This fixes the settings getting overwritten.
+			return;
+		}
+
 		// Remove special fields.
 		if ( isset( $options_to_save['available_tags'] ) ) {
 			unset( $options_to_save['available_tags'] );
@@ -603,8 +609,8 @@ class WPF_Settings {
 
 	public function save_tag_labels() {
 
-		if ( isset( wp_fusion()->crm_base->tag_type ) ) {
-			$this->set( 'crm_tag_type', wp_fusion()->crm_base->tag_type );
+		if ( isset( wp_fusion()->crm->tag_type ) ) {
+			$this->set( 'crm_tag_type', wp_fusion()->crm->tag_type );
 		}
 
 	}
@@ -766,9 +772,24 @@ class WPF_Settings {
 			wp_send_json_error( $tag_id );
 		}
 
+		wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag ' . $tag_name . ' with ID ' . $tag_id );
+
 		$available_tags = $this->get( 'available_tags' );
 
-		$available_tags[ $tag_id ] = $tag_name;
+		if ( is_array( reset( $available_tags ) ) ) {
+
+			// With categories. Just HubSpot for now.
+
+			$available_tags[ $tag_id ] = array(
+				'label'    => $tag_name,
+				'category' => 'Static Lists',
+			);
+
+		} else {
+
+			$available_tags[ $tag_id ] = $tag_name;
+
+		}
 
 		asort( $available_tags );
 
@@ -983,7 +1004,7 @@ class WPF_Settings {
 
 			// Call the custom API. This is a GET so CloudFlare can cache the response for 12h in cases where the transient in WP isn't working.
 			$response = wp_safe_remote_get(
-				WPF_STORE_URL . '/?edd_action=check_license&url=' . rawurlencode( home_url() ),
+				WPF_STORE_URL,
 				array(
 					'timeout'   => 20,
 					'sslverify' => false,
@@ -1239,10 +1260,14 @@ class WPF_Settings {
 
 		$sections['wpf-settings']['main']           = __( 'General Settings', 'wp-fusion-lite' );
 		$sections['wpf-settings']['contact-fields'] = __( 'Contact Fields', 'wp-fusion-lite' );
-		$sections['wpf-settings']['integrations']   = __( 'Integrations', 'wp-fusion-lite' );
-		$sections['wpf-settings']['import']         = __( 'Import Users', 'wp-fusion-lite' );
-		$sections['wpf-settings']['setup']          = __( 'Setup', 'wp-fusion-lite' );
-		$sections['wpf-settings']['advanced']       = __( 'Advanced', 'wp-fusion-lite' );
+
+		if ( wp_fusion()->is_full_version() ) {
+			$sections['wpf-settings']['integrations'] = __( 'Integrations', 'wp-fusion-lite' );
+		}
+
+		$sections['wpf-settings']['import']   = __( 'Import Users', 'wp-fusion-lite' );
+		$sections['wpf-settings']['setup']    = __( 'Setup', 'wp-fusion-lite' );
+		$sections['wpf-settings']['advanced'] = __( 'Advanced', 'wp-fusion-lite' );
 
 		return $sections;
 
@@ -1387,6 +1412,34 @@ class WPF_Settings {
 			'section' => 'main',
 		);
 
+		$settings['restrict_content'] = array(
+			'title'   => __( 'Restrict Content', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable WP Fusion\'s access control system.', 'wp-fusion-lite' ),
+			'std'     => 1,
+			'type'    => 'checkbox',
+			'section' => 'main',
+			'unlock'  => array(
+				'restrict_access_header',
+				'exclude_admins',
+				'hide_restricted',
+				'hide_archives',
+				'query_filter_post_types',
+				'return_after_login',
+				'return_after_login_priority',
+				'default_not_logged_in_redirect',
+				'default_redirect',
+				'restricted_message',
+				'per_post_messages',
+				'site_lockout_header',
+				'lockout_tags',
+				'lockout_redirect',
+				'lockout_allowed_urls',
+				'seo_enabled',
+				'seo_excerpt_length',
+			),
+			'tooltip' => sprintf( __( 'WP Fusion includes many features for restricting access to content based on tags in %s. However if you are not using these features (you only want to sync data with %s), you can un-check this setting to disable the access control interfaces and features.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
+		);
+
 		$settings['exclude_admins'] = array(
 			'title'   => __( 'Exclude Administrators', 'wp-fusion-lite' ),
 			'desc'    => __( 'Users with Administrator accounts will be able to view all content, regardless of restrictions.', 'wp-fusion-lite' ),
@@ -1427,7 +1480,7 @@ class WPF_Settings {
 
 		$settings['return_after_login'] = array(
 			'title'   => __( 'Return After Login', 'wp-fusion-lite' ),
-			'desc'    => __( 'If a user has been redirected away from a restricted page, take them back to that page after logging in.', 'wp-fusion-lite' ),
+			'desc'    => __( 'If a user has tried to view a restricted page, take them back to that page after logging in.', 'wp-fusion-lite' ),
 			'tooltip' => __( 'When a user attempts to access a restricted page a cookie will be set. When the user logs in they will be redirected to the most recent restricted page they tried to access.', 'wp-fusion-lite' ),
 			'std'     => 1,
 			'type'    => 'checkbox',
@@ -1459,7 +1512,7 @@ class WPF_Settings {
 
 		$settings['restricted_message'] = array(
 			'title'         => __( 'Default Restricted Content Message', 'wp-fusion-lite' ),
-			'desc'          => __( 'Restricted content message for when a redirect hasn\'t been specified.', 'wp-fusion-lite' ),
+			'desc'          => __( '<a href="https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-message" target="_blank">Restricted content message</a> for when a redirect isn\'t set. Use <code>[the_excerpt]</code> or <code>[the_excerpt length="120"]</code> to display an excerpt of the restricted content.', 'wp-fusion-lite' ),
 			'std'           => __( '<h2 style="text-align:center">Oops!</h2><p style="text-align:center">You don\'t have permission to view this page! Make sure you\'re logged in and try again, or contact support.</p>', 'wp-fusion-lite' ),
 			'type'          => 'editor',
 			'section'       => 'main',
@@ -1547,7 +1600,7 @@ class WPF_Settings {
 		$settings['access_key_desc'] = array(
 			'type'    => 'paragraph',
 			'section' => 'main',
-			'desc'    => sprintf( __( 'Webhooks allow you to send data from %s back to your website. See <a href="http://wpfusion.com/documentation/#webhooks" target="_blank">our documentation</a> for more information on creating webhooks.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+			'desc'    => sprintf( __( 'Webhooks allow you to send data from %s back to your website. See <a href="https://wpfusion.com/documentation/webhooks/about-webhooks/" target="_blank">our documentation</a> for more information on creating webhooks.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 		);
 
 		$settings['access_key'] = array(
@@ -1624,7 +1677,7 @@ class WPF_Settings {
 			'section' => 'integrations',
 		);
 
-		if ( is_array( wp_fusion()->crm->supports ) && in_array( 'leads', wp_fusion()->crm->supports ) ) {
+		if ( in_array( 'leads', wp_fusion()->crm->supports ) ) {
 
 			$settings['leads_header'] = array(
 				'title'   => __( 'Leads', 'wp-fusion-lite' ),
@@ -1763,7 +1816,14 @@ class WPF_Settings {
 
 		$settings['link_click_tracking'] = array(
 			'title'   => __( 'Link Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enqueue the scripts to handle link click tracking. See <a href="https://wpfusion.com/documentation/tutorials/link-click-tracking/" target="_blank">this tutorial</a> for more info.', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enqueue the script to handle link click tracking. See <a href="https://wpfusion.com/documentation/tutorials/link-click-tracking/" target="_blank">this tutorial</a> for more info.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'advanced',
+		);
+
+		$settings['js_leadsource_tracking'] = array(
+			'title'   => __( 'JS Lead Source Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enqueue a script to handle setting the <a href="https://wpfusion.com/documentation/tutorials/lead-source-tracking/" target="_blank">lead source tracking cookies</a>. This fixes tracking on WP Engine, Flywheel, and other hosts that sanitize UTM parameters out of URLs.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'advanced',
 		);
@@ -1776,7 +1836,7 @@ class WPF_Settings {
 
 		$settings['staging_mode'] = array(
 			'title'   => __( 'Staging Mode', 'wp-fusion-lite' ),
-			'desc'    => sprintf( __( 'When staging mode is active, all normal WP Fusion features will be available, but no API calls will be made to %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+			'desc'    => sprintf( __( 'When <a href="https://wpfusion.com/documentation/faq/staging-sites/" target="_blank">staging mode</a> is active, all normal WP Fusion features will be available, but no API calls will be made to %s, and no tags or access to content will be modified.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			'type'    => 'checkbox',
 			'section' => 'advanced',
 		);
@@ -1993,7 +2053,7 @@ class WPF_Settings {
 
 					foreach ( $data['unlock'] as $unlock_field ) {
 
-						if ( ! empty( $settings[ $unlock_field ] ) ) {
+						if ( ! empty( $settings[ $unlock_field ] ) && empty( $settings[ $unlock_field ]['disabled'] ) ) {
 
 							$settings[ $unlock_field ]['disabled'] = empty( $options[ $setting ] ) ? true : false;
 
@@ -2292,7 +2352,18 @@ class WPF_Settings {
 
 		$setting = $this->get( $id, $std );
 
-		wpf_render_crm_field_select( $setting['crm_field'], 'wpf_options', $id );
+		if ( isset( $setting['crm_field'] ) ) {
+
+			// We're in the process of changing the data storage on
+			// this to not require the array format, so this check allows it to
+			// work both ways for now.
+			//
+			// @since 3.39.4.
+
+			$setting = $setting['crm_field'];
+		}
+
+		wpf_render_crm_field_select( $setting, 'wpf_options', $id );
 
 	}
 

@@ -150,7 +150,6 @@ class WPF_Tubular {
 
 	public function connect( $api_key = null, $test = false ) {
 
-
 		if ( $test == false ) {
 			return true;
 		}
@@ -386,7 +385,7 @@ class WPF_Tubular {
 
 			$request      		= 'https://app.tubular.io/api/company/tags/tag';
 			$params           	= $this->params;
-			$params['body']  	= json_encode( $body );
+			$params['body']  	= wp_json_encode( $body );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -440,19 +439,15 @@ class WPF_Tubular {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
 		$url              = 'https://app.tubular.io/api/company/clients';
 		$params           = $this->params;
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -473,18 +468,10 @@ class WPF_Tubular {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if( empty( $data ) ) {
-			return false;
 		}
 
 		// Move custom fields into custom attributes
@@ -507,7 +494,7 @@ class WPF_Tubular {
 		$url              	= 'https://app.tubular.io/api/company/clients/' . $contact_id;
 		$params           	= $this->params;
 		$params['method']   = 'PUT';
-		$params['body']   	= json_encode( $data );
+		$params['body']   	= wp_json_encode( $data );
 
 		$response = wp_safe_remote_request( $url, $params );
 
@@ -592,7 +579,7 @@ class WPF_Tubular {
 
 		$contact_ids = array();
 
-		$request    	= 'https://app.tubular.io/api/company/clients?leads=false&paginate=1&per_page=1&tags_name_filter=' . urlencode( json_encode( array( $tag ) ) );
+		$request    	= 'https://app.tubular.io/api/company/clients?leads=false&paginate=1&per_page=1&tags_name_filter=' . urlencode( wp_json_encode( array( $tag ) ) );
 		$response     	= wp_safe_remote_get( $request, $this->params );
 
 		if( is_wp_error( $response ) ) {

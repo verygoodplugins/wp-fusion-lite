@@ -410,7 +410,7 @@ class WPF_Drift {
 		}
 
 		$params = $this->params;
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id . '/tags';
 		$response = wp_safe_remote_post( $request, $params );
@@ -437,7 +437,7 @@ class WPF_Drift {
 		}
 
 		$params = $this->params;
-		$params['body'] = json_encode( $tags );
+		$params['body'] = wp_json_encode( $tags );
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id . '/tags/delete/_bulk';
 		$response = wp_safe_remote_post( $request, $params );
@@ -458,18 +458,10 @@ class WPF_Drift {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		$params = $this->params;
-		$params['body'] = json_encode( array( 'attributes' => $data ) );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( array( 'attributes' => $data ) );
 
 		$request  = 'https://driftapi.com/contacts';
 		$response = wp_safe_remote_post( $request, $params );
@@ -491,23 +483,11 @@ class WPF_Drift {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if( empty( $data ) ) {
-			return false;
-		}
-
-		$params 			= $this->params;
-		$params['body']		= json_encode( array( 'attributes' => $data ) );
-		$params['method'] 	= 'PATCH';
+		$params           = $this->get_params();
+		$params['body']   = wp_json_encode( array( 'attributes' => $data ) );
+		$params['method'] = 'PATCH';
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
 		$response = wp_safe_remote_request( $request, $params );

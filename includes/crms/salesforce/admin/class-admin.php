@@ -88,6 +88,8 @@ class WPF_Salesforce_Admin {
 		add_action( 'wpf_settings_notices', array( $this, 'oauth_warning' ) );
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_action( 'validate_field_sf_tag_type', array( $this, 'validate_tag_type' ), 10, 3 );
+		add_filter( 'wpf_get_setting_crm_tag_type', array( $this, 'get_setting_crm_tag_type' ) );
 
 	}
 
@@ -150,19 +152,28 @@ class WPF_Salesforce_Admin {
 				'section' => 'setup',
 			);
 
-			if ( $settings['connection_configured'] == true && wpf_get_option( 'crm' ) == 'salesforce' ) {
+			if ( ! empty( $options['connection_configured'] ) && 'salesforce' === wpf_get_option( 'crm' ) ) {
 
 				$new_settings['sf_tag_type'] = array(
-					'title'   => __( 'Salesforce Tag Type', 'wp-fusion-lite' ),
+					'title'   => __( 'Segment Type', 'wp-fusion-lite' ),
 					'std'     => 'Topics',
 					'type'    => 'radio',
 					'section' => 'setup',
 					'choices' => array(
 						'Topics'   => 'Topics',
+						'Picklist' => 'Picklist',
 						'Personal' => 'Personal tags',
 						'Public'   => 'Public tags',
 					),
-					'desc'    => __( 'After changing the tag type, save the settings page and click Refresh below.', 'wp-fusion-lite' ),
+					'desc'    => __( 'For more information, see <a href="https://wpfusion.com/documentation/crm-specific-docs/salesforce-tags/" target="_blank">Tags with Salesforce</a>.', 'wp-fusion-lite' ),
+				);
+
+				$new_settings['sf_tag_picklist'] = array(
+					'title'    => __( 'Tags Picklist' ),
+					'disabled' => 'Picklist' === $options['sf_tag_type'] ? false : true,
+					'type'     => 'crm_field',
+					'section'  => 'setup',
+					'desc'     => __( 'Select a picklist type field to be used for segmentation with WP Fusion. For more information, see <a href="https://wpfusion.com/documentation/crm-specific-docs/salesforce-tags/" target="_blank">Tags with Salesforce</a>.', 'wp-fusion-lite' ),
 				);
 
 			}
@@ -235,6 +246,54 @@ class WPF_Salesforce_Admin {
 	}
 
 	/**
+	 * Resync tags/topics when the tag type is saved and validate the picklist.
+	 *
+	 * @since  3.39.4
+	 *
+	 * @param  string      $input   The input.
+	 * @param  array       $setting The setting configuration.
+	 * @param  WPF_Options $options The options class.
+	 * @return string|WP_Error The input or error on validation failure.
+	 */
+	public function validate_tag_type( $input, $setting, $options ) {
+
+		if ( ! empty( $options->options['sf_tag_type'] ) && $input !== $options->options['sf_tag_type'] ) {
+
+			if ( 'Picklist' === $input && empty( $options->post_data['sf_tag_picklist']['crm_field'] ) ) {
+				return new WP_Error( 'error', 'To use a picklist for tags you must select a picklist from the Tags Picklist dropdown on the Setup tab.' );
+			}
+
+			// Set these temporarily so sync_tags() works.
+			wp_fusion()->settings->options['sf_tag_type']     = $input;
+			wp_fusion()->settings->options['sf_tag_picklist'] = $options->post_data['sf_tag_picklist']['crm_field'];
+
+			$result = $this->crm->sync_tags();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+
+		}
+
+		return $input;
+
+	}
+
+	/**
+	 * Updates the UI to read "tags" when using the picklist tag selector.
+	 *
+	 * @since  3.40.7
+	 *
+	 * @param array $setting The setting.
+	 * @return string The setting.
+	 */
+	public function get_setting_crm_tag_type( $setting ) {
+
+		return $this->crm->tag_type;
+
+	}
+
+	/**
 	 * Loads standard Salesforce field names and attempts to match them up with standard local ones
 	 *
 	 * @access  public
@@ -243,7 +302,7 @@ class WPF_Salesforce_Admin {
 
 	public function add_default_fields( $options ) {
 
-		if ( $options['connection_configured'] == true ) {
+		if ( ! empty( $options['connection_configured'] ) ) {
 
 			require_once dirname( __FILE__ ) . '/salesforce-fields.php';
 
@@ -335,6 +394,7 @@ class WPF_Salesforce_Admin {
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
+
 		$instance_url = sanitize_text_field( $_POST['sf_instance_url'] );
 		$access_token = sanitize_text_field( $_POST['sf_access_token'] );
 

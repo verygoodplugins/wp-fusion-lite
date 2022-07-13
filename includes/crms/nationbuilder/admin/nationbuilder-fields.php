@@ -338,6 +338,15 @@ $nationbuilder_fields[] = array(
 	'crm_label' => 'Email Opt-in (boolean)',
 );
 
+$nationbuilder_fields[] = array(
+	'crm_field' => 'external_id',
+	'crm_label' => 'External ID',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'marital_status',
+	'crm_label' => 'Marital Status',
+);
 
 // Fields to ignore (for now)
 $nationbuilder_ignore_fields = array(
@@ -350,7 +359,6 @@ $nationbuilder_ignore_fields = array(
 	'do_not_call',
 	'do_not_contact',
 	'dw_id',
-	'external_id',
 	'federal_district',
 	'fire_district',
 	'has_facebook',
@@ -453,7 +461,6 @@ $nationbuilder_ignore_fields = array(
 	'legal_name',
 	'locale',
 	'mailing_address',
-	'marital_status',
 	'media_market_name',
 	'meetup_id',
 	'meetup_address',

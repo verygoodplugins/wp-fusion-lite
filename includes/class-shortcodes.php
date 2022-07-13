@@ -18,11 +18,15 @@ class WPF_Shortcodes {
 		add_shortcode( 'wpf_user_can_access', array( $this, 'shortcode_user_can_access' ) );
 
 		if ( ! shortcode_exists( 'user_meta' ) ) {
-			add_shortcode( 'user_meta', array( $this, 'shortcode_user_meta' ), 10, 2 );
+			add_shortcode( 'user_meta', array( $this, 'shortcode_user_meta' ) );
 		}
 
 		if ( ! shortcode_exists( 'user_meta_if' ) ) {
-			add_shortcode( 'user_meta_if', array( $this, 'shortcode_user_meta_if' ), 10, 2 );
+			add_shortcode( 'user_meta_if', array( $this, 'shortcode_user_meta_if' ) );
+		}
+
+		if ( ! shortcode_exists( 'the_excerpt' ) ) {
+			add_shortcode( 'the_excerpt', array( $this, 'shortcode_the_excerpt' ) );
 		}
 
 	}
@@ -269,7 +273,7 @@ class WPF_Shortcodes {
 		}
 
 		// Maybe refresh the data once from the CRM if the key doesn't exist at all.
-		if ( empty( $value ) && wp_fusion()->crm_base->is_field_active( $atts['field'] ) ) {
+		if ( empty( $value ) && wp_fusion()->crm->is_field_active( $atts['field'] ) ) {
 
 			if ( ! metadata_exists( 'user', $user_id, $atts['field'] ) ) {
 
@@ -447,7 +451,7 @@ class WPF_Shortcodes {
 			return '';
 		}
 
-		if ( ! $atts['field'] || ! $atts['value'] ) {
+		if ( ! $atts['field'] ) {
 			return '';
 		}
 
@@ -462,9 +466,9 @@ class WPF_Shortcodes {
 		$meta_value = $atts['field_format'] ? call_user_func( $atts['field_format'], $meta_value ) : $meta_value;
 		$value      = $atts['value_format'] ? call_user_func( $atts['value_format'], $atts['value'] ) : $atts['value'];
 
-		if ( 'strtotime' == $atts['field_format'] && false === $meta_value ) {
+		if ( 'strtotime' === $atts['field_format'] && false === $meta_value ) {
 			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'userfield' );
-		} elseif ( 'strtotime' == $atts['value_format'] && false === $value ) {
+		} elseif ( 'strtotime' === $atts['value_format'] && false === $value ) {
 			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'value' );
 		}
 
@@ -498,6 +502,15 @@ class WPF_Shortcodes {
 					$show_content = ( false === strpos( $meta_value, $value ) ? true : false );
 				}
 				break;
+			case 'EMPTY':
+				$show_content = empty( $meta_value );
+				break;
+			case 'NOT EMPTY':
+				$show_content = ! empty( $meta_value );
+				break;
+			case '!=':
+				$show_content = $meta_value !== $value;
+				break;
 			default:
 				$show_content = $meta_value === $value;
 				break;
@@ -508,6 +521,50 @@ class WPF_Shortcodes {
 		}
 
 		return do_shortcode( $content );
+
+	}
+
+	/**
+	 * [the_excerpt] shortcode.
+	 *
+	 * @since 3.40.7
+	 *
+	 * @param array $atts   Shortcode atts.
+	 * @return string The excerpt.
+	 */
+	public function shortcode_the_excerpt( $atts ) {
+
+		$atts = shortcode_atts(
+			array(
+				'length' => '',
+			),
+			$atts,
+			'the_excerpt'
+		);
+
+		$atts = array_map( 'sanitize_text_field', $atts );
+
+		if ( ! empty( $atts['length'] ) ) {
+
+			// Possibly modify the excerpt length.
+
+			$length = $atts['length'];
+
+			add_filter(
+				'excerpt_length',
+				function() use ( &$length ) {
+					return $length;
+				},
+				4242 // 4242 so it's hopefully unique when we remove it.
+			);
+		}
+
+		$excerpt = get_the_excerpt();
+
+		// Remove the filter.
+		remove_all_filters( 'excerpt_length', 4242 );
+
+		return $excerpt;
 
 	}
 

@@ -628,17 +628,12 @@ class WPF_PulseTechnologyCRM {
 	 * Adds a new contact.
 	 *
 	 * @param array $contact_data An associative array of contact fields and field values.
-	 * @param bool $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 *
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 * @since 3.37.21
 	 *
 	 */
-	public function add_contact( $contact_data, $map_meta_fields = true ) {
-
-		if ( true == $map_meta_fields ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
-		}
+	public function add_contact( $contact_data ) {
 
 		$contact_data['is_marketable'] = true;
 
@@ -656,19 +651,14 @@ class WPF_PulseTechnologyCRM {
 	/**
 	 * Updates an existing contact record.
 	 *
-	 * @param int $contact_id The ID of the contact to update.
+	 * @param int   $contact_id The ID of the contact to update.
 	 * @param array $contact_data An associative array of contact fields and field values.
-	 * @param bool $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 *
 	 * @return bool|WP_Error Error if the API call failed.
 	 * @since 3.37.21
 	 *
 	 */
-	public function update_contact( $contact_id, $contact_data, $map_meta_fields = true ) {
-
-		if ( true == $map_meta_fields ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
-		}
+	public function update_contact( $contact_id, $contact_data ) {
 
 		$response = $this->pulse_api_put( "contacts/$contact_id", $contact_data );
 

@@ -428,7 +428,7 @@ class WPF_Loopify {
 		);
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = 'https://api.loopify.com/contacts/tag-groups/bulk-insert';
 		$response = wp_safe_remote_post( $request, $params );
@@ -467,7 +467,7 @@ class WPF_Loopify {
 		);
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $body );
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = 'https://api.loopify.com/contacts/tag-groups/bulk-delete';
 		$response = wp_safe_remote_post( $request, $params );
@@ -488,14 +488,10 @@ class WPF_Loopify {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$custom_fields = array();
@@ -528,7 +524,7 @@ class WPF_Loopify {
 		}
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 
 		$request  = 'https://api.loopify.com/contacts';
 		$response = wp_safe_remote_post( $request, $params );
@@ -550,14 +546,10 @@ class WPF_Loopify {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$custom_fields = array();
@@ -590,7 +582,7 @@ class WPF_Loopify {
 		}
 
 		$params           = $this->params;
-		$params['body']   = json_encode( $data );
+		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PUT';
 
 		$request  = 'https://api.loopify.com/contacts/' . $contact_id;
@@ -678,7 +670,7 @@ class WPF_Loopify {
 
 		while ( $proceed ) {
 
-			$request  = 'https://api.loopify.com/contacts/?selectedTags=' . urlencode( json_encode( array( $query ) ) ) . '&pageSize=100';
+			$request  = 'https://api.loopify.com/contacts/?selectedTags=' . urlencode( wp_json_encode( array( $query ) ) ) . '&pageSize=100';
 			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {

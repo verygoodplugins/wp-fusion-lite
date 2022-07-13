@@ -331,7 +331,7 @@ class WPF_Customerly {
 		);
 
 		$params = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
@@ -370,7 +370,7 @@ class WPF_Customerly {
 		);
 
 		$params = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
@@ -391,14 +391,10 @@ class WPF_Customerly {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		require dirname( __FILE__ ) . '/admin/customerly-fields.php';
@@ -426,7 +422,7 @@ class WPF_Customerly {
 		}
 
 		$params = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
@@ -446,14 +442,10 @@ class WPF_Customerly {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		require dirname( __FILE__ ) . '/admin/customerly-fields.php';
@@ -481,7 +473,7 @@ class WPF_Customerly {
 		}
 
 		$params = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );

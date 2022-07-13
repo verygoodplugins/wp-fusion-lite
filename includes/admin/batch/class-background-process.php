@@ -726,7 +726,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			}
 
 			// Disable turbo for bulk processes.
-			wp_fusion()->crm = wp_fusion()->crm_base->crm_no_queue;
+			add_filter( 'wpf_use_api_queue', '__return_false' );
 
 			// 0 is the action hook and 1 is the array of args.
 

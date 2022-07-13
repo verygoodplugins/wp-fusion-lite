@@ -512,15 +512,12 @@ class WPF_Autopilot {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
 
 		require dirname( __FILE__ ) . '/admin/autopilot-fields.php';
 
@@ -567,7 +564,7 @@ class WPF_Autopilot {
 		}
 
 		$params = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api2.autopilothq.com/v1/contact';
 		$response = wp_safe_remote_post( $request, $params );
@@ -589,14 +586,10 @@ class WPF_Autopilot {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		// Load built in fields to get field types and subtypes
@@ -652,12 +645,12 @@ class WPF_Autopilot {
 
 			// We can't update a contact without an email so we'll need to load it
 
-			$update_data['contact']['Email'] = wp_fusion()->crm_base->get_email_from_cid( $contact_id );
+			$update_data['contact']['Email'] = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		}
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api2.autopilothq.com/v1/contact';
 		$response = wp_safe_remote_post( $request, $params );
@@ -783,7 +776,7 @@ class WPF_Autopilot {
 		$request      		= 'https://api2.autopilothq.com/v1/hook';
 		$params           	= $this->params;
 		$params['method'] 	= 'POST';
-		$params['body']  	= json_encode($data,JSON_UNESCAPED_SLASHES);
+		$params['body']  	= wp_json_encode($data,JSON_UNESCAPED_SLASHES);
 
 		$response = wp_safe_remote_post( $request, $params );
 

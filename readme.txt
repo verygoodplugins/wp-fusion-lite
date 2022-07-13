@@ -3,10 +3,10 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 5.9.1
-Stable tag: 3.38.44
+Tested up to: 6.0.1
+Stable tag: 3.40.12
 
-WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
+WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
 == Description ==
 
@@ -78,6 +78,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Bento
 * BirdSend
 * Capsule
+* Constant Contact
 * ConvertKit
 * Copper
 * Customerly
@@ -94,6 +95,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * HubSpot
 * Infusionsoft
 * Intercom
+* Jetpack CRM
 * Kartra
 * Klaviyo
 * Klick-Tipp
@@ -120,7 +122,6 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Tubular
 * UserEngage
 * WP ERP
-* ZeroBS CRM
 * Zoho
 
 For more info on CRM compatibility, [check out the compatibility table](https://wpfusion.com/documentation/faq/crm-compatibility-table/?utm_campaign=free-plugin&utm_source=wp-org).
@@ -185,6 +186,111 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.40.12 - 7/13/2022 =
+
+##### New CRMs
+
+* Added [Constant Contact integration](https://wpfusion.com/documentation/installation-guides/how-to-connect-constant-contact-to-wordpress/)
+
+
+##### New Features
+
+* Added [`the_excerpt` shortcode for use in the restricted content message](https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-excerpts)
+* Added [EMPTY and NOT EMPTY comparisons](https://wpfusion.com/documentation/getting-started/shortcodes/#empty-and-not-empty) to the `user_meta_if` shortcode
+* Added option to [use a custom picklist field for tags with Salesforce](https://wpfusion.com/documentation/crm-specific-docs/salesforce-tags/)
+* Added Current Page pseudo-field to [lead source tracking fields](https://wpfusion.com/documentation/tutorials/lead-source-tracking/)
+* Added support for [Sendinblue event tracking](https://wpfusion.com/documentation/event-tracking/sendinblue-event-tracking/)
+* Added support for [Sendinblue site tracking](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#sendinblue)
+* Added [option to completely disable the access control system](https://wpfusion.com/documentation/getting-started/general-settings/#restrict-content)
+* Addded an experimental method for setting the lead source tracking cookies on sites like WP Engine and Flywheel which sanitize UTM parameters out of request URIs
+* Added fields Marital Status and External ID for sync with NationBuilder
+* Added Status field for sync with FluentCRM (same site)
+
+
+##### Improvements
+
+* Improved - If a <!--more--> tag is set for a post (or the More block is used), and the Restricted Content Message is being displayed, the post excerpt (above the <!--more--> tag) will be displayed
+* Improved - When searching in the Redirect if Access is Denied dropdown in the main WP Fusion meta box, results will by grouped by post type
+* Improved - The tooltip for restricted content in the admin post list table will now show if a redirect has been configured on the post
+* Improved - If an auto login link is visited, the Return After Login process will be triggered (if enabled)
+* Improved - Auto login sessions will now be ended on the `set_logged_in_cookie` action instead of `wp_login` and `wp_authenticate` (fixes conflict with Gravity Perks Auto Login)
+* Improved - If a user registers and has an existing Lead record in Gist, the Lead will be converted to a User
+* Improved - If a timestamp being synced to HubSpot is already a whole date (midnight UTC), it won't be recalculated using the site's timezone offset
+* Improved - Mobile phone numbers synced to NationBuilder will be set to opted in for SMS by default
+* Improved - If a contact has been deleted or merged in ActiveCampaign and a "not found" error is triggered, WP Fusion will try to look up the contact again by email address and retry the API call
+* Improved - If an invalid timestamp is being synced to HubSpot (+/- 1000 years from today) it will be removed from the payload to avoid an API error
+* Improved - Updated NationBuilder add contact API endpoint to `/people/push` instead of `/people` to better handle merging duplicate records
+* Improved - Bento event tracking can now accept an array for `$event_data`
+* Improved - Shortened the URL length when filtering data in the activity logs
+* Improved - Updated Mailchimp `add_contact()` API call to `PUT` instead of `POST` to better handle duplicates
+* Improved logging when syncing dates with invalid formats
+* Improved HubSpot error handling
+* Improved Sendinblue error handling for failed contact record creation
+* Improved error handling with ActiveCampaign (403 errors are now properly handled)
+
+
+##### Bug Fixes
+
+* Fixed Return After Login feature not working since WordPress 6.0
+* Fixed Mautic ignoring empty fields
+* Fixed the "Require Admin Permissions" setting (Advanced settings tab) not working
+* Fixed conflict with "WooCommerce Fattureincloud Premium" when loading the available WooCommerce checkout fields in the admin
+* Fixed some HTML and escaping glitches on the WooCommerce product panel upgrade nag with WP Fusion Lite
+* Fixed incorrect format when syncing dates to Bento
+* Fixed conflict (`Uncaught ArgumentCountError`) with the auto-register functionality in FluentCRM v2.5.9
+* Fixed slashes in Mautic API passwords not getting unslashed before saving, and breaking the API connection
+* Fixed bulk editing access rules not working since WordPress 6.0
+* Fixed date fields not syncing to NationBuilder
+* Fixed UI saying "Add Topics" instead of "Add Tags" when using a picklist field for tags with Salesforce
+* Fixed PHP warning `Expected parameter 2 to be array, null given` when bulk editing WP Fusion access rules and the Merge Changes box was checked
+* Fixed fatal error `Class 'WPF_Staging' not found` when trying to sync data to the CRM on a multisite install after calling `switch_to_blog()`
+* Fixed the Drip integration not loading custom fields with capital letters in the field keys
+* Fixed conflict with Premmerce Permalink Manager for WooCommerce (WP Fusion settings page not saving)
+* Fixed logs not properly displaying the results of a value modified by the `wpf_format_field_value` when the input variable was empty
+* Fixed empty dates getting synced to Mailchimp as Jan 1st 1970
+* Fixed PHP warning in `WPF_CRM_Base` when viewing an admin user profile before WP Fusion had been set up
+* Fixed admin users list showing No Contact ID for users who had a contact ID but no tags
+* Fixed updates to existing leads not working with Intercom and Gist
+* Fixed PHP warning trying to apply tags via AJAX when an invalid tag name was provided
+* Fixed Gist integration not loading more than 50 available tags
+* Fixed user passwords getting recorded in the logs when registering a new user during an active auto-login session
+* Fixed broken "Reauthorize with NationBuilder" link on the setup panel
+* Fixed (Lite) - Integrations settings tab will now be hidden in WP Fusion Lite
+* Fixed Capsule integration not returning the contact ID of newly created contacts
+* Fixed filtering in the logs not working if headers were already sent by another plugin
+* Fixed 401 / unauthorized errors not being correctly handled with Bento
+* Fixed dismissing notices on the WPF settings page not being remembered
+* Fixed adding a new list in HubSpot via WP Fusion causing the existing Select A List dropdown to only show `(array)` for each list option
+* Fixed unhandled exception when updating a contact's email address to an email address already in use by another contact, with FluentCRM (same site)
+* Fixed import by tag not working with MailChimp and numeric tag IDs
+* Fixed unclosed <table> tag on the Setup tab when connected to NationBuilder
+* Fixed first and last name fields not syncing to Bento
+* Fixed capabilities being saved to the database with `wp_` as the prefix instead of the current blog prefix
+* Fixed some unclosed HTML tags in the single taxonomy term settings table
+* Fixed un-checked checkboxes not syncing with Sendinblue boolean fields
+* Fixed FluentCRM (same site) custom fields not being erased when a null value was synced
+* Fixed logs not indicating a value was modified by the `wpf_format_field_value` filter when only the type had changed (fixed `!=` to `!==`)
+* Fixed dates syncing to HubSpot in UTC not local time
+* Fixed custom fields not syncing to Autonami
+* Fixed Import Tool not working with Mailchimp since 3.38.35
+* Fixed date filter in the logs not working
+
+
+##### Developer
+
+* Refactored and simplified CRM class structure: removed calls to wp_fusion()->crm_base, removed class `WPF_CRM_Queue`, removed redundancies in calling `WPF_Staging` CRM
+* Refactored and simplified [lead source tracking](https://wpfusion.com/documentation/tutorials/lead-source-tracking)
+* Removed parameter `$map_meta_fields` in CRM classes. Field mapping is now handled in `__call()` magic method in `WPF_CRM_Base` (i.e. `wp_fusion()->crm`)
+* Developers: Improved - WP Fusion will not save the main settings if you are currently switched to another blog on a multisite install. This prevents settings from the original site overwriting the site you've switched to.
+* Developers: Added filter `wpf_loaded_tags` when tags are loaded from the CRM for a user
+* Developers: added action `wpf_crm_loaded`
+* Developers: Added function `wpf_is_staging_mode()`
+* Developers: Fixed the `wp_fusion_init_crm` action running too early for code added to functions.php (moved from `plugins_loaded` to `init`)
+* Fixed missing second parameter `$force` in [wpf_get_tags() function](https://wpfusion.com/documentation/functions/get_tags/)
+* Fixed fatal error calling `wpf_get_current_user()` before the API was initialized
+
+
 
 = 3.38.44 - 2/24/2022 =
 

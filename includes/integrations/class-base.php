@@ -24,7 +24,7 @@ abstract class WPF_Integrations_Base {
 	 * @since 3.38.14
 	 * @var string $docs_url
 	 */
-	public $docs_url;
+	public $docs_url = false;
 
 	public function __construct() {
 
@@ -85,7 +85,7 @@ abstract class WPF_Integrations_Base {
 
 			foreach ( $update_data as $key => $value ) {
 
-				$crm_field = wp_fusion()->crm_base->get_crm_field( $key );
+				$crm_field = wp_fusion()->crm->get_crm_field( $key );
 
 				if ( false === $crm_field ) {
 					continue;
@@ -125,9 +125,9 @@ abstract class WPF_Integrations_Base {
 
 		// Log whether we're creating or updating a contact, with edit link.
 		if ( false !== $contact_id ) {
-			$log_text .= ' Updating existing contact #' . $contact_id . ': ';
+			$log_text = ' Updating existing contact #' . $contact_id . ': ';
 		} else {
-			$log_text .= ' Creating new contact: ';
+			$log_text = ' Creating new contact: ';
 		}
 
 		wpf_log( 'info', 0, $this->name . ' guest registration.' . $log_text, array( 'meta_array' => $update_data ) );

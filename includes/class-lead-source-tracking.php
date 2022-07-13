@@ -6,7 +6,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WPF_Lead_Source_Tracking {
 
-
 	/**
 	 * WPF_Lead_Source_Tracking constructor.
 	 */
@@ -17,13 +16,15 @@ class WPF_Lead_Source_Tracking {
 
 		add_action( 'init', array( $this, 'set_lead_source' ) );
 
-		add_filter( 'wpf_user_register', array( $this, 'merge_lead_source' ), 10, 2 );
+		add_filter( 'wpf_user_register', array( $this, 'merge_lead_source' ) );
 		add_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
 
 		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 
 		add_filter( 'wpf_meta_field_groups', array( $this, 'add_meta_field_group' ), 5 );
 		add_filter( 'wpf_meta_fields', array( $this, 'add_meta_fields' ) );
+
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_scripts' ) );
 
 	}
 
@@ -128,7 +129,7 @@ class WPF_Lead_Source_Tracking {
 	 * @return  array User Meta
 	 */
 
-	public function merge_lead_source( $user_meta, $user_id ) {
+	public function merge_lead_source( $user_meta = array() ) {
 
 		// No need to run this when a user registers.
 		remove_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
@@ -149,6 +150,14 @@ class WPF_Lead_Source_Tracking {
 
 		}
 
+		if ( isset( $_REQUEST['referrer'] ) ) {
+			$user_meta['current_page'] = esc_url_raw( wp_unslash( $_REQUEST['referrer'] ) );
+		} elseif ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+			$user_meta['current_page'] = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
+		} else {
+			$user_meta['current_page'] = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		}
+
 		return $user_meta;
 
 	}
@@ -162,92 +171,27 @@ class WPF_Lead_Source_Tracking {
 
 	public function merge_lead_source_guest( $args ) {
 
-		$leadsource_cookie_name = $this->get_leadsource_cookie_name();
-		$ref_cookie_name        = $this->get_referral_cookie_name();
-
-		if ( ! isset( $_COOKIE[ $leadsource_cookie_name ] ) && ! isset( $_COOKIE[ $ref_cookie_name ] ) ) {
+		// Only do this on guests.
+		if ( doing_action( 'user_register' ) ) {
 			return $args;
 		}
 
-		// Only do this on guests (checking $map_meta_fields == true)
-		if ( count( $args ) == 3 && true == $args[2] ) {
-			return $args;
-		} elseif ( count( $args ) == 2 && true == $args[1] ) {
-			return $args;
-		}
+		$data = $this->merge_lead_source();
 
-		$merged_data = array();
-
-		if ( ! empty( $_COOKIE[ $leadsource_cookie_name ] ) ) {
-
-			$data        = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $leadsource_cookie_name ] ) );
-			$merged_data = array_merge( $merged_data, $data );
-		}
-
-		if ( ! empty( $_COOKIE[ $ref_cookie_name ] ) ) {
-
-			$data        = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $ref_cookie_name ] ) );
-			$merged_data = array_merge( $merged_data, $data );
-
-		}
-
-		if ( ! empty( $merged_data ) ) {
+		if ( ! empty( $data ) ) {
 
 			wpf_log(
 				'info',
 				0,
 				'Syncing lead source data for guest:',
 				array(
-					'meta_array' => $merged_data,
+					'meta_array' => $data,
 					'source'     => 'lead-source-tracking',
 				)
 			);
 
-			$contact_fields = wpf_get_option( 'contact_fields' );
+			$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $data ); // dont overwrite anything we might have gotten from the database.
 
-			foreach ( $merged_data as $key => $value ) {
-
-				if ( isset( $contact_fields[ $key ] ) && $contact_fields[ $key ]['active'] == true ) {
-
-					$merged_data[ $key ] = $value;
-
-					if ( is_array( $args[0] ) ) {
-
-						// Add contact
-
-						if ( isset( $args[1] ) && false == $args[1] ) {
-
-							// Map meta fields off
-							$args[0][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-						} else {
-
-							// Map meta fields on
-
-							$args[0][ $key ] = $value;
-
-						}
-					} elseif ( is_array( $args[1] ) ) {
-
-						// Update contact (not currently in use)
-
-						$args[1][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-						if ( isset( $args[2] ) && false == $args[2] ) {
-
-							// Map meta fields off
-							$args[1][ $contact_fields[ $key ]['crm_field'] ] = $value;
-
-						} else {
-
-							// Map meta fields on
-
-							$args[1][ $key ] = $value;
-
-						}
-					}
-				}
-			}
 		}
 
 		return $args;
@@ -364,6 +308,13 @@ class WPF_Lead_Source_Tracking {
 			'pseudo' => true,
 		);
 
+		$meta_fields['current_page'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Current Page', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
 		foreach ( $this->get_leadsource_vars() as $var ) {
 
 			if ( ! isset( $meta_fields[ $var ] ) ) {
@@ -377,6 +328,19 @@ class WPF_Lead_Source_Tracking {
 		}
 
 		return $meta_fields;
+
+	}
+
+	/**
+	 * Enqueues the lead source tracking script, if enabled.
+	 *
+	 * @since 3.40.10
+	 */
+	public function enqueue_tracking_scripts() {
+
+		if ( wpf_get_option( 'js_leadsource_tracking' ) ) {
+			wp_enqueue_script( 'wpf-leadsource-tracking', WPF_DIR_URL . 'assets/js/wpf-leadsource-tracking.js', array( 'jquery' ), WP_FUSION_VERSION, true );
+		}
 
 	}
 

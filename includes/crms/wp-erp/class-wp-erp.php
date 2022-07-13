@@ -2,11 +2,9 @@
 
 class WPF_WP_ERP {
 
-
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
-
 	public $supports;
 
 
@@ -291,11 +289,7 @@ class WPF_WP_ERP {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
-
-		if ( true === $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function add_contact( $data ) {
 
 		$data['type'] = 'contact';
 
@@ -316,11 +310,7 @@ class WPF_WP_ERP {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
-
-		if ( true === $map_meta_fields ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
+	public function update_contact( $contact_id, $data ) {
 
 		$data['id']   = $contact_id;
 		$data['type'] = 'contact';

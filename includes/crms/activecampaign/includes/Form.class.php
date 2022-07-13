@@ -182,7 +182,7 @@ var \$j = jQuery.noConflict();
 				$captcha = md5( strtoupper( (string) $_POST["captcha"] ) );
 			}
 			if ( ! isset( $_SESSION["image_random_value"] ) || ! isset( $_SESSION["image_random_value"][ $captcha ] ) ) {
-				return json_encode( array( "success" => 0, "message" => "Invalid captcha" ) );
+				return wp_json_encode( array( "success" => 0, "message" => "Invalid captcha" ) );
 			}
 		}
 
@@ -287,7 +287,7 @@ var \$j = jQuery.noConflict();
 			);
 		}
 
-		return json_encode( $r );
+		return wp_json_encode( $r );
 	}
 
 }

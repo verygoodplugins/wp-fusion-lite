@@ -19,7 +19,7 @@ class WPF_User {
 	public function __construct() {
 
 		// Set the constants for the usermeta keys.
-		add_action( 'wp_fusion_init_crm', array( $this, 'set_constants' ) );
+		add_action( 'wpf_crm_loaded', array( $this, 'set_constants' ) );
 
 		// Register and profile updates.
 		add_action( 'user_register', array( $this, 'user_register' ), 20 ); // 20 so usermeta added by other plugins is saved
@@ -59,9 +59,9 @@ class WPF_User {
 	 *
 	 * @param WPF_CRM $crm    The CRM integration.
 	 */
-	public function set_constants( $crm ) {
+	public function set_constants() {
 
-		$slug = $crm->slug;
+		$slug = wpf_get_option( 'crm' );
 
 		if ( wpf_get_option( 'multisite_prefix_keys' ) ) {
 
@@ -412,8 +412,7 @@ class WPF_User {
 					/* translators: %s: Error message */
 					sprintf( __( 'Error adding contact: %s', 'wp-fusion-lite' ), $contact_id->get_error_message() ),
 					array(
-						'source'     => 'user-register',
-						'meta_array' => $post_data,
+						'source' => 'user-register',
 					)
 				);
 
@@ -435,6 +434,7 @@ class WPF_User {
 				/* translators: %1$s: Existing contact ID, %2$s CRM name */
 				sprintf( __( 'New user registration. Updating contact #%1$s in %2$s:', 'wp-fusion-lite' ), $contact_id, wp_fusion()->crm->name ),
 				array(
+					'source'     => 'user-register',
 					'meta_array' => $post_data,
 				)
 			);
@@ -453,8 +453,7 @@ class WPF_User {
 					/* translators: %s: Error message */
 					sprintf( __( 'Error updating contact: %s', 'wp-fusion-lite' ), $result->get_error_message() ),
 					array(
-						'source'     => 'user-register',
-						'meta_array' => $post_data,
+						'source' => 'user-register',
 					)
 				);
 
@@ -569,7 +568,7 @@ class WPF_User {
 			return false;
 		}
 
-		return wp_fusion()->crm_base->get_contact_edit_url( $contact_id );
+		return wp_fusion()->crm->get_contact_edit_url( $contact_id );
 
 	}
 
@@ -687,7 +686,7 @@ class WPF_User {
 
 		$user_meta = wp_fusion()->crm->load_contact( $contact_id );
 
-		// Error logging
+		// Error logging.
 		if ( is_wp_error( $user_meta ) ) {
 
 			wpf_log( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() );
@@ -700,8 +699,28 @@ class WPF_User {
 
 		}
 
-		// Logger. This is before the filter so that keys that are unset() (i.e. XProfile data) can still be logged.
-		wpf_log( 'info', $user_id, 'Loaded meta data from ' . wp_fusion()->crm->name . ':', array( 'meta_array' => $user_meta ) );
+		/**
+		 * Allow modification of the loaded data.
+		 *
+		 * There are two filters that run on this data, this, and the newer
+		 * wpf_set_user_meta in WPF_User::set_user_meta(). Since this filter
+		 * runs before the logs, we'll use this one for re-formatting any data.
+		 *
+		 * For example in WPF_MemberPress::pulled_user_meta(), we convert radios
+		 * and checkboxes to their proper database values.
+		 *
+		 * wpf_set_user_meta will then be used whenever data has to be pulled
+		 * out of the $user_meta array to be set elsewhere (i.e. a custom
+		 * table), for example WPF_BuddyPress::set_user_meta().
+		 *
+		 * @since 1.0.0
+		 *
+		 * @see   WPF_User::set_user_meta()
+		 * @link  https://wpfusion.com/documentation/filters/wpf_pulled_user_meta/
+		 *
+		 * @param array $user_meta The meta data.
+		 * @param int   $user_id   The user ID.
+		 */
 
 		$user_meta = apply_filters( 'wpf_pulled_user_meta', $user_meta, $user_id );
 
@@ -709,6 +728,15 @@ class WPF_User {
 		if ( null === $user_meta ) {
 			return;
 		}
+
+		wpf_log(
+			'info',
+			$user_id,
+			'Loaded meta data from ' . wp_fusion()->crm->name . ':',
+			array(
+				'meta_array' => $user_meta,
+			)
+		);
 
 		// Don't push updates back to CRM.
 		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
@@ -821,6 +849,24 @@ class WPF_User {
 	 */
 
 	public function set_user_meta( $user_id, $user_meta ) {
+
+		/**
+		 * Allow modification of the data.
+		 *
+		 * There are two filters that run on this data, this, and the older
+		 * wpf_pulled_user_meta in WPF_User::pull_user_meta(). Since this filter
+		 * runs after the logs, we'll use this one for data that has to be
+		 * pulled out of the $user_meta array to be set elsewhere (i.e. a custom
+		 * table), for example WPF_BuddyPress::set_user_meta().
+		 *
+		 * @since 3.35.13
+		 *
+		 * @see   WPF_User::pull_user_meta()
+		 * @link  https://wpfusion.com/documentation/advanced-developer-tutorials/detecting-and-syncing-additional-fields/
+		 *
+		 * @param array $user_meta The meta data.
+		 * @param int   $user_id   The user ID.
+		 */
 
 		$user_meta = apply_filters( 'wpf_set_user_meta', $user_meta, $user_id );
 
@@ -964,6 +1010,8 @@ class WPF_User {
 
 						foreach ( $value as $i => $role ) {
 
+							$role = trim( $role );
+
 							if ( ! wp_roles()->is_role( $role ) ) {
 								wpf_log( 'notice', $user_id, 'Role <strong>' . $role . '</strong> was loaded, but it is not a valid user role for this site.' );
 								continue;
@@ -975,12 +1023,10 @@ class WPF_User {
 
 						if ( ! empty( $capabilities ) ) {
 
-							$current_caps = get_user_meta( $user_id, 'wp_capabilities', true );
-
-							if ( $capabilities != $current_caps ) {
+							if ( $capabilities !== $user->caps ) {
 
 								wpf_log( 'notice', $user_id, 'User capabilities changed to:', array( 'meta_array_nofilter' => $capabilities ) );
-								update_user_meta( $user_id, 'wp_capabilities', $capabilities );
+								update_user_meta( $user_id, $user->cap_key, $capabilities );
 
 							}
 						}
@@ -1057,6 +1103,8 @@ class WPF_User {
 			return apply_filters( 'wpf_user_tags', $user_tags, $user_id );
 
 		}
+
+		$tags = apply_filters( 'wpf_loaded_tags', $tags, $user_id, $contact_id );
 
 		$this->set_tags( $tags, $user_id );
 
@@ -1500,9 +1548,9 @@ class WPF_User {
 					continue;
 				}
 
-				$crm_field = wp_fusion()->crm_base->get_crm_field( $key );
+				$crm_field = wp_fusion()->crm->get_crm_field( $key );
 
-				if ( false !== strpos( $crm_field, 'add_tag_' ) && wp_fusion()->crm_base->is_field_active( $key ) ) {
+				if ( false !== strpos( $crm_field, 'add_tag_' ) && wp_fusion()->crm->is_field_active( $key ) ) {
 
 					if ( is_array( $value ) ) {
 						$apply_tags = array_merge( $apply_tags, $value );
@@ -1550,8 +1598,11 @@ class WPF_User {
 
 	public function add_remove_user_role( $user_id, $role ) {
 
-		if ( doing_action( 'user_register' ) || doing_action( 'set_current_user' ) ) {
-			return; // User register will kick in later, and set_current_user sometimes causes errors because the CRM isn't set up yet
+		if ( doing_action( 'user_register' ) || doing_action( 'set_current_user' ) || doing_wpf_webhook() ) {
+			// User register will kick in later, and set_current_user sometimes causes
+			// errors because the CRM isn't set up yet. We also don't need to sync the role
+			// back if it was changed by a webhook.
+			return;
 		}
 
 		$user = get_userdata( $user_id );
@@ -1736,6 +1787,10 @@ class WPF_User {
 			}
 		}
 
+		if ( ! wpf_is_user_logged_in() && false === $user_id ) {
+			return false;
+		}
+
 		$user_tags = $this->get_tags( $user_id );
 
 		if ( empty( $user_tags ) ) {
@@ -1825,7 +1880,7 @@ class WPF_User {
 
 	public function get_tag_label( $tag_id ) {
 
-		if ( is_array( wp_fusion()->crm->supports ) && in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+		if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 			// CRMs that support add_tags don't use IDs.
 			// We'll do this before loading available_tags to avoid a database hit.
@@ -2010,10 +2065,30 @@ class WPF_User {
 
 		} elseif ( is_object( $user ) ) {
 
-			$user_meta = apply_filters( 'wpf_pulled_user_meta', $user_meta, $user->ID );
+			/**
+			 * Allow modification of the loaded data.
+			 *
+			 * There are two filters that run on this data, this, and the newer
+			 * wpf_set_user_meta in WPF_User::set_user_meta(). Since this filter
+			 * runs before the logs, we'll use this one for re-formatting any data.
+			 *
+			 * For example in WPF_MemberPress::pulled_user_meta(), we convert radios
+			 * and checkboxes to their proper database values.
+			 *
+			 * wpf_set_user_meta will then be used whenever data has to be pulled
+			 * out of the $user_meta array to be set elsewhere (i.e. a custom
+			 * table), for example WPF_BuddyPress::set_user_meta().
+			 *
+			 * @since 1.0.0
+			 *
+			 * @see   WPF_User::set_user_meta()
+			 * @link  https://wpfusion.com/documentation/filters/wpf_pulled_user_meta/
+			 *
+			 * @param array $user_meta The meta data.
+			 * @param int   $user_id   The user ID.
+			 */
 
-			// Don't push updates back to CRM.
-			remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
+			$user_meta = apply_filters( 'wpf_pulled_user_meta', $user_meta, $user->ID );
 
 			update_user_meta( $user->ID, WPF_CONTACT_ID_META_KEY, $contact_id );
 			$this->set_user_meta( $user->ID, $user_meta );

@@ -165,18 +165,13 @@ class WPF_MailerLite {
 
 		} elseif ( $post_data['wpf_action'] == 'add' ) {
 
-			// Multiple subscribers. Push to queue
+			// Multiple subscribers. Push to queue.
 			wp_fusion()->batch->includes();
 			wp_fusion()->batch->init();
 
 			foreach ( $contact_ids as $contact_id ) {
 
-				wp_fusion()->batch->process->push_to_queue(
-					array(
-						'action' => 'wpf_batch_import_users',
-						'args'   => array( $contact_id, $post_data ),
-					)
-				);
+				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $post_data ) ) );
 
 			}
 
@@ -188,18 +183,13 @@ class WPF_MailerLite {
 
 		} elseif ( $post_data['wpf_action'] == 'update_tags' ) {
 
-			// Multiple subscribers. Push to queue
+			// Multiple subscribers. Push to queue.
 			wp_fusion()->batch->includes();
 			wp_fusion()->batch->init();
 
 			foreach ( $contact_ids as $contact_id ) {
 
-				wp_fusion()->batch->process->push_to_queue(
-					array(
-						'action' => 'wpf_batch_users_tags_sync',
-						'args'   => array( $contact_id ),
-					)
-				);
+				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_users_tags_sync', array( $contact_id ) ) );
 
 			}
 
@@ -581,7 +571,7 @@ class WPF_MailerLite {
 			$request          = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers';
 			$params           = $this->params;
 			$params['method'] = 'POST';
-			$params['body']   = json_encode( array( 'email' => $email ) );
+			$params['body']   = wp_json_encode( array( 'email' => $email ) );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -633,14 +623,10 @@ class WPF_MailerLite {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true ) {
+	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
 		}
 
 		$send_data = array();
@@ -659,7 +645,7 @@ class WPF_MailerLite {
 
 		$url            = 'https://api.mailerlite.com/api/v2/subscribers';
 		$params         = $this->params;
-		$params['body'] = json_encode( $send_data );
+		$params['body'] = wp_json_encode( $send_data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -680,18 +666,10 @@ class WPF_MailerLite {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true ) {
+	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		$send_data = array();
@@ -712,7 +690,7 @@ class WPF_MailerLite {
 		$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
 		$params           = $this->params;
 		$params['method'] = 'PUT';
-		$params['body']   = json_encode( $send_data );
+		$params['body']   = wp_json_encode( $send_data );
 
 		$response = wp_safe_remote_request( $url, $params );
 
@@ -737,7 +715,7 @@ class WPF_MailerLite {
 
 				$url            = 'https://api.mailerlite.com/api/v2/subscribers';
 				$params         = $this->params;
-				$params['body'] = json_encode( $contact_data );
+				$params['body'] = wp_json_encode( $contact_data );
 
 				$response = wp_safe_remote_post( $url, $params );
 
@@ -923,7 +901,7 @@ class WPF_MailerLite {
 			$request          = 'https://api.mailerlite.com/api/v2/webhooks';
 			$params           = $this->params;
 			$params['method'] = 'POST';
-			$params['body']   = json_encode( $data );
+			$params['body']   = wp_json_encode( $data );
 
 			$response = wp_safe_remote_post( $request, $params );
 

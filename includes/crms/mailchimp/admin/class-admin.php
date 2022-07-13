@@ -81,6 +81,19 @@ class WPF_MailChimp_Admin {
 			'section' => 'setup',
 		);
 
+		if ( $settings['connection_configured'] && wpf_get_option( 'crm' ) === $this->slug ) {
+
+			$new_settings['mc_default_list'] = array(
+				'title'       => __( 'MailChimp Audience', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select an audience to use for WP Fusion. If you change the audience, you\'ll need to click Refresh Available Tags & Fields (below) to update the available dropdown options.', 'wp-fusion-lite' ),
+				'type'        => 'select',
+				'placeholder' => 'Select Audience',
+				'section'     => 'setup',
+				'choices'     => isset( $options['mc_lists'] ) ? $options['mc_lists'] : array(),
+			);
+
+		}
+
 		$new_settings['mailchimp_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion-lite' ),
 			'desc'        => __( 'You can create an API key by navigating to Account &raquo; Extras &raquo; API Keys.', 'wp-fusion-lite' ),
@@ -89,19 +102,6 @@ class WPF_MailChimp_Admin {
 			'class'       => 'api_key',
 			'post_fields' => array( 'mailchimp_key', 'mc_default_list' ),
 		);
-
-		if ( $settings['connection_configured'] && wpf_get_option( 'crm' ) === $this->slug ) {
-
-			$new_settings['mc_default_list'] = array(
-				'title'       => __( 'MailChimp Audience', 'wp-fusion-lite' ),
-				'desc'        => __( 'Select an audience to use for WP Fusion. If you change the audience, you\'ll need to click Refresh Available Tags & Fields (above) to update the available dropdown options.', 'wp-fusion-lite' ),
-				'type'        => 'select',
-				'placeholder' => 'Select Audience',
-				'section'     => 'setup',
-				'choices'     => isset( $options['mc_lists'] ) ? $options['mc_lists'] : array(),
-			);
-
-		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 

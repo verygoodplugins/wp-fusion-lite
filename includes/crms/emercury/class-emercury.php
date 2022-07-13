@@ -610,15 +610,10 @@ class WPF_Emercury {
 	 * @since 3.37.8
 	 *
 	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
 
-	public function add_contact( $contact_data, $map_meta_fields = true ) {
-
-		if ( true == $map_meta_fields ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
-		}
+	public function add_contact( $contact_data ) {
 
 		$emercury_list = wpf_get_option( 'emercury_list' );
 
@@ -652,15 +647,10 @@ class WPF_Emercury {
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
 	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @param bool  $map_meta_fields Whether to map WordPress meta keys to CRM field keys.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 
-	public function update_contact( $contact_id, $contact_data, $map_meta_fields = true ) {
-
-		if ( true == $map_meta_fields ) {
-			$contact_data = wp_fusion()->crm_base->map_meta_fields( $contact_data );
-		}
+	public function update_contact( $contact_id, $contact_data ) {
 
 		list( $emercury_list ) = explode( '_', $contact_id );
 

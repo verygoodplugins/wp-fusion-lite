@@ -67,14 +67,16 @@ class WPF_ConvertFox {
 
 	public function format_post_data( $post_data ) {
 
-		if ( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
-		}
-
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
 		if ( ! empty( $payload ) ) {
+
+			if ( isset( $payload->message ) && is_object( $payload->message ) ) { // automation webhooks.
+				$payload->contact = $payload->message;
+			}
+
 			$post_data['contact_id'] = $payload->contact->id;
+			$post_data['tags']       = wp_list_pluck( $payload->contact->tags, 'name' );
 		}
 
 		return $post_data;
@@ -295,19 +297,31 @@ class WPF_ConvertFox {
 			$this->get_params();
 		}
 
+		$page           = 1;
+		$proceed        = true;
 		$available_tags = array();
 
-		$request  = 'https://api.getgist.com/tags';
-		$response = wp_safe_remote_get( $request, $this->params );
+		while ( $proceed ) {
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
+			$request  = 'https://api.getgist.com/tags?per_page=50&page=' . $page;
+			$response = wp_safe_remote_get( $request, $this->params );
 
-		$body_json = json_decode( $response['body'], true );
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		foreach ( $body_json['tags'] as $tag ) {
-			$available_tags[ $tag['name'] ] = $tag['name'];
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			foreach ( $response['tags'] as $tag ) {
+				$available_tags[ $tag['name'] ] = $tag['name'];
+			}
+
+			if ( empty( $response['tags'] ) || count( $response['tags'] ) < 50 ) {
+				$proceed = false;
+			}
+
+			$page++;
+
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -474,7 +488,7 @@ class WPF_ConvertFox {
 				'name'     => $tag,
 			);
 
-			$params['body'] = json_encode( $update_data );
+			$params['body'] = wp_json_encode( $update_data );
 
 			$response = wp_safe_remote_post( $url, $params );
 
@@ -515,7 +529,7 @@ class WPF_ConvertFox {
 				'name'     => $tag,
 			);
 
-			$params['body'] = json_encode( $update_data );
+			$params['body'] = wp_json_encode( $update_data );
 
 			$response = wp_safe_remote_post( $url, $params );
 
@@ -535,17 +549,13 @@ class WPF_ConvertFox {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data, $map_meta_fields = true, $lead = false ) {
+	public function add_contact( $data, $lead = false ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		// Fix names
+		// Fix names.
 
 		if ( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
 
@@ -595,12 +605,12 @@ class WPF_ConvertFox {
 
 		}
 
-		if ( $lead === true ) {
+		if ( true === $lead  ) {
 			$update_data->type = 'lead';
 		}
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$response = wp_safe_remote_post( 'https://api.getgist.com/contacts', $params );
 
@@ -621,18 +631,10 @@ class WPF_ConvertFox {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data, $map_meta_fields = true, $lead = false ) {
+	public function update_contact( $contact_id, $data, $lead = false ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
-		}
-
-		if ( $map_meta_fields == true ) {
-			$data = wp_fusion()->crm_base->map_meta_fields( $data );
-		}
-
-		if ( empty( $data ) ) {
-			return false;
 		}
 
 		// Need email address for updates
@@ -679,12 +681,19 @@ class WPF_ConvertFox {
 
 		}
 
-		if ( $lead === true ) {
+		if ( true === $lead ) {
 			$update_data->type = 'lead';
+		} else {
+
+			$user = get_user_by( 'email', $data['email'] );
+
+			if ( $user ) {
+				$update_data->user_id = $user->ID; // if it's a user, send the ID.
+			}
 		}
 
 		$params         = $this->params;
-		$params['body'] = json_encode( $update_data );
+		$params['body'] = wp_json_encode( $update_data );
 
 		$response = wp_safe_remote_post( 'https://api.getgist.com/contacts', $params );
 
@@ -839,13 +848,12 @@ class WPF_ConvertFox {
 	 *
 	 * @since  3.38.36
 	 *
-	 * @param array $data            The lead data.
-	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @param  array $data   The lead data.
 	 * @return string The lead ID.
 	 */
-	public function add_lead( $data, $map_meta_fields = true ) {
+	public function add_lead( $data ) {
 
-		return $this->add_contact( $data, $map_meta_fields, $lead = true );
+		return $this->add_contact( $data, $lead = true );
 
 	}
 
@@ -855,13 +863,13 @@ class WPF_ConvertFox {
 	 *
 	 * @since  3.38.36
 	 *
-	 * @param array $data            The lead data.
-	 * @param bool  $map_meta_fields Whether or not to map the meta fields.
+	 * @param  int   $contact_id The contact ID.
+	 * @param  array $data       The lead data.
 	 * @return string The lead ID.
 	 */
-	public function update_lead( $data, $map_meta_fields = true ) {
+	public function update_lead( $contact_id, $data ) {
 
-		return $this->update_contact( $data, $map_meta_fields, $lead = true );
+		return $this->update_contact( $contact_id, $data, $lead = true );
 
 	}
 
@@ -904,7 +912,7 @@ class WPF_ConvertFox {
 		);
 
 		$params         = $this->params;
-		$params['body'] = wp_json_encode( $data );
+		$params['body'] = wp_wp_json_encode( $data );
 		$response       = wp_safe_remote_post( 'https://api.getgist.com/events', $params );
 
 		if ( is_wp_error( $response ) ) {
