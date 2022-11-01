@@ -302,7 +302,7 @@ class WPF_Zoho {
 					} else {
 						$message  = 'Invalid data passed for field.';
 						$message .= '<br /><br />';
-						$message .= 'This error normally means that you tried to update a Zoho field with invalid data. For example syncing multi-select data to a text field.';
+						$message .= 'This error normally means that you tried to update a Zoho field with invalid data. For example syncing multi-select data to a text field. ';
 						$message .= 'It can also mean you synced multi-select or picklist data, but one or more of the options sent over the API didn\'t match the allowed options inside Zoho.';
 					}
 

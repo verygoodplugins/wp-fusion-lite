@@ -42,8 +42,10 @@ class WPF_ZeroBSCRM {
 
 	public function init() {
 
+		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
+
 		// Don't watch ZBS for changes if staging mode is active
-		if ( wpf_get_option( 'staging_mode' ) == true ) {
+		if ( wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -53,6 +55,26 @@ class WPF_ZeroBSCRM {
 		add_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) );
 
 		$this->edit_url = admin_url( 'admin.php?page=zbs-add-edit&action=view&zbstype=contact&zbsid=%s' );
+
+	}
+
+	/**
+	 * Make sure Jetpack is active before using any of these methods.
+	 *
+	 * @since  3.40.15
+	 *
+	 * @param bool $check Whether the dependencies are met
+	 *
+	 * @return bool|WP_Error
+	 */
+
+	public function preflight_check( $check ) {
+
+		if ( ! class_exists( 'ZeroBSCRM' ) ) {
+			return new WP_Error( 'error', 'Jetpack CRM plugin not active.' );
+		}
+
+		return true;
 
 	}
 
@@ -149,7 +171,7 @@ class WPF_ZeroBSCRM {
 
 		if ( ! class_exists( 'ZeroBSCRM' ) ) {
 
-			return new WP_Error( 'error', 'Zero BS CRM plugin not active.' );
+			return new WP_Error( 'error', 'Jetpack CRM plugin not active.' );
 
 		}
 

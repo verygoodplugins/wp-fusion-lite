@@ -72,6 +72,18 @@ class WPF_Maropost_Admin {
 			'section' => 'setup'
 		);
 
+		if ( $settings['connection_configured'] && 'maropost' === wpf_get_option( 'crm' ) ) {
+
+			$is_config['mp_list'] = array(
+				'title'   => __( 'Maropost Default List', 'wp-fusion-lite' ),
+				'desc'    => __( 'Select a list in Maropost to use with WP Fusion.', 'wp-fusion-lite' ),
+				'std'     => 'Personal',
+				'type'    => 'select',
+				'section' => 'setup',
+				'choices' => wpf_get_option( 'maropost_lists', array() ),
+			);
+		}
+
 		$is_config['maropost_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion-lite' ),
 			'desc'        => __( 'Find your API key under connections in your account settings on Maropost.', 'wp-fusion-lite' ),
@@ -80,18 +92,6 @@ class WPF_Maropost_Admin {
 			'class'       => 'api_key',
 			'post_fields' => array( 'account_id', 'maropost_key', 'mp_list'  )
 		);
-
-		if( $settings['connection_configured'] == true && wpf_get_option('crm') == 'maropost') {
-
-			$is_config['mp_list'] = array(
-				'title'   => __( 'Maropost Default List', 'wp-fusion-lite' ),
-				'std'     => 'Personal',
-				'type'    => 'select',
-				'section' => 'setup',
-				'choices' => wpf_get_option( 'maropost_lists' )
-
-			);
-		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $is_config );
 

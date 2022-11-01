@@ -22,7 +22,7 @@ $activecampaign_fields['phone_number'] = array(
 	'crm_field' => 'phone',
 );
 
-$activecampaign_fields[] = array(
+$activecampaign_fields['billing_company'] = array(
 	'crm_label' => 'Account Name',
 	'crm_field' => 'orgname',
 );

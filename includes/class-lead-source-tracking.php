@@ -137,15 +137,33 @@ class WPF_Lead_Source_Tracking {
 		$leadsource_cookie_name = $this->get_leadsource_cookie_name();
 		$ref_cookie_name        = $this->get_referral_cookie_name();
 
-		if ( ! empty( $_COOKIE[ $leadsource_cookie_name ] ) ) {
+		$cookies = $_COOKIE;
 
-			$data      = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $leadsource_cookie_name ] ) );
+		// Maybe URL-decode the components (some hosts do this with JS tracking).
+		foreach ( $cookies as $key => $val ) {
+
+			if ( ! is_array( $val ) && 0 === strpos( $key, 'wpf_leadsource' ) ) {
+				$newkey = str_replace( 'wpf_leadsource%5B', '', $key );
+				$newkey = str_replace( '%5D', '', $newkey );
+
+				if ( ! isset( $cookies['wpf_leadsource'] ) ) {
+					$cookies['wpf_leadsource'] = array();
+				}
+
+				$cookies['wpf_leadsource'][ $newkey ] = $val;
+			}
+
+		}
+
+		if ( ! empty( $cookies[ $leadsource_cookie_name ] ) ) {
+
+			$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $leadsource_cookie_name ] ) );
 			$user_meta = array_merge( $user_meta, $data );
 		}
 
-		if ( ! empty( $_COOKIE[ $ref_cookie_name ] ) ) {
+		if ( ! empty( $cookies[ $ref_cookie_name ] ) ) {
 
-			$data      = array_map( 'sanitize_text_field', wp_unslash( $_COOKIE[ $ref_cookie_name ] ) );
+			$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $ref_cookie_name ] ) );
 			$user_meta = array_merge( $user_meta, $data );
 
 		}

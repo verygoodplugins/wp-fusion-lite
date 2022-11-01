@@ -23,7 +23,7 @@ class WPF_User {
 
 		// Register and profile updates.
 		add_action( 'user_register', array( $this, 'user_register' ), 20 ); // 20 so usermeta added by other plugins is saved
-		add_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
+		add_action( 'profile_update', array( $this, 'profile_update' ) );
 		add_action( 'add_user_to_blog', array( $this, 'add_user_to_blog' ) );
 		add_filter( 'wpf_user_register', array( $this, 'maybe_set_first_last_name' ), 100, 2 ); // 100 so it runs after everything else
 
@@ -59,9 +59,9 @@ class WPF_User {
 	 *
 	 * @param WPF_CRM $crm    The CRM integration.
 	 */
-	public function set_constants() {
+	public function set_constants( $crm ) {
 
-		$slug = wpf_get_option( 'crm' );
+		$slug = $crm->slug;
 
 		if ( wpf_get_option( 'multisite_prefix_keys' ) ) {
 
@@ -89,14 +89,17 @@ class WPF_User {
 	public function get_current_user_id() {
 
 		if ( is_user_logged_in() ) {
-			return get_current_user_id();
+			$user_id = get_current_user_id();
+		} elseif ( doing_wpf_auto_login() ) {
+			$user_id = wp_fusion()->auto_login->auto_login_user['user_id'];
+		} else {
+			$user_id = 0;
 		}
 
-		if ( doing_wpf_auto_login() ) {
-			return wp_fusion()->auto_login->auto_login_user['user_id'];
-		}
+		// This lets the HTTP API logging know which user ID we're currently operating on.
+		wp_fusion()->logger->user_id = $user_id;
 
-		return 0;
+		return $user_id;
 
 	}
 
@@ -471,6 +474,7 @@ class WPF_User {
 		$assign_tags = wpf_get_option( 'assign_tags' );
 
 		if ( ! empty( $assign_tags ) ) {
+			wp_fusion()->logger->add_source( 'general-settings' );
 			$this->apply_tags( $assign_tags, $user_id );
 		}
 
@@ -487,7 +491,7 @@ class WPF_User {
 	 * @return void
 	 */
 
-	public function profile_update( $user_id, $old_user_data ) {
+	public function profile_update( $user_id ) {
 
 		$bypass = apply_filters( 'wpf_bypass_profile_update', false, wpf_clean( wp_unslash( $_REQUEST ) ) );
 
@@ -797,7 +801,7 @@ class WPF_User {
 		}
 
 		if ( ! empty( $userdata->caps ) ) {
-			$user_meta['wp_capabilities'] = array_keys( $userdata->caps );
+			$user_meta[ $userdata->cap_key ] = array_keys( $userdata->caps );
 		}
 
 		$user_meta['ip'] = $this->get_ip();
@@ -873,9 +877,9 @@ class WPF_User {
 		$user_meta = wpf_clean( $user_meta ); // sanitize and clean.
 
 		// Don't send updates back.
-		remove_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
-		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
-		remove_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
+		remove_action( 'profile_update', array( $this, 'profile_update' ) );
+		remove_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ) );
+		remove_action( 'added_user_meta', array( $this, 'push_user_meta_single' ) );
 
 		// Save all of it to usermeta table if doing auto login
 		if ( doing_wpf_auto_login() ) {
@@ -994,7 +998,7 @@ class WPF_User {
 						wpf_log( 'notice', $user_id, 'Role <strong>' . $value . '</strong> was loaded, but it is not a valid user role for this site.' );
 
 					}
-				} elseif ( $key == 'wp_capabilities' ) {
+				} elseif ( $key === $user->cap_key ) {
 
 					if ( user_can( $user_id, 'manage_options' ) ) { // Don't run on admins.
 						continue;
@@ -1042,7 +1046,7 @@ class WPF_User {
 			}
 		}
 
-		add_action( 'profile_update', array( $this, 'profile_update' ), 10, 2 );
+		add_action( 'profile_update', array( $this, 'profile_update' ) );
 		add_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		add_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 
@@ -1491,14 +1495,14 @@ class WPF_User {
 
 	public function return_password( $user_id, $user_meta ) {
 
-		$password_field = wpf_get_option( 'return_password_field', array() );
+		$password_field = wpf_get_option( 'return_password_field' );
 
-		if ( wpf_get_option( 'return_password' ) && ! empty( $password_field['crm_field'] ) ) {
+		if ( wpf_get_option( 'return_password' ) && ! empty( $password_field ) ) {
 
 			wpf_log( 'info', $user_id, 'Returning generated password <strong>' . $user_meta['user_pass'] . '</strong> to ' . wp_fusion()->crm->name );
 
 			$contact_id = $this->get_contact_id( $user_id );
-			$result     = wp_fusion()->crm->update_contact( $contact_id, array( $password_field['crm_field'] => $user_meta['user_pass'] ), false );
+			$result     = wp_fusion()->crm->update_contact( $contact_id, array( $password_field => $user_meta['user_pass'] ), false );
 
 			if ( is_wp_error( $result ) ) {
 				wpf_log( $result->get_error_code(), $user_id, 'Error while returning password: ' . $result->get_error_message(), array( 'source' => wp_fusion()->crm->slug ) );
@@ -1606,10 +1610,11 @@ class WPF_User {
 		}
 
 		$user = get_userdata( $user_id );
+		$caps = get_user_meta( $user_id, $user->cap_key, true ); // for some reason $user->caps isn't always updated by the time this function runs.
 
-		if ( ! empty( $user->caps ) && is_array( $user->caps ) ) {
+		if ( ! empty( $caps ) && is_array( $caps ) ) {
 
-			$roles = array_keys( $user->caps );
+			$roles = array_keys( $caps );
 
 			if ( ! $this->get_contact_id( $user_id ) ) {
 
@@ -1622,7 +1627,12 @@ class WPF_User {
 				}
 			} else {
 
+				if ( doing_action( 'remove_user_role' ) ) {
+					$role = $roles[0]; // If we're removing a role, $role will be the role that was just removed, so let's grab the fist capability instead.
+				}
+
 				$update_data = array(
+					$user->cap_key    => $roles,
 					'wp_capabilities' => $roles,
 					'role'            => $role,
 				);
@@ -1775,14 +1785,14 @@ class WPF_User {
 
 	public function has_tag( $tags, $user_id = false ) {
 
-		// Allow overrides by admin bar
+		// Allow overrides by admin bar.
 		if ( wpf_is_user_logged_in() && current_user_can( 'manage_options' ) && get_query_var( 'wpf_tag' ) ) {
 
-			if ( get_query_var( 'wpf_tag' ) == 'unlock-all' ) {
+			if ( 'unlock-all' === get_query_var( 'wpf_tag' ) ) {
 				return true;
 			}
 
-			if ( get_query_var( 'wpf_tag' ) == 'lock-all' ) {
+			if ( 'lock-all' === get_query_var( 'wpf_tag' ) ) {
 				return false;
 			}
 		}
@@ -1801,7 +1811,8 @@ class WPF_User {
 			$tags = array( $tags );
 		}
 
-		$tags = array_map( array( $this, 'get_tag_id' ), $tags );
+		// Make sure we're only checking against valid tags.
+		$tags = array_filter( array_map( array( $this, 'get_tag_id' ), $tags ) );
 
 		if ( ! empty( array_intersect( $tags, $user_tags ) ) ) {
 			return true;

@@ -734,7 +734,7 @@ table {
 }
 
 label {
-    display: inline-block;
+    display: inline-block !important;
     margin-bottom: 0;
 }
 

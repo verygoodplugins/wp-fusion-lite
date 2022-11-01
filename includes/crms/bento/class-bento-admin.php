@@ -120,7 +120,7 @@ class WPF_Bento_Admin {
 
 		$new_settings['site_uuid'] = array(
 			'title'   => __( 'Site Unique ID', 'wp-fusion-lite' ),
-			'desc'    => __( 'Your site unique ID can be found in your Bento account under Settings &raquo; Site Settings &raquo; <strong>Site UUID</strong>.', 'wp-fusion-lite' ),
+			'desc'    => __( 'Your site unique ID can be found in your Bento account under the Settings &raquo; <strong>Site UUID</strong>.', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup',
 		);

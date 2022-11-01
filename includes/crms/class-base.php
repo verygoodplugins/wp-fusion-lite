@@ -825,7 +825,10 @@ class WPF_CRM_Base {
 
 			if ( ! is_numeric( $value ) && ! empty( $value ) ) {
 
+				$original_zone = date_default_timezone_get();
+				date_default_timezone_set( 'UTC' ); // @codingStandardsIgnoreLine - We want all timestamp conversions to happen in UTC.
 				$value = strtotime( $value );
+				date_default_timezone_set( $original_zone ); // @codingStandardsIgnoreLine.
 			}
 
 			// intval() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning.

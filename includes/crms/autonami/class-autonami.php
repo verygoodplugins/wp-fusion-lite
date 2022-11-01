@@ -48,7 +48,7 @@ class WPF_Autonami {
 	public function __construct() {
 
 		$this->slug = 'autonami';
-		$this->name = 'Autonami';
+		$this->name = 'FunnelKit Automations';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -75,6 +75,15 @@ class WPF_Autonami {
 		if ( ! empty( $url ) ) {
 			$this->url      = trailingslashit( $url ) . 'wp-json/autonami-admin';
 			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=autonami&path=/contact/%d#/';
+		}
+
+		// Hooks for when Autonami is installed on the same site.
+
+		if ( class_exists( 'BWFAN_Core' ) ) {
+
+			add_action( 'bwfan_tags_added_to_contact', array( $this, 'tags_modified' ), 10, 2 );
+			add_action( 'bwfan_tags_removed_from_contact', array( $this, 'tags_modified' ), 10, 2 );
+
 		}
 
 	}
@@ -127,11 +136,26 @@ class WPF_Autonami {
 	}
 
 	/**
+	 * Load tags when they're modified in Autonami.
+	 *
+	 * @since 3.40.30
+	 *
+	 * @param array          $tags  The tags that were just applied or removed.
+	 * @param BWFCRM_Contact $contact The contact.
+	 */
+	public function tags_modified( $tags, $contact ) {
+
+		if ( ! empty( $contact->contact->get_wpid() ) ) {
+			wp_fusion()->user->set_tags( $contact->get_tags(), $contact->contact->get_wpid() );
+		}
+
+	}
+
+	/**
 	 * Performs initial sync once connection is configured.
 	 *
 	 * @return bool
 	 * @since  3.37.14
-	 *
 	 */
 
 	public function sync() {
@@ -458,16 +482,22 @@ class WPF_Autonami {
 	 *
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 * @since  3.37.14
-	 *
 	 */
 	public function apply_tags( $tags, $contact_id ) {
+
 		$prepared_data = [];
+
 		foreach ( $tags as $tag_id ) {
 			$prepared_data[] = [ 'id' => $tag_id ];
 		}
-		$body           = array(
+
+		$body = array(
 			'tags' => $prepared_data,
 		);
+
+		// Prevent looping.
+		remove_action( 'bwfan_tags_added_to_contact', array( $this, 'tags_modified' ), 10, 2 );
+
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $body );
 
@@ -491,9 +521,9 @@ class WPF_Autonami {
 	 *
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 * @since  3.37.14
-	 *
 	 */
 	public function remove_tags( $tags, $contact_id ) {
+
 		$body = array(
 			'tags' => $tags,
 		);
@@ -502,8 +532,10 @@ class WPF_Autonami {
 		$params['method'] = 'DELETE';
 		$params['body']   = wp_json_encode( $body );
 
+		// Prevent looping.
+		remove_action( 'bwfan_tags_removed_from_contact', array( $this, 'tags_modified' ), 10, 2 );
+
 		$request = $this->url . '/contacts/' . $contact_id . '/tags';
-		;
 		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
@@ -613,17 +645,13 @@ class WPF_Autonami {
 		$contact_fields = wpf_get_option( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( ! empty( $response['result']['fields'] ) ) {
-			$response['result'] = array_merge( $response['result'], $response['result']['fields'] ); // merge custom fields for quicker mapping
-		}
-
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
 			if ( ! empty( $field_data['active'] ) ) {
 
 				if ( isset( $response['result'][ $field_data['crm_field'] ] ) ) {
 
-					// Core fields
+					// Core fields.
 					$user_meta[ $field_id ] = $response['result'][ $field_data['crm_field'] ];
 
 				} elseif ( isset( $response['result']['fields'][ $field_data['crm_field'] ] ) ) {
@@ -632,11 +660,12 @@ class WPF_Autonami {
 
 				}
 
-				// Maybe decode arrays
+				// Maybe decode arrays.
 
-				if ( null !== json_decode( $user_meta[ $field_id ] ) ) {
+				if ( isset( $user_meta[ $field_id ] ) && null !== json_decode( $user_meta[ $field_id ] ) ) {
 					$user_meta[ $field_id ] = json_decode( $user_meta[ $field_id ] );
 				}
+
 			}
 		}
 

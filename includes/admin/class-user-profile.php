@@ -25,6 +25,9 @@ class WPF_User_Profile {
 
 		add_action( 'admin_notices', array( $this, 'profile_notices' ) );
 
+		// New users.
+		add_action( 'user_new_form', array( $this, 'user_new_form' ) );
+
 		// AJAX.
 		add_action( 'wp_ajax_resync_contact', array( $this, 'resync_contact' ) );
 
@@ -33,7 +36,7 @@ class WPF_User_Profile {
 		add_action( 'personal_options_update', array( $this, 'user_profile_update' ), 5 );
 
 		// Filters for posted data from internal forms.
-		add_filter( 'wpf_user_register', array( $this, 'filter_form_fields' ), 10, 2 );
+		add_filter( 'wpf_user_register', array( $this, 'filter_form_fields' ), 30, 2 ); // 30 so all other plugins have run.
 		add_filter( 'wpf_user_update', array( $this, 'filter_form_fields' ), 10, 2 );
 
 	}
@@ -111,6 +114,34 @@ class WPF_User_Profile {
 		echo '<div class="notice notice-success">';
 		echo '<p>' . wp_kses_post( $message ) . '</p>';
 		echo '</div>';
+
+	}
+
+	/**
+	 * Adds "Add to CRM" checkbox to the New User form.
+	 *
+	 * @since 3.40.28
+	 *
+	 * @return mixed HTML content.
+	 */
+	public function user_new_form() {
+
+		?>
+
+		<table class="form-table" role="presentation">
+
+			<tr>
+				<th scope="row"><?php printf( esc_html__( 'Add to %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></th>
+				<td>
+					<input type="checkbox" name="wpf_add_contact" id="wpf_add_contact" value="1" checked />
+					<label for="wpf_add_contact"><?php printf( esc_html__( 'Add the user as a contact in %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></label>
+				</td>
+			</tr>
+
+		</table>
+
+		<?php
+
 
 	}
 
@@ -239,7 +270,11 @@ class WPF_User_Profile {
 
 		$screen = get_current_screen();
 
-		if ( ! is_null( $screen ) && in_array( $screen->id, array( 'profile', 'user-edit', 'user-new' ) ) ) {
+		if ( ! is_null( $screen ) && in_array( $screen->id, array( 'profile', 'user-edit', 'user-new', 'user' ) ) ) {
+
+			if ( 'user' === $screen->id && ! isset( $post_data['wpf_add_contact'] ) ) {
+				return null; // cancel the signup process if the Add to CRM box isn't checked.
+			}
 
 			$field_map = array(
 				'email'         => 'user_email',

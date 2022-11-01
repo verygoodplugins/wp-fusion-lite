@@ -45,6 +45,22 @@ class WPF_Staging_Sites {
 
 	}
 
+
+	/**
+	 * Remove the prefix used to prevent the site URL being updated on WP Engine
+	 * and Cloudways.
+	 *
+	 * @since  3.40.16
+	 *
+	 * @param  string $value  The value.
+	 * @return string The site URL.
+	 */
+	public static function get_site_url() {
+
+		return str_replace( '_[wpf_siteurl]_', '', wpf_get_option( 'site_url', get_site_url() ) );
+
+	}
+
 	/**
 	 * Handles deactivating / ignoring staging mode via the links in the admin
 	 * notices.
@@ -57,10 +73,13 @@ class WPF_Staging_Sites {
 
 			if ( 'update' === $_GET['wpf_duplicate_site'] ) {
 
-				wpf_log( 'notice', get_current_user_id(), 'Site URL changed from <strong>' . wpf_get_option( 'site_url' ) . '</strong> to <strong>' . get_site_url() . '</strong>. Staging mode deactivated.', array( 'source' => 'staging-mode' ) );
+				wpf_log( 'notice', get_current_user_id(), 'Site URL changed from <strong>' . self::get_site_url() . '</strong> to <strong>' . get_site_url() . '</strong>. Staging mode deactivated.', array( 'source' => 'staging-mode' ) );
 
 				wp_fusion()->settings->set( 'dismissed_wpf-staging-notice', false ); // so it can be shown again.
-				wp_fusion()->settings->set( 'site_url', get_site_url() );
+				wp_fusion()->settings->set( 'site_url', self::get_duplicate_site_lock_key() );
+				wp_fusion()->settings->set( 'staging_mode', false );
+
+				wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings' ) );
 
 			} elseif ( 'ignore' === $_GET['wpf_duplicate_site'] ) {
 
@@ -79,10 +98,10 @@ class WPF_Staging_Sites {
 	 *
 	 * @return bool  True if duplicate site, False otherwise.
 	 */
-	public function is_duplicate_site() {
+	public static function is_duplicate_site() {
 
 		$wp_site_url_parts  = wp_parse_url( get_site_url() );
-		$wpf_site_url_parts = wp_parse_url( wpf_get_option( 'site_url', get_site_url() ) );
+		$wpf_site_url_parts = wp_parse_url( self::get_site_url() );
 
 		if ( ! isset( $wp_site_url_parts['path'] ) && ! isset( $wpf_site_url_parts['path'] ) ) {
 			$paths_match = true;
@@ -117,6 +136,28 @@ class WPF_Staging_Sites {
 	}
 
 	/**
+	 * Generates a unique key based on the sites URL used to determine duplicate/staging sites.
+	 *
+	 * The key can not simply be the site URL, e.g. http://example.com, because some hosts (WP Engine) replaces all
+	 * instances of the site URL in the database when creating a staging site. As a result, we obfuscate
+	 * the URL by inserting '_[wpf_siteurl]_' into the middle of it.
+	 *
+	 * We don't use a hash because keeping the URL in the value allows for viewing and editing the URL
+	 * directly in the database.
+	 *
+	 * @since 3.40.16
+	 * @return string The duplicate lock key.
+	 */
+	public static function get_duplicate_site_lock_key() {
+
+		$site_url = get_site_url();
+		$scheme   = wp_parse_url( $site_url, PHP_URL_SCHEME ) . '://';
+		$site_url = str_replace( $scheme, '', $site_url );
+
+		return $scheme . substr_replace( $site_url, '_[wpf_siteurl]_', round( strlen( $site_url ) / 2 ), 0 );
+	}
+
+	/**
 	 * Shows a notice when WPF is in staging mode.
 	 *
 	 * @since 3.38.40
@@ -124,7 +165,11 @@ class WPF_Staging_Sites {
 	 */
 	public function show_staging_notice() {
 
-		if ( $this->is_duplicate_site() && current_user_can( 'manage_options' ) && ! wpf_get_option( 'dismissed_wpf-staging-notice' ) ) {
+		if ( wpf_get_option( 'dismissed_wpf-staging-notice' ) && ! doing_action( 'wpf_settings_notices' ) ) {
+			return; // if the notice has been dismissed across the admin, we'll only show it on the WPF settings page.
+		}
+
+		if ( $this->is_duplicate_site() && current_user_can( 'manage_options' ) ) {
 
 			echo '<div id="wpf-staging-notice" data-notice="wpf-staging-notice" class="notice notice-warning wpf-notice is-dismissible"><p>';
 
@@ -134,20 +179,24 @@ class WPF_Staging_Sites {
 				'<strong>',
 				'</strong>',
 				esc_html( wp_fusion()->crm->name ),
-				'<a href="' . esc_url( wpf_get_option( 'site_url' ) ) . '" target="_blank">',
+				'<a href="' . esc_url( self::get_site_url() ) . '" target="_blank">',
 				'</a>',
-				esc_url( wpf_get_option( 'site_url' ) ),
+				esc_url( self::get_site_url() ),
 				'<a href="https://wpfusion.com/documentation/faq/staging-sites/" target="_blank">',
 				'</a>'
 			);
 
 			echo '</p><p>';
 
-			echo '<a href="' . esc_url( wp_nonce_url( add_query_arg( 'wpf_duplicate_site', 'ignore' ), 'wpf_duplicate_site', '_wpfnonce' ) ) . '" class="button button-primary">';
+			if ( ! doing_action( 'wpf_settings_notices' ) ) {
 
-			esc_html_e( 'Quit nagging me (but keep staging mode enabled)', 'wp-fusion-lite' );
+				echo '<a href="' . esc_url( wp_nonce_url( add_query_arg( 'wpf_duplicate_site', 'ignore' ), 'wpf_duplicate_site', '_wpfnonce' ) ) . '" class="button button-primary">';
 
-			echo '</a> ';
+				esc_html_e( 'Quit nagging me (but keep staging mode enabled)', 'wp-fusion-lite' );
+
+				echo '</a> ';
+
+			}
 
 			echo '<a href="' . esc_url( wp_nonce_url( add_query_arg( 'wpf_duplicate_site', 'update' ), 'wpf_duplicate_site', '_wpfnonce' ) ) . '" class="button">';
 
@@ -169,7 +218,7 @@ class WPF_Staging_Sites {
 	 */
 	public function show_staging_notice_wpf() {
 
-		if ( wpf_get_option( 'staging_mode' ) ) {
+		if ( wpf_get_option( 'staging_mode' ) && ! $this->is_duplicate_site() ) {
 
 			echo '<div class="notice notice-warning wpf-notice"><p>';
 
@@ -183,17 +232,11 @@ class WPF_Staging_Sites {
 				esc_html( wp_fusion()->crm->name )
 			);
 
-			if ( $this->is_duplicate_site() ) {
-
-				echo ' <a href="' . esc_url( wp_nonce_url( add_query_arg( 'wpf_duplicate_site', 'update' ), 'wpf_duplicate_site', '_wpfnonce' ) ) . '">';
-
-				esc_html_e( 'Disable staging mode.', 'wp-fusion-lite' );
-
-				echo '</a>';
-
-			}
-
 			echo '</p></div>';
+
+		} elseif ( $this->is_duplicate_site() ) {
+
+			$this->show_staging_notice();
 
 		}
 

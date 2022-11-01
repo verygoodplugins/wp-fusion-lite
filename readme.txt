@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 6.0.1
-Stable tag: 3.40.12
+Tested up to: 6.1.0
+Stable tag: 3.40.36
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -186,6 +186,96 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.40.36 - 11/1/2022 =
+
+##### Tech stuff
+
+* Tested for WordPress 6.1.0
+* Tested for PHP 8.1.9
+
+
+##### New CRMs
+
+* Added [Pipedrive CRM integration](https://wpfusion.com/documentation/installation-guides/how-to-connect-pipedrive-to-wordpress/)
+
+
+##### New Features
+
+* Added Refresh Available Tags & Fields button to the admin toolbar
+* Added "Add to CRM" checkbox on admin Add New User form
+* Added as-you-type filter to Preview With Tags admin bar dropdown when there are more than 20 available tags
+* Added support for the Groundhogg White Label Branding extension
+* Addded Avatar URL for sync with FluentCRM (can update the contact's photo by syncing a URL to an image)
+* Added County, Availability, Support Level, Latitude, Longitude, Voting District, Inferred Support Level, Priority Level, Do Not Call, Mobile Opt-In, Recruiter ID, and Do Not Contact fields for sync with NationBuilder
+* Added Status field for sync with JetPack CRM
+
+
+##### Improvements
+
+* Improved - The tags list in the All Users list now has a max height set, and can be clicked to expand
+* Improved support for syncing user capabilities when using a custom table prefix
+* Improved - Dates will be force to UTC for timestamp conversion before beng synced (fixes issues with other plugins calling `date_default_timezone_set()` and messing up the conversion)
+* Improved - Filter Queries Advanced will now take into account any `post__in` arguments when building up the array of post IDs to exclude (improves performance)
+* Improved performance when using Filter Queries in Advanced mode and a query is for multiple post types
+* Improved - Exporting the activity logs will now automatically unserialize any serialized data
+* Improved - The HTTP API logs will now be associated with the user who initiaited the API call, instead of "system"
+* Improved - If the logs are disabled, the logs database table will be dropped
+* Improved staging site automatic detection on hosts that find/replace the site URL throughout the database when copying from live to staging
+* Improved and simplified duplicate site and staging site notices in the admin
+* Improved - Made WP Fusion menu item and settings page title able to be white labelled via the `gettext` filter
+* Improved Return After Login feature, will also run on the `login_redirect` filter for cases where another plugin takes priority over the login redirect on `wp_login`
+* Updated Autonami to FunnelKit Automations
+* Improved - If Autonami is running on the same site, tag changes will be synced across to WP Fusion immediately, without requiring an API call
+* Improved - The Bento integration will force all email addresses to lowercase, both for syncing and for contact ID lookups
+* **Warning** - Bento users - Note that this change will cause WordPress users to become disconnected from their Bento subscriber records if their email addresses in Bento contain capital letters. To fix this, it's recommended to run a Push User Meta operation one time, and WP Fusion will update all your subscriber records in Bento to use lowercase email addresses
+* Improved - Groundhogg integration will now log an error when updating a contact's email to an address that is already in use by another contact
+
+
+##### Bug Fixes
+
+* Fixed - All links to CRM contact records in the logs will now open in a new browser window
+* Fixed Staging Mode checkbox not un-checkable when the site was in staging mode due to detecting a change in the site's URL
+* Fixed the TipTip JS file getting enqueued twice with WooCommerce (made tooltips not automatically close)
+* Fixed staging mode only auto-activating in the admin of the staging site
+* Fixed Preview With Tag not working with tags with apostrophes in the tag name
+* Fixed Filter Queries - Advanced not working on `post` post type when not speficied as the `post_type` in the `WP_Query` arguments
+* Fixed `?wpf-end-auto-login=true` query parameter not working
+* Fixed memory leak when using [the_excerpt] shortcode inside a post's main content area
+* Fixed PHP warning during auto-login session when a Return After Login redirect was attempted
+* Fixed Apply Tags on View functionality not working when "Restrict Content" was disabled in the General settings
+* Fixed connection settings getting overwritten when calling `wp_fusion()->settings->set()` after having switched to another multisite blog
+* Fixed fatal error trying to delete import groups that contained `WP_Error`s
+* Fixed disabling the API queue also disabling staging mode
+* Fixed JavaScript lead source tracking not working on some hosts (cookie components were being URI-encoded)
+* Fixed removing a user role syncing the user's role as the name of the role that was just removed
+* Fixed fatal error on WP Fusion settings page when connected to Jetpack CRM and the Jetpack CRM plugin was deactivated
+* Fixed Groundhogg syncing new user registrations to Groundhogg before WP Fusion
+* Fixed PHP warnings in Maropost integration
+* Fixed lists not loading with Dynamics Marketing 365
+* Fixed fatal error starting an auto login session with Dynamics 365 when the contact wasn't on any lists
+* Fixed the MailerLite integration logging an error when a subscriber record isn't found for an email address (should just be an info message)
+* Fixed custom fields not loading with Autonami 2.2.0
+* Fixed PHP warning loading usermeta fields from Autonami (same site)
+* Fixed unhandled fatal error when a HubSpot access token refresh failed
+* Fixed un-selected checkboxes not being loaded from HubSpot
+* Fixed address and phone fields not updating with Groundhogg (REST API)
+* Fixed error `The entity "ccedil" was referenced, but not declared.` when syncing a country value of `Curaçao` to Infusionsoft
+* Fixed missing `use_utm_names` flag with Ontraport when updating existing contacts (prevented lead sources from being set)
+* Fixed tags not loading with MooSend
+* Fixed PHP warnings in MooSend integration
+* Fixed Mautic ignoring empty fields
+
+
+##### Developer
+
+* Added error handling for the Sendinblue Sales CRM API
+* Developers: When a user's tags are modified, the memory cache at WPF_Access_Control::$can_access_posts will be cleared
+* Developers: `wpf_crm_loaded` action will now pass the active CRM as a parameter
+* Developers: Fixed `wpf_get_setting_{$id}` filter not updating the option inputs on the settings page
+* Developers - Improved: The `validate_field_` filters in the settings will now only run when an option value has changed instead of on every save
+
+
 
 = 3.40.12 - 7/13/2022 =
 

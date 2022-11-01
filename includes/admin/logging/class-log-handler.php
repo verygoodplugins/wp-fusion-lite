@@ -63,11 +63,23 @@ class WPF_Log_Handler {
 	public $event_sources = array();
 
 	/**
+	 * This contains the current user ID (or the user ID currently being acted on),
+	 * for use with HTTP API logging.
+	 *
+	 * @since 3.40.29
+	 *
+	 * @var int
+	 */
+	public $user_id = 0;
+
+	/**
 	 * Constructor for the logger.
 	 */
 	public function __construct() {
 
 		add_action( 'init', array( $this, 'init' ) );
+
+		add_filter( 'validate_field_enable_logging', array( $this, 'validate_enable_logging' ), 10, 2 );
 
 	}
 
@@ -91,6 +103,9 @@ class WPF_Log_Handler {
 
 		// Clear the error count.
 		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'clear_errors_count' ) );
+
+		// Track user IDs.
+		add_action( 'wpf_get_contact_id_start', array( $this, 'set_log_source_user_id' ) );
 
 		// Screen options.
 		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'add_screen_options' ) );
@@ -118,6 +133,30 @@ class WPF_Log_Handler {
 
 	}
 
+	/**
+	 * Drops / re-creates the logging table when logging is disabled or re-enabled.
+	 *
+	 * @since 3.40.15
+	 *
+	 * @param bool  $input   The input.
+	 * @param array $setting The setting.
+	 */
+	public function validate_enable_logging( $input, $setting ) {
+
+		if ( $input ) {
+
+			$this->create_update_table();
+
+		} else {
+
+			global $wpdb;
+			$wpdb->query( "DROP TABLE {$wpdb->prefix}wpf_logging" );
+
+		}
+
+		return $input;
+
+	}
 
 	/**
 	 * This allows us to manually prepend an event source to the log entry.
@@ -129,10 +168,22 @@ class WPF_Log_Handler {
 
 	public function add_source( $source ) {
 
-		if ( ! in_array( $source, $this->event_sources ) ) {
+		if ( ! in_array( $source, $this->event_sources, true ) ) {
 			$this->event_sources[] = $source;
 		}
 
+	}
+
+	/**
+	 * This sets the user ID about to be queried, so it can be used with HTTP API
+	 * logging.
+	 *
+	 * @since 3.40.29
+	 *
+	 * @param int $user_id The user ID.
+	 */
+	public function set_log_source_user_id( $user_id ) {
+		$this->user_id = $user_id;
 	}
 
 
@@ -197,7 +248,7 @@ class WPF_Log_Handler {
 
 		$message .= '</ul>';
 
-		$this->handle( 'http', 0, $message );
+		$this->handle( 'http', $this->user_id, $message );
 
 	}
 
@@ -740,8 +791,11 @@ class WPF_Log_Handler {
 	 * @since 3.38.23
 	 */
 	public static function export() {
+
 		global $wpdb;
+
 		$results = $wpdb->get_results( "SELECT * from {$wpdb->prefix}wpf_logging" );
+
 		if ( ! empty( $results ) ) {
 
 			$delimiter = ',';
@@ -761,9 +815,9 @@ class WPF_Log_Handler {
 					$result->timestamp,
 					$result->level,
 					$result->user,
-					$result->source,
+					print_r( maybe_unserialize( $result->source ), true ),
 					wp_strip_all_tags( htmlspecialchars_decode( $result->message ) ),
-					$result->context,
+					print_r( maybe_unserialize( $result->context ), true ),
 				);
 
 				fputcsv( $output, $line_data );

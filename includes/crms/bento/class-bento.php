@@ -147,7 +147,7 @@ class WPF_Bento {
 		if ( wpf_is_user_logged_in() ) {
 
 			$userdata = wpf_get_current_user();
-			echo "bento.identify('" . esc_js( $userdata->user_email ) . "');";
+			echo "bento.identify('" . esc_js( strtolower( $userdata->user_email ) ) . "');";
 		}
 
 		echo '
@@ -444,15 +444,12 @@ class WPF_Bento {
 	public function get_contact_id( $email_address ) {
 
 		$site_uuid = wpf_get_option( 'site_uuid' );
-		$request   = $this->url . '/fetch/subscribers/?site_uuid=' . $site_uuid . '&email=' . rawurlencode( $email_address );
+		$request   = $this->url . '/fetch/subscribers/?site_uuid=' . $site_uuid . '&email=' . rawurlencode( strtolower( $email_address ) );
 		$response  = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
-
-		// @todo find a way to save "navigation_url"=>"/account/visitors/visitor_XXXX"
-		// from the response so we can link to the contact record.
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -620,7 +617,7 @@ class WPF_Bento {
 
 		$contact_data = array(
 			'site_uuid' => wpf_get_option( 'site_uuid' ),
-			'email'     => $data['email'],
+			'email'     => strtolower( $data['email'] ),
 		);
 
 		$request        = $this->url . '/fetch/subscribers/';
@@ -659,6 +656,10 @@ class WPF_Bento {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $data ) {
+
+		if ( isset( $data['email'] ) ) {
+			$data['email'] = strtolower( $data['email'] );
+		}
 
 		$body = array(
 			'site_uuid' => wpf_get_option( 'site_uuid' ),

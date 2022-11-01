@@ -139,7 +139,7 @@ class WPF_ZeroBSCRM_Admin {
 			'section' => 'main',
 		);
 
-		if ( zeroBSCRM_getSetting( 'portalusers' ) ) {
+		if ( function_exists( 'zeroBSCRM_getSetting' ) && zeroBSCRM_getSetting( 'portalusers' ) ) {
 			$new_settings['jetpack_import_tag']['desc'] .= '<br /><br /><div class="alert alert-info">' . sprintf( __( 'Heads up: You currently have <strong>Generate WordPress Users for new contacts</strong> enabled in the <a href="%s">Jetpack CRM Client Portal</a>.<br />The Import Trigger will not work if Jetpack is also automatically importing WordPress users.', 'wp-fusion-lite' ), esc_url( admin_url( 'admin.php?page=zerobscrm-plugin-settings&tab=clients' ) ) ) . '</div>';
 		}
 

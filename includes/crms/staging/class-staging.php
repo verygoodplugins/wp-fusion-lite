@@ -39,16 +39,6 @@ class WPF_Staging {
 	 */
 	public function __call( $method, $args ) {
 
-		wpf_log(
-			'notice',
-			wpf_get_current_user_id(),
-			'Staging mode enabled (URL ' . get_site_url() . '). Method ' . $method . ':',
-			array(
-				'source' => wp_fusion()->crm->slug,
-				'args'   => $args,
-			)
-		);
-
 		return false;
 
 	}

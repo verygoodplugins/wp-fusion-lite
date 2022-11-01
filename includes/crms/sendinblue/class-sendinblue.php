@@ -288,6 +288,16 @@ class WPF_SendinBlue {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
+			} elseif ( 400 == wp_remote_retrieve_response_code( $response ) ) {
+
+				// Sales CRM responses.
+
+				if ( ! empty( $body_json->data ) ) {
+					$body_json->message .= ' ' . implode( ' ', $body_json->data );
+				}
+
+				$response = new WP_Error( 'error', $body_json->message );
+
 			}
 		}
 

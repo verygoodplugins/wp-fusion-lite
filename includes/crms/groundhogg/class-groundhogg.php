@@ -51,9 +51,14 @@ class WPF_Groundhogg {
 	 */
 
 	public function init() {
+
 		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
 
-		// Don't watch GH for changes if staging mode is active
+		if ( function_exists( 'Groundhogg\white_labeled_name' ) ) {
+			$this->name = Groundhogg\white_labeled_name(); // White Labelling support.
+		}
+
+		// Don't watch GH for changes if staging mode is active.
 
 		if ( wpf_get_option( 'staging_mode' ) == true || ! class_exists( '\Groundhogg\Contact' ) ) {
 			return;
@@ -69,7 +74,12 @@ class WPF_Groundhogg {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_apply_tags', array( $this, 'create_new_tags' ) );
 
-		add_action( 'plugins_loaded', array( $this, 'remove_actions' ) );
+		// Stop GH syncing users to contacts.
+		add_filter( 'groundhogg/should_convert_user_to_contact_when_user_registered', '__return_false' );
+
+		remove_action( 'user_register', 'Groundhogg\convert_user_to_contact_when_user_registered' );
+		remove_action( 'user_register', array( \Groundhogg\Plugin::instance()->user_syncing, 'sync_new_user' ) );
+		remove_action( 'profile_update', array( \Groundhogg\Plugin::instance()->user_syncing, 'sync_existing_user' ) );
 
 		add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
 		add_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
@@ -145,18 +155,6 @@ class WPF_Groundhogg {
 
 	}
 
-	/**
-	 * Let WP Fusion create contacts from users, not GH
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function remove_actions() {
-
-		remove_action( 'user_register', 'Groundhogg\convert_user_to_contact_when_user_registered' );
-
-	}
 
 	/**
 	 * Formats user entered data to match GH field formats
@@ -167,9 +165,16 @@ class WPF_Groundhogg {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field == 'optin_status' && ! is_numeric( $field ) ) {
+		if ( 'optin_status' === $field && 'checkbox' === $field_type ) {
 
-			// Convert optin status strings to proper format
+			if ( empty( $value ) ) {
+				$value = 1; // Unconfirmed.
+			} else {
+				$value = 2; // Confirmed.
+			}
+		} elseif ( 'optin_status' === $field && ! is_numeric( $value ) ) {
+
+			// Convert optin status strings to proper format.
 
 			$value = strtoupper( $value );
 
@@ -582,8 +587,8 @@ class WPF_Groundhogg {
 
 		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 
-		$contact = new \Groundhogg\Contact( $data, $by_user_id);
-		
+		$contact = new \Groundhogg\Contact( $data, $by_user_id );
+
 		if ( ! $contact->exists() ) {
 			return new WP_Error( 'error', 'Contact creation failed.' );
 		}
@@ -651,7 +656,13 @@ class WPF_Groundhogg {
 
 		$contact = new \Groundhogg\Contact( $contact_id );
 
-		$contact->update( $data );
+		$result = $contact->update( $data );
+
+		// Update failed for some reason.
+
+		if ( isset( $data['email'] ) && $data['email'] !== $contact->email ) {
+			$result = new WP_Error( 'error', ' Could not update email address from <strong>' . $contact->email . '</strong> to <strong>' . $data['email'] . '</strong> because there is already a contact with that email address. Please merge the duplicate contacts and try again.' );
+		}
 
 		unset( $data['user_id'] );
 		unset( $data['owner_id'] );
@@ -666,7 +677,7 @@ class WPF_Groundhogg {
 
 		}
 
-		return true;
+		return $result;
 	}
 
 	/**

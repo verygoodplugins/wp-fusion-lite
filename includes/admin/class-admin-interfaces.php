@@ -49,7 +49,7 @@ class WPF_Admin_Interfaces {
 		$this->includes();
 
 		// Scripts.
-		add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts' ), 20 ); // 20 so WooCommerce has a change to register TipTip.
 
 		// Taxonomy settings.
 		add_action( 'admin_init', array( $this, 'register_taxonomy_form_fields' ) );
@@ -74,7 +74,7 @@ class WPF_Admin_Interfaces {
 		// Meta box content.
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ), 20 );
 
-		if ( wpf_get_option( 'restrict_content', true )  ){
+		if ( wpf_get_option( 'restrict_content', true ) ) {
 
 			// Lock symbol in list table.
 			add_filter( 'display_post_states', array( $this, 'admin_table_post_states' ), 10, 2 );
@@ -200,9 +200,9 @@ class WPF_Admin_Interfaces {
 	public function admin_scripts() {
 
 		wp_enqueue_style( 'select4', WPF_DIR_URL . 'includes/admin/options/lib/select2/select4.min.css', array(), '4.0.1' );
-		wp_enqueue_script( 'select4', WPF_DIR_URL . 'includes/admin/options/lib/select2/select4.min.js', array( 'jquery' ), '4.0.1' );
+		wp_enqueue_script( 'select4', WPF_DIR_URL . 'includes/admin/options/lib/select2/select4.min.js', array( 'jquery' ), '4.0.1', true );
 
-		wp_enqueue_script( 'jquery-tiptip', WPF_DIR_URL . 'assets/js/jquery-tiptip/jquery.tipTip.min.js', array( 'jquery' ), '4.0.1' );
+		wp_enqueue_script( 'jquery-tiptip', WPF_DIR_URL . 'assets/js/jquery-tiptip/jquery.tipTip.min.js', array( 'jquery' ), '1.3', true );
 
 		wp_enqueue_style( 'wpf-admin', WPF_DIR_URL . 'assets/css/wpf-admin.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip' ), WP_FUSION_VERSION, true );
@@ -210,6 +210,7 @@ class WPF_Admin_Interfaces {
 		$localize = array(
 			'crm_supports'  => wp_fusion()->crm->supports,
 			'nonce'         => wp_create_nonce( 'wpf_admin_nonce' ),
+			'connected'  => (bool) wpf_get_option( 'connection_configured' ),
 			'tagSelect4'    => false == apply_filters( 'wpf_disable_tag_select4', false ) ? true : false,
 			'fieldSelect4'  => false == apply_filters( 'wpf_disable_crm_field_select4', false ) ? true : false,
 			'settings_page' => esc_url( admin_url( 'options-general.php?page=wpf-settings' ) ),
@@ -233,6 +234,9 @@ class WPF_Admin_Interfaces {
 					__( 'You can only select %s item', 'wp-fusion-lite' ),
 					'MAX'
 				),
+				'error'            => __( 'Error', 'wp-fusion-lite' ),
+				'syncTags'         => __( 'Syncing Tags', 'wp-fusion-lite' ),
+				'connecting'       => __( 'Connecting', 'wp-fusion-lite' ),
 			),
 		);
 
@@ -728,7 +732,7 @@ class WPF_Admin_Interfaces {
 
 			if ( ! empty( $tags ) ) {
 
-				return esc_html( implode( ', ', array_map( 'wpf_get_tag_label', $tags ) ) );
+				return '<div class="wpf-users-tags">' . esc_html( implode( ', ', array_map( 'wpf_get_tag_label', $tags ) ) ) . '</div>';
 
 			} elseif ( empty( $tags ) && is_array( $tags ) ) {
 

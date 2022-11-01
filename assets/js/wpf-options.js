@@ -1,5 +1,6 @@
 jQuery(document).ready(function($){
 
+
 	// Settings page specific functions
 
 	if($('body').hasClass('settings_page_wpf-settings')) {
@@ -419,6 +420,8 @@ jQuery(document).ready(function($){
 		});
 
 
+
+
 		//
 		// Test Connection and perform initial sync
 		//
@@ -475,9 +478,12 @@ jQuery(document).ready(function($){
 
 				}
 
+
 			});
 
 		}
+
+
 
 		// Button handler for test connection / resync
 
@@ -652,7 +658,7 @@ jQuery(document).ready(function($){
 			
 			if( $(this).val().length && $(this).val().includes( 'https://' ) ) {
 
-				var url = $(this).val().replace(/\/?$/, '/');
+				var url = $(this).val().trim().replace(/\/?$/, '/');
 
 				url = url + 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' + wpf_ajax.sitetitle + '&success_url=' + wpf_ajax.optionsurl + '%26crm=' + crm;
 
@@ -707,12 +713,15 @@ jQuery(document).ready(function($){
 				if(response.success == true && response.data == 'activated') {
 
 					button.html('Deactivate License').removeAttr('disabled').attr('data-action', 'edd_deactivate');
+					button.addClass('activated');
 					$('#license_key').attr('disabled', 'disabled');
 					$('#license_status').val('valid');
+					$('#connection-output-edd').html('');
 
 				} else if(response.success == true && response.data == 'deactivated') {
 
 					button.html('Activate License').removeAttr('disabled').attr('data-action', 'edd_activate');
+					button.removeClass('activated');
 					$('#license_key').removeAttr('disabled');
 					$('#license_key').val('');
 					$('#license_status').val('invalid');
@@ -720,7 +729,7 @@ jQuery(document).ready(function($){
 				} else {
 
 					$('#license_key').removeAttr('disabled');
-					button.html('Retry').addClass('btn-danger').removeAttr('disabled');
+					button.html('Retry').removeAttr('disabled');
 					$('#connection-output-edd').html('<div class="error validation-error"><p>' + wpf_ajax.strings.licenseError + '</p></div><br/>' + response.data);
 
 

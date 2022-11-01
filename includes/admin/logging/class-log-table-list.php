@@ -178,7 +178,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		$edit_url   = wp_fusion()->crm->get_contact_edit_url( $contact_id );
 
 		if ( $edit_url ) {
-			$ret .= ' (<a title="' . sprintf( esc_attr__( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . ' &raquo;" href="' . esc_url( $edit_url ) . '" target="_blank">#' . esc_html( $contact_id ) . '</a>)';
+			$ret .= ' (<a title="' . sprintf( esc_attr__( 'View in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . ' &raquo;" href="' . esc_url( $edit_url ) . '" target="_blank">#' . esc_html( $contact_id ) . '<span class="dashicons dashicons-external"></span></a>)';
 		}
 
 		return $ret;
@@ -207,7 +207,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 				$url = wp_fusion()->crm->get_contact_edit_url( $contact_id );
 
 				if ( false !== $url ) {
-					$output = preg_replace( '/contact\ #\w*/', 'contact <a href="' . $url . '" target="_blank">#' . $contact_id . '</a>', $output );
+					$output = preg_replace( '/contact\ #\w*/', 'contact <a href="' . $url . '" target="_blank">#' . $contact_id . '<span class="dashicons dashicons-external"></span></a>', $output );
 				}
 			}
 		}
@@ -313,7 +313,8 @@ class WPF_Log_Table_List extends WP_List_Table {
 			'strike' => array(),
 			'br'     => array(),
 			'a'      => array(
-				'href' => true,
+				'href'   => true,
+				'target' => true,
 			),
 		);
 

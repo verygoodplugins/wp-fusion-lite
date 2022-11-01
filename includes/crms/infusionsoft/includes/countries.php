@@ -69,7 +69,7 @@ return array(
 	'CR' => 'Costa Rica',
 	'HR' => 'Croatia',
 	'CU' => 'Cuba',
-	'CW' => 'Cura&ccedil;ao',
+	'CW' => 'Curaçao',
 	'CY' => 'Cyprus',
 	'CZ' => 'Czech Republic (the)',
 	'DK' => 'Denmark',

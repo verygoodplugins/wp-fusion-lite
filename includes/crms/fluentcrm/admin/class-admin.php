@@ -240,26 +240,6 @@ class WPF_FluentCRM_Admin {
 			],
 		];
 
-		$fields[] = array(
-			'crm_label' => 'Name Prefix',
-			'crm_field' => 'prefix',
-		);
-
-		$fields[] = array(
-			'crm_label' => 'Contact Type',
-			'crm_field' => 'contact_type',
-		);
-
-		$fields[] = array(
-			'crm_label' => 'Date of Birth',
-			'crm_field' => 'date_of_birth',
-		);
-
-		$fields[] = array(
-			'crm_label' => 'Status',
-			'crm_field' => 'status',
-		);
-
 		return $fields;
 	}
 

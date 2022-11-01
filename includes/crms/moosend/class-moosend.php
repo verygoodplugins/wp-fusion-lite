@@ -311,12 +311,8 @@ class WPF_MooSend {
 
 		$available_lists = array();
 
-		if ( ! $this->params ) {
-			$this->get_params( $api_key );
-		}
-
 		$request  = $this->url . '/lists.json?apikey=' . $this->api_key;
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		// Validate the connection.
 		if ( is_wp_error( $response ) ) {
@@ -391,8 +387,13 @@ class WPF_MooSend {
 				$page++;
 			}
 		}
-		$available_tags = asort( array_unique( $available_tags ) );
+
+		$available_tags = array_unique( $available_tags );
+
+		asort( $available_tags );
+
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
+
 		return $available_tags;
 	}
 

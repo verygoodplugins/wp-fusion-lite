@@ -46,7 +46,7 @@ class WPF_ActiveCampaign {
 
 		$this->slug     = 'activecampaign';
 		$this->name     = 'ActiveCampaign';
-		$this->supports = array( 'add_tags', 'add_lists','events' );
+		$this->supports = array( 'add_tags', 'add_lists', 'events' );
 		$this->api_url  = trailingslashit( wpf_get_option( 'ac_url' ) );
 
 		if ( is_admin() ) {
@@ -205,7 +205,13 @@ class WPF_ActiveCampaign {
 
 			} elseif ( 404 === $code ) {
 
-				$response = new WP_Error( 'not_found', $body->message );
+				if ( ! empty( $body ) && ! empty( $body->message ) ) {
+					$message = $body->message;
+				} else {
+					$message = 'Not found (404)';
+				}
+
+				$response = new WP_Error( 'not_found', $message );
 
 			} elseif ( 500 === $code || 429 === $code ) {
 
@@ -736,7 +742,7 @@ class WPF_ActiveCampaign {
 		$data['overwrite'] = 0;
 
 		// you can pass $data['status[1]'] = 1; to re-subscribe an unsubscribed contact to a list. [1] is the ID of the list.
-		// for this to work you must also have $data['p[1]'] = 1;. See example at 
+		// for this to work you must also have $data['p[1]'] = 1;.
 
 		$request = add_query_arg(
 			array(

@@ -376,10 +376,6 @@ class WPF_Dynamics_365 {
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
-		// Store the ID / name pairings as well for when we load tags for a contact.
-
-		wp_fusion()->settings->set( 'dynamics-365_tag_ids', $tag_ids );
-
 		return $tag_ids;
 	}
 
@@ -490,6 +486,7 @@ class WPF_Dynamics_365 {
 	 * @return int|WP_Error The contact ID in the CRM.
 	 */
 	public function get_contact_id( $email_address ) {
+
 		$request  = $this->url . '/contacts?$filter=emailaddress1 eq \'' . $email_address . '\'';
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
@@ -521,7 +518,7 @@ class WPF_Dynamics_365 {
 			$this->get_params();
 		}
 
-		$request  = $this->url . '/listmembers?$filter=listmemberid eq \'' . $contact_id . '\'&$select=_listid_value';
+		$request  = $this->url . '/listmembers?$filter=_entityid_value%20eq%20\'' . $contact_id . '\'&$select=_listid_value';
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -530,28 +527,12 @@ class WPF_Dynamics_365 {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$tags = array();
-
 		if ( empty( $response->value ) ) {
-			return false;
+			return array();
 		}
 
-		$tag_ids = wpf_get_option( 'dynamics-365_tag_ids', array() );
+		return wp_list_pluck( $response->value, '_listid_value' );
 
-		foreach ( $response->value as $tag ) {
-			$tag_id = $tag->_listid_value;
-			if ( isset( $tag_ids[ $tag_id ] ) ) {
-				$tags[] = $tag_ids[ $tag_id ];
-			} else {
-
-				// Resync needed.
-				$tag_ids = $this->sync_tags();
-				$tags[]  = $tag_ids[ $tag_id ];
-
-			}
-		}
-
-		return $tags;
 	}
 
 	/**
@@ -564,14 +545,15 @@ class WPF_Dynamics_365 {
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
 	public function apply_tags( $tags, $contact_id ) {
+
 		$params = $this->get_params();
-		$body   = array();
 
 		foreach ( $tags as $tag ) {
-			$body['EntityId'] = $contact_id;
-			$params['body']   = wp_json_encode( $body );
-			$request          = $this->url . '/lists(' . $tag . ')/Microsoft.Dynamics.CRM.AddMemberList';
-			$response         = wp_remote_post( $request, $params );
+
+			$params['body'] = wp_json_encode( array( 'EntityId' => $contact_id ) );
+			$request        = $this->url . '/lists(' . $tag . ')/Microsoft.Dynamics.CRM.AddMemberList';
+			$response       = wp_remote_post( $request, $params );
+
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}

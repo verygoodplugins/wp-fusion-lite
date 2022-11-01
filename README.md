@@ -41,6 +41,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * BirdSend
 * Bento
 * Capsule
+* Constant Contact
 * ConvertKit
 * Copper
 * Customerly
@@ -74,6 +75,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Mautic
 * NationBuilder
 * Ontraport
+* Pipedrive
 * Platform.ly
 * PulseTechnologyCRM
 * Quentn

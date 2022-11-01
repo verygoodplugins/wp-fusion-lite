@@ -534,6 +534,10 @@ class WPF_Shortcodes {
 	 */
 	public function shortcode_the_excerpt( $atts ) {
 
+		if ( doing_filter( 'get_the_excerpt' ) ) {
+			return false; // prevent looping.
+		}
+
 		$atts = shortcode_atts(
 			array(
 				'length' => '',

@@ -1,38 +1,35 @@
 <?php
 
-class WPF_Constant_Contact_Admin {
+class WPF_Pipedrive_Admin {
 
 	/**
 	 * The CRM slug
 	 *
 	 * @var string
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 */
-
 	private $slug;
 
 	/**
 	 * The CRM name
 	 *
 	 * @var string
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 */
-
 	private $name;
 
 	/**
 	 * The CRM object
 	 *
 	 * @var object
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 */
-
 	private $crm;
 
 	/**
 	 * Get things started.
 	 *
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 */
 	public function __construct( $slug, $name, $crm ) {
 
@@ -41,7 +38,7 @@ class WPF_Constant_Contact_Admin {
 		$this->crm  = $crm;
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_constant_contact_header_begin', array( $this, 'show_field_constant_contact_header_begin' ), 10, 2 );
+		add_action( 'show_field_pipedrive_header_begin', array( $this, 'show_field_pipedrive_header_begin' ), 10, 2 );
 
 		// AJAX callback to test the connection.
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
@@ -51,20 +48,19 @@ class WPF_Constant_Contact_Admin {
 		}
 
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
 	 * Hooks to run when this CRM is selected as active
 	 *
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 */
 	public function init() {
 
 		// Hooks in init() will run on the admin screen when this CRM is active.
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_action( 'validate_field_pipedrive_tag', array( $this, 'validate_tag_type' ), 10, 3 );
 
 	}
 
@@ -73,9 +69,9 @@ class WPF_Constant_Contact_Admin {
 	 * Gets the OAuth URL for the initial connection. Remove if not using OAuth.
 	 *
 	 * If we're using the WP Fusion app, send the request through wpfusion.com,
-	 * otherwise allow a constant_contact app.
+	 * otherwise allow a custom app.
 	 *
-	 * @since  3.40.0
+	 * @since  3.40.33
 	 *
 	 * @return string The URL.
 	 */
@@ -84,7 +80,7 @@ class WPF_Constant_Contact_Admin {
 		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
 
 		$args = array(
-			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=' . $this->slug ),
+			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=pipedrive' ),
 			'action'   => "wpf_get_{$this->slug}_token",
 		);
 
@@ -95,7 +91,7 @@ class WPF_Constant_Contact_Admin {
 	/**
 	 * Listen for an OAuth response and maybe complete setup. Remove if not using OAuth.
 	 *
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 */
 	public function maybe_oauth_complete() {
 
@@ -119,17 +115,17 @@ class WPF_Constant_Contact_Admin {
 				),
 			);
 
-			$response = wp_safe_remote_post( 'https://authz.constantcontact.com/oauth2/default/v1/token', $params );
+			$response = wp_safe_remote_post( $this->crm->auth_url, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return false;
 			}
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
-
 			wp_fusion()->settings->set( "{$this->slug}_refresh_token", $response->refresh_token );
 			wp_fusion()->settings->set( "{$this->slug}_token", $response->access_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
+			wp_fusion()->settings->set( "{$this->slug}_api_domain", $response->api_domain );
 
 			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
@@ -138,38 +134,38 @@ class WPF_Constant_Contact_Admin {
 
 	}
 
-
 	/**
-	 * Loads specific settings fields.
+	 * Resync tags/topics when the tag type is saved and validate the picklist.
 	 *
-	 * @since  3.40.0
+	 * @since  3.40.33
+	 *
+	 * @param  string      $input   The input.
+	 * @param  array       $setting The setting configuration.
+	 * @param  WPF_Options $options The options class.
+	 * @return string|WP_Error The input or error on validation failure.
 	 */
+	public function validate_tag_type( $input, $setting, $options ) {
 
-	public function register_settings( $settings, $options ) {
+		if ( ! empty( $input ) ) {
 
-		if ( ! isset( $options['available_lists'] ) ) {
-			$options['available_lists'] = array();
+			wp_fusion()->settings->options['pipedrive_tag'] = $input;
+
+			$result = $this->crm->sync_tags();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
 		}
 
-		$new_settings['cc_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion-lite' ),
-			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion-lite' ),
-			'type'        => 'multi_select',
-			'placeholder' => __( 'Select lists', 'wp-fusion-lite' ),
-			'section'     => 'main',
-			'choices'     => $options['available_lists'],
-		);
+		return $input;
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
-
-		return $settings;
 	}
 
 
 	/**
 	 * Loads CRM connection information on settings page
 	 *
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 *
 	 * @param array $settings The registered settings on the options page.
 	 * @param array $options  The options saved in the database.
@@ -179,13 +175,11 @@ class WPF_Constant_Contact_Admin {
 
 		$new_settings = array();
 
-		$new_settings['constant_contact_header'] = array(
-			'title'   => __( 'Contstant Contact CRM Configuration', 'wp-fusion-lite' ),
+		$new_settings['pipedrive_header'] = array(
+			'title'   => __( 'Pipedrive Configuration', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
-
-		// OR, Option 2, OAuth based authentication. Remove if not using OAuth.
 
 		if ( empty( $options[ "{$this->slug}_refresh_token" ] ) && ! isset( $_GET['code'] ) ) {
 
@@ -200,6 +194,23 @@ class WPF_Constant_Contact_Admin {
 
 		} else {
 
+			$new_settings[ "{$this->slug}_api_domain" ] = array(
+				'title'   => __( 'API Domain URL', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
+
+			if ( ! empty( $options['connection_configured'] ) && 'pipedrive' === wpf_get_option( 'crm' ) ) {
+
+				$new_settings['pipedrive_tag'] = array(
+					'title'   => __( 'Tags Field' ),
+					'type'    => 'crm_field',
+					'section' => 'setup',
+					'desc'    => __( 'Select a tag field to be used for segmentation with WP Fusion. For more information, see <a href="https://wpfusion.com/documentation/" target="_blank">Tags with Pipedrive</a>.', 'wp-fusion-lite' ),
+				);
+
+			}
+
 			$new_settings[ "{$this->slug}_token" ] = array(
 				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
 				'type'    => 'text',
@@ -211,7 +222,7 @@ class WPF_Constant_Contact_Admin {
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
-				'post_fields' => array( "{$this->slug}_token", "{$this->slug}_refresh_token" ),
+				'post_fields' => array( "{$this->slug}_api_domain", "{$this->slug}_token", "{$this->slug}_refresh_token" ),
 				'desc'        => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
 			);
 
@@ -227,7 +238,7 @@ class WPF_Constant_Contact_Admin {
 	 * Loads standard CRM field names and attempts to match them up with
 	 * standard local ones.
 	 *
-	 * @since  3.40.0
+	 * @since  3.40.33
 	 *
 	 * @param  array $options The options.
 	 * @return array The options.
@@ -251,13 +262,13 @@ class WPF_Constant_Contact_Admin {
 	/**
 	 * Puts a div around the CRM configuration section so it can be toggled
 	 *
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 *
 	 * @param string $id    The ID of the field.
 	 * @param array  $field The field properties.
 	 * @return mixed HTML output.
 	 */
-	public function show_field_constant_contact_header_begin( $id, $field ) {
+	public function show_field_pipedrive_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
@@ -269,15 +280,19 @@ class WPF_Constant_Contact_Admin {
 	/**
 	 * Verify connection credentials.
 	 *
-	 * @since  3.40.0
+	 * @since 3.40.33
 	 *
 	 * @return mixed JSON response.
 	 */
 	public function test_connection() {
 
-		$access_token = $_POST[ "{$this->slug}_token" ];
+		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$connection = $this->crm->connect( $access_token, true );
+		$access_token  = isset( $_POST['pipedrive_token'] ) ? sanitize_text_field( wp_unslash( $_POST['pipedrive_token'] ) ) : false;
+		$api_domain    = isset( $_POST['pipedrive_api_domain'] ) ? sanitize_text_field( wp_unslash( $_POST['pipedrive_api_domain'] ) ) : false;
+		$refresh_token = isset( $_POST['pipedrive_refresh_token'] ) ? sanitize_text_field( wp_unslash( $_POST['pipedrive_refresh_token'] ) ) : false;
+
+		$connection = $this->crm->connect( $access_token, $api_domain, true );
 
 		if ( is_wp_error( $connection ) ) {
 
@@ -287,18 +302,18 @@ class WPF_Constant_Contact_Admin {
 		} else {
 
 			// Save the API credentials.
-			$options                          = wp_fusion()->settings->get_all();
-			$options[ "{$this->slug}_token" ] = $access_token;
-			$options['crm']                   = $this->slug;
-			$options['connection_configured'] = true;
+			$options                            = array();
+			$options['pipedrive_token']         = $access_token;
+			$options['pipedrive_refresh_token'] = $refresh_token;
+			$options['pipedrive_api_domain']    = $api_domain;
+			$options['crm']                     = $this->slug;
+			$options['connection_configured']   = true;
 
-			wp_fusion()->settings->set_all( $options );
+			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();
 
 		}
-
-		die();
 
 	}
 

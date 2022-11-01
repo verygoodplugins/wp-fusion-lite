@@ -97,3 +97,8 @@ $zerobscrm_fields[] = array(
 	'crm_label' => 'Avatar',
 	'crm_field' => 'avatar'
 );
+
+$zerobscrm_fields[] = array(
+	'crm_label' => 'Status',
+	'crm_field' => 'status'
+);

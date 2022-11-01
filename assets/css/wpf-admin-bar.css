@@ -25,3 +25,16 @@
     padding-bottom: 3px;
     line-height: 22px !important;
 }
+#wp-admin-bar-wpf > .ab-sub-wrapper > ul input.wpf_search_preview_tag{
+    margin-left: 10px;
+    padding: 0 10px;
+    width: 200px;
+    background: #33373b;
+    border: 1px solid #666;
+    margin-bottom: 5px;
+    color: #fff;
+}
+
+#wp-admin-bar-wpf > .ab-sub-wrapper > ul input.wpf_search_preview_tag::placeholder {
+    color: #fff
+}

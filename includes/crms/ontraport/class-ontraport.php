@@ -545,9 +545,8 @@ class WPF_Ontraport {
 			$this->get_params();
 		}
 
-		$contact_info = array();
-		$request      = 'https://api.ontraport.com/1/object/getByEmail?objectID=' . $this->object_type . '&email=' . urlencode( $email_address );
-		$response     = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.ontraport.com/1/object/getByEmail?objectID=' . $this->object_type . '&email=' . urlencode( $email_address );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -682,7 +681,7 @@ class WPF_Ontraport {
 			$data['lreferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
 		}
 
-		// To automatically update Campaign / Lead Source / Medium relational fields.
+		// To automatically update Campaign / Lead Source / Medium relational fields. @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
 		$data['use_utm_names'] = true;
 
 		if ( $this->object_type == 0 ) {
@@ -736,7 +735,8 @@ class WPF_Ontraport {
 
 		// $data['bulk_mail'] = 1; // Contacts can only be set to 0 (transactional) over the API
 
-		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request
+		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request.
+		$data['use_utm_names']      = true; // @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
 
 		$params           = $this->params;
 		$params['method'] = 'PUT';

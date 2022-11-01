@@ -34,6 +34,8 @@ class WPF_Settings {
 
 			$this->init();
 
+			add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_item' ), 100 );
+
 		}
 
 		// Default settings.
@@ -41,6 +43,40 @@ class WPF_Settings {
 		add_filter( 'wpf_get_setting_contact_fields', array( $this, 'get_contact_fields' ) );
 
 	}
+
+	/**
+	 * Add WP Fusion in admin bar.
+	 *
+	 * @since 3.40.31
+	 * @param WP_Admin_Bar $wp_admin_bar The admin bar.
+	 */
+	public function add_admin_bar_item( WP_Admin_Bar $wp_admin_bar ) {
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$wp_admin_bar->add_menu(
+			array(
+				'id'     => 'wpfusion',
+				'parent' => null,
+				'href'   => admin_url( 'options-general.php?page=wpf-settings' ),
+				'title'  => __( 'WP Fusion', 'wp-fusion-lite' ),
+			)
+		);
+
+		$wp_admin_bar->add_menu(
+			array(
+				'parent' => 'wpfusion',
+				'title'  => __( 'Refresh Available Tags & Fields', 'wp-fusion-lite' ),
+				'id'     => 'wpfusion-refresh-tags',
+				'href'   => '#',
+			)
+		);
+
+	}
+
+
 
 	/**
 	 * Fires up settings in admin
@@ -219,6 +255,22 @@ class WPF_Settings {
 
 		}
 
+		if ( is_array( $value ) ) {
+
+			$value = array_filter( $value );
+
+			// Fix for pre-3.40.33 Select CRM Field dropdowns.
+
+			if ( isset( $value['crm_field'] ) ) {
+				$value = $value['crm_field'];
+			}
+
+		} elseif ( is_numeric( $value ) ) {
+
+			$value = intval( $value ); // make sure numbers are returned as numbers.
+
+		}
+
 		return apply_filters( 'wpf_get_setting_' . $key, $value );
 	}
 
@@ -255,10 +307,15 @@ class WPF_Settings {
 			update_option( 'wpf_crm_fields', $value, false );
 		}
 
-		if ( ! empty( $GLOBALS['_wp_switched_stack'] ) ) {
+		if ( ! empty( $GLOBALS['_wp_switched_stack'] ) && ! is_multisite() ) {
 			// Don't save the main settings if we've switched to another blog.
 			// This fixes the settings getting overwritten.
 			return;
+		}
+
+		if ( 'contact_fields' === $key ) {
+			// Copy it over to the CRM as well (this is a little sloppy).
+			wp_fusion()->crm->contact_fields = $value;
 		}
 
 		// Remove special fields.
@@ -351,7 +408,7 @@ class WPF_Settings {
 	 * @since 3.33.4
 	 * @return array
 	 */
-	public function get_available_tags_flat( $include_read_only = true ) {
+	public function get_available_tags_flat( $include_read_only = true, $include_read_only_labels = true ) {
 
 		$available_tags = $this->get( 'available_tags', array() );
 
@@ -365,7 +422,7 @@ class WPF_Settings {
 					continue; // don't include read only tags.
 				}
 
-				if ( strpos( $label['category'], 'Read Only' ) !== false ) {
+				if ( $include_read_only_labels && strpos( $label['category'], 'Read Only' ) !== false ) {
 					$label['label'] .= ' <small>(' . esc_html__( 'read only', 'wp-fusion-lite' ) . ')</small>';
 				}
 
@@ -405,8 +462,11 @@ class WPF_Settings {
 
 			foreach ( $crm_fields as $category ) {
 
-				foreach ( $category as $key => $label ) {
-					$fields_flat[ $key ] = $label;
+				if ( is_array( $category ) ) {
+
+					foreach ( $category as $key => $label ) {
+						$fields_flat[ $key ] = $label;
+					}
 				}
 			}
 
@@ -452,8 +512,17 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return array
 	 */
-
-	public function insert_setting_after( $key, array $array, $new_key, $new_value = null ) {
+	/**
+	 * Utility function for adding a setting after an existing setting.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $key       The array key to insert the setting after.
+	 * @param array  $array     The original settings array.
+	 * @param array  $new_key   The array of new settings to insert.
+	 * @param [type] $new_value [description].
+	 */
+	public function insert_setting_after( $key, array $array, $new_settings ) {
 
 		if ( isset( $array[ $key ] ) ) {
 			$new = array();
@@ -461,11 +530,7 @@ class WPF_Settings {
 			foreach ( $array as $k => $value ) {
 				$new[ $k ] = $value;
 				if ( $k === $key ) {
-					if ( is_array( $new_key ) && count( $new_key ) > 0 ) {
-						$new = array_merge( $new, $new_key );
-					} else {
-						$new[ $new_key ] = $new_value;
-					}
+					$new = array_merge( $new, $new_settings );
 				}
 			}
 
@@ -473,7 +538,7 @@ class WPF_Settings {
 
 		} else {
 
-			$array = $array + $new_key;
+			$array = $array + $new_settings;
 
 		}
 
@@ -504,8 +569,8 @@ class WPF_Settings {
 	 *
 	 * @since  3.36.0
 	 *
-	 * @param  array   $links  The links.
-	 * @param  string  $file   The plugin file name.
+	 * @param  array  $links  The links.
+	 * @param  string $file   The plugin file name.
 	 * @return array   The row links.
 	 */
 	public function add_row_links( $links, $file ) {
@@ -540,6 +605,7 @@ class WPF_Settings {
 		$localize = array(
 			'ajaxurl'    => admin_url( 'admin-ajax.php' ),
 			'nonce'      => wp_create_nonce( 'wpf_settings_nonce' ),
+			'crm_slug'   => wp_fusion()->crm->slug,
 			'optionsurl' => admin_url( 'options-general.php?page=wpf-settings' ),
 			'connected'  => (bool) $this->get( 'connection_configured' ),
 			'sitetitle'  => rawurlencode( get_bloginfo( 'name' ) ),
@@ -814,7 +880,7 @@ class WPF_Settings {
 	public function sync_tags() {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
-
+		
 		$available_tags = wpf_get_option( 'available_tags' );
 		$new_tags       = wp_fusion()->crm->sync_tags();
 
@@ -889,13 +955,15 @@ class WPF_Settings {
 		$import_group  = absint( $_POST['group_id'] );
 		$import_groups = get_option( 'wpf_import_groups' );
 
-		global $current_user;
-
 		foreach ( $import_groups[ $import_group ]['user_ids'] as $user_id ) {
+
+			if ( is_wp_error( $user_id ) ) {
+				continue;
+			}
 
 			// Don't delete admins.
 			if ( ! user_can( $user_id, 'manage_options' ) ) {
-				wp_delete_user( $user_id, $current_user->ID );
+				wp_delete_user( $user_id, get_current_user_id() );
 			}
 		}
 
@@ -1067,7 +1135,7 @@ class WPF_Settings {
 
 		// Call the custom API.
 		$response = wp_safe_remote_get(
-			WPF_STORE_URL . '/?edd_action=activate',
+			WPF_STORE_URL,
 			array(
 				'timeout'   => 15,
 				'sslverify' => false,
@@ -1104,40 +1172,44 @@ class WPF_Settings {
 					case 'expired':
 						$message = sprintf(
 							/* translators: the license key expiration date */
-							__( 'Your license key expired on %s.', 'edd-sample-plugin' ),
+							__( 'Your license key expired on %s.', 'wp-fusion-lite' ),
 							date_i18n( get_option( 'date_format' ), strtotime( $license_data->expires, current_time( 'timestamp' ) ) )
 						);
 						break;
 
 					case 'disabled':
 					case 'revoked':
-						$message = __( 'Your license key has been disabled.', 'edd-sample-plugin' );
+						$message = __( 'Your license key has been disabled.', 'wp-fusion-lite' );
 						break;
 
 					case 'missing':
-						$message = __( 'Invalid license.', 'edd-sample-plugin' );
+						$message = __( 'Invalid license.', 'wp-fusion-lite' );
 						break;
 
 					case 'invalid':
 					case 'site_inactive':
-						$message = __( 'Your license is not active for this URL.', 'edd-sample-plugin' );
+						$message = __( 'Your license is not active for this URL.', 'wp-fusion-lite' );
 						break;
 
 					case 'item_name_mismatch':
 						/* translators: the plugin name */
-						$message = sprintf( __( 'This appears to be an invalid license key for %s.', 'edd-sample-plugin' ), EDD_SAMPLE_ITEM_NAME );
+						$message = sprintf( __( 'This appears to be an invalid license key for WP Fusion.', 'wp-fusion-lite' ) );
 						break;
 
 					case 'no_activations_left':
-						$message = __( 'Your license key has reached its activation limit.', 'edd-sample-plugin' );
+						$message = __( 'Your license key has reached its activation limit.', 'wp-fusion-lite' );
 						break;
 
 					default:
-						$message = __( 'An error occurred, please try again.', 'edd-sample-plugin' );
+						$message = __( 'An error occurred, please try again.', 'wp-fusion-lite' );
 						break;
 				}
 
-				wp_send_json_error( $message . '<br /><pre>' . wpf_print_r( $license_data, true ) . '</pre>' );
+				if ( empty( $license_data ) ) {
+					$license_data = $response; // for unknown errors.
+				}
+
+				wp_send_json_error( $message . '<br /><pre>' . esc_html( wpf_print_r( $license_data, true ) ) . '</pre>' );
 			}
 		} else {
 
@@ -1288,7 +1360,7 @@ class WPF_Settings {
 		}
 
 		if ( empty( $options['site_url'] ) ) {
-			$options['site_url'] = get_site_url();
+			$options['site_url'] = WPF_Staging_Sites::get_duplicate_site_lock_key();
 		}
 
 		if ( empty( $options['wp_fusion_version'] ) ) {
@@ -1437,7 +1509,7 @@ class WPF_Settings {
 				'seo_enabled',
 				'seo_excerpt_length',
 			),
-			'tooltip' => sprintf( __( 'WP Fusion includes many features for restricting access to content based on tags in %s. However if you are not using these features (you only want to sync data with %s), you can un-check this setting to disable the access control interfaces and features.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
+			'tooltip' => sprintf( __( 'WP Fusion includes many features for restricting access to content based on tags in %1$s. However if you are not using these features (you only want to sync data with %2$s), you can un-check this setting to disable the access control interfaces and features.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
 		);
 
 		$settings['exclude_admins'] = array(
@@ -1841,6 +1913,11 @@ class WPF_Settings {
 			'section' => 'advanced',
 		);
 
+		if ( WPF_Staging_Sites::is_duplicate_site() ) {
+			$settings['staging_mode']['disabled'] = true;
+			$settings['staging_mode']['desc'] = __( 'To disable staging mode, please click Disable Staging Mode at the top of this page.', 'wp-fusion-lite' );
+		}
+
 		if ( is_multisite() ) {
 
 			$settings['multisite_prefix_keys'] = array(
@@ -1865,7 +1942,6 @@ class WPF_Settings {
 			'std'     => 1,
 			'section' => 'advanced',
 			'tooltip' => __( 'It is <strong>strongly</strong> recommended to leave this on except for debugging purposes.', 'wp-fusion-lite' ),
-			'unlock'  => array( 'staging_mode' ),
 		);
 
 		$settings['prevent_reapply'] = array(
@@ -2158,7 +2234,7 @@ class WPF_Settings {
 
 		echo '</table><div id="connection-output"></div>';
 		echo '</div>'; // close CRM div.
-		//echo '<table class="form-table">';
+		// echo '<table class="form-table">';
 
 	}
 
@@ -2228,7 +2304,7 @@ class WPF_Settings {
 		echo '<input id="' . esc_attr( $id ) . '" class="form-control" ' . ( $this->license_status == 'valid' ? 'disabled' : '' ) . ' type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->{ $id } ) . '">';
 
 		if ( 'valid' === $this->license_status ) {
-			echo '<a id="edd-license" data-action="edd_deactivate" class="button">' . esc_html__( 'Deactivate License', 'wp-fusion-lite' ) . '</a>';
+			echo '<a id="edd-license" data-action="edd_deactivate" class="button activated">' . esc_html__( 'Deactivate License', 'wp-fusion-lite' ) . '</a>';
 		} else {
 			echo '<a id="edd-license" data-action="edd_activate" class="button">' . esc_html__( 'Activate License', 'wp-fusion-lite' ) . '</a>';
 		}

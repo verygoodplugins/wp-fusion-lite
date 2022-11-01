@@ -290,7 +290,12 @@ class WPF_HubSpot {
 
 				if ( strpos( $body_json->message, 'expired' ) !== false ) {
 
-					$access_token                     = $this->refresh_token();
+					$access_token = $this->refresh_token();
+
+					if ( is_wp_error( $access_token ) ) {
+						return new WP_Error( 'error', 'Error refreshing access token: ' . $access_token->get_error_message() );
+					}
+
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
 					$response = wp_safe_remote_request( $url, $args );
@@ -801,10 +806,21 @@ class WPF_HubSpot {
 
 				$value = $body_json->properties->{$field_data['crm_field']}->value;
 
-				if ( 'multiselect' == $field_data['type'] && ! empty( $value ) ) {
+				if ( 'multiselect' === $field_data['type'] && ! empty( $value ) ) {
+
 					$value = explode( ';', $value );
-				} elseif ( ( 'datepicker' == $field_data['type'] || 'date' == $field_data['type'] ) && is_numeric( $value ) ) {
+
+				} elseif ( 'checkbox' === $field_data['type'] ) {
+
+					if ( 'false' === $value ) {
+						$value = null;
+					} else {
+						$value = true;
+					}
+				} elseif ( ( 'datepicker' === $field_data['type'] || 'date' === $field_data['type'] ) && is_numeric( $value ) ) {
+
 					$value /= 1000; // Convert milliseconds back to seconds.
+
 				}
 
 				$user_meta[ $field_id ] = $value;
@@ -993,7 +1009,6 @@ class WPF_HubSpot {
 		$body = array(
 			'engagement'   => array(
 				'active'  => true,
-				'ownerId' => $contact_id,
 				'type'    => 'NOTE',
 			),
 			'associations' => array(

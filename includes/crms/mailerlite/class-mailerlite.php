@@ -484,7 +484,7 @@ class WPF_MailerLite {
 		$request      = 'https://api.mailerlite.com/api/v2/subscribers/' . urlencode( $email_address );
 		$response     = wp_safe_remote_get( $request, $this->params );
 
-		if ( is_wp_error( $response ) && $response->get_error_message() == 'Subscriber not found' ) {
+		if ( is_wp_error( $response ) && false !== strpos( strtolower( $response->get_error_message() ), 'not found' ) ) {
 
 			return false;
 
@@ -494,7 +494,7 @@ class WPF_MailerLite {
 
 		}
 
-		// JSON_BIGINT_AS_STRING so contact IDs don't get truncated when PHP_INT_MAX is only 32 bit
+		// JSON_BIGINT_AS_STRING so contact IDs don't get truncated when PHP_INT_MAX is only 32 bit.
 
 		$body_json = json_decode( $response['body'], false, 512, JSON_BIGINT_AS_STRING );
 

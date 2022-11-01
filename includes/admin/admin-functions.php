@@ -65,7 +65,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 				// If the tag is stored as a name, and we're able to find a numeric ID, update it
 
-				$search = wp_fusion()->user->get_tag_id( $value );
+				$search = wpf_get_tag_id( $value );
 
 				if ( false !== $search ) {
 
@@ -197,11 +197,14 @@ function wpf_render_tag_multiselect( $args = array() ) {
  * @return mixed HTML field
  */
 
-function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $field_sub_id = null ) {
+function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $field_sub_id = false ) {
 
-	if ( false == $field_id ) {
+	if ( doing_action( 'show_field_crm_field' ) ) {
+		// Settings page.
+		$name = $meta_name . '[' . $field_id . ']';
+	} elseif ( false === $field_id ) {
 		$name = $meta_name . '[crm_field]';
-	} elseif ( false == $field_sub_id ) {
+	} elseif ( false === $field_sub_id ) {
 		$name = $meta_name . '[' . $field_id . '][crm_field]';
 	} else {
 		$name = $meta_name . '[' . $field_id . '][' . $field_sub_id . '][crm_field]';

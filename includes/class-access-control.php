@@ -35,6 +35,9 @@ class WPF_Access_Control {
 
 	public function __construct() {
 
+		// Apply tags on view scripts
+		add_action( 'wp_enqueue_scripts', array( $this, 'apply_tags_on_view' ) );
+
 		if ( ! wpf_get_option( 'restrict_content', true ) ) {
 			return;
 		}
@@ -52,6 +55,7 @@ class WPF_Access_Control {
 
 		// Cache the access
 		add_filter( 'wpf_user_can_access', array( $this, 'cache_can_access' ), 100, 3 );
+		add_action( 'wpf_tags_modified', array( $this, 'clear_access_cache' ) );
 
 		// Protect post types
 		add_filter( 'wpf_post_access_meta', array( $this, 'check_post_type' ), 10, 2 );
@@ -63,21 +67,19 @@ class WPF_Access_Control {
 		// Site lockout
 		add_action( 'template_redirect', array( $this, 'maybe_do_lockout' ), 13 );
 
-		// Apply tags on view scripts
-		add_action( 'wp_enqueue_scripts', array( $this, 'apply_tags_on_view' ) );
-
 		// Return after login
 
 		if ( wpf_get_option( 'return_after_login' ) ) {
 
 			$priority = wpf_get_option( 'return_after_login_priority', 10 );
 			add_action( 'wp_login', array( $this, 'return_after_login' ), absint( $priority ) );
+			add_filter( 'login_redirect', array( $this, 'login_redirect' ), 10, 3 );
 			add_action( 'wpf_started_auto_login', array( $this, 'return_after_login' ) );
 
 		}
 
 		// Check to see if a page is protected but no redirect is specified, and there's no content area
- 		add_filter( 'the_content', array( $this, 'test_the_content' ) );
+		add_filter( 'the_content', array( $this, 'test_the_content' ) );
 		add_action( 'wp_footer', array( $this, 'maybe_doing_it_wrong' ) );
 
 	}
@@ -1218,7 +1220,7 @@ class WPF_Access_Control {
 		}
 
 		// See if the post type is eligible.
-		$post_type = $query->get( 'post_type' );
+		$post_type = $query->get( 'post_type', 'post' );
 
 		if ( ! $this->is_post_type_eligible_for_query_filtering( $post_type ) ) {
 			return false;
@@ -1252,11 +1254,13 @@ class WPF_Access_Control {
 	 * posts inheriting protetcions or posts protected by taxonomy terms.
 	 *
 	 * @since  3.37.6
+	 * @since  3.40.28 Added second parameter $in.
 	 *
 	 * @param  array $post_types The post types.
+	 * @param  array $in         Optionally limit it to specific posts.
 	 * @return array The restricted post IDs.
 	 */
-	public function get_restricted_posts( $post_types ) {
+	public function get_restricted_posts( $post_types, $in = array() ) {
 
 		if ( ! is_array( $post_types ) ) {
 			$post_types = array( $post_types );
@@ -1277,6 +1281,7 @@ class WPF_Access_Control {
 				'post_type'      => $post_types,
 				'posts_per_page' => 200, // 200 sounds like a safe place for performance?
 				'fields'         => 'ids',
+				'post__in'       => $in,
 				'meta_query'     => array(
 					array(
 						'key'     => 'wpf-settings',
@@ -1309,7 +1314,7 @@ class WPF_Access_Control {
 			add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
 
 			if ( count( $post_ids ) === $args['posts_per_page'] ) {
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Filter Queries is running on the <strong>' . $post_types[0] . '</strong> post type, but more than ' . $args['posts_per_page'] . ' posts were found with WP Fusion access rules. To protect the stability of your site, additional posts beyond the first ' . $args['posts_per_page'] . ' will not be filtered. This can be modified with the <a href="https://wpfusion.com/documentation/filters/wpf_query_filter_get_posts_args/" target="_blank"><code>wpf_query_filter_get_posts_args</code> filter</a>.' );
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Filter Queries is running on the <strong>' . implode( ', ', $post_types ) . '</strong> post type(s), but more than ' . $args['posts_per_page'] . ' posts were found with WP Fusion access rules. To protect the stability of your site, additional posts beyond the first ' . $args['posts_per_page'] . ' will not be filtered. This can be modified with the <a href="https://wpfusion.com/documentation/filters/wpf_query_filter_get_posts_args/" target="_blank"><code>wpf_query_filter_get_posts_args</code> filter</a>.' );
 			}
 
 			$not_in = array();
@@ -1451,8 +1456,17 @@ class WPF_Access_Control {
 
 			} elseif ( 'advanced' == $setting ) {
 
-				$post_types         = $query->get( 'post_type' );
+				$post_types = $query->get( 'post_type', 'post' );
+
+				if ( ! is_array( $post_types ) ) {
+					$post_types = array( $post_types );
+				}
+
 				$allowed_post_types = wpf_get_option( 'query_filter_post_types', array() );
+
+				if ( ! empty( $allowed_post_types ) ) {
+					$post_types = array_intersect( $post_types, $allowed_post_types );
+				}
 
 				if ( empty( $post_types ) && $query->is_search() ) {
 
@@ -1467,7 +1481,7 @@ class WPF_Access_Control {
 					return;
 				}
 
-				$not_in = $this->get_restricted_posts( $post_types );
+				$not_in = $this->get_restricted_posts( $post_types, $query->get( 'post__in' ) );
 
 				if ( ! empty( $not_in ) ) {
 
@@ -1620,6 +1634,17 @@ class WPF_Access_Control {
 
 	}
 
+	/**
+	 * If tags are applied, new content may be unlocked, so clear the cache.
+	 *
+	 * @since 3.40.28
+	 */
+	public function clear_access_cache() {
+
+		$this->can_access_posts = array();
+
+	}
+
 
 	/**
 	 * Redirect back to restricted content after login
@@ -1640,7 +1665,7 @@ class WPF_Access_Control {
 			$post_id = absint( $_COOKIE['wpf_return_to_override'] );
 			$url     = get_permalink( $post_id );
 
-			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
+			if ( $user && ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
 
 				setcookie( 'wpf_return_to_override', '', time() - ( 15 * 60 ) );
 				setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
@@ -1659,13 +1684,48 @@ class WPF_Access_Control {
 
 			setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
 
-			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
+			if ( $user && ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
 
 				wp_safe_redirect( $url, 302, 'WP Fusion; Return after login' );
 				exit();
 
 			}
 		}
+
+	}
+
+	/**
+	 * This is a fallback on the login_redirect filter for cases where other
+	 * plugins might run a login redirect on the wp_login action before our
+	 * redirect has a chance to run.
+	 *
+	 * @since 3.40.21
+	 *
+	 * @param string  $redirect_to           The redirect URI.
+	 * @param string  $requested_redirect_to The requested redirect URI.
+	 * @param WP_User $user                  The WP_User (or WP_Error) logging in.
+	 * @return string The redirect URI.
+	 */
+	public function login_redirect( $redirect_to, $requested_redirect_to, $user = false ) {
+
+		if ( false === $user ) {
+			$user = wpf_get_current_user();
+		}
+
+		if ( isset( $_COOKIE['wpf_return_to'] ) && is_a( $user, 'WP_User' ) ) {
+
+			$post_id = absint( $_COOKIE['wpf_return_to'] );
+			$url     = get_permalink( $post_id );
+
+			setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
+
+			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
+				return $url;
+			}
+
+		}
+
+		return $redirect_to;
 
 	}
 

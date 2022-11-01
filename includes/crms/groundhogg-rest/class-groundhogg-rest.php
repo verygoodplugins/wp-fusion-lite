@@ -38,6 +38,28 @@ class WPF_Groundhogg_REST {
 
 	public $edit_url = '';
 
+	/**
+	 * Track which fields are core vs custom meta.
+	 *
+	 * @since 3.40.29
+	 * @var  array
+	 */
+
+	private $data_fields = array(
+		'email',
+		'first_name',
+		'last_name',
+		'user_id',
+		'owner_id',
+		'optin_status',
+		'date_created',
+		'date_optin_status_changed',
+		'ID',
+		'gravatar',
+		'full_name',
+		'age',
+	);
+
 
 	/**
 	 * Get things started
@@ -498,20 +520,15 @@ class WPF_Groundhogg_REST {
 	 */
 	public function add_contact( $data ) {
 
-		$fields = wpf_get_option( 'crm_fields' );
-
 		// Custom fields go in their own key.
 
 		$meta = array();
 
 		foreach ( $data as $key => $value ) {
 
-			if ( ! isset( $fields['Standard Fields'][ $key ] ) ) {
-
+			if ( ! in_array( $key, $this->data_fields ) ) {
 				$meta[ $key ] = $value;
-
 				unset( $data[ $key ] );
-
 			}
 		}
 
@@ -587,12 +604,9 @@ class WPF_Groundhogg_REST {
 
 		foreach ( $data as $key => $value ) {
 
-			if ( ! isset( $fields['Standard Fields'][ $key ] ) ) {
-
+			if ( ! in_array( $key, $this->data_fields ) ) {
 				$meta[ $key ] = $value;
-
 				unset( $data[ $key ] );
-
 			}
 		}
 
@@ -704,20 +718,25 @@ class WPF_Groundhogg_REST {
 	 */
 	public function track_event( $event, $event_data = false, $email_address = false ) {
 
+		$contact_id = false;
+
 		// Get the email address to track.
 
 		if ( empty( $email_address ) ) {
 			$email_address = wpf_get_current_user_email();
+			$contact_id    = wpf_get_contact_id();
 		}
 
 		if ( false === $email_address ) {
 			return; // can't track without an email.
 		}
 
-		$contact_id = $this->get_contact_id( $email_address );
+		if ( false === $contact_id ) {
+			$contact_id = $this->get_contact_id( $email_address );
 
-		if ( ! $contact_id ) {
-			return;
+			if ( ! $contact_id ) {
+				return;
+			}
 		}
 
 		$body = array(

@@ -231,6 +231,11 @@ class WPF_FluentCRM_REST_Admin {
 			'crm_field' => 'photo',
 		);
 
+		$fields[] = array(
+			'crm_label' => 'Avatar URL',
+			'crm_field' => 'avatar',
+		);
+
 		return $fields;
 
 	}

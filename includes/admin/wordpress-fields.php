@@ -52,7 +52,12 @@ $wp_fields['role'] = array(
 	'label' => __( 'User Role', 'wp-fusion-lite' ),
 );
 
-$wp_fields['wp_capabilities'] = array(
+// Add the capabilities key. Usually wp_capabilities but sometimes
+// different if the table prefix has been changed.
+
+$user = wp_get_current_user();
+
+$wp_fields[ $user->cap_key ] = array(
 	'type'  => 'multiselect',
 	'label' => __( 'User Capabilities', 'wp-fusion-lite' ),
 );

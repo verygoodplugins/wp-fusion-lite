@@ -241,7 +241,17 @@ if ( ! function_exists( 'wpf_get_tag_id' ) ) {
 
 	function wpf_get_tag_id( $tag_name ) {
 
-		return wp_fusion()->user->get_tag_id( $tag_name );
+		if ( is_object( wp_fusion()->user ) ) {
+
+			// Avoid errors if WP Fusion isn't connected to a CRM.
+
+			return wp_fusion()->user->get_tag_id( $tag_name );
+
+		} else {
+
+			return false;
+
+		}
 
 	}
 }
@@ -256,7 +266,17 @@ if ( ! function_exists( 'wpf_get_tag_label' ) ) {
 
 	function wpf_get_tag_label( $tag_id ) {
 
-		return wp_fusion()->user->get_tag_label( $tag_id );
+		if ( is_object( wp_fusion()->user ) ) {
+
+			// Avoid errors if WP Fusion isn't connected to a CRM.
+
+			return wp_fusion()->user->get_tag_label( $tag_id );
+
+		} else {
+
+			return false;
+
+		}
 
 	}
 }
@@ -343,15 +363,13 @@ function wpf_get_lookup_field() {
  *
  * @since  3.39.5
  *
+ * @see WPF_Staging_Sites::maybe_activate_staging_mode()
+ *
  * @return bool  Whether or not we're in staging mode.
  */
 function wpf_is_staging_mode() {
 
-	if ( wpf_get_option( 'staging_mode' ) || ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) ) {
-		return true;
-	} else {
-		return false;
-	}
+	return wpf_get_option( 'staging_mode' );
 
 }
 

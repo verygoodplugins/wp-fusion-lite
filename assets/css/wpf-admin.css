@@ -231,6 +231,38 @@ body.term-php .wpf-page-redirect-select label {
 	display: none;
 }
 
+/* Users list */
+
+table.wp-list-table.users div.wpf-users-tags {
+	max-height: 180px;
+	overflow-y: hidden;
+	position: relative;
+	transition: all 0.5s ease-out;
+}
+
+table.wp-list-table.users div.wpf-users-tags:after {
+	content: '\f347';
+    display: block;
+    left: 0;
+    right: 0;
+    position: absolute;
+    height: 34px;
+    top: 140px;
+    background: linear-gradient(0deg, rgba(246,247,247,1) 0%, rgba(246,247,247,0) 100%);
+    font-family: 'dashicons';
+    text-align: center;
+    line-height: 57px;
+	cursor: pointer;
+}
+
+table.wp-list-table.users div.wpf-users-tags.expanded {
+	max-height: 1000px;
+}
+
+table.wp-list-table.users div.wpf-users-tags.expanded:after {
+	display: none;
+}
+
 /* Gutenberg / LearnDash inputs / Generic select4 */
 
 #learndash-course-access-settings .select4-container, #learndash-group-access-settings .select4-container, table.form-table .select4-container {
@@ -440,7 +472,9 @@ div.notice.wpf-tags-notice {
 }
 
 .select4-container--default .select4-search--inline input.select4-search__field {
-	width: auto !important;
+	/* width: auto !important; removed because it cuts off the placeholder text */
+	min-width: 160px;
+	max-width: 100%;
 }
 
 .select4-container .select4-selection {
@@ -649,6 +683,10 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	margin-bottom: 5px;
 }
 
+.edd-order-wpf-status span.dashicons {
+	vertical-align: middle;
+}
+
 .wp-core-ui a.wpf-action-button {
 	position: relative;
 	padding-right: 22px;
@@ -675,6 +713,12 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 
 .pum-field-select.select4-wpf-tags-wrapper input.select4-search__field {
 	height: 28px;
+}
+
+/* Fluent Forms */
+
+li.ff_item_wpfusion {
+	display: none;
 }
 
 /* WPPayForm Pro */
@@ -951,3 +995,82 @@ ul.wc-tabs li.wp-fusion-settings-tab a svg {
     display: inline-block;
 	font-size: 12px;
 }
+
+/* Holler box */
+#triggers .trigger[data-id="wpf_show_any"],
+#triggers .trigger[data-id="wpf_hide_any"]{
+	flex-direction: column;
+    align-items: baseline;
+}
+
+#triggers .trigger[data-id="wpf_show_any"] .enabled,
+#triggers .trigger[data-id="wpf_hide_any"] .enabled{
+	align-self: flex-end;
+}
+
+#triggers .trigger[data-id="wpf_show_any"] .controls,
+#triggers .trigger[data-id="wpf_hide_any"] .controls{
+	margin: 10px 0;
+}
+
+#triggers .select4-container {
+	width: 100% !important;
+}
+
+.tap-icon-wpfusion-logo{
+	background-image:url('../img/logo-sm-trans.png');
+	background-size: 100%;
+}
+
+/* Thrive API Connection */
+.tvd-row.tvd-third-party-api-list .tvd-col:first-child .tvd-card-image{
+	background-size: 70%;
+    top: 23%;
+}
+
+
+
+
+
+/* WPF Admin Bar */  
+
+@keyframes dashicons-spin {
+	0% {
+	   transform: rotate( 0deg );
+	}
+	100% {
+	   transform: rotate( 360deg );
+	}
+ }
+ 
+
+#wpadminbar .quicklinks .menupop ul li#wp-admin-bar-wpfusion-refresh-tags span.dashicons{
+	font-family: dashicons;
+    margin-right: 5px;
+	font-size: 15px;
+}
+#wpadminbar .quicklinks .menupop ul li#wp-admin-bar-wpfusion-refresh-tags .ab-item{
+	padding: 0 10px;
+	height: 30px;
+	display: flex;
+    align-items: center;
+}
+
+#wpadminbar .quicklinks #wp-admin-bar-wpfusion .override_hover{
+	background-image: initial;
+	background-color: rgb(35, 41, 45);
+	color: rgb(113, 178, 230);
+}
+
+#wp-admin-bar-wpfusion-refresh-tags .dashicons.wpf-spin {
+	animation: dashicons-spin 2s infinite;
+	animation-timing-function: linear;
+ }
+
+ #wp-admin-bar-wpfusion .error{
+	width:400px;
+	padding: 0 5px;
+ }
+
+
+

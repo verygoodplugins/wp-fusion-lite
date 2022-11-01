@@ -76,7 +76,7 @@ class WPF_Constant_Contact {
 	public function __construct() {
 
 		$this->slug = 'constant-contact';
-		$this->name = 'Contstant Contact';
+		$this->name = 'Constant Contact';
 
 		// Set up admin options.
 		if ( is_admin() ) {

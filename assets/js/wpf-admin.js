@@ -19,6 +19,10 @@ function initializeTagsSelect(target) {
 
 		jQuery( target + " select.select4-wpf-tags").each(function(index, el) {
 
+			if ( jQuery(this).data('select4') ) {
+				return;
+			}
+
 			// See if we need to do duplication prevention
 			var noDupes = jQuery(this).attr('data-no-dupes');
 
@@ -71,7 +75,6 @@ function initializeTagsSelect(target) {
 
 
 			if( jQuery.inArray('add_tags', wpf_admin.crm_supports) > -1 ) {
-
 				// For CRMs that use strings as tags / they don't need to be created before they can be used.
 
 				selectArgs.tags = true;
@@ -82,7 +85,6 @@ function initializeTagsSelect(target) {
 				};
 				
 			} else if( jQuery.inArray('add_tags_api', wpf_admin.crm_supports) > -1 ) {
-				
 				// For CRMs that support adding new tags via API
 				
 				selectArgs.tags = true;
@@ -93,7 +95,6 @@ function initializeTagsSelect(target) {
 				};
 
 			} else {
-
 				// From CRMs that need to resync
 
 				selectArgs.language.noResults = function() {
@@ -433,7 +434,10 @@ jQuery(document).ready(function($){
 							}
 
 							return {id: term, text: term + ' (new)'};
-						}
+						},
+					escapeMarkup: function (markup) {
+						return markup;
+					},
 				});
 
 			} else {
@@ -503,6 +507,12 @@ jQuery(document).ready(function($){
 			$('#' + target).prop('disabled', !ischecked); 
 		});
 
+	});
+
+	// Users list
+
+	$( 'div.wpf-users-tags' ).on( "click", function() {
+		$(this).addClass( 'expanded' )
 	});
 
 	// Warn on linked tag change
@@ -732,15 +742,11 @@ jQuery(document).ready(function($){
 
 		// Variable pricing
 
-		$( document.body ).on( 'change', '#edd_variable_pricing', function(e) {
-			initializeTagsSelect('#wpbody');
-		});
+		$( document.body ).on( 'click', '#edd_price_fields button.edd_add_repeatable', function(e) {
 
-		$( document.body ).on( 'click', '#edd_price_fields a.edd_add_repeatable', function(e) {
-			$('#edd_price_fields tbody tr.edd_repeatable_row').last().find('td.wpf-tags-select span.select4').remove();
-			initializeTagsSelect('#wpbody');
-			$('#edd_price_fields tbody tr.edd_repeatable_row').last().find('td.wpf-tags-select span.select4').css('width', '100%');
-			$('#edd_price_fields tbody tr.edd_repeatable_row').last().find('td.wpf-tags-select span.select4 input.select4-search__field').css('width', '120px');
+			$('#edd_price_fields .edd-price-option-fields .edd_repeatable_row').last().find('span.select4').remove();
+			initializeTagsSelect( '#edd_price_fields .edd-price-option-fields' );
+
 		});
 
 
@@ -956,6 +962,95 @@ jQuery(document).ready(function($){
 		initializeTagsSelect( 'div.acf-postbox' );
 
 	}
+
+	// Sync tags and custom fields
+
+	var syncTagsAndFields = function(button, total, crmContainer) {
+
+		button.addClass('button-primary');
+		button.find('span.dashicons').addClass('wpf-spin');
+		button.find('span.text').html( wpf_admin.strings.syncTags );
+
+		var data = {
+			'action'	  : 'sync_tags',
+			'_ajax_nonce' : wpf_admin.nonce,
+		};
+
+		$.post(ajaxurl, data, function(response) {
+			
+			if(true == wpf_admin.connected) {
+					
+				if(response &&  jQuery( "#wpbody select.select4-wpf-tags").length && wpf_admin.tagSelect4 == 1 ) {
+
+					jQuery( "#wpbody select.select4-wpf-tags").each(function(index, el) {
+						
+						jQuery(el).append(response);
+						jQuery(el).trigger('change');
+
+					});
+
+				}
+
+				// Syncing custom fields.
+				button.find('span.text').html( wpf_admin.strings.loadingFields );
+
+				var data = {
+					'action'	  : 'sync_custom_fields',
+					'_ajax_nonce' : wpf_admin.nonce,
+				}
+		
+				$.post(ajaxurl, data, function(response) {
+					if(response &&  jQuery( "#wpbody select.select4-crm-field").length) {
+		
+						jQuery( "#wpbody select.select4-crm-field").each(function(index, el) {
+		
+							jQuery(el).append(response);
+							jQuery(el).trigger('change');
+				
+						});
+		
+					}
+		
+					button.trigger('wpf_sync_complete');
+					button.find('span.dashicons').removeClass('wpf-spin');
+					button.find('span.text').html( 'Complete' );
+				});
+		
+			}
+
+		});
+
+	}
+
+
+
+	// WPF Admin Bar.
+	$('#wp-admin-bar-wpfusion-refresh-tags a').on('click',function(e){
+
+		e.preventDefault();
+		$('#wp-admin-bar-wpfusion .ab-sub-wrapper').css('display','block');
+		$('#wp-admin-bar-wpfusion .ab-item').addClass('override_hover');
+		
+		var button = $(this);
+		var container = $('#wp-admin-bar-wpfusion');
+
+		button.wrapInner('<span class="text"></span>');
+		button.find('span.text').html( wpf_admin.strings.connecting );
+		if(button.find('span.dashicons').length <= 0){
+			button.prepend('<span class="dashicons dashicons-update-alt wpf-spin"></span>');
+		}
+
+		syncTagsAndFields(button, 0, container);
+
+		$(button).on('wpf_sync_complete',function(){
+			setTimeout(() => {
+				$('#wp-admin-bar-wpfusion .ab-sub-wrapper').css('display','');
+				$('#wp-admin-bar-wpfusion .ab-item').removeClass('override_hover');
+			}, 1000);
+		});
+
+	});
+
 
 });
 

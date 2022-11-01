@@ -202,6 +202,15 @@ a#edd-license, a#export-btn {
 	vertical-align: middle;
 }
 
+a#edd-license.activated:before {
+	content: "\f12a";
+    font-family: 'dashicons';
+    position: absolute;
+    left: -35px;
+    font-size: 20px;
+    margin-top: -8px;
+}
+
 form#wpf-settings .tooltip .tooltip-inner {
 	background-color: #333;
 	opacity: 1;
@@ -591,6 +600,11 @@ body.tools_page_wpf-settings-logs .alignleft span.select4-container.select4-cont
 .wp-list-table.wpf-logs .column-message code {
 	border-bottom: 1px dashed #999;
 	line-height: 1.85;
+}
+
+.wp-list-table.wpf-logs a span.dashicons.dashicons-external {
+	vertical-align: middle;
+    font-size: 16px;
 }
 
 @media screen and (min-width: 783px) {

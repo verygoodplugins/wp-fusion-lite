@@ -122,8 +122,6 @@ class WPF_Auto_Login {
 			return;
 		}
 
-		$contact_data = array();
-
 		// Try finding a contact ID in the URL.
 		if ( empty( $contact_id ) ) {
 			$contact_id = $this->get_contact_id_from_url();
@@ -134,26 +132,27 @@ class WPF_Auto_Login {
 		}
 
 		if ( ! empty( $_COOKIE['wpf_contact'] ) ) {
+
 			$contact_data = json_decode( wp_unslash( $_COOKIE['wpf_contact'] ), true );
 
 			if ( ! empty( $contact_data ) ) {
-				$contact_data = array_map( 'sanitize_text_field', $contact_data );
+				$this->auto_login_user = array_map( 'sanitize_text_field', $contact_data );
 			}
 		}
 
 		// Allow permanently ending the session.
-		if ( true === apply_filters( 'wpf_end_auto_login', false, $contact_data ) ) {
+		if ( true === apply_filters( 'wpf_end_auto_login', false, $this->auto_login_user ) ) {
 			$this->end_auto_login();
 			return;
 		}
 
 		// If CID has changed, start a new session.
-		if ( ! empty( $contact_data ) && ! empty( $contact_id ) && $contact_id != $contact_data['contact_id'] ) {
+		if ( ! empty( $this->auto_login_user ) && ! empty( $contact_id ) && $contact_id != $this->auto_login_user['contact_id'] ) {
 			$this->end_auto_login();
-			$contact_data = array();
+			$this->auto_login_user = array();
 		}
 
-		if ( empty( $contact_data ) && isset( $contact_id ) ) {
+		if ( empty( $this->auto_login_user ) && isset( $contact_id ) ) {
 
 			// Do first time autologin
 
@@ -163,26 +162,26 @@ class WPF_Auto_Login {
 				return false;
 			}
 
-			$contact_data = array(
+			$this->auto_login_user = array(
 				'contact_id' => $contact_id,
 				'user_id'    => $user_id,
 			);
 
-		} elseif ( isset( $contact_data['user_id'] ) ) {
+		} elseif ( isset( $this->auto_login_user['user_id'] ) ) {
 
 			// If data already exists, make sure the user hasn't expired.
 
-			$contact_id_from_db = get_user_meta( $contact_data['user_id'], WPF_CONTACT_ID_META_KEY, true );
+			$contact_id_from_db = get_user_meta( $this->auto_login_user['user_id'], WPF_CONTACT_ID_META_KEY, true );
 
-			if ( empty( $contact_id_from_db ) || $contact_id_from_db != $contact_data['contact_id'] ) {
+			if ( empty( $contact_id_from_db ) || $contact_id_from_db != $this->auto_login_user['contact_id'] ) {
 
-				$user_id = $this->create_temp_user( $contact_data['contact_id'] );
+				$user_id = $this->create_temp_user( $this->auto_login_user['contact_id'] );
 
 				if ( is_wp_error( $user_id ) ) {
 					return false;
 				}
 
-				$contact_data['user_id'] = $user_id;
+				$this->auto_login_user['user_id'] = $user_id;
 
 			} elseif ( false !== $contact_id ) {
 
@@ -194,16 +193,14 @@ class WPF_Auto_Login {
 					// (HTTP_CACHE_CONTROL = max-age=0), or if a form is being
 					// submitted.
 
-					wp_fusion()->user->get_tags( $contact_data['user_id'], true, false );
+					wp_fusion()->user->get_tags( $this->auto_login_user['user_id'], true, false );
 
 				}
 			}
 		}
 
-		$this->auto_login_user = $contact_data;
-
 		// Allow temporarily skipping the session on a single page.
-		if ( false !== $contact_data && true === apply_filters( 'wpf_skip_auto_login', false, $contact_data ) ) {
+		if ( false !== $this->auto_login_user && true === apply_filters( 'wpf_skip_auto_login', false, $this->auto_login_user ) ) {
 			return;
 		}
 
@@ -217,16 +214,16 @@ class WPF_Auto_Login {
 		}
 
 		// Set the user in the cache.
-		wp_cache_set( $contact_data['user_id'], $user, 'users', DAY_IN_SECONDS );
+		wp_cache_set( $this->auto_login_user['user_id'], $user, 'users', DAY_IN_SECONDS );
 
 		// Hide admin bar.
 		add_filter( 'show_admin_bar', '__return_false' );
 
 		add_filter( 'wp_get_current_commenter', array( $this, 'get_current_commenter' ) );
 
-		do_action( 'wpf_started_auto_login', $contact_data['user_id'], $contact_id );
+		do_action( 'wpf_started_auto_login', $this->auto_login_user['user_id'], $contact_id );
 
-		return $contact_data['user_id'];
+		return $this->auto_login_user['user_id'];
 
 	}
 

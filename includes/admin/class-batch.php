@@ -197,12 +197,12 @@ class WPF_Batch {
 		if ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
 			$this->process->dispatch();
 		}
-		
-		if(!is_array($status)){
+
+		if ( ! is_array( $status ) ) {
 			$status = array(
-				'total'=>0,
-				'remaining'=>0,
-				'key'=>0
+				'total'     => 0,
+				'remaining' => 0,
+				'key'       => 0
 			);
 		}
 
@@ -343,7 +343,7 @@ class WPF_Batch {
 
 		if ( ! empty( $status['next_step'] ) ) {
 			$status['title'] = $this->get_operation_title( $status['next_step'][0] );
-		} else {
+		} elseif ( isset( $status['title'] ) ) {
 			$status['title'] = false;
 		}
 

@@ -83,6 +83,21 @@ $nationbuilder_fields['billing_country'] = array(
 	'crm_label' => 'Country (Billing)',
 );
 
+$nationbuilder_fields[] = array(
+	'crm_field' => 'billing_address+county',
+	'crm_label' => 'County (Billing)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'billing_address+lat',
+	'crm_label' => 'Latitude (Billing)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'billing_address+lng',
+	'crm_label' => 'Longitude (Billing)',
+);
+
 // Registered Address
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+address1',
@@ -112,6 +127,21 @@ $nationbuilder_fields[] = array(
 $nationbuilder_fields[] = array(
 	'crm_field' => 'registered_address+country_code',
 	'crm_label' => 'Country (Registered)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'registered_address+county',
+	'crm_label' => 'County (Registered)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'registered_address+lat',
+	'crm_label' => 'Latitude (Registered)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'registered_address+lng',
+	'crm_label' => 'Longitude (Registered)',
 );
 
 // Home Address
@@ -145,6 +175,21 @@ $nationbuilder_fields['shipping_country'] = array(
 	'crm_label' => 'Country (Home / Primary)',
 );
 
+$nationbuilder_fields[] = array(
+	'crm_field' => 'home_address+county',
+	'crm_label' => 'County (Home)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'home_address+lat',
+	'crm_label' => 'Latitude (Home)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'home_address+lng',
+	'crm_label' => 'Longitude (Home)',
+);
+
 // Work Address
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+address1',
@@ -174,6 +219,21 @@ $nationbuilder_fields[] = array(
 $nationbuilder_fields[] = array(
 	'crm_field' => 'work_address+country_code',
 	'crm_label' => 'Country (Work)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+county',
+	'crm_label' => 'County (Work)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+lat',
+	'crm_label' => 'Latitude (Work)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'work_address+lng',
+	'crm_label' => 'Longitude (Work)',
 );
 
 // Other stuff
@@ -348,27 +408,122 @@ $nationbuilder_fields[] = array(
 	'crm_label' => 'Marital Status',
 );
 
+/* Voting district */
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'city_district',
+	'crm_label' => 'City District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'city_sub_district',
+	'crm_label' => 'City Sub District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'county_district',
+	'crm_label' => 'County District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'federal_district',
+	'crm_label' => 'Federal District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'fire_district',
+	'crm_label' => 'Fire District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'judicial_district',
+	'crm_label' => 'Judicial District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'school_district',
+	'crm_label' => 'Shool District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'shool_sub_district',
+	'crm_label' => 'School Sub District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'state_lower_district',
+	'crm_label' => 'State Lower District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'state_upper_district',
+	'crm_label' => 'State Upper District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'supranational_district',
+	'crm_label' => 'Supranational District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'village_district',
+	'crm_label' => 'Village District (Voting)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'availability',
+	'crm_label' => 'Availability',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'support_level',
+	'crm_label' => 'Support Level',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'inferred_support_level',
+	'crm_label' => 'Inferred Support Level',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'priority_level',
+	'crm_label' => 'Priority Level',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'do_not_call',
+	'crm_label' => 'Do Not Call',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'mobile_opt_in',
+	'crm_label' => 'Mobile Opt-In',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'do_not_contact',
+	'crm_label' => 'Do Not Contact',
+);
+
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'recruiter_id',
+	'crm_label' => 'Recruiter ID',
+);
+
 // Fields to ignore (for now)
 $nationbuilder_ignore_fields = array(
-	'city_district',
 	'civicrm_id',
-	'county_district',
 	'county_file_id',
 	'created_at',
 	'datatrust_id',
-	'do_not_call',
-	'do_not_contact',
 	'dw_id',
-	'federal_district',
-	'fire_district',
 	'has_facebook',
 	'id',
 	'is_twitter_follower',
-	'judicial_district',
 	'labour_region',
 	'linkedin_id',
 	'mobile',
-	'mobile_opt_in',
 	'middle_name',
 	'nbec_guid',
 	'ngp_id',
@@ -378,35 +533,25 @@ $nationbuilder_ignore_fields = array(
 	'precinct_id',
 	'primary_address',
 	'profile_image_url_ssl',
-	'recruiter_id',
 	'rnc_id',
 	'rnc_regid',
 	'salesforce_id',
-	'school_district',
-	'school_sub_district',
 	'state_file_id',
-	'state_lower_district',
-	'state_upper_district',
-	'support_level',
-	'supranational_district',
 	'tags',
 	'updated_at',
 	'van_id',
-	'village_district',
 	'ward',
 	'active_customer_expires_at',
 	'active_customer_started_at',
 	'author',
 	'author_id',
 	'auto_import_id',
-	'availability',
 	'ballots',
 	'banned_at',
 	'billing_address',
 	'call_status_id',
 	'call_status_name',
 	'capital_amount_in_cents',
-	'city_sub_district',
 	'closed_invoices_amount_in_cents',
 	'closed_invoices_count',
 	'contact_status_id',
@@ -446,7 +591,6 @@ $nationbuilder_ignore_fields = array(
 	'home_address',
 	'import_id',
 	'inferred_party',
-	'inferred_support_level',
 	'invoice_payments_amount_in_cents',
 	'invoice_payments_referred_amount_in_cents',
 	'invoices_amount_in_cents',
@@ -481,7 +625,6 @@ $nationbuilder_ignore_fields = array(
 	'prefix',
 	'previous_party',
 	'primary_email_id',
-	'priority_level',
 	'priority_level_changed_at',
 	'profile_content',
 	'profile_content_html',

@@ -173,6 +173,13 @@ class WP_Fusion_Options {
 			// Initialize settings to default values
 			$this->settings = $this->initialize_settings( $settings );
 
+			// This is messy but it's a quick fix for making wpf_get_setting_ filters
+			// work on the settings page.
+
+			foreach ( $this->options as $id => $value ) {
+				$this->options[ $id ] = apply_filters( 'wpf_get_setting_' . $id, $value );
+			}
+
 			if ( isset( $_POST['action'] ) && 'update' == $_POST['action'] && isset( $_POST[ $this->setup['project_slug'] . '_nonce' ] ) ) {
 
 				$this->save_options();
@@ -257,7 +264,7 @@ class WP_Fusion_Options {
 				unset( $this->post_data[ $id ] );
 			}
 
-			if ( isset( $this->post_data[ $id ] ) && ! isset( $setting['subfields'] ) ) {
+			if ( isset( $this->post_data[ $id ] ) && $this->post_data[ $id ] !== $this->options[ $id ] ) {
 
 				$this->post_data[ $id ] = $this->validate_options( $id, $this->post_data[ $id ], $setting );
 
@@ -536,16 +543,17 @@ class WP_Fusion_Options {
 
 	public function add_menus() {
 
-		// Create an array to contain all pages, and add the main setup page (registered with $setup)
+		// Create an array to contain all pages, and add the main setup page (registered with $setup).
+		// Moved strings to this function in 3.40.23 so they pass through gettext
 		$pages = array(
 			$this->setup['slug'] => array(
-				'menu'       => $this->setup['menu'],
-				'page_title' => $this->setup['page_title'],
-				'menu_title' => $this->setup['menu_title'],
-				'capability' => $this->setup['capability'],
-				'page_icon'  => $this->setup['page_icon'],
-				'icon_url'   => $this->setup['icon_url'],
-				'position'   => $this->setup['position'],
+				'menu'         => 'settings',
+				'page_title'   => __( 'WP Fusion Settings', 'wp-fusion-lite' ),
+				'menu_title'   => __( 'WP Fusion', 'wp-fusion-lite' ),
+				'capability'   => 'manage_options',
+				'option_group' => 'wpf_options',
+				'slug'         => 'wpf-settings',
+				'page_icon'    => 'tools',
 			),
 		);
 
@@ -669,7 +677,7 @@ class WP_Fusion_Options {
 
 		// Enqueue any custom scripts and styles
 		if ( has_action( $this->setup['project_slug'] . '_enqueue_scripts' ) ) {
-			do_action( $this->setup['project_slug'] . '_enqueue_scripts' );
+			do_action( $this->setup['project_slug'] . '_enqueue_scripts' ); // wpf_enqueue_scripts.
 		}
 	}
 

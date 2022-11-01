@@ -250,6 +250,7 @@ class WPF_FluentCRM {
 
 		$built_in_fields           = FluentCrmApi( 'contacts' )->getInstance()->mappables();
 		$built_in_fields['status'] = 'Status';
+		$built_in_fields['avatar'] = 'Avatar URL';
 		$custom_fields             = $this->get_custom_fields();
 
 		asort( $built_in_fields );
@@ -390,7 +391,7 @@ class WPF_FluentCRM {
 		 * By default status is subscribed if status is not given
 		 * If status is pending given in data then sending a double optin
 		 */
-		if ( 'pending' == $contact->status ) {
+		if ( 'pending' === $contact->status ) {
 			$contact->sendDoubleOptinEmail();
 		}
 

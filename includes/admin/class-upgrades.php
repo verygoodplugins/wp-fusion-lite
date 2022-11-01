@@ -129,6 +129,20 @@ class WPF_Upgrades {
 
 	}
 
+	/**
+	 * Update the duplicate site key to include a hash to prevent it from
+	 * getting replaced on WP Engine / CloudWays.
+	 * 
+	 * @see WPF_StagingSites::get_duplicate_site_lock_key().
+	 *
+	 * @since 3.40.16
+	 */
+	public static function v_3_40_16() {
+
+		wp_fusion()->settings->set( 'site_url', WPF_Staging_Sites::get_duplicate_site_lock_key() );
+
+	}
+
 }
 
 new WPF_Upgrades();
