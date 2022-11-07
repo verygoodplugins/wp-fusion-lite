@@ -203,9 +203,10 @@ class WPF_Growmatik {
 	 *
 	 * @param string $contact_id   Growmatic user id.
 	 * @param array  $contact_data Data to push as new user data.
+	 * @param string $contact_email User email. Overrides the need for contact ID.
 	 * @return bool|WP_Error True on success, WP Error object on failure.
 	 */
-	private function update_contact_custom_attributes( $contact_id, $contact_data ) {
+	private function update_contact_custom_attributes( $contact_id, $contact_data, $contact_email = '' ) {
 
 		$params  = $this->get_params( false );
 		$request = $this->url . '/contact/attribute/email/';
@@ -221,7 +222,7 @@ class WPF_Growmatik {
 			}
 		}
 
-		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
+		$params['body']['email'] = ! empty( $contact_email ) ? $contact_email : $this->get_email_from_cid( $contact_id );
 		$params['body']['data']  = $prepared_data;
 
 		$response = wp_safe_remote_post( $request, $params );
@@ -603,6 +604,22 @@ class WPF_Growmatik {
 		if ( ! $results->success ) {
 			return false;
 		}
+
+		// If successfully added contact, try to send its custom fields afterward to its own endpoint.
+		require_once dirname( __FILE__ ) . '/admin/growmatik-fields.php';
+
+		$basic_field_names = array_column( $growmatik_fields, 'crm_field' );
+		$attributes        = $this->get_user_attributes();
+		$custom_attributes = wp_list_pluck( $attributes['custom'], 'name', 'id' );
+		$custom_fields     = array();
+
+		foreach ( $contact_data as $name => $value ) {
+			if ( ! in_array( $name, $basic_field_names, true ) ) {
+				$custom_fields[ $custom_attributes[ $name ] ] = $value;
+			}
+		}
+
+		$this->update_contact_custom_attributes( '', $custom_fields, $contact_data['email'] );
 
 		return $results->data->gmId;
 	}
