@@ -280,6 +280,11 @@ jQuery(document).ready(function($){
 		var select_page_options  = {
 			allowClear: true,
 			minimumInputLength: 3,
+			tags : true,
+			insertTag : function(data, tag){
+				tag.text = tag.text + " (add URL)"
+				data.push(tag);
+			},
 			ajax: {
     			url: ajaxurl,
     			dataType: 'json',
@@ -296,34 +301,31 @@ jQuery(document).ready(function($){
     			}
     		}
 		};
-		if($("select.select4-select-page").hasClass('select4-allow-adding')){
-			select_page_options.tags = true;
-			select_page_options.insertTag = function(data, tag){
-				tag.text = tag.text + " (add URL)"
-				data.push(tag);
-			};
-		}
+
 		$("select.select4-select-page").select4(select_page_options);
 		
 	}
 
 	// Tooltips
 
-	$( '.wpf-tip.wpf-tip-right' ).tipTip({
-		'attribute': 'data-tip',
-		'fadeIn': 50,
-		'fadeOut': 50,
-		'delay': 200,
-		'defaultPosition': 'right',
-	});
+	if( typeof $.fn.tipTip !== 'undefined' ) {
 
-	$( '.wpf-tip.wpf-tip-bottom' ).tipTip({
-		'attribute': 'data-tip',
-		'fadeIn': 50,
-		'fadeOut': 50,
-		'delay': 200,
-		'defaultPosition': 'bottom',
-	});
+		$( '.wpf-tip.wpf-tip-right' ).tipTip({
+			'attribute': 'data-tip',
+			'fadeIn': 50,
+			'fadeOut': 50,
+			'delay': 200,
+			'defaultPosition': 'right',
+		});
+
+		$( '.wpf-tip.wpf-tip-bottom' ).tipTip({
+			'attribute': 'data-tip',
+			'fadeIn': 50,
+			'fadeOut': 50,
+			'delay': 200,
+			'defaultPosition': 'bottom',
+		});
+	}
 
 
 	// Logs User dropdown
@@ -331,7 +333,7 @@ jQuery(document).ready(function($){
 
 		$("select.select4-users-log").select4({
 			allowClear: true,
-			// placeholder: "Search for users",
+			placeholder: "All users",
 			minimumInputLength: 3,
 			width: '225px',
 			ajax: {
@@ -508,6 +510,23 @@ jQuery(document).ready(function($){
 		});
 
 	});
+
+	$('#wpf-meta select').on( "change", function() {
+
+		if ( 0 == $( '#wpf-settings-allow_tags' ).find('option:selected').length && 0 == $( '#wpf-settings-allow_tags_all' ).find('option:selected').length ) {
+
+			$('#wpf-check-tags').attr( 'disabled', true );
+			$('#wpf-check-tags').prop( 'checked', false );
+			$('#wpf-check-tags-label').addClass( 'disabled' );
+
+		} else {
+
+			$('#wpf-check-tags').attr( 'disabled', false );
+			$('#wpf-check-tags-label').removeClass( 'disabled' );
+
+		}
+
+	} );
 
 	// Users list
 
@@ -1057,4 +1076,11 @@ jQuery(document).ready(function($){
 // Fix tribe tickets select2 issued
 jQuery(document).on('click','#ticket_form_toggle,#rsvp_form_toggle',function(){
 	initializeTagsSelect( '#ticket_form_table' );
+});
+
+// For some reason this doesn't work inside of document.ready().
+jQuery(document).on('click','#edd_price_fields .edd-add-repeatable-row > button', function(e){
+	
+	initializeTagsSelect('#wpbody');
+
 });

@@ -73,6 +73,7 @@ class WPF_FluentCRM_REST {
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		$url = wpf_get_option( 'fluentcrm_rest_url' );
 
@@ -106,6 +107,32 @@ class WPF_FluentCRM_REST {
 
 	}
 
+	/**
+	 * Formats field values for API calls.
+	 *
+	 * @since  3.40.49
+	 *
+	 * @param  mixed  $value      The field value.
+	 * @param  string $field_type The field type.
+	 * @param  string $field      The field in the cRM.
+	 * @return mixed  $value     The formatted field value.
+	 */
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( 'date' === $field_type && ! empty( $value ) ) {
+
+			// Adjust formatting for date fields.
+			$date = gmdate( 'Y-m-d', $value );
+
+			return $date;
+
+		} else {
+
+			return $value;
+
+		}
+
+	}
 
 	/**
 	 * Gets params for API calls.
@@ -544,7 +571,7 @@ class WPF_FluentCRM_REST {
 		}
 
 		if ( empty( $data['status'] ) ) {
-			$data['status'] = 'subscribed';
+			$data['status'] = wpf_get_option( 'default_status', 'subscribed' );
 		}
 
 		$params         = $this->get_params();
@@ -559,7 +586,16 @@ class WPF_FluentCRM_REST {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $response->contact->id;
+		$contact_id = $response->contact->id;
+
+		if ( 'pending' === $data['status'] ) {
+
+			// Send double opt-in request.
+			wp_remote_post( $this->url . '/subscribers/' . $contact_id . '/send-double-optin', $this->get_params() );
+
+		}
+
+		return $contact_id;
 
 	}
 

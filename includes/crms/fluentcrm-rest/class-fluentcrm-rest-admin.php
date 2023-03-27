@@ -65,6 +65,7 @@ class WPF_FluentCRM_REST_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
 
 	}
 
@@ -240,6 +241,36 @@ class WPF_FluentCRM_REST_Admin {
 
 	}
 
+	/**
+	 * Add option to set default subscriber status.
+	 *
+	 * @since 3.40.40
+	 *
+	 * @param array $settings The settings.
+	 * @return array The settings.
+	 */
+	public function configure_settings( $settings ) {
+
+		$new_settings = array(
+			'default_status' => array(
+				'title'       => __( 'Default Status', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
+				'tooltip'     => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address. This can be overridden on a per-form basis by syncing a value of "subscribed" to the Status field.', 'wp-fusion-lite' ),
+				'type'        => 'select',
+				'std'         => 'subscribed',
+				'section'     => 'main',
+				'choices'     => array(
+					'susbcribed' => 'Subscribed',
+					'pending'    => 'Pending',
+				),
+			),
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+
+		return $settings;
+
+	}
 
 
 	/**

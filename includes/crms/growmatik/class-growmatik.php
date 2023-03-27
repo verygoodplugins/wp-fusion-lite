@@ -111,39 +111,6 @@ class WPF_Growmatik {
 
 	}
 
-
-	/**
-	 * Get user email by contact id.
-	 *
-	 * @since 3.36.0
-	 * @access private
-	 *
-	 * @param string $contact_id Growmatik user id.
-	 * @return string User email.
-	 */
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'growmatik_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			$user = $this->load_contact( $contact_id );
-
-			return $user['user_email'];
-
-		}
-	}
-
 	private function get_user_attributes() {
 		$params  = $this->get_params();
 		$request = $this->url . '/site/attributes';
@@ -222,7 +189,7 @@ class WPF_Growmatik {
 			}
 		}
 
-		$params['body']['email'] = ! empty( $contact_email ) ? $contact_email : $this->get_email_from_cid( $contact_id );
+		$params['body']['email'] = ! empty( $contact_email ) ? $contact_email : wp_fusion()->crm->get_email_from_cid( $contact_id );
 		$params['body']['data']  = $prepared_data;
 
 		$response = wp_safe_remote_post( $request, $params );
@@ -561,7 +528,7 @@ class WPF_Growmatik {
 		$params['method']        = 'DELETE';
 		$params['body']['id']    = $contact_id;
 		$params['body']['tags']  = $tags;
-		$params['body']['email'] = $this->get_email_from_cid( $contact_id );
+		$params['body']['email'] = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		$response = wp_safe_remote_request( $request, $params );
 

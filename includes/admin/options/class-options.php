@@ -273,7 +273,7 @@ class WP_Fusion_Options {
 
 		if ( $this->reset_options ) {
 
-			do_action( 'wpf_resetting_options', $this->options );
+			do_action( 'wpf_resetting_options', wp_parse_args( $this->post_data, $this->options ) );
 
 			delete_option( $this->option_group );
 			delete_option( 'wpf_available_tags' );
@@ -367,6 +367,11 @@ class WP_Fusion_Options {
 
 		}
 
+		// Handles the Reset option.
+		if ( method_exists( $this, 'validate_field_' . $id ) ) {
+			add_filter( 'validate_field_' . $id, array( $this, 'validate_field_' . $id ), 10, 3 );
+		}
+
 		if ( has_filter( 'validate_field_' . $id ) ) {
 
 			// If there's a validation function for this particular field ID
@@ -393,8 +398,8 @@ class WP_Fusion_Options {
 
 		if ( is_wp_error( $input ) ) {
 
-			// If an input fails validation, put the error message into the errors array for display
-			$this->errors[ $id ] = $input->get_error_message();
+			// If an input fails validation, put the error message into the errors array for display.
+			$this->errors[ $id ] = sprintf( __( 'Error saving field %1$s: %2$s', 'wp-fusion-lite' ), '<strong>' . esc_html( $setting['title'] ) . '</strong>', esc_html( $input->get_error_message() ) );
 			$input               = $input->get_error_data();
 		}
 
@@ -750,7 +755,7 @@ class WP_Fusion_Options {
 
 			if ( $this->errors ) {
 				foreach ( $this->errors as $id => $error_message ) {
-					echo '<div id="message" class="error"><p><i class="fa fa-warning"></i>' . esc_html( $error_message ) . '</p></div>';
+					echo '<div id="message" class="error"><p><i class="fa fa-warning"></i>' . wp_kses_post( $error_message ) . '</p></div>';
 					echo '<style type="text/css">#' . esc_attr( $id ) . '{ border: 1px solid #d00; }</style>';
 				}
 			}
@@ -2065,7 +2070,7 @@ class WP_Fusion_Options {
 	 */
 	public function validate_field_reset( $input, $setting ) {
 
-		if ( isset( $input ) ) {
+		if ( ! empty( $input ) ) {
 			$this->reset_options = true;
 		}
 

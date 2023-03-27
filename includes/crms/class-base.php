@@ -28,13 +28,22 @@ class WPF_CRM_Base {
 	public $contact_fields;
 
 	/**
+	 * When WPF has created an email via a guest form submission or checkout, this allows
+	 * us to pass it to tracking scripts in the footer.
+	 *
+	 * @since 3.41.0
+	 * @var guest_email
+	 */
+	public $guest_email;
+
+	/**
 	 * Buffer for queued API calls.
 	 *
 	 * @since 3.39.6
 	 * @var   buffer
 	 */
 
-	private $buffer;
+	private $buffer = array( 'update_contact' => array(), 'remove_tags' => array(), 'apply_tags' => array() );
 
 	/**
 	 * Constructs a new instance.
@@ -49,6 +58,10 @@ class WPF_CRM_Base {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
 
+		// Guest tracking.
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_guest_email' ), 10, 2 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_guest_email' ), 10, 2 );
+
 		// Default field value formatting.
 		// 5 so it runs before wpf_format_field_value at priority 10 in the individual CRM integrations.
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 5, 3 );
@@ -57,7 +70,7 @@ class WPF_CRM_Base {
 		add_action( 'wp_ajax_wpf_sync', array( $this, 'ajax_sync' ) );
 
 		// Process queued actions at PHP shutdown.
-		add_action( 'shutdown', array( $this, 'shutdown' ), 1 );
+		add_action( 'shutdown', array( $this, 'shutdown' ), -1 );
 
 		// Load the field mapping into memory.
 		$this->contact_fields = wpf_get_option( 'contact_fields', array() );
@@ -140,6 +153,8 @@ class WPF_CRM_Base {
 					'source' => $this->crm->slug,
 				)
 			);
+
+			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
 
 			$staging = new WPF_Staging();
 
@@ -237,6 +252,21 @@ class WPF_CRM_Base {
 			return $this->request( $method, $args );
 
 		}
+
+	}
+
+	/**
+	 * Runs when a guest has been created/updated, and sets the guest email property
+	 * so it can be passed to tracking scripts in the footer.
+	 *
+	 * @since 3.41.0
+	 *
+	 * @param string $contact_id The contact ID.
+	 * @param string $email_address The email address.
+	 */
+	public function set_guest_email( $contact_id, $email_address ) {
+
+		$this->guest_email = $email_address;
 
 	}
 
@@ -451,7 +481,7 @@ class WPF_CRM_Base {
 
 		$enabled = true;
 
-		if ( defined( 'WPF_DISABLE_QUEUE' ) && false === defined( 'WPF_DISABLE_QUEUE' ) ) {
+		if ( defined( 'WPF_DISABLE_QUEUE' ) && true === WPF_DISABLE_QUEUE ) {
 			$enabled = false;
 		} elseif ( ! wpf_get_option( 'enable_queue', true ) ) {
 			$enabled = false;
@@ -467,8 +497,8 @@ class WPF_CRM_Base {
 	 *
 	 * @since  3.36.17
 	 *
-	 * @param  string $contact_id The contact ID.
-	 * @return string The email address.
+	 * @param  string       $contact_id The contact ID.
+	 * @return string|false The email address or false.
 	 */
 	public function get_email_from_cid( $contact_id ) {
 
@@ -484,19 +514,40 @@ class WPF_CRM_Base {
 
 			return $users[0]->user_email;
 
-		} else {
-
-			// Make an API call.
-
-			$contact = $this->crm->load_contact( $contact_id );
-
-			if ( is_wp_error( $contact ) ) {
-				return false;
-			}
-
-			return $contact['user_email'];
-
 		}
+
+		if ( class_exists( 'WooCommerce' ) ) {
+
+			// See if we know it from a Woo order.
+
+			// @TODO As we add more integrations it will be better if these are moved
+			// into their own classes and hooked to wpf_get_email_from_contact_id.
+
+			$args = array(
+				'limit'      => 1,
+				'status'     => array( 'wc-processing', 'wc-completed' ),
+				'meta_key'   => "{$this->crm->slug}_contact_id",
+				'meta_value' => $contact_id,
+			);
+
+			$orders = wc_get_orders( $args );
+
+			if ( ! empty( $orders ) ) {
+
+				return $orders[0]->get_billing_email();
+
+			}
+		}
+
+		// Make an API call.
+
+		$contact = $this->crm->load_contact( $contact_id );
+
+		if ( is_wp_error( $contact ) || empty( $contact['user_email'] ) ) {
+			return false;
+		}
+
+		return apply_filters( 'wpf_get_email_from_contact_id', $contact['user_email'], $contact_id ) ;
 
 	}
 
@@ -514,7 +565,7 @@ class WPF_CRM_Base {
 	 */
 	private function doing_reset() {
 
-		if ( ! empty( $_POST ) && isset( $_POST['wpf_options'] ) && ! empty( $_POST['wpf_options']['reset_options'] ) ) {
+		if ( ! empty( $_POST ) && isset( $_POST['wpf_options'] ) && ! empty( $_POST['wpf_options']['reset'] ) ) {
 			return true;
 		}
 
@@ -617,7 +668,7 @@ class WPF_CRM_Base {
 			}
 
 			// If field exists in form and sync is active.
-			if ( isset( $user_meta[ $field ] ) ) {
+			if ( array_key_exists( $field, $user_meta ) ) {
 
 				if ( empty( $field_data['type'] ) ) {
 					$field_data['type'] = 'text';

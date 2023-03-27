@@ -12,7 +12,7 @@ class WPF_Infusionsoft_iSDK {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags_api' );
 
 	/**
 	 * Holds connection errors
@@ -41,7 +41,6 @@ class WPF_Infusionsoft_iSDK {
 		$this->slug      = 'infusionsoft';
 		$this->name      = 'Infusionsoft';
 		$this->menu_name = 'Infusionsoft / Keap';
-		$this->supports  = array( 'add_tags_api' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -187,7 +186,7 @@ class WPF_Infusionsoft_iSDK {
 
 			return implode( ',', array_filter( $value ) );
 
-		} elseif ( $field_type == 'country' ) {
+		} elseif ( 'country' === $field_type ) {
 
 			$countries = include dirname( __FILE__ ) . '/includes/countries.php';
 
@@ -202,7 +201,7 @@ class WPF_Infusionsoft_iSDK {
 			}
 		} else {
 
-			return strval( $value ); // fixes "Error adding: java.lang.Integer cannot be cast to java.lang.String".
+			return sanitize_text_field( $value ); // fixes "Error adding: java.lang.Integer cannot be cast to java.lang.String".
 
 		}
 

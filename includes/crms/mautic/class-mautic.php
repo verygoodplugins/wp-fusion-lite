@@ -9,6 +9,20 @@ class WPF_Mautic {
 	public $url;
 
 	/**
+	 * Client ID for oauth
+	 *
+	 * @var string
+	 */
+	public $client_id;
+
+	/**
+	 * Client secret for ouath
+	 *
+	 * @var string
+	 */
+	public $client_secret;
+
+	/**
 	 * Contains API params
 	 */
 
@@ -22,6 +36,7 @@ class WPF_Mautic {
 
 	/**
 	 * Lets us link directly to editing a contact record.
+	 *
 	 * @var string
 	 */
 
@@ -39,6 +54,9 @@ class WPF_Mautic {
 		$this->slug     = 'mautic';
 		$this->name     = 'Mautic';
 		$this->supports = array( 'add_tags', 'combined_updates' );
+
+		$this->client_id     = wpf_get_option( 'mautic_client_id' );
+		$this->client_secret = wpf_get_option( 'mautic_client_secret' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -71,7 +89,7 @@ class WPF_Mautic {
 
 		$mautic_url = wpf_get_option( 'mautic_url' );
 
-		if( ! empty( $mautic_url ) ){
+		if ( ! empty( $mautic_url ) ) {
 			$this->edit_url = trailingslashit( $mautic_url ) . 's/contacts/view/%d';
 		}
 	}
@@ -237,7 +255,7 @@ class WPF_Mautic {
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( "Y-m-d", $value );
+			$date = date( 'Y-m-d', $value );
 
 			return $date;
 
@@ -249,41 +267,39 @@ class WPF_Mautic {
 
 			$countries = include dirname( __FILE__ ) . '/includes/countries.php';
 
-			if( isset( $countries[$value] ) ) {
+			if ( isset( $countries[ $value ] ) ) {
 
-				return $countries[$value];
+				return $countries[ $value ];
 
 			} else {
 
 				return $value;
 
 			}
-
 		} elseif ( $field_type == 'state' ) {
 
 			$states = include dirname( __FILE__ ) . '/includes/states.php';
 
-			if( isset( $states[$value] ) ) {
+			if ( isset( $states[ $value ] ) ) {
 
-				return $states[$value];
+				return $states[ $value ];
 
 			} else {
 
 				// Try and fix foreign characters
 
 				// ã
-				$value = str_replace('&atilde;', 'a', $value);
+				$value = str_replace( '&atilde;', 'a', $value );
 
 				// á
-				$value = str_replace('&aacute;', 'a', $value);
+				$value = str_replace( '&aacute;', 'a', $value );
 
 				// é
-				$value = str_replace('&eacute;', 'e', $value);
+				$value = str_replace( '&eacute;', 'e', $value );
 
 				return $value;
 
 			}
-
 		} else {
 
 			return $value;
@@ -300,20 +316,77 @@ class WPF_Mautic {
 	 */
 
 	public function handle_http_response( $response, $args, $url ) {
+		if ( ! empty( $this->url ) && strpos( $url, $this->url ) !== false ) {
 
-		if( ! empty( $this->url ) && strpos( $url, $this->url ) !== false ) {
+			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
+			$response_code = wp_remote_retrieve_response_code( $response );
 
-			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( 401 === $response_code && $body_json->errors ) {
 
-			if( isset( $body_json->errors ) ) {
+				if ( strpos( $body_json->errors[0]->message, 'invalid' ) !== false || strpos( $body_json->errors[0]->message, 'expired' ) !== false ) {
 
+					$access_token = $this->refresh_token();
+
+					if ( is_wp_error( $access_token ) ) {
+						return $access_token;
+					}
+
+					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
+
+					$response = wp_safe_remote_request( $url, $args );
+
+				}
+			} elseif ( isset( $body_json->errors ) ) {
 				$response = new WP_Error( 'error', $body_json->errors[0]->message );
 
 			}
-
 		}
 
 		return $response;
+
+	}
+
+
+	/**
+	 * Refresh an access token from a refresh token.
+	 *
+	 * @since 3.40.39
+	 *
+	 * @return string An access token.
+	 */
+	public function refresh_token() {
+
+		$refresh_token = wpf_get_option( "{$this->slug}_refresh_token" );
+
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() );
+		$params    = array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type' => 'application/x-www-form-urlencoded',
+			),
+			'body'       => array(
+				'grant_type'    => 'refresh_token',
+				'client_id'     => $this->client_id,
+				'client_secret' => $this->client_secret,
+				'redirect_uri'  => $admin_url . 'options-general.php?page=wpf-settings&crm=mautic',
+				'refresh_token' => $refresh_token,
+			),
+		);
+		$url       = trailingslashit( wpf_get_option( 'mautic_url' ) ) . 'oauth/v2/token';
+
+		$response = wp_safe_remote_post( $url, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+		$this->get_params( null, null, null, $body_json->access_token );
+
+		wp_fusion()->settings->set( "{$this->slug}_token", $body_json->access_token );
+		wp_fusion()->settings->set( "{$this->slug}_refresh_token", $body_json->refresh_token );
+
+		return $body_json->access_token;
 
 	}
 
@@ -324,24 +397,32 @@ class WPF_Mautic {
 	 * @return  array Params
 	 */
 
-	public function get_params( $mautic_url = null, $mautic_username = null, $mautic_password = null ) {
+	public function get_params( $mautic_url = null, $mautic_username = null, $mautic_password = null, $mautic_token = null ) {
 
 		// Get saved data from DB
-		if ( empty( $mautic_url ) || empty( $mautic_username ) || empty($mautic_password) ) {
-			$mautic_url = wpf_get_option( 'mautic_url' );
+		if ( empty( $mautic_url ) || empty( $mautic_username ) || empty( $mautic_password ) || empty( $mautic_token ) ) {
+			$mautic_url      = wpf_get_option( 'mautic_url' );
 			$mautic_username = wpf_get_option( 'mautic_username' );
+			$mautic_token    = wpf_get_option( 'mautic_token' );
 			$mautic_password = wpf_get_option( 'mautic_password' );
 		}
 
-		$auth_key = base64_encode($mautic_username . ':' . $mautic_password);
+		// Oauth
+		if ( $mautic_token ) {
+			$auth = 'Bearer ' . $mautic_token;
+		} else {
+			// Basic Auth
+			$auth_key = base64_encode( $mautic_username . ':' . $mautic_password );
+			$auth     = 'Basic ' . $auth_key;
+		}
 
 		$this->params = array(
 			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 30,
 			'httpversion' => '1.1',
 			'headers'     => array(
-				'Authorization' => 'Basic ' . $auth_key
-			)
+				'Authorization' => $auth,
+			),
 		);
 
 		$this->url = trailingslashit( $mautic_url );
@@ -357,34 +438,34 @@ class WPF_Mautic {
 	 * @return  bool
 	 */
 
-	public function connect( $mautic_url = null, $mautic_username = null, $mautic_password = null, $test = false ) {
+	public function connect( $mautic_url = null, $mautic_username = null, $mautic_password = null, $mautic_token = null, $test = false ) {
 
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
 		if ( ! $this->params ) {
-			$this->get_params( $mautic_url, $mautic_username, $mautic_password );
+			$this->get_params( $mautic_url, $mautic_username, $mautic_password, $mautic_token );
 		}
 
-		if( $test == true ) {
+		if ( $test == true ) {
 
 			$request  = $this->url . 'api/contacts';
 			$response = wp_safe_remote_get( $request, $this->params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body->errors ) ) {
+			if ( isset( $body->errors ) ) {
 
-				if( $body->errors[0]->code == 404 ) {
+				if ( $body->errors[0]->code == 404 ) {
 
 					return new WP_Error( $body->errors[0]->code, '404 error. This sometimes happens when you\'ve just enabled the API, and your cache needs to be rebuilt. See <a href="https://mautic.org/docs/en/tips/troubleshooting.html" target="_blank">here for more info</a>. Error message: ' . $body->errors[0]->message );
 
-				} elseif( $body->errors[0]->code == 403 ) {
+				} elseif ( $body->errors[0]->code == 403 ) {
 
 					return new WP_Error( $body->errors[0]->code, '403 error. You need to enable the API from within Mautic\'s configuration settings for WP Fusion to connect.' );
 
@@ -393,13 +474,11 @@ class WPF_Mautic {
 					return new WP_Error( $body->errors[0]->code, $body->errors[0]->message );
 
 				}
-
 			} elseif ( empty( $body ) ) {
 
 				return new WP_Error( 'error', 'This is not a valid URL. Please enter the base URL to your Mautic install.' );
 
 			}
-
 		}
 
 		return true;
@@ -447,20 +526,19 @@ class WPF_Mautic {
 		$request  = $this->url . 'api/tags?limit=5000';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
-		if( ! empty( $body_json['tags'] ) ) {
+		if ( ! empty( $body_json['tags'] ) ) {
 
-			foreach( $body_json['tags'] as $tag ) {
+			foreach ( $body_json['tags'] as $tag ) {
 
 				$available_tags[ $tag['tag'] ] = $tag['tag'];
 
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -483,16 +561,16 @@ class WPF_Mautic {
 		}
 
 		$crm_fields = array();
-		$request  = $this->url . 'api/fields/contact?limit=1000';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$request    = $this->url . 'api/fields/contact?limit=1000';
+		$response   = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach( $body_json['fields'] as $field ) {
+		foreach ( $body_json['fields'] as $field ) {
 
 			$crm_fields[ $field['alias'] ] = $field['label'];
 
@@ -574,7 +652,7 @@ class WPF_Mautic {
 		$request      = $this->url . 'api/contacts/' . $contact_id;
 		$response     = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -586,23 +664,21 @@ class WPF_Mautic {
 			return $contact_tags;
 		}
 
+		$found_new      = false;
+		$available_tags = wpf_get_option( 'available_tags' );
 
-		$found_new = false;
-		$available_tags = wpf_get_option('available_tags');
+		foreach ( $body_json['contact']['tags'] as $tag ) {
 
-		foreach( $body_json['contact']['tags'] as $tag ) {
-			
 			$contact_tags[] = $tag['tag'];
 
 			// Handle tags that might not have been picked up by sync_tags
-			if( !isset( $available_tags[$tag['tag']] ) ) {
-				$available_tags[$tag['tag']] = $tag['tag'];
-				$found_new = true;
+			if ( ! isset( $available_tags[ $tag['tag'] ] ) ) {
+				$available_tags[ $tag['tag'] ] = $tag['tag'];
+				$found_new                     = true;
 			}
-
 		}
 
-		if( $found_new ) {
+		if ( $found_new ) {
 			wp_fusion()->settings->set( 'available_tags', $available_tags );
 		}
 
@@ -622,14 +698,14 @@ class WPF_Mautic {
 			$this->get_params();
 		}
 
-		$request      		= $this->url . 'api/contacts/' . $contact_id . '/edit';
-		$params           	= $this->params;
-		$params['method'] 	= 'PATCH';
-		$params['body']  	= array('tags' => $tags);
+		$request          = $this->url . 'api/contacts/' . $contact_id . '/edit';
+		$params           = $this->params;
+		$params['method'] = 'PATCH';
+		$params['body']   = array( 'tags' => $tags );
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -651,18 +727,18 @@ class WPF_Mautic {
 		}
 
 		// Prefix with - sign for removal
-		foreach( $tags as $i => $tag ) {
-			$tags[$i] = '-' . $tag;
+		foreach ( $tags as $i => $tag ) {
+			$tags[ $i ] = '-' . $tag;
 		}
 
-		$request      		= $this->url . 'api/contacts/' . $contact_id . '/edit';
-		$params           	= $this->params;
-		$params['method'] 	= 'PATCH';
-		$params['body']  	= array('tags' => $tags);
+		$request          = $this->url . 'api/contacts/' . $contact_id . '/edit';
+		$params           = $this->params;
+		$params['method'] = 'PATCH';
+		$params['body']   = array( 'tags' => $tags );
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -686,19 +762,19 @@ class WPF_Mautic {
 
 		$data['ipAddress'] = $_SERVER['REMOTE_ADDR'];
 
-		$request 		= $this->url . 'api/contacts/new';
-		$params 		= $this->params;
+		$request        = $this->url . 'api/contacts/new';
+		$params         = $this->params;
 		$params['body'] = $data;
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $body->errors ) ) {
+		if ( isset( $body->errors ) ) {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
 
@@ -726,7 +802,7 @@ class WPF_Mautic {
 			$this->get_params();
 		}
 
-		if( empty( $data ) ) {
+		if ( empty( $data ) ) {
 			return false;
 		}
 
@@ -764,7 +840,7 @@ class WPF_Mautic {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $body->errors ) ) {
+		if ( isset( $body->errors ) ) {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
 
@@ -801,7 +877,6 @@ class WPF_Mautic {
 			foreach ( $update_data['remove_tags'] as $tag ) {
 				$data['tags'][] = '-' . $tag;
 			}
-
 		}
 
 		$result = $this->update_contact( $contact_id, $data, false );
@@ -823,10 +898,11 @@ class WPF_Mautic {
 			$this->get_params();
 		}
 
-		$url      = $this->url . 'api/contacts/' . $contact_id;;
+		$url = $this->url . 'api/contacts/' . $contact_id;
+
 		$response = wp_safe_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -836,11 +912,10 @@ class WPF_Mautic {
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if ( $field_data['active'] == true && isset( $body_json['contact']['fields']['all'][ $field_data['crm_field'] ] )) {
+			if ( $field_data['active'] == true && isset( $body_json['contact']['fields']['all'][ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $body_json['contact']['fields']['all'][ $field_data['crm_field'] ];
 
 			}
-
 		}
 
 		return $user_meta;

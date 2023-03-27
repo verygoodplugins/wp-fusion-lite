@@ -100,6 +100,19 @@ class WPF_FluentCRM_Admin {
 			'choices'     => $options['available_lists'],
 		);
 
+		$new_settings['default_status'] = array(
+			'title'       => __( 'Default Status', 'wp-fusion-lite' ),
+			'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
+			'tooltip'     => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address. This can be overridden on a per-form basis by syncing a value of "subscribed" to the Status field.', 'wp-fusion-lite' ),
+			'type'        => 'select',
+			'std'         => 'subscribed',
+			'section'     => 'main',
+			'choices'     => array(
+				'subscribed' => 'Subscribed',
+				'pending'    => 'Pending',
+			),
+		);
+
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		if ( ! isset( $settings['create_users']['unlock']['fluentcrm_lists'] ) ) {

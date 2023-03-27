@@ -71,8 +71,8 @@ class WPF_Infusionsoft_iSDK_Admin {
 		);
 
 		$is_config['api_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion-lite' ),
-			'desc'        => __( 'For help generating an API key, please read <a target="_blank" href="http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key">this knowledgebase article</a>.', 'wp-fusion-lite' ),
+			'title'       => __( 'Legacy API Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'For help finding your API key, please read <a target="_blank" href="https://help.keap.com/help/api-key">this knowledgebase article</a>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

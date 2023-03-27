@@ -94,12 +94,10 @@ class WPF_HubSpot_Admin {
 					'grant_type'    => 'authorization_code',
 					'client_id'     => $this->crm->client_id,
 					'client_secret' => $this->crm->client_secret,
-					'redirect_uri'  => get_admin_url() . 'options-general.php?page=wpf-settings&crm=hubspot',
+					'redirect_uri'  => 'https://wpfusion.com/oauth/?action=wpf_get_hubspot_token',
 					'code'          => $code,
 				),
 			);
-
-			$params['body']['redirect_uri'] = str_replace( 'http://', 'https://', $params['body']['redirect_uri'] );
 
 			$response = wp_safe_remote_post( 'https://api.hubapi.com/oauth/v1/token', $params );
 

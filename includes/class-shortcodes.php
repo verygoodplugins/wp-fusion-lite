@@ -199,11 +199,13 @@ class WPF_Shortcodes {
 	 * @return null
 	 */
 
-	public function shortcode_update_tags( $atts ) {
+	public function shortcode_update_tags() {
 
 		if ( wpf_is_user_logged_in() && ! is_admin() ) {
 			wp_fusion()->user->get_tags( wpf_get_current_user_id(), true );
 		}
+
+		return '<!-- wpf_update_tags -->';
 
 	}
 
@@ -214,11 +216,13 @@ class WPF_Shortcodes {
 	 * @return null
 	 */
 
-	public function shortcode_update_meta( $atts ) {
+	public function shortcode_update_meta() {
 
 		if ( wpf_is_user_logged_in() && ! is_admin() ) {
 			wp_fusion()->user->pull_user_meta( wpf_get_current_user_id() );
 		}
+
+		return '<!-- wpf_update_meta -->';
 
 	}
 
@@ -237,6 +241,7 @@ class WPF_Shortcodes {
 				'date-format'     => '',
 				'format'          => '',
 				'timezone-offset' => '0',
+				'sync_if_empty'   => false,
 			),
 			$atts
 		);
@@ -273,7 +278,7 @@ class WPF_Shortcodes {
 		}
 
 		// Maybe refresh the data once from the CRM if the key doesn't exist at all.
-		if ( empty( $value ) && wp_fusion()->crm->is_field_active( $atts['field'] ) ) {
+		if ( empty( $value ) && $atts['sync_if_empty'] && ! did_action( 'wpf_user_updated' ) && wp_fusion()->crm->is_field_active( $atts['field'] ) ) {
 
 			if ( ! metadata_exists( 'user', $user_id, $atts['field'] ) ) {
 
@@ -305,12 +310,12 @@ class WPF_Shortcodes {
 			}
 
 			if ( ! empty( $atts['timezone-offset'] ) ) {
-				$value += intval( $atts['timezone-offset'] ) * 60;
+				$value += intval( $atts['timezone-offset'] ) * HOUR_IN_SECONDS;
 			}
 
 			// At this point the date is in GMT, let's switch it to local timezone for display.
 
-			$value = get_date_from_gmt( gmdate( 'Y-m-d H:i:s', $value ), $atts['date-format'] );
+			$value = date_i18n( $atts['date-format'], $value );
 
 		}
 

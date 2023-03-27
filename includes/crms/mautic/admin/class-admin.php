@@ -24,10 +24,14 @@ class WPF_Mautic_Admin {
 
 		// AJAX
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
+		add_action( 'wp_ajax_wpf_save_client_credentials', array( $this, 'save_client_credentials' ) );
 
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
+
+		// OAuth
+		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ), 1 );
 
 	}
 
@@ -45,6 +49,71 @@ class WPF_Mautic_Admin {
 
 	}
 
+	/**
+	 * Save ouath client credentials.
+	 *
+	 * @since 3.40.39
+	 */
+	public function save_client_credentials() {
+		check_ajax_referer( 'wpf_settings_nonce' );
+		$options                         = array();
+		$options['mautic_url']           = sanitize_text_field( $_POST['url'] );
+		$options['mautic_client_id']     = sanitize_text_field( $_POST['client_id'] );
+		$options['mautic_client_secret'] = sanitize_text_field( $_POST['client_secret'] );
+
+		wp_fusion()->settings->set_multiple( $options );
+		wp_send_json_success( array( 'url' => $this->get_oauth_url( $options['mautic_url'] ) ) );
+	}
+
+	/**
+	 * Listen for an OAuth response and maybe complete setup. Remove if not using OAuth.
+	 *
+	 * @since 3.40.39
+	 */
+	public function maybe_oauth_complete() {
+
+		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && $_GET['crm'] === $this->slug ) {
+
+			$code      = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+			$admin_url = str_replace( 'http://', 'https://', get_admin_url() );
+			$body      = array(
+				'grant_type'    => 'authorization_code',
+				'code'          => $code,
+				'client_id'     => $this->crm->client_id,
+				'client_secret' => $this->crm->client_secret,
+				'redirect_uri'  => $admin_url . 'options-general.php?page=wpf-settings&crm=mautic',
+			);
+
+			$params   = array(
+				'timeout'    => 30,
+				'user-agent' => 'WP Fusion; ' . home_url(),
+				'body'       => wp_json_encode( $body ),
+				'headers'    => array(
+					'Content-Type' => 'application/json',
+					'Accept'       => 'application/json',
+				),
+			);
+			$url      = trailingslashit( wpf_get_option( 'mautic_url' ) ) . 'oauth/v2/token';
+			$response = wp_safe_remote_post( $url, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return false;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			wp_fusion()->settings->set( "{$this->slug}_refresh_token", $response->refresh_token );
+			wp_fusion()->settings->set( "{$this->slug}_token", $response->access_token );
+			wp_fusion()->settings->set( 'crm', $this->slug );
+
+			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
+			exit;
+
+		}
+
+	}
+
+
 
 	/**
 	 * Loads mautic connection information on settings page
@@ -57,41 +126,133 @@ class WPF_Mautic_Admin {
 
 		$new_settings = array();
 
-		$new_settings['mautic_header'] = array(
-			'title'   => __( 'Mautic Configuration', 'wp-fusion-lite' ),
-			'type'    => 'heading',
-			'section' => 'setup',
-			'desc'	  => __( 'Before attempting to connect to Mautic, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' )
-		);
+		if ( wp_fusion()->crm && isset( $options['mautic_username'] ) && $options['mautic_username'] != '' ) {
+			// Option 2
+			$new_settings['mautic_header'] = array(
+				'title'   => __( 'Mautic Configuration Basic Auth', 'wp-fusion-lite' ),
+				'type'    => 'heading',
+				'section' => 'setup',
+				'desc'    => __( 'Before attempting to connect to Mautic, you\'ll first need to enable API access. You can do this by going to the configuration screen, and selecting API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable Basic HTTP Auth</strong> to On.', 'wp-fusion-lite' ),
+			);
 
-		$new_settings['mautic_header']['desc'] .= '<br /><br />' . __( '<strong>Note</strong> that if you\'ve just enabled the API for the first time you\'ll probably need to <a href="https://docs.mautic.org/en/troubleshooting#1-clear-the-cache" target="_blank">clear your Mautic caches</a>.', 'wp-fusion-lite' );
+			$new_settings['mautic_header']['desc'] .= '<br /><br />' . __( '<strong>Note</strong> that if you\'ve just enabled the API for the first time you\'ll probably need to <a href="https://docs.mautic.org/en/troubleshooting#1-clear-the-cache" target="_blank">clear your Mautic caches</a>.', 'wp-fusion-lite' );
 
-		$new_settings['mautic_url'] = array(
-			'title'   => __( 'URL', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter the URL for your Mautic account (like https://app.mautic.net/).', 'wp-fusion-lite' ),
-			'type'    => 'text',
-			'section' => 'setup'
-		);
+			$new_settings['mautic_url'] = array(
+				'title'   => __( 'URL', 'wp-fusion-lite' ),
+				'desc'    => __( 'Enter the URL for your Mautic account (like https://app.mautic.net/).', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
 
-		$new_settings['mautic_username'] = array(
-			'title'   => __( 'Username', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter the Username for your Mautic account.', 'wp-fusion-lite' ),
-			'type'    => 'text',
-			'section' => 'setup'
-		);
+			$new_settings['mautic_username'] = array(
+				'title'   => __( 'Username', 'wp-fusion-lite' ),
+				'desc'    => __( 'Enter the Username for your Mautic account.', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
 
-		$new_settings['mautic_password'] = array(
-			'title'       => __( 'Password', 'wp-fusion-lite' ),
-			'type'        => 'api_validate',
-			'section'     => 'setup',
-			'class'       => 'api_key',
-			'password'	  => true,
-			'post_fields' => array( 'mautic_url', 'mautic_username', 'mautic_password' )
-		);
+			$new_settings['mautic_password'] = array(
+				'title'       => __( 'Password', 'wp-fusion-lite' ),
+				'type'        => 'api_validate',
+				'section'     => 'setup',
+				'class'       => 'api_key',
+				'password'    => true,
+				'post_fields' => array( 'mautic_url', 'mautic_username', 'mautic_password' ),
+			);
+
+		} else {
+			// Option 1.
+			$admin_url                     = str_replace( 'http://', 'https://', get_admin_url() );
+			$redirect_url                  = $admin_url . 'options-general.php?page=wpf-settings&crm=mautic';
+			$new_settings['mautic_header'] = array(
+				'title'   => __( 'Mautic Configuration', 'wp-fusion-lite' ),
+				'type'    => 'heading',
+				'section' => 'setup',
+				'desc'    => sprintf( __( 'Connect to Mautic using OAuth, get the credentials by folowing <a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-mautic-to-wordpress/" target="_blank">these instructions</a>. Enter this as the Redirect URI while generating the client id: <br> <code>%s</code>', 'wp-fusion-lite' ), $redirect_url ),
+			);
+
+			$new_settings['mautic_url'] = array(
+				'title'   => __( 'URL', 'wp-fusion-lite' ),
+				'desc'    => __( 'Enter the URL for your Mautic account (like https://app.mautic.net/).', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
+
+			$new_settings['mautic_client_id'] = array(
+				'title'   => __( 'Client ID', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
+
+			$new_settings['mautic_client_secret'] = array(
+				'title'   => __( 'Client Secret', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
+
+			if ( empty( $options[ "{$this->slug}_refresh_token" ] ) && ! isset( $_GET['code'] ) ) {
+				$new_settings['mautic_auth'] = array(
+					'title'   => __( 'Authorize', 'wp-fusion-lite' ),
+					'type'    => 'oauth_authorize',
+					'section' => 'setup',
+					'url'     => $this->get_oauth_url(),
+					'name'    => $this->name,
+					'slug'    => $this->slug,
+					'dis'     => true,
+				);
+
+			} else {
+
+				$new_settings[ "{$this->slug}_token" ] = array(
+					'title'   => __( 'Access Token', 'wp-fusion-lite' ),
+					'type'    => 'text',
+					'section' => 'setup',
+				);
+
+				$new_settings[ "{$this->slug}_refresh_token" ] = array(
+					'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
+					'type'        => 'api_validate',
+					'section'     => 'setup',
+					'class'       => 'api_key',
+					'post_fields' => array( 'mautic_url', 'mautic_token', 'mautic_refresh_token' ),
+					'desc'        => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
+				);
+
+			}
+		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
+
+	}
+
+
+	/**
+	 * Gets the OAuth URL for the initial connection.
+	 *
+	 * If we're using the WP Fusion app, send the request through wpfusion.com,
+	 * otherwise allow a custom app.
+	 *
+	 * @since 3.40.39
+	 *
+	 * @return string The URL.
+	 */
+	public function get_oauth_url( $url = false ) {
+		if ( $url === false ) {
+			$url = wpf_get_option( $this->slug . '_url' );
+		}
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
+
+		$args = array(
+			'client_id'     => wpf_get_option( $this->slug . '_client_id' ),
+			'grant_type'    => 'authorization_code',
+			'redirect_uri'  => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=mautic' ),
+			'response_type' => 'code',
+			'state'         => 'wpf_mautic',
+		);
+
+		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, trailingslashit( $url ) . 'oauth/v2/authorize' ) );
 
 	}
 
@@ -198,11 +359,20 @@ class WPF_Mautic_Admin {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$mautic_url      = esc_url_raw( wp_unslash( $_POST['mautic_url'] ) );
-		$mautic_username = sanitize_text_field( wp_unslash( $_POST['mautic_username'] ) );
-		$mautic_password = sanitize_text_field( wp_unslash( $_POST['mautic_password'] ) );
+		$mautic_url = esc_url_raw( wp_unslash( $_POST['mautic_url'] ) );
 
-		$connection = $this->crm->connect( $mautic_url, $mautic_username, $mautic_password, true );
+		if ( isset( $_POST['mautic_username'] ) ) {
+			$mautic_username = sanitize_text_field( wp_unslash( $_POST['mautic_username'] ) );
+			$mautic_password = sanitize_text_field( wp_unslash( $_POST['mautic_password'] ) );
+			$mautic_token    = false;
+		} else {
+			$mautic_username      = false;
+			$mautic_password      = false;
+			$mautic_token         = sanitize_text_field( wp_unslash( $_POST['mautic_token'] ) );
+			$mautic_refresh_token = sanitize_text_field( wp_unslash( $_POST['mautic_token'] ) );
+		}
+
+		$connection = $this->crm->connect( $mautic_url, $mautic_username, $mautic_password, $mautic_token, true );
 
 		if ( is_wp_error( $connection ) ) {
 
@@ -210,12 +380,22 @@ class WPF_Mautic_Admin {
 
 		} else {
 
-			$options                               = array();
-			$options['mautic_url']				   = $mautic_url;
-			$options['mautic_username']            = $mautic_username;
-			$options['mautic_password']            = $mautic_password;
-			$options['crm']                        = $this->slug;
-			$options['connection_configured']      = true;
+			$options = array(
+				'crm'                   => $this->slug,
+				'mautic_url'            => $mautic_url,
+				'connection_configured' => true,
+			);
+
+			if ( isset( $mautic_username ) ) {
+				// Basic auth.
+				$options['mautic_username'] = $mautic_username;
+				$options['mautic_password'] = $mautic_password;
+			} else {
+				// Oauth.
+				$options['mautic_token']         = $mautic_token;
+				$options['mautic_refresh_token'] = $mautic_refresh_token;
+			}
+
 			wp_fusion()->settings->set_multiple( $options );
 
 			wp_send_json_success();

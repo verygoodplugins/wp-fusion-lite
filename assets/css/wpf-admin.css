@@ -296,12 +296,17 @@ table.wp-list-table.users div.wpf-users-tags.expanded:after {
  	vertical-align: top;
 	margin-top: 4px;
 	margin-left: 2px;
+	margin-bottom: 5px;
 }
 
 #wpf-meta label > small {
 	display: inline;
     width: auto;
     float: none;
+}
+
+#wpf-meta label.disabled {
+	opacity: 0.5;
 }
 
 #wpf-meta input[type=text] {

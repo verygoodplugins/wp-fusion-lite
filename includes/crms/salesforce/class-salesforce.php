@@ -44,6 +44,13 @@ class WPF_Salesforce {
 	public $edit_url = '';
 
 	/**
+	 * Used for initial authorization and token refreshes.
+	 *
+	 * @var string
+	 */
+	 public $auth_url;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -95,34 +102,13 @@ class WPF_Salesforce {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_action( 'wpf_api_success', array( $this, 'api_success' ), 10, 2 );
 		add_action( 'wpf_api_fail', array( $this, 'api_success' ), 10, 2 );
-		add_filter( 'wpf_get_setting_sf_tag_picklist', array( $this, 'get_setting_sf_tag_picklist' ) );
 
 		$instance_url = wpf_get_option( 'sf_instance_url' );
 		if ( ! empty( $instance_url ) ) {
 			$this->edit_url = trailingslashit( $instance_url ) . 'lightning/r/Contact/%s/view';
 		}
-	}
 
-	/**
-	 * Due to some poor planning a long time ago, crm_field type settings are
-	 * stored as an array, but it makes it way easier to work with if the value
-	 * is a string. This modifies the field value when it's called by
-	 * wpf_get_option().
-	 *
-	 * @since 3.39.4
-	 *
-	 * @param array $setting The setting.
-	 * @return string|bool The setting.
-	 */
-	public function get_setting_sf_tag_picklist( $setting ) {
-
-		if ( ! empty( $setting['crm_field'] ) ) {
-			$setting = $setting['crm_field'];
-		} else {
-			$setting = false;
-		}
-
-		return $setting;
+		$this->auth_url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
 
 	}
 
@@ -265,7 +251,7 @@ class WPF_Salesforce {
 
 		if ( in_array( $field, wpf_get_option( 'read_only_fields', array() ) ) ) {
 
-			// Don't sync read only fields, they'll just throw an error anyway
+			// Don't sync read only fields, they'll just throw an error anyway.
 
 			return false;
 
@@ -284,6 +270,47 @@ class WPF_Salesforce {
 		} else {
 
 			return $value;
+
+		}
+
+	}
+
+	/**
+	 * Gets the OAuth URL for the initial connection.
+	 *
+	 * If we're using the WP Fusion app, send the request through wpfusion.com,
+	 * otherwise allow a custom app.
+	 *
+	 * @since  3.38.20
+	 *
+	 * @return string The URL.
+	 */
+	public function get_oauth_url() {
+
+		$url       = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
+		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
+
+		$args = array(
+			'action'   => 'wpf_get_salesforce_token',
+			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=salesforce' ),
+		);
+
+		if ( 'https://login.salesforce.com/services/oauth2/token' === $url ) {
+
+			// Standard URL.
+			return apply_filters( 'wpf_salesforce_init_auth_url', add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
+
+		} elseif ( 'https://test.salesforce.com/services/oauth2/token' === $url ) {
+
+			$args['sandbox'] = true;
+
+			// Sandbox URLs.
+			return apply_filters( 'wpf_salesforce_init_auth_url', add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
+
+		} else {
+
+			// Custom URL, we don't need to send it through wpfusion.com.
+			return $url;
 
 		}
 
@@ -314,12 +341,10 @@ class WPF_Salesforce {
 				),
 			);
 
-			$url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
-
 			// Prevent the error handling looping on itself.
 			remove_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-			$response = wp_safe_remote_post( $url, $params );
+			$response = wp_safe_remote_post( $this->auth_url, $params );
 
 			add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
@@ -358,9 +383,7 @@ class WPF_Salesforce {
 				'password'      => rawurlencode( htmlspecialchars_decode( $token ) ),
 			);
 
-			$url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
-
-			$auth_url = add_query_arg( $auth_args, $url );
+			$auth_url = add_query_arg( $auth_args, $this->auth_url );
 			$response = wp_safe_remote_post( $auth_url );
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
@@ -412,7 +435,7 @@ class WPF_Salesforce {
 
 				} else {
 					// For example: "This session is not valid for use with the REST API".
-					$response = new WP_Error( 'error', 'Invalid API credentials: ' . $body[0]->message );
+					$response = new WP_Error( 403, 'Invalid API credentials: ' . $body[0]->message );
 				}
 			} elseif ( $response_code != 200 && $response_code != 201 && $response_code != 204 && ! empty( $response_message ) ) {
 
@@ -426,7 +449,7 @@ class WPF_Salesforce {
 
 				}
 
-				$response = new WP_Error( 'error', $response_message );
+				$response = new WP_Error( (int) $response_code, $response_message );
 
 			}
 		}
@@ -540,28 +563,38 @@ class WPF_Salesforce {
 
 		if ( 'Topics' === $tag_type ) {
 
+			$continue   = true;
 			$query_args = array( 'q' => 'SELECT%20Name,%20Id%20from%20Topic' );
+			$url        = $this->instance_url . '/services/data/v42.0/query';
 
-			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
+			while ( $continue ) {
 
-			$response = wp_safe_remote_get( $request, $this->params );
+				$request  = add_query_arg( $query_args, $url );
+				$response = wp_safe_remote_get( $request, $this->params );
 
-			if ( is_wp_error( $response ) ) {
+				if ( is_wp_error( $response ) ) {
 
-				// For accounts without topics
-				if ( strpos( $response->get_error_message(), "'Topic' is not supported" ) !== false ) {
-					return array();
+					// For accounts without topics.
+					if ( strpos( $response->get_error_message(), "'Topic' is not supported" ) !== false ) {
+						return array();
+					}
+
+					return $response;
 				}
 
-				return $response;
-			}
+				$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+				if ( ! empty( $response->records ) ) {
 
-			if ( ! empty( $response->records ) ) {
+					foreach ( $response->records as $tag ) {
+						$available_tags[ $tag->Id ] = $tag->Name;
+					}
+				}
 
-				foreach ( $response->records as $tag ) {
-					$available_tags[ $tag->Id ] = $tag->Name;
+				if ( ! empty( $response->{'nextRecordsUrl'} ) ) {
+					$url = $this->instance_url . $response->{'nextRecordsUrl'};
+				} else {
+					$continue = false;
 				}
 			}
 		} elseif ( 'Picklist' === $tag_type ) {
@@ -744,8 +777,7 @@ class WPF_Salesforce {
 		}
 
 		$contact_tags = array();
-
-		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
+		$tag_type     = wpf_get_option( 'sf_tag_type', 'Topics' );
 
 		if ( 'Topics' === $tag_type ) {
 
@@ -770,23 +802,7 @@ class WPF_Salesforce {
 			foreach ( $response->records as $tag ) {
 				$contact_tags[] = $tag->{'TopicId'};
 			}
-
-		} elseif ( 'Picklist' === $tag_type ) {
-
-			$tags_field = wpf_get_option( 'sf_tag_picklist' );
-
-			$response = wp_safe_remote_get( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( ! empty( $body->{ $tags_field } ) ) {
-				$contact_tags = explode( ';', $body->{ $tags_field } );
-			}
-		} else {
+		} elseif ( 'Personal' === $tag_type || 'Public' === $tag_type ) {
 
 			$query_args = array( 'q' => "SELECT TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
 
@@ -808,24 +824,24 @@ class WPF_Salesforce {
 
 			foreach ( $response->records as $tag ) {
 
-				$contact_tags[] = $tag->TagDefinitionId;
+				$contact_tags[] = $tag->{'TagDefinitionId'};
 
 			}
-		}
+		} elseif ( 'Picklist' === $tag_type ) {
 
-		$available_tags = wpf_get_option( 'available_tags', array() );
-		$needs_tag_sync = false;
+			$tags_field = wpf_get_option( 'sf_tag_picklist' );
 
-		foreach ( $contact_tags as $tag_id ) {
+			$response = wp_safe_remote_get( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
 
-			if ( ! isset( $available_tags[ $tag_id ] ) ) {
-				$needs_tag_sync = true;
-				break;
+			if ( is_wp_error( $response ) ) {
+				return $response;
 			}
-		}
 
-		if ( $needs_tag_sync ) {
-			$this->sync_tags();
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $body->{ $tags_field } ) ) {
+				$contact_tags = explode( ';', $body->{ $tags_field } );
+			}
 		}
 
 		return $contact_tags;
@@ -1131,7 +1147,7 @@ class WPF_Salesforce {
 		$tag_type = wpf_get_option( 'sf_tag_type', 'Topics' );
 
 		// Limited to 2000 contacts right now
-		if ( $tag_type == 'Topics' ) {
+		if ( $tag_type === 'Topics' ) {
 
 			$query_args = array( 'q' => "SELECT EntityId from TopicAssignment WHERE TopicId = '" . $tag . "'" );
 			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'load_contacts', $tag );
@@ -1152,7 +1168,7 @@ class WPF_Salesforce {
 					$contact_ids[] = $contact->EntityId;
 				}
 			}
-		} else {
+		} elseif ( 'Personal' === $tag_type || 'Public' === $tag_type ) {
 
 			$query_args = array( 'q' => "SELECT ItemId, TagDefinitionId from ContactTag where TagDefinitionId = '" . $tag . "'" );
 			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'load_contacts', $tag );
@@ -1171,6 +1187,30 @@ class WPF_Salesforce {
 
 				foreach ( $response->records as $contact ) {
 					$contact_ids[] = $contact->ItemId;
+				}
+			}
+		} elseif ( 'Picklist' === $tag_type ) {
+
+			$tags_field = wpf_get_option( 'sf_tag_picklist' );
+
+			$query_args = array( 'q' => "SELECT Id from Contact where {$tags_field} includes ('{$tag}')" );
+			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'load_contacts', $tag );
+
+			$request  = add_query_arg( $query_args, $this->instance_url . '/services/data/v42.0/query' );
+			$response = wp_safe_remote_get( $request, $this->params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->records ) ) {
+
+				foreach ( $response->records as $contact ) {
+
+					$contact_ids[] = $contact->{'Id'};
+
 				}
 			}
 		}

@@ -347,6 +347,15 @@ class WPF_Auto_Login {
 		// Schedule cleanup after one day.
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
 
+		// If the temp user has a real user account, copy their tags over there as well,
+		// just in case they log in again.
+
+		$existing_user_id = wpf_get_user_id( $contact_id );
+
+		if ( $existing_user_id ) {
+			wp_fusion()->user->set_tags( $user_tags, $existing_user_id );
+		}
+
 		return $user_id;
 
 	}

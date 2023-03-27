@@ -298,7 +298,12 @@ class WPF_Quentn {
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
-			return $response;
+
+			if ( false !== strpos( $response->get_error_message(), 'not found' ) ) {
+				return false;
+			} else {
+				return $response;
+			}
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );

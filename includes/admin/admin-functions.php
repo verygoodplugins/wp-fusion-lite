@@ -210,7 +210,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 		$name = $meta_name . '[' . $field_id . '][' . $field_sub_id . '][crm_field]';
 	}
 
-	echo '<select id="' . esc_attr( $field_id . ( isset( $field_sub_id ) ? '-' . $field_sub_id : '' ) ) . '" class="select4-crm-field" name="' . esc_attr( $name ) . '" data-placeholder="Select a field">';
+	echo '<select id="' . esc_attr( $field_id . ( ! empty( $field_sub_id ) ? '-' . $field_sub_id : '' ) ) . '" class="select4-crm-field" name="' . esc_attr( $name ) . '" data-placeholder="Select a field">';
 
 	echo '<option></option>';
 
@@ -281,9 +281,11 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 			if ( isset( $crm_fields['Custom Fields'] ) ) {
 
 				$crm_fields['Custom Fields'][ $setting ] = $setting;
+				asort( $crm_fields['Custom Fields'] );
 
 			} else {
 				$crm_fields[ $setting ] = $setting;
+				asort( $crm_fields );
 			}
 
 			wp_fusion()->settings->set( 'crm_fields', $crm_fields );

@@ -38,7 +38,7 @@
 	 * @returns {String} logo
 	 */
 	TVE.add_filter( 'tcb.lead_generation.api_logo', ( logo, apiKey ) => {
-        console.log(apiKey,WPF_API_KEY);
+
         if ( apiKey === WPF_API_KEY ) {
 			logo = wpf_thrive_api.api_logo;
 		}

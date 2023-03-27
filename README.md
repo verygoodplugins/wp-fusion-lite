@@ -48,6 +48,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Drift
 * Drip
 * Emercury
+* Engage
 * EngageBay
 * Flexie
 * FluentCRM (Same site or REST API)
@@ -75,6 +76,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Mautic
 * NationBuilder
 * Ontraport
+* Ortto
 * Pipedrive
 * Platform.ly
 * PulseTechnologyCRM
@@ -97,6 +99,10 @@ For detailed setup instructions for each CRM, visit the official [Documentation]
 2. Or download it directly as a ZIP file: `https://github.com/verygoodplugins/wp-fusion-lite/archive/master.zip`
 
 This will download the latest copy of WP Fusion Lite.
+
+## Changelog ##
+
+See readme.txt.
 
 ## Bugs ##
 If you find an issue, let us know [here](https://github.com/verygoodplugins/wp-fusion-lite/issues?state=open)!

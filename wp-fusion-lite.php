@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.40.36
+ * Version: 3.41.2
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.40.36' );
+define( 'WP_FUSION_VERSION', '3.41.2' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -37,7 +37,11 @@ if ( ! function_exists( 'add_action' ) ) {
 	exit();
 }
 
-
+/**
+ * Main WP_Fusion_Lite class.
+ *
+ * @since 1.0.0
+ */
 final class WP_Fusion_Lite {
 
 	/** Singleton *************************************************************/
@@ -434,7 +438,9 @@ final class WP_Fusion_Lite {
 				'groundhogg-rest'  => 'WPF_Groundhogg_REST',
 				'moosend'          => 'WPF_MooSend',
 				'constant-contact' => 'WPF_Constant_Contact',
-				'pipedrive' 	   => 'WPF_Pipedrive',
+				'pipedrive'        => 'WPF_Pipedrive',
+				'engage'           => 'WPF_Engage',
+				'ortto'            => 'WPF_Ortto',
 			)
 		);
 
@@ -624,19 +630,6 @@ final class WP_Fusion_Lite {
 
 	}
 
-	/**
-	 * Load internationalization files
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function load_textdomain() {
-
-		load_plugin_textdomain( 'wp-fusion-lite', false, 'wp-fusion/languages' );
-
-	}
-
 
 	/**
 	 * Check to see if this is WPF Lite or regular
@@ -656,6 +649,7 @@ final class WP_Fusion_Lite {
 		}
 
 	}
+
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

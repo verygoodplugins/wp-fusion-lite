@@ -242,9 +242,6 @@ jQuery(document).ready(function($){
 
 			var button = $(this);
 
-			if(button.attr('disabled'))
-				return;
-
 			button.attr('disabled', 'disabled').html('Cancelling');
 
 			var data = {
@@ -337,7 +334,7 @@ jQuery(document).ready(function($){
 				'delay': 200,
 				'defaultPosition': 'right',
 			});
-			$('.skip-processed-container').show();
+			$('.skip-processed-container').css('display','inline-block');
 		});
 
 		//
@@ -617,6 +614,37 @@ jQuery(document).ready(function($){
 
 		});
 
+		// Mautic ouath.
+		$('#mautic_url,#mautic_client_id,#mautic_client_secret').on('input', function(event) {
+			
+			if($('#mautic_url').val().length &&
+				$('#mautic_client_id').val().length &&
+				$('#mautic_client_secret').val().length 
+			){
+				$("a#mautic-auth-btn").removeClass('button-disabled').addClass('button-primary');
+			}else{
+				$("a#mautic-auth-btn").removeClass('button-primary').addClass('button-disabled');
+			}
+
+		});
+
+
+		$('a#mautic-auth-btn').on('click', function(event) {
+			event.preventDefault();
+	        var data = {
+				'action'	  : 'wpf_save_client_credentials',
+				'_ajax_nonce' : wpf_ajax.nonce,
+				'url'		  : $('#mautic_url').val(),
+				'client_id'		  : $('#mautic_client_id').val(),
+				'client_secret'		  : $('#mautic_client_secret').val()
+			};
+
+			$.post(ajaxurl, data, function(response) {
+				if(response.success === true){
+					window.location.href = response.data.url;
+				}
+			});
+		});
 
 		//
 		// Dynamics 365 crm url

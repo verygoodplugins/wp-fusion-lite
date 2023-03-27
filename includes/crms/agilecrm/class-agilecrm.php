@@ -376,45 +376,6 @@ class WPF_AgileCRM {
 
 
 	/**
-	 * AgileCRM sometimes requires an email to be submitted when contacts are modified
-	 *
-	 * @access public
-	 * @return string Email
-	 */
-
-	public function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'agilecrm_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			$contact = $this->load_contact( $contact_id );
-
-			if ( ! is_wp_error( $contact ) ) {
-
-				return $contact['user_email'];
-
-			} else {
-
-				return false;
-
-			}
-		}
-
-	}
-
-
-	/**
 	 * Initialize connection
 	 *
 	 * @access  public

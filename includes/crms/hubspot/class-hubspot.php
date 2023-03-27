@@ -134,7 +134,7 @@ class WPF_HubSpot {
 
 				if ( $value % DAY_IN_SECONDS !== 0 ) {
 					// If the date is a timestamp, do the timezone offset and then reset it to midnight.
-					$value += (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+					$value -= (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
 					$value  = strtotime( 'today', $value );
 				}
 
@@ -219,7 +219,7 @@ class WPF_HubSpot {
 
 		$this->params = array(
 			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'timeout'     => 120,
+			'timeout'     => 15,
 			'httpversion' => '1.1',
 			'headers'     => array(
 				'Authorization' => 'Bearer ' . $access_token,
@@ -251,7 +251,7 @@ class WPF_HubSpot {
 				'grant_type'    => 'refresh_token',
 				'client_id'     => $this->client_id,
 				'client_secret' => $this->client_secret,
-				'redirect_uri'  => get_admin_url() . '/options-general.php?page=wpf-settings&crm=hubspot',
+				'redirect_uri'  => 'https://wpfusion.com/oauth/?action=wpf_get_hubspot_token',
 				'refresh_token' => $refresh_token,
 			),
 		);
@@ -335,6 +335,8 @@ class WPF_HubSpot {
 					$message .= '.<br /><br />This error usually means that you\'ve deleted or merged a contact record in HubSpot, and then tried to update a contact ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
 				} elseif ( 'Can not operate manually on a dynamic list' == $message ) {
 					$message .= '.<br /><br />' . __( 'This error means you tried to apply an Active list over the API. Only Static lists can be assigned over the API. For an overview of HubSpot lists, see <a href="https://knowledge.hubspot.com/lists/create-active-or-static-lists#types-of-lists" target="_blank">this documentation page</a>.', 'wp-fusion-lite' );
+				} elseif ( 'MISSING_SCOPES' === $body_json->category ) {
+					$message .= '<br /><br />' . __( 'This error means you\'re trying to access a feature that requires additional permissions. You can grant these permissions by clicking Reauthorize with HubSpot on the Setup tab in the WP Fusion settings.', 'wp-fusion-lite' );
 				}
 
 				if ( isset( $body_json->validationResults ) ) {
@@ -1042,10 +1044,6 @@ class WPF_HubSpot {
 	 */
 	public function add_object( $properties, $object_type_id ) {
 
-		if ( ! defined( 'HUBSPOT_API_KEY' ) ) {
-			return new WP_Error( 'error', 'HubSpot API key not defined. See https://wpfusion.com/documentation/crm-specific-docs/hubspot-custom-objects/' );
-		}
-
 		$properties = array(
 			'properties' => $properties,
 		);
@@ -1053,9 +1051,7 @@ class WPF_HubSpot {
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $properties );
 
-		unset( $params['headers']['Authorization'] ); // Remove the OAuth params so they don't conflict with the API key param.
-
-		$response = wp_safe_remote_post( 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '?hapikey=' . HUBSPOT_API_KEY, $params );
+		$response = wp_safe_remote_post( 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1079,10 +1075,6 @@ class WPF_HubSpot {
 	 */
 	public function update_object( $object_id, $properties, $object_type_id ) {
 
-		if ( ! defined( 'HUBSPOT_API_KEY' ) ) {
-			return new WP_Error( 'error', 'HubSpot API key not defined. See https://wpfusion.com/documentation/crm-specific-docs/hubspot-custom-objects/' );
-		}
-
 		$properties = array(
 			'properties' => $properties,
 		);
@@ -1091,9 +1083,7 @@ class WPF_HubSpot {
 		$params['body']   = wp_json_encode( $properties );
 		$params['method'] = 'PATCH';
 
-		unset( $params['headers']['Authorization'] ); // Remove the OAuth params so they don't conflict with the API key param.
-
-		$response = wp_safe_remote_request( 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '/' . $object_id . '/?hapikey=' . HUBSPOT_API_KEY, $params );
+		$response = wp_safe_remote_request( 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '/' . $object_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1115,14 +1105,9 @@ class WPF_HubSpot {
 	 */
 	public function load_object( $object_id, $object_type_id, $properties ) {
 
-		if ( ! defined( 'HUBSPOT_API_KEY' ) ) {
-			return new WP_Error( 'error', 'HubSpot API key not defined. See https://wpfusion.com/documentation/crm-specific-docs/hubspot-custom-objects/' );
-		}
-
 		$params = $this->get_params();
-		unset( $params['headers']['Authorization'] ); // Remove the OAuth params so they don't conflict with the API key param.
 
-		$request = 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '/' . $object_id . '/?hapikey=' . HUBSPOT_API_KEY;
+		$request = 'https://api.hubapi.com/crm/v3/objects/' . $object_type_id . '/' . $object_id;
 
 		foreach ( $properties as $property ) {
 			$request .= '&properties=' . $property;

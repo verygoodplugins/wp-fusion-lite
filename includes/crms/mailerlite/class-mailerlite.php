@@ -8,13 +8,19 @@ class WPF_MailerLite {
 
 	public $params;
 
-
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
+	/**
+	 * Base URL for API requests. Changes depending if the API key is v1 or v2.
+	 *
+	 * @since 3.40.55
+	 * @var  string
+	 */
+	public $api_url = '';
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -22,8 +28,7 @@ class WPF_MailerLite {
 	 * @since 3.37.30
 	 * @var  string
 	 */
-
-	public $edit_url = 'https://app.mailerlite.com/subscribers/single/%d';
+	public $edit_url = '';
 
 
 	/**
@@ -31,7 +36,6 @@ class WPF_MailerLite {
 	 *
 	 * @var tag_type
 	 */
-
 	public $tag_type = 'Group';
 
 	/**
@@ -40,14 +44,12 @@ class WPF_MailerLite {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
-		$this->slug     = 'mailerlite';
-		$this->name     = 'MailerLite';
-		$this->supports = array();
+		$this->slug = 'mailerlite';
+		$this->name = 'MailerLite';
 
-		// Set up admin options
+		// Set up admin options.
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
 			new WPF_MailerLite_Admin( $this->slug, $this->name, $this );
@@ -68,10 +70,35 @@ class WPF_MailerLite {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-		// Slow down the batch processses to get around API limits
+		// Slow down the batch processses to get around API limits.
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
 		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
+
+		if ( $this->is_v2() ) {
+			$this->api_url  = 'https://connect.mailerlite.com/api/';
+			$this->edit_url = 'https://dashboard.mailerlite.com/subscribers/%d';
+		} else {
+			$this->api_url  = 'https://api.mailerlite.com/api/v2/';
+			$this->edit_url = 'https://app.mailerlite.com/subscribers/single/%d';
+		}
+
+	}
+
+	/**
+	 * Checks the API version based on the length of the API key.
+	 *
+	 * @since 3.40.55
+	 *
+	 * @return bool True if v2, false if v1.
+	 */
+	public function is_v2() {
+
+		if ( 32 < strlen( wpf_get_option( 'mailerlite_key' ) ) ) {
+			return true;
+		} else {
+			return false;
+		}
 
 	}
 
@@ -91,17 +118,15 @@ class WPF_MailerLite {
 
 
 	/**
-	 * Formats POST data received from HTTP Posts into standard format
+	 * Extract subscriber data from the webhook payload.
 	 *
-	 * @access public
-	 * @return array
+	 * @since 3.10.0
+	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
+	 *
+	 * @param array $post_data The data POSTed to the endpoint.
+	 * @return array|bool The data to import or false if the webhook payload is invalid.
 	 */
-
 	public function format_post_data( $post_data ) {
-
-		if ( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
-		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
@@ -111,59 +136,103 @@ class WPF_MailerLite {
 
 		$contact_ids = array();
 
-		if ( $post_data['wpf_action'] == 'update' || $post_data['wpf_action'] == 'update_tags' ) {
+		if ( $this->is_v2() ) {
 
-			foreach ( $payload->events as $event ) {
+			// The v2 API sends a single event for each subscriber.
 
-				if ( ! in_array( $event->data->subscriber->id, $contact_ids ) ) {
-					$contact_ids[] = absint( $event->data->subscriber->id );
+			if ( 'add' === $post_data['wpf_action'] ) {
+
+				if ( wpf_get_user_id( $payload->subscriber->id ) ) {
+					// If the user already exists.
+					wp_die( '', 'Success', 200 );
+				}
+
+				// Verify the tag.
+				$tag = wpf_get_option( 'mailerlite_add_tag' );
+
+				if ( intval( $payload->group->id ) === intval( $tag[0] ) ) {
+
+					$contact_ids[] = $payload->subscriber->id;
+
+					if ( wpf_get_option( 'mailerlite_import_notification' ) ) {
+						$post_data['send_notification'] = true;
+					}
+
+				} else {
+
+					$received_name = wpf_get_tag_label( $payload->group->id );
+
+					wpf_log( 'info', 0, 'Subscriber was added to group <strong>' . $received_name . '</strong> which triggered an import webhook. <strong>' . $received_name . '</strong> is not the selected import group, so no data will be imported.' );
+					wp_die( '', 'Success', 200 );
+
+				}
+			} else {
+
+				if ( isset( $payload->subscriber ) ) {
+					$contact_ids[] = $payload->subscriber->id;
+				} else {
+					$contact_ids[] = $payload->id;
 				}
 			}
-		} elseif ( $post_data['wpf_action'] == 'add' ) {
+		} else {
 
-			if ( true == wpf_get_option( 'mailerlite_import_notification' ) ) {
-				$post_data['send_notification'] = true;
-			}
+			// The v1 API sends an array of events when multiple subscribers are edited.
 
-			$tag = wpf_get_option( 'mailerlite_add_tag' );
+			if ( 'update' === $post_data['wpf_action'] || 'update_tags' === $post_data['wpf_action'] ) {
 
-			foreach ( $payload->events as $event ) {
+				foreach ( $payload->events as $event ) {
 
-				if ( $event->data->group->id == $tag[0] && ! in_array( $event->data->subscriber->id, $contact_ids ) ) {
-					$contact_ids[] = absint( $event->data->subscriber->id );
+					if ( ! in_array( $event->data->subscriber->id, $contact_ids ) ) {
+						$contact_ids[] = absint( $event->data->subscriber->id );
+					}
+				}
+			} elseif ( 'add' === $post_data['wpf_action'] ) {
+
+				if ( wpf_get_option( 'mailerlite_import_notification' ) ) {
+					$post_data['send_notification'] = true;
+				}
+
+				$tag = wpf_get_option( 'mailerlite_add_tag' );
+
+				foreach ( $payload->events as $event ) {
+
+					if ( $event->data->group->id == $tag[0] && ! in_array( $event->data->subscriber->id, $contact_ids ) ) {
+						$contact_ids[] = absint( $event->data->subscriber->id );
+					}
 				}
 			}
+
 		}
 
 		if ( empty( $contact_ids ) ) {
 
-			// Nothing found
+			// Nothing found.
 
-			if ( 'add' == $post_data['wpf_action'] ) {
+			if ( 'add' === $post_data['wpf_action'] ) {
 
 				$received_name = wpf_get_tag_label( absint( $event->data->group->id ) );
 
 				wpf_log( 'info', 0, 'Subscriber was added to group <strong>' . $received_name . '</strong> which triggered an import webhook. <strong>' . $received_name . '</strong> is not the selected import group, so no data will be imported.' );
-
 				wp_die( '', 'Success', 200 );
+
 			}
 
-			// Debug stuff
+			// Debug stuff.
 			$post_data['payload'] = $payload;
 
-			// No one found
+			// No one found.
 			$post_data['contact_id'] = false;
 
 			return $post_data;
 
-		} elseif ( count( $contact_ids ) == 1 ) {
+		} elseif ( 1 === count( $contact_ids ) ) {
 
-			// Simple, one subscriber in payload
+			// Simple, one subscriber in payload.
 			$post_data['contact_id'] = $contact_ids[0];
 
 			return $post_data;
 
-		} elseif ( $post_data['wpf_action'] == 'add' ) {
+		} elseif ( 'add' === $post_data['wpf_action'] ) {
 
 			// Multiple subscribers. Push to queue.
 			wp_fusion()->batch->includes();
@@ -181,7 +250,7 @@ class WPF_MailerLite {
 
 			return $post_data;
 
-		} elseif ( $post_data['wpf_action'] == 'update_tags' ) {
+		} elseif ( 'update_tags' === $post_data['wpf_action'] ) {
 
 			// Multiple subscribers. Push to queue.
 			wp_fusion()->batch->includes();
@@ -261,6 +330,10 @@ class WPF_MailerLite {
 
 				$response = new WP_Error( 'error', $body_json->error->message );
 
+			} elseif ( isset( $body_json->errors ) ) {
+
+				$response = new WP_Error( 'error', $body_json->message );
+
 			} elseif ( wp_remote_retrieve_response_code( $response ) == 429 ) {
 
 				$response = new WP_Error( 'error', 'API limits exceeded.' );
@@ -290,52 +363,13 @@ class WPF_MailerLite {
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 30,
 			'headers'    => array(
-				'X-MailerLite-ApiKey' => $api_key,
+				'X-MailerLite-ApiKey' => $api_key, // v1 API.
+				'Authorization'       => 'Bearer ' . $api_key, // v2 API.
 				'Content-Type'        => 'application/json',
 			),
 		);
 
 		return $this->params;
-	}
-
-
-	/**
-	 * AgileCRM sometimes requires an email to be submitted when contacts are modified
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'mailerlite_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			// Try an API lookup
-			$data = $this->load_contact( $contact_id );
-
-			if ( ! is_wp_error( $data ) && ! empty( $data['user_email'] ) ) {
-
-				return $data['user_email'];
-
-			} else {
-
-				return false;
-
-			}
-		}
-
 	}
 
 
@@ -348,7 +382,7 @@ class WPF_MailerLite {
 
 	public function connect( $api_key = null, $test = false ) {
 
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
@@ -374,10 +408,6 @@ class WPF_MailerLite {
 	 */
 
 	public function sync() {
-
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
 
 		$this->sync_tags();
 		$this->sync_crm_fields();
@@ -406,7 +436,7 @@ class WPF_MailerLite {
 		$offset   = 0;
 		$continue = true;
 
-		while ( $continue == true ) {
+		while ( $continue ) {
 
 			$request  = 'https://api.mailerlite.com/api/v2/groups?offset=' . $offset;
 			$response = wp_safe_remote_get( $request, $this->params );
@@ -461,6 +491,8 @@ class WPF_MailerLite {
 			$crm_fields[ $field_data['key'] ] = ucwords( str_replace( '_', ' ', $field_data['key'] ) );
 		}
 
+		$crm_fields['type'] = 'Optin Status';
+
 		asort( $crm_fields );
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -514,13 +546,9 @@ class WPF_MailerLite {
 
 	public function get_tags( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$tags     = array();
 		$request  = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id . '/groups';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -536,7 +564,7 @@ class WPF_MailerLite {
 			$tags[] = $row['id'];
 		}
 
-		// Check if we need to update the available tags list
+		// Check if we need to update the available tags list.
 		$available_tags = wpf_get_option( 'available_tags', array() );
 
 		foreach ( $body_json as $row ) {
@@ -564,7 +592,7 @@ class WPF_MailerLite {
 			$this->get_params();
 		}
 
-		$email = $this->get_email_from_cid( $contact_id );
+		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		foreach ( $tags as $tag ) {
 
@@ -615,19 +643,15 @@ class WPF_MailerLite {
 
 	}
 
-
 	/**
-	 * Adds a new contact
+	 * Formats subscriber data and sets defaults.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @since 3.40.45
+	 *
+	 * @param array $data The input data.
+	 * @return array The formatted data.
 	 */
-
-	public function add_contact( $data ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+	public function format_subscriber_data( $data, $contact_id = false ) {
 
 		$send_data = array();
 
@@ -641,11 +665,124 @@ class WPF_MailerLite {
 			unset( $data['email'] );
 		}
 
-		$send_data['fields'] = $data;
+		// Checkboxes on checkout send bool values.
+		if ( 1 === $data['type'] || true === $data['type'] ) {
+			$data['type'] = 'active';
+		}
+
+		// Handle the optin status.
+
+		$default = wpf_get_option( 'mailerlite_optin', null );
+
+		if ( ! isset( $data['type'] ) && false === $contact_id ) {
+
+			$send_data['type'] = $default;
+
+		} elseif ( empty( $data['type'] ) && false === $contact_id ) {
+
+			$send_data['type']            = 'unsubscribed';
+			$send_data['unsubscribed_at'] = gmdate( 'Y-m-d H:i:s' );
+
+		} elseif ( empty( $data['type'] ) && false !== $contact_id ) {
+
+			// existing subscribers, don't sync a status.
+			$send_data['type'] = null;
+
+		} elseif ( 'active' === $data['type'] && false !== $contact_id ) {
+
+			if ( 'active' === $default || empty( $default ) ) {
+				$send_data['type'] = 'active'; // existing subscribers, opted in, keep them active.
+			} else {
+
+				// If they're an existing subscriber and the default is not active, we
+				// need to load their record and see if they're already active, so we don't
+				// accidentally unsubscribe them.
+
+				$url      = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
+				$response = wp_safe_remote_get( $url, $this->get_params() );
+
+				if ( is_wp_error( $response ) ) {
+					wpf_log( 'error', 0, 'Error checking subscriber\'s status in  MailerLite. Subscriber will be set to <code>active</code>. (' . $response->get_error_message() . ')' );
+					$send_data['type'] = 'active';
+				} else {
+
+					$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+					if ( 'unsubscribed' === $body['type'] ) {
+
+						// Updating a subscriber can only change them from unsubscribed to
+						// active, not to unconfirmed.
+
+						$send_data['type']        = 'active';
+						$send_data['resubscribe'] = true;
+						$send_data['opted_in_at'] = gmdate( 'Y-m-d H:i:s' );
+						$send_data['optin_ip']    = wp_fusion()->user->get_ip();
+
+						wpf_log( 'notice', 0, 'Subscriber with contact #' . $contact_id . ' opted in, but they were previously unsubscribed. They have been resubscribed as <code>active</code>.' );
+
+					} else {
+						$send_data['type'] = $body['type'];
+					}
+				}
+			}
+		} elseif ( 'active' === $data['type'] && false === $contact_id ) {
+
+			// New subscribers should be set to uncormfirmed unless the default is active.
+
+			if ( 'active' === $default ) {
+				$send_data['type']        = 'active';
+				$send_data['opted_in_at'] = gmdate( 'Y-m-d H:i:s' );
+				$send_data['optin_ip']    = wp_fusion()->user->get_ip();
+			} else {
+				$send_data['type']          = 'unconfirmed';
+				$send_data['subscribed_at'] = gmdate( 'Y-m-d H:i:s' );
+			}
+
+		} elseif ( ! in_array( $data['type'], array( 'unsubscribed', 'active', 'unconfirmed' ) ) ) {
+
+			wpf_log( 'notice', 0, 'Invalid optin status <code>' . $data['type'] . '</code> passed to MailerLite. Optin status must be one of <code>unsubscribed</code>, <code>active</code>, or <code>unconfirmed</code>.' );
+
+		} else {
+
+			$send_data['type'] = $data['type'];
+
+		}
+
+		unset( $data['type'] );
+
+		$send_data['fields']     = $data;
+		$send_data['ip_address'] = wp_fusion()->user->get_ip();
+
+		if ( $this->is_v2() ) {
+
+			// Status is synced as "status" instead of "type" in v2.
+			$send_data['status'] = $send_data['type'];
+			unset( $send_data['type'] );
+
+		}
+
+		return $send_data;
+
+	}
+
+	/**
+	 * Adds a new contact
+	 *
+	 * @access public
+	 * @return int Contact ID
+	 */
+
+	public function add_contact( $data ) {
+
+		$data = $this->format_subscriber_data( $data );
+
+		if ( empty( $data ) ) {
+			return false;
+		}
 
 		$url            = 'https://api.mailerlite.com/api/v2/subscribers';
-		$params         = $this->params;
-		$params['body'] = wp_json_encode( $send_data );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $url, $params );
 
@@ -668,29 +805,10 @@ class WPF_MailerLite {
 
 	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$send_data = array();
-
-		if ( ! empty( $data['name'] ) ) {
-			$send_data['name'] = $data['name'];
-			unset( $data['name'] );
-		}
-
-		if ( ! empty( $data['email'] ) ) {
-			$send_data['email'] = $data['email'];
-			unset( $data['email'] );
-		}
-
-		$send_data['fields'] = $data;
-		$send_data['type']   = 'active';
-
 		$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
-		$params           = $this->params;
+		$params           = $this->get_params();
 		$params['method'] = 'PUT';
-		$params['body']   = wp_json_encode( $send_data );
+		$params['body']   = wp_json_encode( $this->format_subscriber_data( $data, $contact_id ) );
 
 		$response = wp_safe_remote_request( $url, $params );
 
@@ -703,14 +821,14 @@ class WPF_MailerLite {
 
 			$contact_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			if ( strtolower( $contact_data['email'] ) != strtolower( $send_data['email'] ) ) {
+			if ( strtolower( $contact_data['email'] ) != strtolower( $data['email'] ) ) {
 
-				wpf_log( 'notice', $user_id, 'Email address change detected (from <strong>' . $original_email . '</strong> to <strong>' . $contact_data['email'] . '</strong>). Proceeding to delete subscriber. To disable this, set <strong>Email Address Changes</strong> to <strong>Ignore</strong> in the Advanced settings of WP Fusion.', array( 'source' => 'mailerlite' ) );
+				wpf_log( 'notice', $user_id, 'Email address change detected (from <strong>' . $original_email . '</strong> to <strong>' . $data['email'] . '</strong>). Proceeding to delete subscriber. To disable this, set <strong>Email Address Changes</strong> to <strong>Ignore</strong> in the Advanced settings of WP Fusion.', array( 'source' => 'mailerlite' ) );
 
 				// Add new contact with updated email
 				$original_email = $contact_data['email'];
 
-				$contact_data['email'] = $send_data['email'];
+				$contact_data['email'] = $data['email'];
 				unset( $contact_data['id'] );
 
 				$url            = 'https://api.mailerlite.com/api/v2/subscribers';
@@ -762,12 +880,8 @@ class WPF_MailerLite {
 
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$url      = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
-		$response = wp_safe_remote_get( $url, $this->params );
+		$response = wp_safe_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -781,8 +895,23 @@ class WPF_MailerLite {
 
 			foreach ( $contact_fields as $field_id => $field_data ) {
 
-				if ( $field_data['active'] == true && $field['key'] == $field_data['crm_field'] ) {
+				if ( $field_data['active'] && $field['key'] === $field_data['crm_field'] ) {
 					$user_meta[ $field_id ] = $field['value'];
+				}
+			}
+
+			unset( $body_json['fields'] );
+
+		}
+
+		// Now the regular ones.
+
+		foreach ( $body_json as $key => $value ) {
+
+			foreach ( $contact_fields as $field_id => $field_data ) {
+
+				if ( $field_data['active'] && $key === $field_data['crm_field'] ) {
+					$user_meta[ $field_id ] = $value;
 				}
 			}
 		}
@@ -824,84 +953,80 @@ class WPF_MailerLite {
 	}
 
 	/**
-	 * Get all webhooks
+	 * Lists all webhooks.
 	 *
-	 * @access public
-	 * @return array Webhooks
+	 * @since 3.32.1
+	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
+	 *
+	 * @return array|WP_Error The webhooks or an error object.
 	 */
-
 	public function get_webhooks() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$request  = 'https://api.mailerlite.com/api/v2/webhooks';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $this->api_url . 'webhooks', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		return json_decode( wp_remote_retrieve_body( $response ) );
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( isset( $response->webhooks ) ) {
+			return $response->webhooks;
+		} else {
+			return $response->data; // webhooks are stored in data in v2.
+		}
 
 	}
 
 	/**
-	 * Create a webhook
+	 * Creates a webhook.
 	 *
-	 * @access public
-	 * @return array Rule IDs
+	 * @since 3.10.0
+	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
+	 *
+	 * @param string $type The webhook type: add or update.
+	 * @return array|WP_Error The created rule IDs or an error.
 	 */
-
 	public function register_webhooks( $type ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$event_types = array();
 
-		if ( $type == 'add' ) {
-
-			$event_types[] = 'add_to_group';
-
-		} elseif ( $type == 'update' ) {
-
-			$event_types[] = 'update';
-			$event_types[] = 'add_to_group';
-			$event_types[] = 'remove_from_group';
-
-		}
-
 		$access_key = wpf_get_option( 'access_key' );
 
-		// Don't do this when the settings are being reset
+		// Don't do this when the settings are being reset.
 		if ( empty( $access_key ) ) {
 			return false;
 		}
 
 		$ids = array();
 
-		foreach ( $event_types as $event_type ) {
+		if ( $this->is_v2() ) {
 
-			if ( ( $type == 'update' && $event_type == 'add_to_group' ) || ( $type == 'update' && $event_type == 'remove_from_group' ) ) {
-				$type = 'update_tags';
+			// V2 lets us send a single API call.
+
+			if ( 'add' === $type ) {
+
+				$event_types[] = 'subscriber.added_to_group';
+
+			} elseif ( 'update' === $type ) {
+
+				$event_types[] = 'subscriber.updated';
+				$event_types[] = 'subscriber.added_to_group';
+				$event_types[] = 'subscriber.removed_from_group';
+
 			}
 
 			$data = array(
-				'url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
-				'event' => 'subscriber.' . $event_type,
+				'name'   => 'WP Fusion - ' . home_url(),
+				'url'    => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
+				'events' => $event_types,
 			);
 
-			// Testing
+			wpf_log( 'info', 0, 'Registering webhook for ' . $type . ' events: <pre>' . print_r( $data, true ) . '</pre>' );
 
-			//$data['url'] = 'https://webhook.site/1b0baac5-78af-4ee2-875d-59165a079250';
-
-			$request          = 'https://api.mailerlite.com/api/v2/webhooks';
-			$params           = $this->params;
-			$params['method'] = 'POST';
-			$params['body']   = wp_json_encode( $data );
+			$request        = $this->api_url . 'webhooks';
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $data );
 
 			$response = wp_safe_remote_post( $request, $params );
 
@@ -909,10 +1034,55 @@ class WPF_MailerLite {
 				return $response;
 			}
 
-			$result = json_decode( wp_remote_retrieve_body( $response ) );
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if ( is_object( $result ) ) {
-				$ids[] = $result->id;
+			if ( isset( $response->data->id ) ) {
+				$ids[] = $response->data->id;
+			}
+		} else {
+
+			// V1 requires a separate API call for each event type.
+
+			if ( 'add' === $type ) {
+
+				$event_types[] = 'add_to_group';
+
+			} elseif ( 'update' === $type ) {
+
+				$event_types[] = 'update';
+				$event_types[] = 'add_to_group';
+				$event_types[] = 'remove_from_group';
+
+			}
+
+			foreach ( $event_types as $event_type ) {
+
+				if ( ( $type == 'update' && $event_type == 'add_to_group' ) || ( $type == 'update' && $event_type == 'remove_from_group' ) ) {
+					$type = 'update_tags';
+				}
+
+				$data = array(
+					'url'   => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
+					'event' => 'subscriber.' . $event_type,
+				);
+
+				wpf_log( 'info', 0, 'Registering webhook for ' . $type . ' event: <pre>' . print_r( $data, true ) . '</pre>' );
+
+				$request        = $this->api_url . 'webhooks';
+				$params         = $this->get_params();
+				$params['body'] = wp_json_encode( $data );
+
+				$response = wp_safe_remote_post( $request, $params );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$result = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( is_object( $result ) ) {
+					$ids[] = $result->id;
+				}
 			}
 		}
 
@@ -921,23 +1091,23 @@ class WPF_MailerLite {
 	}
 
 	/**
-	 * Destroy a previously created webhook
+	 * Destroys a webhook.
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.10.0
+	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
+	 *
+	 * @param int $rule_id The webhook ID.
+	 * @return bool|WP_Error True or an error on failure.
 	 */
-
 	public function destroy_webhook( $rule_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$request          = 'https://api.mailerlite.com/api/v2/webhooks/' . $rule_id;
-		$params           = $this->params;
+		$request          = $this->api_url . 'webhooks/' . $rule_id;
+		$params           = $this->get_params();
 		$params['method'] = 'DELETE';
 
-		$response = wp_safe_remote_post( $request, $params );
+		wpf_log( 'info', 0, 'Deleting webhook with ID ' . $rule_id );
+
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

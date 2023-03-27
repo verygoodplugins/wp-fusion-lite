@@ -434,6 +434,7 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 	 *
 	 * @return integer
 	 */
+	#[\ReturnTypeWillChange] // https://wiki.php.net/rfc/internal_method_return_types.
 	public function count() {
 		switch ( $this->mytype ) {
 			case 3:
@@ -452,6 +453,7 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 	 *
 	 * @return ArrayIterator
 	 */
+	#[\ReturnTypeWillChange] // https://wiki.php.net/rfc/internal_method_return_types.
 	public function getIterator() {
 		switch ( $this->mytype ) {
 			case 3:
@@ -467,7 +469,7 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 		return new \ArrayIterator();
 	}
 
-
+	#[\ReturnTypeWillChange] // https://wiki.php.net/rfc/internal_method_return_types.
 	public function offsetSet( $offset, $value ) {
 
 		switch ( $this->mytype ) {
@@ -511,6 +513,7 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 		}
 	}
 
+	#[\ReturnTypeWillChange] // https://wiki.php.net/rfc/internal_method_return_types.
 	public function offsetExists( $offset ) {
 		switch ( $this->mytype ) {
 			case 3:
@@ -525,6 +528,7 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 		}
 	}
 
+	#[\ReturnTypeWillChange] // https://wiki.php.net/rfc/internal_method_return_types.
 	public function offsetUnset( $offset ) {
 		switch ( $this->mytype ) {
 			case 3:
@@ -543,6 +547,7 @@ class Value implements \Countable, \IteratorAggregate, \ArrayAccess {
 		}
 	}
 
+	#[\ReturnTypeWillChange] // https://wiki.php.net/rfc/internal_method_return_types.
 	public function offsetGet( $offset ) {
 		switch ( $this->mytype ) {
 			case 3:

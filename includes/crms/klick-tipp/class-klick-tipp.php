@@ -18,6 +18,7 @@ class WPF_KlickTipp {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * No trials only paid plans.
+	 *
 	 * @var string
 	 */
 
@@ -52,47 +53,6 @@ class WPF_KlickTipp {
 	 */
 
 	public function init() {}
-
-	/**
-	 * Klick-Tipp requires an email to be submitted when tags are applied/removed
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'klick-tipp_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			// Try an API call
-
-			if ( is_wp_error( $this->connect() ) ) {
-				return new WP_Error( 'error', $this->app->get_last_error() );
-			}
-
-			$result = $this->app->subscriber_get( $contact_id );
-
-			if ( ! empty( $result ) ) {
-				return $result->email;
-			} else {
-				return false;
-			}
-		}
-
-	}
-
 
 	/**
 	 * Initialize connection
@@ -142,6 +102,7 @@ class WPF_KlickTipp {
 
 		$this->sync_tags();
 		$this->sync_crm_fields();
+		$this->sync_double_opt_in_processes();
 
 		do_action( 'wpf_sync' );
 
@@ -258,7 +219,7 @@ class WPF_KlickTipp {
 			return new WP_Error( 'error', $this->app->get_last_error() );
 		}
 
-		$email = $this->get_email_from_cid( $contact_id );
+		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		if ( false === $email ) {
 			return new WP_Error( 'error', 'Unable to find email address for contact ID ' . $contact_id . '. Can\'t apply tags.' );
@@ -292,7 +253,7 @@ class WPF_KlickTipp {
 			return new WP_Error( 'error', $this->app->get_last_error() );
 		}
 
-		$email = $this->get_email_from_cid( $contact_id );
+		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		if ( false === $email ) {
 			return new WP_Error( 'error', 'Unable to find email address for contact ID ' . $contact_id . '. Can\'t remove tags.' );
@@ -312,6 +273,31 @@ class WPF_KlickTipp {
 
 	}
 
+	/**
+	 * Sync Double Opt in Processes.
+	 *
+	 * @since 3.40.41
+	 */
+	public function sync_double_opt_in_processes() {
+
+		if ( is_wp_error( $this->connect() ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
+
+		$result = $this->app->subscription_process_index();
+
+		if ( ! is_array( $result ) || empty( $result ) ) {
+			return new WP_Error( 'error', $this->app->get_last_error() );
+		}
+
+		$processes = array();
+		foreach ( $result as $key => $value ) {
+			$processes[ $key ] = ( $value ? $value : 'Default' );
+		}
+
+		wp_fusion()->settings->set( 'double_optin_processes', $processes );
+	}
+
 
 	/**
 	 * Adds a new contact
@@ -329,7 +315,12 @@ class WPF_KlickTipp {
 		$email = $data['email'];
 		unset( $data['email'] );
 
-		$result = $this->app->subscribe( $email, false, false, $data );
+		$optin_id = false;
+		if ( wpf_get_option( 'kt_double_optin_id' ) ) {
+			$optin_id = wpf_get_option( 'kt_double_optin_id' );
+		}
+
+		$result = $this->app->subscribe( $email, $optin_id, false, $data );
 
 		if ( ! isset( $result->id ) ) {
 			return new WP_Error( 'error', $this->app->get_last_error() );

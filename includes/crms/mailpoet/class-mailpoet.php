@@ -202,8 +202,13 @@ class WPF_MailPoet {
 
 		}
 
+		$available_tags = wpf_get_option( $available_tags );
+
 		foreach ( $contact['subscriptions'] as $subscription ) {
-			$tags[] = $subscription['segment_id'];
+
+			if ( isset( $available_tags[ $subscription['segment_id'] ] ) ) {
+				$tags[] = $subscription['segment_id'];
+			}
 		}
 
 		return $tags;

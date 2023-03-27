@@ -492,7 +492,7 @@ th.sync {
 
 #wpf-settings .skip-processed-container {
 	display:none;
-	width: 300px;
+	width: auto;
 	border: 1px solid #ddd;
 	padding: 10px 15px;
 	margin: 12px 0 12px -16px;
@@ -594,7 +594,8 @@ body.tools_page_wpf-settings-logs .alignleft span.select4-container.select4-cont
 .wp-list-table.wpf-logs .column-message pre {
 	background: #eee;
     padding: 10px;
-    overflow-x: scroll;
+    overflow: scroll;
+	max-height: 400px;;
 }
 
 .wp-list-table.wpf-logs .column-message code {

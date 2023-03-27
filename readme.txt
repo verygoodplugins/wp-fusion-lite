@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 6.1.0
-Stable tag: 3.40.36
+Tested up to: 6.2.0
+Stable tag: 3.41.2
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -84,6 +84,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Customerly
 * Drift
 * Drip
+* Engage
 * EngageBay
 * Flexie
 * FluentCRM (same site or REST API)
@@ -111,6 +112,8 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * MooSend
 * NationBuilder
 * Ontraport
+* Ortto
+* Pipedrive
 * Platform.ly
 * PulseTechnologyCRM
 * Quentn
@@ -186,6 +189,124 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.41.2 - 3/27/2023 =
+
+##### Tech stuff
+
+* Tested for WordPress 6.2.0
+
+##### New CRMs
+
+* Added [Ortto CRM integration](https://wpfusion.com/documentation/installation-guides/how-to-connect-ortto-to-wordpress/)
+* Added [Engage CRM integration](https://engage.so)
+
+
+##### New Features
+
+* Added option to [refresh a user's tags when access is denied](https://wpfusion.com/documentation/getting-started/working-with-tags/#when-access-is-denied)
+* Added `wpf-refresh` query string parameter [to force a refresh of the user's tags and/or meta from the CRM](https://wpfusion.com/documentation/getting-started/shortcodes/#via-url)
+* Added a [`sync_if_empty` parameter](https://wpfusion.com/documentation/getting-started/shortcodes/#sync-if-empty) to the `user_meta` shortcode
+* Added option to [completely remove all WP Fusion settings](https://wpfusion.com/documentation/tutorials/switching-crms/#2-reset-wp-fusion) from the database when resetting the main settings page
+* Added Previous User Email field for sync (to track email address changes)
+
+* Added support for [updating lookup fields and associated entities with Microsoft Dynamics 365 Marketing](https://wpfusion.com/documentation/crm-specific-docs/dynamics-365-associating-entities/)
+* Added option with FluentCRM (REST API and same site) to set the default status for new contacts to either Subscribed or Pending (and trigger a double opt-in email)
+* Added link to edit the contact in the CRM for HighLevel (requires a Resync Contact IDs operation to load the edit URLs)
+* Added new scopes to HubSpot integration: timeline, crm.objects.custom.read, and crm.objects.custom.write
+* Added [Intercom event tracking](https://wpfusion.com/documentation/event-tracking/intercom-event-tracking/)
+* Added [Intercom site tracking](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#intercom)
+* Added [Klaviyo event tracking](https://wpfusion.com/documentation/event-tracking/klaviyo-event-tracking/)
+* Added direct link to view a subscriber from WordPress when using the new V2 MailerLite API
+* Added OAuth API integration with Mautic (requires settings reset)
+* Added [Optin Status field for sync with MailerLite](https://wpfusion.com/documentation/crm-specific-docs/mailerlite-double-opt-ins/) — you can sync a value of `active`, `unconfirmed`, or `unsubscribed` to update the subscriber's status in MailerLite
+
+
+##### Improvements
+
+* Improved - With CRMs that support identifying a visitor to a tracking script via JavaScript, a visitor can now be identified in the same page load as a form submission (instead of requiring a redirect or refresh)
+* Improved - The "Select a redirect" box in the main WP Fusion metabox can now accept a page or a URL
+* Improved - The API Queue will now run on the `shutdown` hook at priority -1 instead of 1, to try and get ahead of any potential redirects in WooCommerce payment gateways
+* Improved - You can now set the `WPF_MULTISITE_PREFIX_KEYS` in wp-config.php to turn on [blog ID prefixes for usermeta keys](https://wpfusion.com/documentation/faq/multisite/)
+* Improved - When an auto-login session loads the tags for someone who has a user account on the site, those tags will also be saved to their local cache
+* Improved - Clicking Cancel on a batch operation / export operation will now cancel the next operation in the queue, even if the key is unknown
+* Improved status output for batch operations in the console: will now count items processed in the last batch, and available memory is human-readable
+* Improved - Some plugins sloppily trigger `wp_login` twice during a single login. WP Fusion will now only run on the first instance
+* Improved notifications when an error was encountered saving or validating an option in the WP Fusion settings
+* Improved: the `wpf_update_meta` and `wpf_update_tags` shortcodes will now output an HTML comment to help locating them within a page
+* Improved - Using the `date-format` parameter in the `user_meta` shortcode will now output the date in the site's language (as opposed to English)
+* Improved - If a user's contact record is deleted, their cached tags will be deleted as well (previously these were left behind and could clutter up the database)
+* Improved - If a contact was created in staging mode, deactvating staging mode will also remove the user's `staging_xxxx` contact ID
+* Improved lead source tracking — tracking data will now be stored JSON-encoded inside of a single cookie, instead of across multiple cookies
+* Improved - Set a `max-height` on the debug output for HTTP API logging in the logs
+* Improved - With CRMs which require an email address for some API calls, WP Fusion will now check to see if the email can be retrieved from a WooCommerce order before making an API call to load the contact (improves performance)
+
+* Improved - ActiveCampaign event tracking API calls updated to use `wp_remote_post()` instead of `wp_safe_remote_post()` to fix occasional `A valid URL was not provided` errors
+* Improved - The Bento tracking script will now be registered via `wp_enqueue_script()` instead of inline, to play better with caching and optimization plugins
+* Improved - The cookie to track Bento guest form submissions will only be set for one hour (instead of one year). This is plenty of time for the Bento tracking script to pick it up, and will make it easier to cache pages for identified guests
+* Improved - Guest form submissions and checkouts will now pass the guest's email address to the Bento tracking script
+* Improved - Removed redundant `name` and `email` custom fields with Bento
+* Improved error handling with Dynamics 365
+* Improved - Updated Klaviyo integration to use the new v2022-10-17 API, which will greatly improve performance
+* Improved MailerLite error handling
+* Improved - When changing the tag type with Salesforce, all users will automatically have their tags resynced from the CRM
+* Improved - When using a Picklist for Salesforce tags, if an unknown is loaded for a user, it will be added to the dropdown of available options
+
+
+##### Bug Fixes
+
+* Fixed "Action Failed" error when flushing the logs when WooCommmerce's logging was active in database mode
+* Fixed fatal error with Push All when other plugins updated user meta fields before WP Fusion had loaded
+* Fixed HTML in custom field names being displayed in the Contact Fields list
+* Fixed JavaScript based lead source tracking not working with WP Rocket
+* Fixed warning "Attempt to read `cap_key` on bool" when adding or removing roles with a deleted user ID
+* Fixed the `wpf_update_meta` shortcode triggering a pull from the CRM multiple times per page load (if used with multiple blank fields)
+* Fixed WP Fusion not running on multiple user registrations in the same request
+* Fixed `timezone-offset` parameter in the `user_meta` shortcode being treated as minutes, not hours
+* Fixed batch operations started on a single multisite showing the status bar on all other sites in the network
+* Fixed fatal error displaying a user's tags on the All Users list when a user's tags were stored as a string, with PHP 8
+* Fixed PHP error `Cannot use string offset as array` when importing users with PHP 8
+* Fixed being unable to clear out the User dropdown filter in the logs once a user was selected
+
+* Fixed Event Tracking not working with a recent ActiveCampaign API update (not sure exactly when it started)
+* Fixed the ActiveCampaign integration intercepting API errors from other CRMs during the initial connection process
+* Fixed fatal error syncing string-formatted date timestamps to ActiveCampaign with PHP 8.1
+* Fixed link to edit subscriber in Bento not available immediately after creating a new subscriber
+* Fixed Bento integration returning `false` when a contact had no tags, instead of an empty array. Sometimes caused errors with other integrations.
+* Fixed: Removed Drip site tracking code (Drip no longer supports site tracking)
+* Fixed date fields not syncing to FluentCRM (REST API)
+* Fixed API errors syncing multiselect or array data with Gist
+* Fixed Event Tracking not working with Groundhogg (This Site)
+* Fixed custom properties created with the core Groundhogg plugin (not the Better Meta extension) not being available for sync
+* Fixed error resyncing available fields when the Groundhogg Better Meta plugin was active
+* Fixed logs warning with Groundhogg when a user updated their email address to have capital letters in it
+* Fixed Event Tracking updating the most recent event instead of creating a new one with Groundhogg (REST API)
+* Fixed Groundhogg (REST API) integration not loading more than 100 available tags
+* Fixed all phone numbers getting synced to HighLevel with a +1 country code
+* Fixed HubSpot integration using a 120 second timeout
+* Fixed redirect URI mismatch error with HubSpot (since HubSpot scopes were updated on March 24th)
+* Fixed GMT calculation with HubSpot dates adding the GMT offset when it should have been subtracing it
+* Fixed error `Failed to parse XML-RPC request` when syncing HTML in text fields to Infusionsoft / Keap
+* Fixed warnings `Return type of X should be compatible with Y` warnings with PHP 8.1 and the XMLRPC library (Infusionsoft/Keap)
+* Fixed Klaviyo integration sometimes loading "Unknown List" entries from subscribers in cases of deleted or system lists
+* Fixed groups not applying for anonymous subscribers when using the new MailerLite API
+* Fixed updating a user profile in WordPress marking MailerLite subscribers as Active even if they hadn't been confirmed yet
+* Fixed MailPoet integration listing a user's segments as "unknown lists"
+* Fixed an unhandled error refreshing the Mautic access token when the user's API credentials had changed
+* Fixed - Pipedrive integration will now use a private app instead of a public app, which will allow setup to complete (previously we were pending a public app review for several months)
+* Fixed Quentn integration treating a Contact Not Found as a serious error
+* Fixed import tool not working with Salesforce picklist-based segmentation
+* Fixed Salesforce integration not loading more than 2000 available topics
+* Fixed Import Users tool with Sendinblue not loading more than 500 subscribers
+* Fixed PHP warning `Undefined variable $code` in Zoho integration when handling an API error
+
+
+##### Developer
+* Developers: If the background worker / exporter goes rogue, [you can now hard cancel everything](https://wpfusion.com/documentation/tutorials/batch-operations/#cancelling) by appending `&wpf-cancel-batch` to the WPF settings page URL
+* Developers: Added filter `wpf_get_email_from_contact_id`
+* [Updated Growmatik integration](https://github.com/verygoodplugins/wp-fusion-lite/pull/20)
+
+
 
 = 3.40.36 - 11/1/2022 =
 

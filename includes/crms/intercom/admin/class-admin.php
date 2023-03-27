@@ -39,8 +39,67 @@ class WPF_Intercom_Admin {
 	 */
 
 	public function init() {
-
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_initialize_options', array( $this, 'maybe_get_tracking_id' ), 10 );
+	}
+
+	/**
+	 * Loads Intercom specific settings fields.
+	 *
+	 * @since 3.40.40
+	 *
+	 */
+	public function register_settings( $settings, $options ) {
+		$site_tracking = array();
+
+		$site_tracking['site_tracking_header'] = array(
+			'title'   => __( 'Intercom Site Tracking', 'wp-fusion-lite' ),
+			'type'    => 'heading',
+			'section' => 'main',
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#intercom">Intercom site tracking scripts</a>.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+		);
+
+		$new_settings['site_tracking_id'] = array(
+			'type'    => 'hidden',
+			'section' => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
+
+		return $settings;
+
+	}
+
+
+	/**
+	 * Gets and saves tracking ID if site tracking is enabled.
+	 *
+	 * @since 3.40.40
+	 */
+	public function maybe_get_tracking_id( $options ) {
+
+		if ( ! empty( $options['site_tracking'] ) && empty( $options['site_tracking_id'] ) ) {
+
+			$this->crm->connect();
+			$trackid = $this->crm->get_tracking_id();
+
+			if ( empty( $trackid ) ) {
+				return $options;
+			}
+
+			$options['site_tracking_id'] = $trackid;
+			wp_fusion()->settings->set( 'site_tracking_id', $trackid );
+
+		}
+
+		return $options;
 
 	}
 
@@ -58,7 +117,6 @@ class WPF_Intercom_Admin {
 
 		$new_settings['intercom_header'] = array(
 			'title'   => __( 'Intercom Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);

@@ -193,8 +193,22 @@ class WPF_Batch {
 			$active = true;
 		}
 
+		if ( isset( $_GET['wpf-cancel-batch'] ) ) {
+
+			echo '<pre>';
+			print_r( $keys );
+			echo '</pre>';
+
+			foreach ( $keys as $key ) {
+				$this->process->cancel_process( $key );
+			}
+
+			return;
+
+		}
+
 		// Try and restart it if it's stalled.
-		if ( $this->process->is_queue_empty() == false && $this->process->is_process_running() == false ) {
+		if ( ! $this->process->is_queue_empty() && ! $this->process->is_process_running() ) {
 			$this->process->dispatch();
 		}
 
@@ -238,7 +252,9 @@ class WPF_Batch {
 
 	public function batch_init( $hook = false, $args = array() ) {
 
-		check_ajax_referer( 'wpf_settings_nonce' );
+		if ( wp_doing_ajax() ) {
+			check_ajax_referer( 'wpf_settings_nonce' );
+		}
 
 		if ( isset( $_POST['hook'] ) ) {
 			$hook = sanitize_key( $_POST['hook'] );
@@ -254,8 +270,12 @@ class WPF_Batch {
 		$objects = apply_filters( 'wpf_batch_objects', $objects, $args );
 
 		if ( empty( $objects ) ) {
-			wp_send_json_success( $objects );
-			die();
+
+			if ( wp_doing_ajax() ) {
+				wp_send_json_success( $objects );
+			} else {
+				return false;
+			}
 		}
 
 		reset( $objects ); // fix the pointer in cases where objects might have been removed by the filter.
@@ -270,7 +290,7 @@ class WPF_Batch {
 
 		wpf_log(
 			'info',
-			0,
+			wpf_get_current_user_id(),
 			sprintf(
 				// translators: 1: Operation title, 2: Count of records to be processed, 3: Type of records being processed ("users", "orders", etc).
 				__( 'Beginning %1$s batch operation on %2$d %3$s.', 'wp-fusion-lite' ),
@@ -309,9 +329,11 @@ class WPF_Batch {
 
 		$this->process->save()->dispatch();
 
-		wp_send_json_success( $objects );
-
-		die();
+		if ( wp_doing_ajax() ) {
+			wp_send_json_success( $objects );
+		} else {
+			return $objects;
+		}
 
 	}
 
@@ -368,12 +390,24 @@ class WPF_Batch {
 
 			$key = sanitize_key( $_POST['key'] );
 
+		} else {
+
+			$keys = $this->process->get_keys();
+
+			if ( ! empty( $keys ) ) {
+				$key = $keys[0];
+			}
+		}
+
+		if ( ! empty( $key ) ) {
+
 			// We'll set this in the DB and then the background worker will pick up on it when it's a good time.
-			set_site_transient( 'wpfb_cancel_' . $key, true, MINUTE_IN_SECONDS );
+
+			set_transient( 'wpfb_cancel_' . $key, true, 5 * MINUTE_IN_SECONDS );
 
 		}
 
-		die();
+		wp_send_json_success();
 
 	}
 
@@ -524,9 +558,21 @@ class WPF_Batch {
 			// Track the imported users.
 			$import_groups = get_option( 'wpf_import_groups', array() );
 
+			if ( empty( $import_groups ) ) {
+				$import_groups = array();
+			}
+
 			end( $import_groups );
 			$key = key( $import_groups );
 			reset( $import_groups );
+
+			if ( empty( $import_groups[ $key ] ) ) {
+				$import_groups[ $key ] = array();
+			}
+
+			if ( ! isset( $import_groups[ $key ]['user_ids'] ) ) {
+				$import_groups[ $key ]['user_ids'] = array();
+			}
 
 			$import_groups[ $key ]['user_ids'][] = $user_id;
 
@@ -572,7 +618,10 @@ class WPF_Batch {
 
 	public function users_sync_init() {
 
-		$args = array( 'fields' => 'ID' );
+		$args = array(
+			'fields'  => 'ID',
+			'orderby' => 'ID',
+		);
 
 		return get_users( $args );
 

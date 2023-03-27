@@ -136,6 +136,8 @@ class WPF_Dynamics_365 {
 	/**
 	 * Formats POST data received from HTTP Posts into standard format.
 	 *
+	 * Not currently supported. See https://cloudblogs.microsoft.com/dynamics365/no-audience/2016/01/15/sending-webhooks-with-microsoft-dynamics-crm/.
+	 *
 	 * @since  3.38.5
 	 *
 	 * @param  array $post_data The post data.
@@ -293,16 +295,12 @@ class WPF_Dynamics_365 {
 	 */
 	public function connect( $access_token = null, $refresh_token = null, $test = false ) {
 
-		if ( ! $this->params ) {
-			$this->get_params( $access_token );
-		}
-
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
 		$request  = $this->url . '/emails?$top=1';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params( $access_token ) );
 
 		// Validate the connection.
 		if ( is_wp_error( $response ) ) {
@@ -338,7 +336,7 @@ class WPF_Dynamics_365 {
 
 	/**
 	 * Gets all available lists and saves them to options.
-	 * 
+	 *
 	 * At the moment we are using Static Marketing Lists for segmentation but I'm
 	 * open to adding options for additional list types in a future update.
 	 *
@@ -429,41 +427,45 @@ class WPF_Dynamics_365 {
 	/**
 	 * Loads all custom fields from CRM and merges with local list.
 	 *
-	 * @since  3.38.43
+	 * @since 3.38.43
 	 *
 	 * @return array|WP_Error Either the available fields in the CRM, or a WP_Error.
 	 */
 	public function sync_crm_fields() {
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
-		// Load built in fields first
-		require dirname( __FILE__ ) . '/dynamics-365-fields.php';
+		$response = wp_safe_remote_get( $this->url . '/EntityDefinitions(LogicalName=\'contact\')/Attributes', $this->get_params() );
 
-		$built_in_fields = array();
-
-		foreach ( $dynamics_fields as $index => $data ) {
-			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
-		}
-
-		$request  = $this->url . '/contacts/?$top=1';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$response      = json_decode( wp_remote_retrieve_body( $response ) );
-		$custom_fields = array();
-		$keys          = get_object_vars( $response->value[0] );
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach ( $keys as $key => $field ) {
+		foreach ( $response->value as $field ) {
 
-			if ( ! in_array( $key, array( 'firstname', 'lastname', 'emailaddress1' ) ) ) {
-				$custom_fields[ $key ] = $key;
+			if ( 'Virtual' === $field->{'AttributeType'} || empty( $field->{'DisplayName'}->{'UserLocalizedLabel'} ) ) {
+				continue;
+			}
+
+			$id    = $field->{'LogicalName'};
+			$label = $field->{'DisplayName'}->{'UserLocalizedLabel'}->{'Label'};
+
+			$label = str_replace( '(', '&#40;', $label ); // normally () content gets made small so HTML-escaping it will avoid that.
+			$label = str_replace( ')', '&#41;', $label );
+
+			if ( 'Lookup' === $field->{'AttributeType'} || 'Owner' === $field->{'AttributeType'} ) {
+				$id     = '_' . $id . '_value';
+				$label .= ' (Lookup Field)';
+			}
+
+			if ( $field->{'IsCustomAttribute'} ) {
+				$custom_fields[ $id ] = $label;
+			} else {
+				$built_in_fields[ $id ] = $label;
 			}
 		}
 
+		asort( $built_in_fields );
 		asort( $custom_fields );
 
 		$crm_fields = array(
@@ -590,6 +592,47 @@ class WPF_Dynamics_365 {
 
 	}
 
+	/**
+	 * Formats lookup fields for the API.
+	 *
+	 * @link https://learn.microsoft.com/en-us/previous-versions/dynamicscrm-2016/developers-guide/mt607875(v=crm.8)
+	 * 
+	 * @since 3.40.57
+	 * 
+	 * @param array $data The contact data.
+	 */
+	public function format_lookup_fields( $data ) {
+
+		foreach ( $data as $key => $value ) {
+
+			if ( 0 === strpos( $key, '_' ) && false !== strpos( $key, '_value' ) ) {
+
+				unset( $data[ $key ] );
+
+				$key = trim( $key, '_' );
+				$key = str_replace( '_value', '', $key );
+
+				// Add the slash if needed.
+				$value = '/' . ltrim( $value, '/\\' );
+
+				if ( ! preg_match( '/^\/[\w-]+(\([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\))$/', $value ) ) {
+					wpf_log(
+						'notice',
+						wpf_get_current_user_id(),
+						'Invalid lookup field value for <strong>' . $key . '</strong>: <code>' . $value . '</code>.<br />Values should be synced as a navigation proprty, for example <code>/systemusers(5cfb32d8-dbb4-ed11-9885-6045bd01004c)</code>. For more info see the <a href="https://wpfusion.com/documentation/crm-specific-docs/dynamics-365-associating-entities/" target="_blank">documentation on assocating entities</a>. To avoid an API error, this value will not be synced.',
+						array( 'source' => 'dynamics-365' )
+					);
+					continue;
+				}
+
+				$data[ $key . '@odata.bind' ] = $value;
+
+			}
+		}
+
+		return $data;
+
+	}
 
 	/**
 	 * Adds a new contact.
@@ -600,6 +643,8 @@ class WPF_Dynamics_365 {
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
 	public function add_contact( $data ) {
+
+		$data = $this->format_lookup_fields( $data );
 
 		$request                     = $this->url . '/contacts/';
 		$params                      = $this->get_params();
@@ -631,6 +676,8 @@ class WPF_Dynamics_365 {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $data ) {
+
+		$data = $this->format_lookup_fields( $data );
 
 		$request          = $this->url . '/contacts(' . $contact_id . ')';
 		$params           = $this->get_params();

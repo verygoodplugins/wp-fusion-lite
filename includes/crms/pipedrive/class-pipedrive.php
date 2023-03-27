@@ -46,7 +46,7 @@ class WPF_Pipedrive {
 	 * @var string
 	 * @since 3.40.33
 	 */
-	public $client_id = '6cc27b9043b3360f';
+	public $client_id = 'd684d1641b7c3d28';
 
 	/**
 	 * Client secret for OAuth (if applicable).
@@ -54,8 +54,7 @@ class WPF_Pipedrive {
 	 * @var string
 	 * @since 3.40.33
 	 */
-	public $client_secret = '6d185afb6780388f02547c645549dd4bb291f37c';
-
+	public $client_secret = '526c120fad23e27249f4df624fad88d5e0d66555';
 
 	/**
 	 * Authorization URL for OAuth (if applicable).

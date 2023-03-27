@@ -159,7 +159,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		if ( empty( $log['user'] ) || $log['user'] < 1 ) {
 			return __( 'system', 'wp-fusion-lite' );
-		} elseif ( $log['user'] >= 100000000 || false !== strpos( $log['source'], 'auto-login' ) ) {
+		} elseif ( intval( $log['user'] ) >= 100000000 ) {
 			/* translators: %d user ID */
 			return sprintf( __( 'auto-login-%d', 'wp-fusion-lite' ), absint( $log['user'] ) );
 		}
@@ -172,7 +172,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			return sprintf( __( '(deleted user %d)', 'wp-fusion-lite' ), absint( $log['user'] ) );
 		}
 
-		$ret = '<a href="' . esc_url( get_edit_user_link( $log['user'] ) ) . '" target="_blank">' . esc_html( $userdata->data->user_login ) . '</a>';
+		$ret = '<a href="' . esc_url( get_edit_user_link( $log['user'] ) ) . '">' . esc_html( $userdata->data->user_login ) . '</a>';
 
 		$contact_id = wp_fusion()->user->get_contact_id( $log['user'] );
 		$edit_url   = wp_fusion()->crm->get_contact_edit_url( $contact_id );

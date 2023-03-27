@@ -72,7 +72,7 @@ class WPF_Groundhogg_REST {
 		$this->slug      = 'groundhogg-rest';
 		$this->name      = 'Groundhogg';
 		$this->menu_name = 'Groundhogg (REST API)';
-		$this->supports  = array( 'events', 'add_tags_api' );
+		$this->supports  = array( 'events', 'add_tags_api', 'events_multi_key' );
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -175,6 +175,7 @@ class WPF_Groundhogg_REST {
 		$this->params = array(
 			'timeout'    => 15,
 			'user-agent' => 'WP Fusion; ' . home_url(),
+			'sslverify'  => false, // fixes issues with localhost testing.
 			'headers'    => array(
 				'Content-Type'  => 'application/json',
 				'Accept'        => 'application/json',
@@ -303,11 +304,11 @@ class WPF_Groundhogg_REST {
 
 		$available_tags = array();
 		$continue       = true;
-		$page           = 1;
+		$offset         = 0;
 
 		while ( $continue ) {
 
-			$request  = $this->url . '/tags?sort_by=id&sort_order=DESC&per_page=100&page=' . $page;
+			$request  = $this->url . '/tags?limit=1000&offset=' . $offset;
 			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
@@ -325,10 +326,10 @@ class WPF_Groundhogg_REST {
 				}
 			}
 
-			if ( empty( $response->items ) || count( $response->items ) < 100 ) {
+			if ( empty( $response->items ) || count( $response->items ) < 1000 ) {
 				$continue = false;
 			} else {
-				$page++;
+				$offset = $offset + 1000;
 			}
 		}
 
@@ -364,7 +365,7 @@ class WPF_Groundhogg_REST {
 
 		// Then get custom ones
 
-		$request  = $this->url . '/fields?per_page=500';
+		$request  = $this->url . '/fields?limit=500';
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
@@ -405,7 +406,7 @@ class WPF_Groundhogg_REST {
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->url . '/contacts?per_page=1&search=' . rawurlencode( $email_address );
+		$request  = $this->url . '/contacts?limit=1&search=' . rawurlencode( $email_address );
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
@@ -750,9 +751,15 @@ class WPF_Groundhogg_REST {
 			),
 		);
 
-		$request        = $this->url . '/activity/';
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $body );
+		if ( is_array( $event_data ) ) {
+			$body['meta']['event_value'] = reset( $event_data );
+			$body['meta']                = array_merge( $body['meta'], $event_data );
+		}
+
+		$request            = $this->url . '/activity/?force=1'; // force to always create a new entry, not update an existing one.
+		$params             = $this->get_params();
+		$params['body']     = wp_json_encode( $body );
+		$params['blocking'] = false;
 
 		$response = wp_safe_remote_post( $request, $params );
 

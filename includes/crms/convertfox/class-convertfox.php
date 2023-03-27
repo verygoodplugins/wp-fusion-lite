@@ -29,7 +29,7 @@ class WPF_ConvertFox {
 
 		$this->slug     = 'convertfox';
 		$this->name     = 'Gist';
-		$this->supports = array( 'add_fields', 'add_tags', 'events', 'leads' );
+		$this->supports = array( 'add_fields', 'add_tags', 'events', 'leads', 'events_multi_key' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -50,6 +50,8 @@ class WPF_ConvertFox {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 2 );
 
 		// Add tracking code to footer
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ), 100 );
@@ -108,6 +110,28 @@ class WPF_ConvertFox {
 	}
 
 	/**
+	 * Format field value.
+	 *
+	 * Formats outgoing data to match CRM field formats. This will vary
+	 * depending on the data formats accepted by the CRM.
+	 *
+	 * @since  3.40.42
+	 *
+	 * @param  mixed  $value      The value.
+	 * @param  string $field_type The field type.
+	 * @return mixed  The field value.
+	 */
+	public function format_field_value( $value, $field_type ) {
+
+		if ( is_array( $value ) ) {
+			$value = implode( ', ', $value );
+		}
+
+		return $value;
+
+	}
+
+	/**
 	 * Output tracking code
 	 *
 	 * @access public
@@ -116,26 +140,14 @@ class WPF_ConvertFox {
 
 	public function tracking_code_output() {
 
-		$email = false;
-
-		if ( wpf_is_user_logged_in() ) {
-
-			$user = get_userdata( wpf_get_current_user_id() );
-
-			$email = $user->user_email;
-
-		} elseif ( isset( $_COOKIE['wpf_gist_id'] ) ) {
-
-			$email = sanitize_email( wp_unslash( $_COOKIE['wpf_gist_id'] ) );
-
-		}
+		$email = wpf_get_current_user_email();
 
 		if ( false !== $email ) {
 
 			echo '<!-- WP Fusion / Gist identify -->';
 			echo '<script type="text/javascript">';
 			echo 'if ( typeof gist !== "undefined" ) {';
-			echo 'gist.identify("' . esc_js( $email ) . '");';
+			echo 'gist.identify("' . esc_js( strtolower( $email ) ) . '");';
 			echo '}';
 			echo '</script>';
 
@@ -156,49 +168,9 @@ class WPF_ConvertFox {
 			return;
 		}
 
-		setcookie( 'wpf_gist_id', $update_data['email'], time() + DAY_IN_SECONDS * 365, COOKIEPATH, COOKIE_DOMAIN );
+		setcookie( 'wpf_guest', $update_data['email'], time() + DAY_IN_SECONDS * 365, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
-
-
-	/**
-	 * Gist requires an email to be submitted when updating contacts
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'convertfox_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			$url      = 'https://api.getgist.com/contacts/' . $contact_id;
-			$response = wp_safe_remote_get( $url, $this->params );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-			return $response->contact->email;
-
-		}
-
-	}
-
 
 	/**
 	 * Gets params for API calls
@@ -641,7 +613,7 @@ class WPF_ConvertFox {
 
 		if ( ! isset( $data['email'] ) ) {
 
-			$data['email'] = $this->get_email_from_cid( $contact_id );
+			$data['email'] = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 			if ( is_wp_error( $data['email'] ) ) {
 				return $data['email'];
@@ -904,15 +876,21 @@ class WPF_ConvertFox {
 
 		$data = array(
 			'email'      => $email_address,
-			'event_name' => $event . ' - ' . $event_data,
+			'event_name' => $event,
 			'properties' => array(
 				'manual_record' => false,
 				'recorded_from' => 'wp-fusion-lite',
 			),
 		);
 
+		if ( is_array( $event_data ) ) {
+			$data['properties'] = array_merge( $data['properties'], $event_data );
+		} else {
+			$data['properties']['data'] = $event_data;
+		}
+
 		$params         = $this->params;
-		$params['body'] = wp_wp_json_encode( $data );
+		$params['body'] = wp_json_encode( $data );
 		$response       = wp_safe_remote_post( 'https://api.getgist.com/events', $params );
 
 		if ( is_wp_error( $response ) ) {

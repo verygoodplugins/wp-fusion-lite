@@ -455,9 +455,21 @@ class WPF_Groundhogg {
 			}
 		}
 
+		// Custom fields (since 3.40.40).
+
+		if ( class_exists( 'Groundhogg\Properties' ) ) {
+			$additional_fields = Groundhogg\Properties::instance()->get_fields();
+
+			if ( ! empty( $additional_fields ) ) {
+				foreach ( $additional_fields as $field ) {
+					$crm_fields[ $field['name'] ] = $field['label'];
+				}
+			}
+		}
+
 		// Advanced Meta.
 
-		if ( class_exists( 'GroundhoggBetterMeta\Tab_Api\Fields' ) ) {
+		if ( class_exists( 'GroundhoggBetterMeta\Tab_Api\Fields' ) && ! empty( GroundhoggBetterMeta\Tab_Api\Fields::$instance ) ) {
 
 			$additional_fields = GroundhoggBetterMeta\Tab_Api\Fields::$instance->get_all();
 
@@ -568,26 +580,28 @@ class WPF_Groundhogg {
 
 	public function add_contact( $data ) {
 
+		// Make sure we have an email.
+
+		if ( ! isset( $data['email'] ) || ! is_email( $data['email'] ) ) {
+			return new WP_Error( 'error', 'Unable to create contact in Groundhogg, a missing or invalid <code>email</code> field was provided.' );
+		}
+
+		// If we're creating a contact from a user, pass that through.
+
 		if ( ! empty( $data['user_id'] ) ) {
 			$user_id = $data['user_id'];
 		}
 
-		// If we're creating a contact from a user, pass that through
-		$by_user_id = false;
-		if ( isset( $user_id ) ) {
-			$data['user_id'] = $user_id;
-			$by_user_id = true;
-		}
-
-		// Set to opted in by default unless otherwise specified
+		// Set to opted in by default unless otherwise specified.
 
 		if ( ! isset( $data['optin_status'] ) ) {
 			$data['optin_status'] = wpf_get_option( 'gh_default_status', 2 );
 		}
 
+		// Prevent looping.
 		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
 
-		$contact = new \Groundhogg\Contact( $data, $by_user_id );
+		$contact = new \Groundhogg\Contact( $data );
 
 		if ( ! $contact->exists() ) {
 			return new WP_Error( 'error', 'Contact creation failed.' );
@@ -595,7 +609,7 @@ class WPF_Groundhogg {
 
 		$id = $contact->get_id();
 
-		// These things don't go into meta
+		// These things don't go into meta.
 
 		unset( $data['user_id'] );
 		unset( $data['optin_status'] );
@@ -609,7 +623,7 @@ class WPF_Groundhogg {
 
 		}
 
-		// Trigger user created benchmarks
+		// Trigger user created benchmarks.
 
 		if ( isset( $user_id ) ) {
 
@@ -660,7 +674,7 @@ class WPF_Groundhogg {
 
 		// Update failed for some reason.
 
-		if ( isset( $data['email'] ) && $data['email'] !== $contact->email ) {
+		if ( isset( $data['email'] ) && strtolower( $data['email'] ) !== strtolower( $contact->email ) ) {
 			$result = new WP_Error( 'error', ' Could not update email address from <strong>' . $contact->email . '</strong> to <strong>' . $data['email'] . '</strong> because there is already a contact with that email address. Please merge the duplicate contacts and try again.' );
 		}
 
@@ -765,7 +779,17 @@ class WPF_Groundhogg {
 			'contact_id' => $contact->ID,
 		);
 
-		$track = \Groundhogg\track_activity( $contact, $event, $args, $event_data );
+		if ( ! is_array( $event_data ) ) {
+			// Single key/value events.
+			$event_data = array(
+				'event_name'  => $event,
+				'event_value' => $event_data,
+			);
+		} else {
+			$event_data['event_name'] = $event;
+		}
+
+		\Groundhogg\track_activity( $contact, 'wp_fusion', $args, $event_data );
 
 		return true;
 	}

@@ -18,7 +18,7 @@ class WPF_Intercom {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'events', 'events_multi_key', 'add_fields', 'add_tags', 'events', 'leads' );
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -39,9 +39,8 @@ class WPF_Intercom {
 
 	public function __construct() {
 
-		$this->slug     = 'intercom';
-		$this->name     = 'Intercom';
-		$this->supports = array( 'add_fields', 'add_tags', 'events', 'leads' );
+		$this->slug = 'intercom';
+		$this->name = 'Intercom';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -65,11 +64,110 @@ class WPF_Intercom {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'set_country_names' ), 10, 2 );
 
+		// Guest site tracking
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+
+		// Add tracking code to footer
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+
 		$app_id_code = wpf_get_option( 'app_id_code' );
 
 		if ( ! empty( $app_id_code ) ) {
 			$this->edit_url = 'https://app.intercom.com/a/apps/' . $app_id_code . '/users/%s/all-conversations';
 		}
+
+	}
+
+	/**
+	 * Set a cookie to fix tracking for guest checkouts.
+	 *
+	 * @since 3.40.40
+	 *
+	 * @param int    $contact_id The contact ID.
+	 * @param string $email      The email address.
+	 */
+	public function set_tracking_cookie_guest( $contact_id, $email ) {
+
+		if ( wpf_is_user_logged_in() || false == wpf_get_option( 'site_tracking' ) ) {
+			return;
+		}
+
+		if ( headers_sent() ) {
+			wpf_log( 'notice', 0, 'Tried and failed to set site tracking cookie for ' . $email . ', because headers have already been sent.' );
+			return;
+		}
+
+		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $email . '.' );
+
+		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+
+	}
+
+	/**
+	 * Get site tracking ID
+	 *
+	 * @since 3.40.40
+	 *
+	 * @access  public
+	 * @return  int Tracking ID
+	 */
+
+	public function get_tracking_id() {
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$request  = 'https://api.intercom.io/me';
+		$response = wp_safe_remote_get( $request, $this->params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		wp_fusion()->settings->set( 'site_tracking_id', $body_json->app->id_code );
+
+		return $body_json->app->id_code;
+
+	}
+
+	/**
+	 * Output tracking code
+	 *
+	 * @since 3.40.40
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+
+	public function tracking_code_output() {
+
+		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
+			return;
+		}
+
+		$email   = wpf_get_current_user_email();
+		$trackid = wpf_get_option( 'site_tracking_id' );
+
+		if ( empty( $trackid ) ) {
+			$trackid = $this->get_tracking_id();
+		}
+
+		echo '<!-- Start Intercom site tracking via WP Fusion -->';
+		echo '<script type="text/javascript">';
+		echo "var APP_ID = '" . esc_js( $trackid ) . "';";
+		echo "var current_user_email = '" . esc_js( $email ) . "';";
+		echo 'window.intercomSettings = {  
+			app_id: APP_ID,  
+			email: current_user_email,
+		};';
+
+		echo "(function(){var w=window;var ic=w.Intercom;if(typeof ic==='function'){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/' + APP_ID;var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s, x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();";
+		echo '</script>';
+		echo '<!-- End Intercom site tracking -->';
 
 	}
 
@@ -203,7 +301,7 @@ class WPF_Intercom {
 
 	public function connect( $access_key = null, $test = false ) {
 
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
@@ -224,9 +322,10 @@ class WPF_Intercom {
 			return new WP_Error( $response->errors[0]->code, $response->errors[0]->message );
 		}
 
-		// Save this for later
+		// Save these for later.
 
 		wp_fusion()->settings->set( 'app_id_code', $response->app->id_code );
+		wp_fusion()->settings->set( 'site_tracking_id', $response->app->id_code );
 
 		return true;
 	}
@@ -813,6 +912,10 @@ class WPF_Intercom {
 				'data' => $event_data,
 			),
 		);
+
+		if ( is_array( $event_data ) ) {
+			$data['metadata'] = $event_data; // multi-key support.
+		}
 
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );

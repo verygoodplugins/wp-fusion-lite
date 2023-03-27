@@ -42,6 +42,7 @@ class WPF_KlickTipp_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -89,6 +90,33 @@ class WPF_KlickTipp_Admin {
 	}
 
 
+	/**
+	 * Loads Klick-Tipp specific settings fields
+	 *
+	 * @since 3.40.41
+	 */
+	public function register_settings( $settings, $options ) {
+
+		if ( empty( wpf_get_option( 'double_optin_processes' ) ) ) {
+			return $settings;
+		}
+
+		$new_settings = array(
+			'kt_double_optin_id' => array(
+				'title'   => __( 'Double Optin', 'wp-fusion-lite' ),
+				'desc'    => __( 'Select the double optin process that the user will go through.', 'wp-fusion-lite' ),
+				'type'    => 'select',
+				'std'     => key( wpf_get_option( 'double_optin_processes' ) ),
+				'choices' => wpf_get_option( 'double_optin_processes' ),
+				'section' => 'main',
+			),
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+
+		return $settings;
+
+	}
 
 	/**
 	 * Loads standard Klick-Tipp field names and attempts to match them up with standard local ones

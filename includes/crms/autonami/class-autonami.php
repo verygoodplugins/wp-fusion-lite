@@ -116,7 +116,7 @@ class WPF_Autonami {
 
 					if ( 'rest_no_route' == $body->code ) {
 
-						$body->message .= ' <strong>' . __( 'This could mean the Autonami Marketing Automations Pro plugin isn\'t active.', 'wp-fusion-lite' ) . '</strong>';
+						$body->message .= ' <strong>' . __( 'This could mean the FunnelKit Automations Pro plugin isn\'t active.', 'wp-fusion-lite' ) . '</strong>';
 						$body->message .= ' ' . __( 'Try again or <a href="http://wpfusion.com/contact">contact support</a>.', 'wp-fusion-lite' ) . ' (URL: ' . $url . ')';
 
 					}

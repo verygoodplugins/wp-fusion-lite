@@ -54,6 +54,8 @@ class WPF_ActiveCampaign {
 			new WPF_ActiveCampaign_Admin( $this->slug, $this->name, $this );
 		}
 
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
 	}
 
 	/**
@@ -68,8 +70,6 @@ class WPF_ActiveCampaign {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
-
-		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 		// Guest site tracking
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
@@ -116,10 +116,10 @@ class WPF_ActiveCampaign {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
+		if ( 'date' === $field_type && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y H:i:s', $value );
+			// Adjust formatting for date fields.
+			$date = gmdate( 'm/d/Y H:i:s', intval( $value ) );
 
 			return $date;
 
@@ -146,14 +146,14 @@ class WPF_ActiveCampaign {
 	 * @return array Params
 	 */
 
-	public function get_params() {
+	public function get_params( $api_key = false ) {
 
 		$params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 20,
 			'headers'    => array(
 				'Content-Type' => 'application/json; charset=utf-8',
-				'Api-Token'    => wpf_get_option( 'ac_key' ),
+				'Api-Token'    => $api_key ? $api_key : wpf_get_option( 'ac_key' ),
 			),
 		);
 
@@ -172,7 +172,7 @@ class WPF_ActiveCampaign {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( false !== strpos( $url, $this->api_url ) && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
+		if ( 'WP Fusion; ' . home_url() === $args['user-agent'] && false !== strpos( $url, '.api-' ) ) {
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 			$code = wp_remote_retrieve_response_code( $response );
@@ -199,9 +199,17 @@ class WPF_ActiveCampaign {
 
 				$response = new WP_Error( $code, $body->result_message );
 
+			} elseif ( 400 === $code ) {
+
+				$response = new WP_Error( 'error', 'Bad request (400).' );
+
+			} elseif ( 402 === $code ) {
+
+				$response = new WP_Error( 'error', 'Payment required (402).' );
+
 			} elseif ( 403 === $code ) {
 
-				$response = new WP_Error( 'error', 'Access denied (403). This usually means your ActiveCampaign API key is invalid, at Settings &raquo; WP Fusion &raquo; Setup.' );
+				$response = new WP_Error( 'error', 'Access denied (403). This usually means your ActiveCampaign API key is invalid.' );
 
 			} elseif ( 404 === $code ) {
 
@@ -245,7 +253,7 @@ class WPF_ActiveCampaign {
 
 		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $email . '.' );
 
-		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
+		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
 
@@ -269,7 +277,7 @@ class WPF_ActiveCampaign {
 			$trackid = $this->get_tracking_id();
 		}
 
-		echo '<!-- Start ActiveCampaign site tracking -->';
+		echo '<!-- Start ActiveCampaign site tracking (by WP Fusion)-->';
 		echo '<script type="text/javascript">';
 		echo '(function(e,t,o,n,p,r,i){e.visitorGlobalObjectAlias=n;e[e.visitorGlobalObjectAlias]=e[e.visitorGlobalObjectAlias]||function(){(e[e.visitorGlobalObjectAlias].q=e[e.visitorGlobalObjectAlias].q||[]).push(arguments)};e[e.visitorGlobalObjectAlias].l=(new Date).getTime();r=t.createElement("script");r.src=o;r.async=true;i=t.getElementsByTagName("script")[0];i.parentNode.insertBefore(r,i)})(window,document,"https://diffuser-cdn.app-us1.com/diffuser/diffuser.js","vgo");';
 		echo 'vgo("setAccount", "' . esc_js( $trackid ) . '");';
@@ -320,11 +328,11 @@ class WPF_ActiveCampaign {
 
 	public function connect( $api_url = null, $api_key = null, $test = false ) {
 
-		if ( isset( $this->app ) && $test == false ) {
+		if ( isset( $this->app ) && ! $test ) {
 			return true;
 		}
 
-		// Get saved data from DB
+		// Get saved data from DB.
 		if ( empty( $api_url ) || empty( $api_key ) ) {
 			$api_url = wpf_get_option( 'ac_url' );
 			$api_key = wpf_get_option( 'ac_key' );
@@ -334,17 +342,19 @@ class WPF_ActiveCampaign {
 			require_once dirname( __FILE__ ) . '/includes/ActiveCampaign.class.php';
 		}
 
-		$app = new ActiveCampaign( $api_url, $api_key );
+		// This is for backwards compatibility with folks who might be using the old SDK.
+		// WP Fusion no longer uses it.
 
-		if ( $test == true ) {
+		$this->app = new ActiveCampaign( $api_url, $api_key );
 
-			if ( ! (int) $app->credentials_test() ) {
-				return new WP_Error( 'error', __( 'Access denied: Invalid credentials (URL and/or API key).', 'wp-fusion-lite' ) );
+		if ( $test ) {
+
+			$response = wp_remote_get( trailingslashit( $api_url ) . 'api/3/tags', $this->get_params( $api_key ) );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
 			}
 		}
-
-		// Connection was a success
-		$this->app = $app;
 
 		return true;
 
@@ -879,6 +889,8 @@ class WPF_ActiveCampaign {
 
 		}
 
+		$tag_id = false;
+
 		foreach ( $response->tags as $tag ) {
 
 			if ( $tag_name === $tag->tag ) {
@@ -895,6 +907,7 @@ class WPF_ActiveCampaign {
 
 		while ( $proceed ) {
 
+			// Limit is actually 100, this has been tested.
 			$response = wp_safe_remote_get( $this->api_url . 'api/3/contacts?limit=100&offset=' . $offset . '&tagid=' . $tag_id, $this->params );
 
 			if ( is_wp_error( $response ) ) {
@@ -1234,8 +1247,10 @@ class WPF_ActiveCampaign {
 			'key'       => $trackid,
 			'event'     => $event,
 			'eventdata' => $event_data,
-			'visit'     => array(
-				'email' => $email_address,
+			'visit'     => wp_json_encode(
+				array(
+					'email' => $email_address,
+				)
 			),
 		);
 
@@ -1244,7 +1259,7 @@ class WPF_ActiveCampaign {
 		$params['body']                    = $data;
 		$params['blocking']                = false; // we don't need to wait for a response.
 
-		$response = wp_safe_remote_post( 'https://trackcmp.net/event', $params );
+		$response = wp_remote_post( 'https://trackcmp.net/event', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

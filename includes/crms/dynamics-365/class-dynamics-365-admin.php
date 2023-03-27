@@ -100,11 +100,10 @@ class WPF_Dynamics_365_Admin {
 	 */
 	public function maybe_oauth_complete() {
 
-		// var_dump();exit;
 		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && $this->slug == $_GET['crm'] ) {
 
-			$code = $_GET['code'];
-			$url  = 'https://login.microsoftonline.com/common/oauth2/token/';
+			$code     = sanitize_text_field( $_GET['code'] );
+			$resource = esc_url_raw( urldecode( $_GET['rest_url'] ) );
 
 			$params = array(
 				'headers' => array(
@@ -115,38 +114,35 @@ class WPF_Dynamics_365_Admin {
 					'client_id'     => $this->crm->client_id,
 					'grant_type'    => 'authorization_code',
 					'client_secret' => $this->crm->client_secret,
-					'resource'      => urldecode( $_GET['rest_url'] ),
+					'resource'      => $resource,
 					'redirect_uri'  => $this->crm->callback_url,
 					'scope'         => 'openid offline_access https://graph.microsoft.com/user.read',
 				),
 			);
 
-			$response = wp_remote_post( $url, $params );
+			$response = wp_remote_post( 'https://login.microsoftonline.com/common/oauth2/token/', $params );
+
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
+
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			// Generate long term token
-			$url    = 'https://login.microsoftonline.com/common/oauth2/token/';
-			$params = array(
-				'headers' => array(
-					'Content-type' => 'application/x-www-form-urlencoded',
-				),
-				'body'    => array(
-					'refresh_token' => $response->refresh_token,
-					'client_id'     => $this->crm->client_id,
-					'grant_type'    => 'refresh_token',
-					'resource'      => urldecode( $_GET['rest_url'] ),
-					'client_secret' => $this->crm->client_secret,
-					'scope'         => 'openid offline_access https://graph.microsoft.com/user.read',
-				),
-			);
+			if ( isset( $response->error ) ) {
+				return new WP_Error( 'error', $response->error_description );
+			}
 
-			$response = wp_remote_post( $url, $params );
+			// Generate long term token.
+
+			$params['body']['refresh_token'] = $response->refresh_token;
+			$params['body']['grant_type']    = 'refresh_token';
+
+			$response = wp_remote_post( 'https://login.microsoftonline.com/common/oauth2/token/', $params );
+
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
+
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $response->error ) ) {
@@ -154,7 +150,7 @@ class WPF_Dynamics_365_Admin {
 			}
 
 			$options = array(
-				'dynamics_365_rest_url'      => $_GET['rest_url'],
+				'dynamics_365_rest_url'      => $resource,
 				'dynamics_365_access_token'  => $response->access_token,
 				'dynamics_365_refresh_token' => $response->refresh_token,
 				'crm'                        => $this->slug,
@@ -162,7 +158,7 @@ class WPF_Dynamics_365_Admin {
 
 			wp_fusion()->settings->set_multiple( $options );
 
-			wp_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
+			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
 
 		}
@@ -196,7 +192,7 @@ class WPF_Dynamics_365_Admin {
 			'type'    => 'text',
 			'section' => 'setup',
 			'class'   => 'wp-dynamics-url',
-			'desc'    => __( 'Enter the URL to your dynamics crm (it must end with dynamics.com)', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the full URL to your Dynamics 365 CRM instance (it must end with dynamics.com)', 'wp-fusion-lite' ),
 		);
 
 		if ( empty( $options['dynamics_365_access_token'] ) && ! isset( $_GET['code'] ) ) {
@@ -280,7 +276,7 @@ class WPF_Dynamics_365_Admin {
 	 */
 	public function add_default_fields( $options ) {
 
-		if ( $options['connection_configured'] ) {
+		if ( ! empty( $options['connection_configured'] ) ) {
 
 			$standard_fields = $this->get_default_fields();
 

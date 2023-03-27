@@ -133,7 +133,7 @@ class WPF_User_Profile {
 			<tr>
 				<th scope="row"><?php printf( esc_html__( 'Add to %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></th>
 				<td>
-					<input type="checkbox" name="wpf_add_contact" id="wpf_add_contact" value="1" checked />
+					<input type="checkbox" name="wpf_add_contact" id="wpf_add_contact" value="1" <?php checked( wpf_get_option( 'create_users' ) ); ?> />
 					<label for="wpf_add_contact"><?php printf( esc_html__( 'Add the user as a contact in %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></label>
 				</td>
 			</tr>

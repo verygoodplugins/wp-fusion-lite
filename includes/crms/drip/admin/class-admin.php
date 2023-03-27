@@ -189,20 +189,12 @@ class WPF_Drip_Admin {
 			'section' => 'main'
 		);
 
-		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enable <a target="_blank" href="http://kb.getdrip.com/general/installing-your-javascript-snippet/">Drip site tracking</a>.', 'wp-fusion-lite' ),
-			'std'     => 0,
-			'type'    => 'checkbox',
-			'section' => 'main'
-		);
-
 		$site_tracking['email_change_event'] = array(
 			'title'   => __( 'Email Change Event', 'wp-fusion-lite' ),
 			'desc'    => __( 'Send an <code>Email Changed</code> event when a user changes their email address.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );

@@ -40,6 +40,7 @@ class WPF_Settings {
 
 		// Default settings.
 		add_filter( 'wpf_get_setting_license_key', array( $this, 'get_license_key' ) );
+		add_filter( 'wpf_get_setting_multisite_prefix_keys', array( $this, 'get_multisite_prefix_keys' ) );
 		add_filter( 'wpf_get_setting_contact_fields', array( $this, 'get_contact_fields' ) );
 
 	}
@@ -134,7 +135,7 @@ class WPF_Settings {
 		add_action( 'wpf_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
 		// Resetting options.
-		add_action( 'wpf_resetting_options', array( $this, 'reset_contact_ids_and_tags' ) );
+		add_action( 'wpf_resetting_options', array( $this, 'reset_additional' ) );
 
 		// Set tag labels.
 		add_action( 'wpf_sync', array( $this, 'save_tag_labels' ) );
@@ -264,8 +265,9 @@ class WPF_Settings {
 			if ( isset( $value['crm_field'] ) ) {
 				$value = $value['crm_field'];
 			}
+		} elseif ( is_string( $value ) && preg_match( '/^[0-9]+$/', $value ) ) {
 
-		} elseif ( is_numeric( $value ) ) {
+			// Can't use is_numeric() because 183e3486 matches and is converted to 0.
 
 			$value = intval( $value ); // make sure numbers are returned as numbers.
 
@@ -651,18 +653,26 @@ class WPF_Settings {
 
 	/**
 	 * When resetting the main options page, also delete the cache of contact
-	 * IDs and tags for all users.
+	 * IDs and tags for all users, and postmeta if applicable.
 	 *
 	 * @since 3.38.33
 	 *
 	 * @param array $options The options.
 	 */
-	public function reset_contact_ids_and_tags( $options ) {
+	public function reset_additional( $options ) {
 
 		global $wpdb;
 
 		$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->usermeta WHERE meta_key = %s", "{$options['crm']}_contact_id" ) );
 		$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->usermeta WHERE meta_key = %s", "{$options['crm']}_tags" ) );
+
+		if ( ! empty( $options['reset_all'] ) ) {
+
+			$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->options WHERE option_name LIKE %s", $wpdb->esc_like( 'wpf_' ) . '%' ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->postmeta WHERE meta_key LIKE %s", $wpdb->esc_like( 'wpf_' ) . '%' ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->postmeta WHERE meta_key LIKE %s", $wpdb->esc_like( 'wpf-' ) . '%' ) );
+
+		}
 
 	}
 
@@ -838,9 +848,9 @@ class WPF_Settings {
 			wp_send_json_error( $tag_id );
 		}
 
-		wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag ' . $tag_name . ' with ID ' . $tag_id );
+		wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag <strong>' . $tag_name . '</strong> with ID <code>' . $tag_id . '</code>' );
 
-		$available_tags = $this->get( 'available_tags' );
+		$available_tags = $this->get( 'available_tags', array() );
 
 		if ( is_array( reset( $available_tags ) ) ) {
 
@@ -1038,6 +1048,24 @@ class WPF_Settings {
 		}
 
 		return $license_key;
+
+	}
+
+	/**
+	 * Allows overriding the multisite prefix keys setting.
+	 *
+	 * @since  3.41.0
+	 *
+	 * @param  bool $setting The setting.
+	 * @return bool The setting
+	 */
+	public function get_multisite_prefix_keys( $setting ) {
+
+		if ( defined( 'WPF_MULTISITE_PREFIX_KEYS' ) && true === WPF_MULTISITE_PREFIX_KEYS ) {
+			return true;
+		}
+
+		return $setting;
 
 	}
 
@@ -1442,14 +1470,6 @@ class WPF_Settings {
 			'unlock'  => array( 'push_all_meta' ),
 		);
 
-		$settings['push_all_meta'] = array(
-			'title'   => __( 'Push All', 'wp-fusion-lite' ),
-			'desc'    => __( 'Push meta data whenever a single "user_meta" entry is added or modified.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'section' => 'main',
-			'tooltip' => __( 'This is useful if using non-supported plugins or manual user_meta updates, but may result in duplicate API calls and slower performance.', 'wp-fusion-lite' ),
-		);
-
 		$settings['login_sync'] = array(
 			'title'   => __( 'Login Tags Sync', 'wp-fusion-lite' ),
 			'desc'    => sprintf( __( 'Load the user\'s latest tags from %s on login.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
@@ -1570,7 +1590,7 @@ class WPF_Settings {
 
 		$settings['default_not_logged_in_redirect'] = array(
 			'title'   => __( 'Default Not Logged-In Redirect', 'wp-fusion-lite' ),
-			'desc'    => __( 'A redirect URL specified here will take priority in cases where a visitor was denied access to a piece of content due to not being logged in.', 'wp-fusion-lite' ),
+			'desc'    => __( 'If you specify a URL here (usualy the URL to your login page), it will take priority over all other redirects in cases where the user is denied access and is not logged in.', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'main',
 		);
@@ -1584,7 +1604,7 @@ class WPF_Settings {
 
 		$settings['restricted_message'] = array(
 			'title'         => __( 'Default Restricted Content Message', 'wp-fusion-lite' ),
-			'desc'          => __( '<a href="https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-message" target="_blank">Restricted content message</a> for when a redirect isn\'t set. Use <code>[the_excerpt]</code> or <code>[the_excerpt length="120"]</code> to display an excerpt of the restricted content.', 'wp-fusion-lite' ),
+			'desc'          => sprintf( __( '%1$sRestricted content message%2$s for when a redirect isn\'t set. Use <code>[the_excerpt]</code> or <code>[the_excerpt length="120"]</code> to display an excerpt of the restricted content.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/getting-started/access-control/#restricted-content-message" target="_blank">', '</a>' ),
 			'std'           => __( '<h2 style="text-align:center">Oops!</h2><p style="text-align:center">You don\'t have permission to view this page! Make sure you\'re logged in and try again, or contact support.</p>', 'wp-fusion-lite' ),
 			'type'          => 'editor',
 			'section'       => 'main',
@@ -1895,9 +1915,10 @@ class WPF_Settings {
 
 		$settings['js_leadsource_tracking'] = array(
 			'title'   => __( 'JS Lead Source Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enqueue a script to handle setting the <a href="https://wpfusion.com/documentation/tutorials/lead-source-tracking/" target="_blank">lead source tracking cookies</a>. This fixes tracking on WP Engine, Flywheel, and other hosts that sanitize UTM parameters out of URLs.', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enqueue a script to handle setting the <a href="https://wpfusion.com/documentation/tutorials/lead-source-tracking/" target="_blank">lead source tracking cookies</a>.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'advanced',
+			'tooltip' => __( 'This fixes tracking on WP Engine, Flywheel, and other hosts that sanitize UTM parameters out of URLs.', 'wp-fusion-lite' ),
 		);
 
 		$settings['system_header'] = array(
@@ -1920,9 +1941,11 @@ class WPF_Settings {
 
 		if ( is_multisite() ) {
 
+			global $wpdb;
+
 			$settings['multisite_prefix_keys'] = array(
 				'title'   => __( 'Multisite - Blog Prefix', 'wp-fusion-lite' ),
-				'desc'    => __( 'Prefix all WP Fusion usermeta keys with the blog ID of the current site in the network.', 'wp-fusion-lite' ),
+				'desc'    => sprintf( __( 'Prefix all WP Fusion usermeta keys with the blog ID of the current site in the network (%s).', 'wp-fusion-lite' ), '<code>' . esc_attr( $wpdb->get_blog_prefix() ) . '</code>' ),
 				'tooltip' => __( 'By default, data for a single user is shared across all sites in a multisite network.<br /><br />This can cause problems if you have multiple sub-sites connected to different instances of the same CRM&ndash; a user\'s tags and contact ID can end up in use on the wrong site.<br /><br />Enabling this setting will create a new usermeta key for each user\'s tags and contact ID for every site in the network where they are a member.', 'wp-fusion-lite' ),
 				'type'    => 'checkbox',
 				'section' => 'advanced',
@@ -1951,6 +1974,14 @@ class WPF_Settings {
 			'std'     => 1,
 			'section' => 'advanced',
 			'tooltip' => __( 'It\'s recommended to leave this on for performance reasons but it can be turned off for debugging.', 'wp-fusion-lite' ),
+		);
+
+		$settings['push_all_meta'] = array(
+			'title'   => __( 'Push All', 'wp-fusion-lite' ),
+			'desc'    => __( 'Push meta data whenever a single "user_meta" entry is added or modified.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'advanced',
+			'tooltip' => __( 'This is useful if using non-supported plugins or manual user_meta updates, but may result in duplicate API calls and slower performance.', 'wp-fusion-lite' ),
 		);
 
 		$settings['enable_cron'] = array(
@@ -2079,14 +2110,24 @@ class WPF_Settings {
 
 		$settings['reset_header'] = array(
 			'title'   => __( 'Reset', 'wp-fusion-lite' ),
+			'url'     => 'https://wpfusion.com/documentation/tutorials/switching-crms/',
 			'type'    => 'heading',
 			'section' => 'advanced',
 		);
 
-		$settings['reset_options'] = array(
+		$settings['reset'] = array(
 			'title'   => __( 'Reset', 'wp-fusion-lite' ),
-			'desc'    => __( 'Check this box and click "Save Changes" below to reset all options to their defaults.', 'wp-fusion-lite' ),
-			'type'    => 'reset',
+			'desc'    => __( 'Check this box and click "Save Changes" below to reset the options to their defaults.', 'wp-fusion-lite' ),
+			'tooltip' => __( 'This will reset the options on this settings page, allowing you to connect to a new CRM. It does not remove the access rules on your content, or other settings saved in different parts of the database.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'advanced',
+			'unlock'  => array( 'reset_all' ),
+		);
+
+		$settings['reset_all'] = array(
+			'title'   => __( 'Reset All', 'wp-fusion-lite' ),
+			'desc'    => __( 'Also erase all WP Fusion settings configured on posts, pages, courses, memberships, and elsewhere.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
 			'section' => 'advanced',
 		);
 
@@ -2196,7 +2237,7 @@ class WPF_Settings {
 			$type = 'text';
 		}
 
-		echo '<input id="' . esc_attr( $id ) . '" class="form-control ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->{ $id } ) . '">';
+		echo '<input id="' . esc_attr( $id ) . '" class="form-control api_key ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->{ $id } ) . '">';
 
 		if ( $this->connection_configured ) {
 
@@ -2424,11 +2465,9 @@ class WPF_Settings {
 
 	public function show_field_crm_field( $id, $field ) {
 
-		$std = array( 'crm_field' => false );
+		$setting = $this->get( $id );
 
-		$setting = $this->get( $id, $std );
-
-		if ( isset( $setting['crm_field'] ) ) {
+		if ( is_array( $setting ) && isset( $setting['crm_field'] ) ) {
 
 			// We're in the process of changing the data storage on
 			// this to not require the array format, so this check allows it to
@@ -2437,6 +2476,7 @@ class WPF_Settings {
 			// @since 3.39.4.
 
 			$setting = $setting['crm_field'];
+
 		}
 
 		wpf_render_crm_field_select( $setting, 'wpf_options', $id );
@@ -2510,7 +2550,11 @@ class WPF_Settings {
 			}
 		}
 
-		// Set some defaults to prevent notices, and then rebuild fields array into group structure
+		if ( empty( $this->options[ $id ] ) ) {
+			$this->options[ $id ] = array();
+		}
+
+		// Set some defaults to prevent notices, and then rebuild fields array into group structure.
 
 		foreach ( $field['choices'] as $meta_key => $data ) {
 
@@ -2651,7 +2695,7 @@ class WPF_Settings {
 
 				echo '<tr' . ( $this->options[ $id ][ $user_meta ]['active'] == true ? ' class="success" ' : '' ) . '>';
 				echo '<td><input class="checkbox contact-fields-checkbox"' . ( empty( $this->options[ $id ][ $user_meta ]['crm_field'] ) || 'user_email' == $user_meta ? ' disabled' : '' ) . ' type="checkbox" id="wpf_cb_' . esc_attr( $user_meta ) . '" name="wpf_options[' . esc_attr( $id ) . '][' . esc_attr( $user_meta ) . '][active]" value="1" ' . checked( $this->options[ $id ][ $user_meta ]['active'], 1, false ) . '/></td>';
-				echo '<td class="wp_field_label">' . ( isset( $data['label'] ) ? esc_html( $data['label'] ) : '' );
+				echo '<td class="wp_field_label">' . ( isset( $data['label'] ) ? esc_html( wp_strip_all_tags( $data['label'] ) ) : '' );
 
 				if ( 'user_pass' === $user_meta ) {
 
@@ -2666,7 +2710,7 @@ class WPF_Settings {
 				// Track custom registered fields.
 
 				if ( ! empty( $this->options['custom_metafields'] ) && in_array( $user_meta, $this->options['custom_metafields'] ) ) {
-					echo '(' . esc_html__( 'Added by user', 'wp-fusion-lite' ) . ')';
+					echo ' (' . esc_html__( 'Added by user', 'wp-fusion-lite' ) . ')';
 				}
 
 				echo '</td>';

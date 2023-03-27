@@ -13,7 +13,7 @@ class WPF_MailChimp {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array( 'events', 'web_id' );
+	public $supports = array( 'events', 'web_id', 'events_multi_key' );
 
 
 	/**
@@ -201,48 +201,6 @@ class WPF_MailChimp {
 
 	}
 
-
-	/**
-	 * MailChimp requires an email to be submitted when tags are applied/removed
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'mailchimp_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-			$response = wp_safe_remote_get( $url, $this->get_params() );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$result = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( ! isset( $result->email_address ) ) {
-				return false;
-			}
-
-			return $result->email_address;
-
-		}
-
-	}
 
 	/**
 	 * Gets params for API calls
@@ -746,7 +704,7 @@ class WPF_MailChimp {
 		}
 
 		if ( empty( $data['email_address'] ) ) {
-			$email_address = $this->get_email_from_cid( $contact_id );
+			$email_address = wp_fusion()->crm->get_email_from_cid( $contact_id );
 		} else {
 			$email_address = $data['email_address'];
 			unset( $data['email_address'] );
@@ -912,9 +870,14 @@ class WPF_MailChimp {
 		$event = str_replace( ' ', '_', $event );
 
 		$body = array(
-			'name'       => $event,
-			'properties' => array( 'data' => $event_data ),
+			'name' => $event,
 		);
+
+		if ( is_array( $event_data ) ) {
+			$body['properties'] = $event_data;
+		} else {
+			$body['properties'] = array( 'data' => $event_data );
+		}
 
 		$request            = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/events';
 		$params             = $this->get_params();

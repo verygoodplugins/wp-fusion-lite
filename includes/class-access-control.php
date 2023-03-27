@@ -38,6 +38,8 @@ class WPF_Access_Control {
 		// Apply tags on view scripts
 		add_action( 'wp_enqueue_scripts', array( $this, 'apply_tags_on_view' ) );
 
+		add_action( 'template_redirect', array( $this, 'handle_refresh' ), 10 );
+
 		if ( ! wpf_get_option( 'restrict_content', true ) ) {
 			return;
 		}
@@ -56,6 +58,7 @@ class WPF_Access_Control {
 		// Cache the access
 		add_filter( 'wpf_user_can_access', array( $this, 'cache_can_access' ), 100, 3 );
 		add_action( 'wpf_tags_modified', array( $this, 'clear_access_cache' ) );
+		add_action( 'wpf_started_auto_login', array( $this, 'clear_access_cache' ) );
 
 		// Protect post types
 		add_filter( 'wpf_post_access_meta', array( $this, 'check_post_type' ), 10, 2 );
@@ -228,6 +231,16 @@ class WPF_Access_Control {
 				$can_access = false;
 
 			}
+
+			// Possibly refresh the tags.
+
+			if ( false === $can_access && doing_action( 'template_redirect' ) && ! did_action( 'wpf_tags_modified' ) && ! empty( $settings['check_tags'] ) ) {
+
+				wpf_get_tags( $user_id, true );
+				$can_access = $this->user_can_access( $post_id, $user_id );
+
+			}
+
 		}
 
 		/**
@@ -454,7 +467,7 @@ class WPF_Access_Control {
 		} elseif ( ! empty( $post_restrictions['redirect'] ) ) {
 
 			// Don't allow infinite redirect.
-			if ( $post_restrictions['redirect'] == $post_id ) {
+			if ( absint( $post_restrictions['redirect'] ) === absint( $post_id ) ) {
 				return false;
 			}
 
@@ -462,8 +475,10 @@ class WPF_Access_Control {
 				$redirect = home_url();
 			} elseif ( 'login' === $post_restrictions['redirect'] ) {
 				$redirect = wp_login_url();
-			} else {
+			} elseif ( is_numeric( $post_restrictions['redirect'] ) ) {
 				$redirect = get_permalink( $post_restrictions['redirect'] );
+			} else {
+				$redirect = $post_restrictions['redirect'];
 			}
 		} elseif ( ! empty( $default_redirect ) ) {
 
@@ -1918,6 +1933,36 @@ class WPF_Access_Control {
 
 			}
 		}
+
+	}
+
+	/**
+	 * Refreshes the users tags and/or metadata based on a query string.
+	 *
+	 * @since 3.40.55
+	 */
+	public function handle_refresh() {
+
+		if ( ! wpf_is_user_logged_in() ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['wpf-refresh'] ) ) {
+			return;
+		}
+
+		$refresh = sanitize_text_field( wp_unslash( $_GET['wpf-refresh'] ) );
+
+		if ( 'all' === $refresh || 'tags' === $refresh ) {
+			wp_fusion()->user->get_tags( wpf_get_current_user_id(), true );
+		}
+
+		if ( 'all' === $refresh || 'meta' === $refresh ) {
+			wp_fusion()->user->pull_user_meta();
+		}
+
+		// Redirect so the query string doesn't stick around.
+		wp_safe_redirect( remove_query_arg( 'wpf-refresh', add_query_arg() ) );
 
 	}
 

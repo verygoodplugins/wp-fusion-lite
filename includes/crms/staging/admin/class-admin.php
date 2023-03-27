@@ -19,10 +19,10 @@ class WPF_Staging_Admin {
 		$this->name = $name;
 		$this->crm  = $crm;
 
-		// Settings
+		// Settings.
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
-		add_action( 'show_field_staging_header_begin', array( $this, 'show_field_staging_header_begin' ), 10, 2 );
-		add_action( 'show_field_staging_header_end', array( $this, 'show_field_staging_header_end' ), 10, 2 );
+		add_action( 'show_field_staging_header_begin', array( $this, 'show_field_staging_header_begin' ) );
+		add_action( 'show_field_staging_header_end', array( $this, 'show_field_staging_header_end' ) );
 
 	}
 
@@ -42,7 +42,7 @@ class WPF_Staging_Admin {
 			'title'   => __( 'Staging', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
-			'desc'	  => 'This is equivalent to activating "Staging Mode" from the Advanced settings tab. WP Fusion will function as normal, but no API calls will be sent. </p><p>Tags and other actions will be applied to a local buffer, and will be erased when staging mode is disabled.'
+			'desc'	  => __( 'In "Staging Mode" WP Fusion will function as normal, but no API calls will be sent. </p><p>Tags and other actions will be applied to a local buffer, and will be erased when staging mode is disabled.', 'wp-fusion-lite' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -51,15 +51,14 @@ class WPF_Staging_Admin {
 
 	}
 
-
 	/**
-	 * Puts a div around the configuration section so it can be toggled
+	 * Puts a div around the Infusionsoft configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
-	public function show_field_staging_header_begin( $id, $field ) {
+	public function show_field_staging_header_begin() {
 
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
@@ -68,17 +67,15 @@ class WPF_Staging_Admin {
 	}
 
 	/**
-	 * Close out Active Campaign section
+	 * Puts a div around the Infusionsoft configuration section so it can be toggled
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
 
+	public function show_field_staging_header_end() {
 
-	public function show_field_staging_header_end( $id, $field ) {
-
-		echo '</div>'; // close #staging div
-		echo '<table class="form-table">';
+		echo '</div>';
 
 	}
 

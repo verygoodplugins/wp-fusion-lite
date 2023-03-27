@@ -73,45 +73,6 @@ class WPF_BirdSend {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 	}
 
-	/**
-	 * BirdSend requires an email to be submitted when contacts are modified
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users( array( 'meta_key'   => 'birdsend_contact_id',
-		                           'meta_value' => $contact_id,
-		                           'fields'     => array( 'user_email' )
-		) );
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-			
-		} else {
-			
-			// Try an API lookup
-
-			$data = $this->load_contact( $contact_id );
-
-			if( ! is_wp_error( $data ) && ! empty( $data['user_email'] ) ) {
-
-				return $data['user_email'];
-
-			} else {
-
-				return false;
-
-			}
-
-		}
-
-
-	}
-
 
 	/**
 	 * Gets params for API calls
@@ -513,7 +474,7 @@ class WPF_BirdSend {
 		} else {
 
 			// Email is required for updates
-			$update_data['email'] = $this->get_email_from_cid( $contact_id );
+			$update_data['email'] = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		}
 

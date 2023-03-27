@@ -46,3 +46,18 @@ $mailerlite_fields['billing_postcode'] = array(
 	'crm_label' => 'Zip',
 	'crm_field' => 'zip',
 );
+
+$mailerlite_fields['email_optin'] = array(
+	'crm_label' => 'Optin Status',
+	'crm_field' => 'type',
+);
+
+$mailerlite_fields['edd_email_optin'] = array(
+	'crm_label' => 'Optin Status',
+	'crm_field' => 'type',
+);
+
+$mailerlite_fields['give_email_optin'] = array(
+	'crm_label' => 'Optin Status',
+	'crm_field' => 'type',
+);

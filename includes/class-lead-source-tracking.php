@@ -90,33 +90,40 @@ class WPF_Lead_Source_Tracking {
 			return;
 		}
 
-		$leadsource_vars = $this->get_leadsource_vars();
-
-		$alt_vars = array(
-			'original_ref',
-			'landing_page',
-		);
-
-		$contact_fields = wpf_get_option( 'contact_fields' );
-
 		$leadsource_cookie_name = $this->get_leadsource_cookie_name();
 		$ref_cookie_name        = $this->get_referral_cookie_name();
 
-		foreach ( $leadsource_vars as $var ) {
+		if ( ! empty( $_COOKIE[ $leadsource_cookie_name ] ) && ! is_array( $_COOKIE[ $leadsource_cookie_name ] ) ) {
+			$cookie_data = (array) json_decode( wp_unslash( $_COOKIE[ $leadsource_cookie_name ] ), true );
+		} else {
+			$cookie_data = array();
+		}
+
+		foreach ( $this->get_leadsource_vars() as $var ) {
 
 			if ( isset( $_GET[ $var ] ) && wpf_is_field_active( $var ) ) {
-				setcookie( "{$leadsource_cookie_name}[{$var}]", sanitize_text_field( wp_unslash( $_GET[ $var ] ) ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				$cookie_data[ $var ] = sanitize_text_field( wp_unslash( $_GET[ $var ] ) );
 			}
+		}
+
+		if ( ! empty( $cookie_data ) ) {
+			setcookie( $leadsource_cookie_name, wp_json_encode( $cookie_data ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 		}
 
 		if ( ! is_admin() && empty( $_COOKIE[ $ref_cookie_name ] ) ) {
 
+			$cookie_data = array();
+
 			if ( wpf_is_field_active( 'original_ref' ) && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-				setcookie( "{$ref_cookie_name}[original_ref]", esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				$cookie_data['original_ref'] = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
 			}
 
 			if ( wpf_is_field_active( 'landing_page' ) && ! empty( $_SERVER['REQUEST_URI'] ) ) {
-				setcookie( "{$ref_cookie_name}[landing_page]", esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
+				$cookie_data['landing_page'] = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+			}
+
+			if ( ! empty( $cookie_data ) ) {
+				setcookie( $ref_cookie_name, wp_json_encode( $cookie_data ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
 
@@ -139,32 +146,30 @@ class WPF_Lead_Source_Tracking {
 
 		$cookies = $_COOKIE;
 
-		// Maybe URL-decode the components (some hosts do this with JS tracking).
-		foreach ( $cookies as $key => $val ) {
-
-			if ( ! is_array( $val ) && 0 === strpos( $key, 'wpf_leadsource' ) ) {
-				$newkey = str_replace( 'wpf_leadsource%5B', '', $key );
-				$newkey = str_replace( '%5D', '', $newkey );
-
-				if ( ! isset( $cookies['wpf_leadsource'] ) ) {
-					$cookies['wpf_leadsource'] = array();
-				}
-
-				$cookies['wpf_leadsource'][ $newkey ] = $val;
-			}
-
-		}
-
 		if ( ! empty( $cookies[ $leadsource_cookie_name ] ) ) {
 
-			$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $leadsource_cookie_name ] ) );
-			$user_meta = array_merge( $user_meta, $data );
+			if ( ! is_array( $cookies[ $leadsource_cookie_name ] ) ) {
+				// New 3.40.43 format.
+				$cookies[ $leadsource_cookie_name ] = json_decode( wp_unslash( $cookies[ $leadsource_cookie_name ] ), true );
+			}
+
+			if ( ! empty( $cookies[ $leadsource_cookie_name ] ) ) {
+				$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $leadsource_cookie_name ] ) );
+				$user_meta = array_merge( $user_meta, $data );
+			}
 		}
 
 		if ( ! empty( $cookies[ $ref_cookie_name ] ) ) {
 
-			$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $ref_cookie_name ] ) );
-			$user_meta = array_merge( $user_meta, $data );
+			if ( ! is_array( $cookies[ $ref_cookie_name ] ) ) {
+				// New 3.40.43 format.
+				$cookies[ $ref_cookie_name ] = json_decode( wp_unslash( $cookies[ $ref_cookie_name ] ), true );
+			}
+
+			if ( ! empty( $cookies[ $ref_cookie_name ] ) ) {
+				$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $ref_cookie_name ] ) );
+				$user_meta = array_merge( $user_meta, $data );
+			}
 
 		}
 

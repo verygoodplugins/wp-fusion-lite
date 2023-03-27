@@ -96,7 +96,7 @@ class WPF_Autonami_Admin {
 
 
 	/**
-	 * Registers Autonami API settings.
+	 * Registers FunnelKit Automations API settings.
 	 *
 	 * @param array $settings The registered settings on the options page.
 	 * @param array $options The options saved in the database.
@@ -110,7 +110,7 @@ class WPF_Autonami_Admin {
 		$new_settings = array();
 
 		$new_settings['autonami_header'] = array(
-			'title'   => __( 'Autonami Configuration', 'wp-fusion-lite' ),
+			'title'   => __( 'FunnelKit Automations Configuration', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -120,11 +120,11 @@ class WPF_Autonami_Admin {
 			'type'    => 'text',
 			'section' => 'setup',
 			'class'   => 'wp-rest-url',
-			'desc'    => __( 'Enter the URL to your website where Autonami is installed (must be https://).', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter the URL to your website where FunnelKit Automations is installed (must be https://).', 'wp-fusion-lite' ),
 		);
 
 		if ( class_exists( 'BWFAN_Core' ) ) {
-			$new_settings['autonami_url']['desc'] .= '<br /><br /><strong>' . sprintf( __( 'If you are trying to connect to Autonami on this site, enter %s for the URL.', 'wp-fusion-lite' ), '<code>' . home_url() . '</code>' ) . '</strong>';
+			$new_settings['autonami_url']['desc'] .= '<br /><br /><strong>' . sprintf( __( 'If you are trying to connect to FunnelKit Automations on this site, enter %s for the URL.', 'wp-fusion-lite' ), '<code>' . home_url() . '</code>' ) . '</strong>';
 		}
 
 		if ( empty( $options['autonami_url'] ) ) {
@@ -135,8 +135,8 @@ class WPF_Autonami_Admin {
 			$class = 'button rest-auth-btn';
 		}
 
-		$new_settings['autonami_url']['desc'] .= '<br /><br /><a id="autonami-auth-btn" class="' . esc_attr( $class ) . '" href="' . esc_url( $href ) . '">' . __( 'Authorize with Autonami', 'wp-fusion-lite' ) . '</a>';
-		$new_settings['autonami_url']['desc'] .= '<span class="description">' . __( 'You can click the Authorize button to be taken to the Autonami site and generate an application password automatically.', 'wp-fusion-lite' ) . '</span>';
+		$new_settings['autonami_url']['desc'] .= '<br /><br /><a id="autonami-auth-btn" class="' . esc_attr( $class ) . '" href="' . esc_url( $href ) . '">' . __( 'Authorize with FunnelKit Automations', 'wp-fusion-lite' ) . '</a>';
+		$new_settings['autonami_url']['desc'] .= '<span class="description">' . __( 'You can click the Authorize button to be taken to the FunnelKit Automations site and generate an application password automatically.', 'wp-fusion-lite' ) . '</span>';
 
 		$new_settings['autonami_username'] = array(
 			'title'   => __( 'Application Username', 'wp-fusion-lite' ),
@@ -159,7 +159,7 @@ class WPF_Autonami_Admin {
 	}
 
 	/**
-	 * Loads standard Autonami_REST field names and attempts to match them up
+	 * Loads standard FunnelKit Automations_REST field names and attempts to match them up
 	 * with standard local ones.
 	 *
 	 * @param array $options The options.

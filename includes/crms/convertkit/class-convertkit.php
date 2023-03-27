@@ -330,54 +330,6 @@ class WPF_ConvertKit {
 	}
 
 	/**
-	 * ConvertKit requires an email to be submitted when tags are applied/removed
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'convertkit_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			// Try and get it via API call
-
-			if ( is_wp_error( $this->connect() ) ) {
-				return false;
-			}
-
-			$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret );
-
-			if ( is_wp_error( $response ) ) {
-				return false;
-			}
-
-			$result = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( ! isset( $result->subscriber ) ) {
-				return false;
-			}
-
-			return $result->subscriber->email_address;
-
-		}
-
-	}
-
-
-	/**
 	 * Initialize connection
 	 *
 	 * @access  public
@@ -599,7 +551,7 @@ class WPF_ConvertKit {
 
 		$tag_string = implode( ',', $tags );
 
-		$email_address = $this->get_email_from_cid( $contact_id );
+		$email_address = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		$data = array(
 			'api_secret' => $this->api_secret,

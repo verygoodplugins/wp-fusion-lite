@@ -45,7 +45,7 @@ class WPF_SendinBlue {
 
 		$this->slug     = 'sendinblue';
 		$this->name     = 'Sendinblue';
-		$this->supports = array( 'events' );
+		$this->supports = array( 'events', 'events_multi_key' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -470,17 +470,10 @@ class WPF_SendinBlue {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		// Sendinblue converts email addresses to lowercase so we'll do the same for contact ID lookups.
 
-		// Sendinblue converts email addresses to lowercase so we'll do the same for contact ID lookups
-
-		$email_address = strtolower( $email_address );
-
-		$contact_info = array();
-		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $email_address );
-		$response     = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.sendinblue.com/v3/contacts/' . rawurlencode( strtolower( $email_address ) );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -749,18 +742,29 @@ class WPF_SendinBlue {
 		}
 
 		$contact_ids = array();
+		$continue    = true;
+		$offset      = 0;
 
-		$url     = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts?limit=500';
-		$results = wp_safe_remote_get( $url, $this->params );
+		while ( $continue ) {
 
-		if ( is_wp_error( $results ) ) {
-			return $results;
-		}
+			$url     = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts?limit=500&offset=' . $offset;
+			$results = wp_safe_remote_get( $url, $this->params );
 
-		$body_json = json_decode( $results['body'], true );
+			if ( is_wp_error( $results ) ) {
+				return $results;
+			}
 
-		foreach ( $body_json['contacts'] as $row => $contact ) {
-			$contact_ids[] = $contact['email'];
+			$body_json = json_decode( $results['body'], true );
+
+			foreach ( $body_json['contacts'] as $row => $contact ) {
+				$contact_ids[] = $contact['email'];
+			}
+
+			if ( count( $body_json['contacts'] ) < 500 ) {
+				$continue = false;
+			} else {
+				$offset += 500;
+			}
 		}
 
 		return $contact_ids;
@@ -800,8 +804,13 @@ class WPF_SendinBlue {
 		$body = array(
 			'email'     => $email_address,
 			'event'     => $event,
-			'eventdata' => (object) array( 'details' => $event_data ),
 		);
+
+		if ( is_array( $event_data ) ) {
+			$body['eventdata'] = (object) $event_data;
+		} else {
+			$body['eventdata'] = (object) array( 'details' => $event_data );
+		}
 
 		$request                     = 'https://in-automate.sendinblue.com/api/v2/trackEvent';
 		$params                      = $this->get_params();

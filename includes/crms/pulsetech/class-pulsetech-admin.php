@@ -203,7 +203,6 @@ class WPF_PulseTechnologyCRM_Admin {
 				);
 
 				$new_settings['pulsetech_footer'] = array(
-					'title'   => __( '', 'wp-fusion-lite' ),
 					'type'    => 'heading',
 					'section' => 'setup',
 				);

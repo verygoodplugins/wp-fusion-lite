@@ -18,13 +18,13 @@ class WPF_MailerLite_Admin {
 		$this->name = $name;
 		$this->crm  = $crm;
 
-		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ) );
 		add_action( 'show_field_mailerlite_header_begin', array( $this, 'show_field_mailerlite_header_begin' ), 10, 2 );
 
-		// AJAX
+		// AJAX.
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wpf_get_option( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
 
@@ -41,8 +41,9 @@ class WPF_MailerLite_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-		add_filter( 'validate_field_mailerlite_update_trigger', array( $this, 'validate_update_trigger' ), 10, 2 );
-		add_filter( 'validate_field_mailerlite_add_tag', array( $this, 'validate_import_trigger' ), 10, 2 );
+
+		add_filter( 'validate_field_mailerlite_update_trigger', array( $this, 'validate_update_trigger' ) );
+		add_filter( 'validate_field_mailerlite_add_tag', array( $this, 'validate_import_trigger' ) );
 
 		add_action( 'wpf_resetting_options', array( $this, 'delete_webhooks' ) );
 
@@ -56,24 +57,21 @@ class WPF_MailerLite_Admin {
 	 * @since   1.0
 	 */
 
-	public function register_connection_settings( $settings, $options ) {
+	public function register_connection_settings( $settings ) {
 
-		$new_settings = array();
-
-		$new_settings['mailerlite_header'] = array(
-			'title'   => __( 'MailerLite Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
-			'type'    => 'heading',
-			'section' => 'setup'
-		);
-
-		$new_settings['mailerlite_key'] = array(
-			'title'       => __( 'API Key', 'wp-fusion-lite' ),
-			'desc'        => __( 'You can find your API key in the <a href="https://app.mailerlite.com/integrations/api/" target="_blank">Developer API</a> settings of your MailerLite account.', 'wp-fusion-lite' ),
-			'type'        => 'api_validate',
-			'section'     => 'setup',
-			'class'       => 'api_key',
-			'post_fields' => array( 'mailerlite_key' )
+		$new_settings = array(
+			'mailerlite_header' => array(
+				'title'   => __( 'MailerLite Configuration', 'wp-fusion-lite' ),
+				'type'    => 'heading',
+				'section' => 'setup',
+			),
+			'mailerlite_key' => array(
+				'title'       => __( 'API Token', 'wp-fusion-lite' ),
+				'desc'        => __( 'You can find your API token in the <a href="https://dashboard.mailerlite.com/integrations/api" target="_blank">Developer API</a> settings of your MailerLite account.', 'wp-fusion-lite' ),
+				'type'        => 'api_validate',
+				'section'     => 'setup',
+				'post_fields' => array( 'mailerlite_key' ),
+			),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -114,28 +112,29 @@ class WPF_MailerLite_Admin {
 
 		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
 
-		if( wp_fusion()->is_full_version() ) {
+		if ( wp_fusion()->is_full_version() ) {
 
 			$settings['access_key_desc'] = array(
-				'std'     => 0,
 				'type'    => 'paragraph',
 				'section' => 'main',
 				'desc'    => __( 'Configuring the fields below allows you to add new users to your site and update existing users based on changes in MailerLite. Read our <a href="https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion-lite' ),
 			);
 
+			$settings['access_key_desc']['desc'] .= ' ' . sprintf( __( 'To list all registered webhooks (for debugging purposes), %1$sclick here%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( admin_url( 'options-general.php?page=wpf-settings&ml_debug=true' ) ) . '">', '</a>' );
+
 			if ( isset( $_GET['ml_debug'] ) ) {
 
-				$webhooks = wp_fusion()->crm->get_webhooks();
+				$settings['access_key_desc']['desc'] .= ' ' . sprintf( __( 'To <strong>delete</strong> all registered webhooks, %1$sclick here%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( admin_url( 'options-general.php?page=wpf-settings&ml_debug=true&ml_destroy_all_webhooks=true' ) ) . '">', '</a>' );
+
+				$webhooks = $this->crm->get_webhooks();
 
 				if ( isset( $_GET['ml_destroy_all_webhooks'] ) ) {
 
-					foreach ( $webhooks->webhooks as $webhook ) {
-
-						wp_fusion()->crm->destroy_webhook( $webhook->id );
-
+					foreach ( $webhooks as $webhook ) {
+						$this->crm->destroy_webhook( $webhook->id );
 					}
 
-					$webhooks = 'Destroyed ' . count( $webhooks->webhooks ) . ' webhooks.';
+					$webhooks = 'Destroyed ' . count( $webhooks ) . ' webhooks.';
 
 				}
 
@@ -144,198 +143,215 @@ class WPF_MailerLite_Admin {
 			}
 
 			$new_settings['mailerlite_update_trigger'] = array(
-				'title' 	=> __( 'Update Trigger', 'wp-fusion-lite' ),
-				'desc'		=> __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion-lite' ),
-				'std'		=> 0,
-				'type'		=> 'checkbox',
-				'section'	=> 'main'
-				);
+				'title'   => __( 'Update Trigger', 'wp-fusion-lite' ),
+				'desc'    => __( 'When a subscriber is updated in MailerLite, send their data back to WordPress.', 'wp-fusion-lite' ),
+				'type'    => 'checkbox',
+				'section' => 'main',
+			);
 
 			$new_settings['mailerlite_update_trigger_rule_id'] = array(
-				'std'		=> false,
-				'type'		=> 'hidden',
-				'section'	=> 'main'
-				);
+				'type'    => 'hidden',
+				'section' => 'main',
+			);
 
 			$new_settings['mailerlite_update_trigger_group_add_rule_id'] = array(
-				'std'		=> false,
-				'type'		=> 'hidden',
-				'section'	=> 'main'
-				);
+				'type'    => 'hidden',
+				'section' => 'main',
+			);
 
 			$new_settings['mailerlite_update_trigger_group_remove_rule_id'] = array(
-				'std'		=> false,
-				'type'		=> 'hidden',
-				'section'	=> 'main'
-				);
+				'type'    => 'hidden',
+				'section' => 'main',
+			);
 
 			$new_settings['mailerlite_add_tag'] = array(
-				'title' 	=> __( 'Import Group', 'wp-fusion-lite' ),
-				'desc'		=> __( 'When a contact is added to this group in MailerLite, they will be imported as a new WordPress user.', 'wp-fusion-lite' ),
-				'type'		=> 'assign_tags',
-				'section'	=> 'main',
-				'placeholder' => 'Select a group',
-				'limit'		=> 1
-				);
+				'title'       => __( 'Import Group', 'wp-fusion-lite' ),
+				'desc'        => __( 'When a contact is added to this group in MailerLite, they will be imported as a new WordPress user.', 'wp-fusion-lite' ),
+				'type'        => 'assign_tags',
+				'section'     => 'main',
+				'placeholder' => __( 'Select a group', 'wp-fusion-lite' ),
+				'limit'       => 1,
+			);
 
 			$new_settings['mailerlite_add_tag_rule_id'] = array(
-				'std'		=> false,
-				'type'		=> 'hidden',
-				'section'	=> 'main'
-				);
+				'type'    => 'hidden',
+				'section' => 'main',
+			);
 
 			$new_settings['mailerlite_import_notification'] = array(
 				'title'   => __( 'Enable Notifications', 'wp-fusion-lite' ),
 				'desc'    => __( 'Send a welcome email to new users containing their username and a password reset link.', 'wp-fusion-lite' ),
 				'type'    => 'checkbox',
 				'section' => 'main',
-				'std'	  => 0
-				);
+			);
 
-			$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
+			$settings = wp_fusion()->settings->insert_setting_before( 'access_key', $settings, $new_settings );
 
 		}
+
+		// add a settings field to let the user select a default optin status for new contacts.
+		$new_settings = array(
+			'mailerlite_optin' => array(
+				'title'   => __( 'Default Optin Status', 'wp-fusion-lite' ),
+				'desc'    => __( 'Select the default optin status for new contacts.', 'wp-fusion-lite' ),
+				'tooltip' => __( '"Default" will respect the opt-in settings configured in MailerLite. Set "Active" to mark the subscriber confirmed, or "Unconfirmed" to trigger a double-opt-in email.', 'wp-fusion-lite' ),
+				'type'    => 'radio',
+				'section' => 'main',
+				'choices' => array(
+					''             => __( 'Default', 'wp-fusion-lite' ),
+					'active'       => __( 'Active', 'wp-fusion-lite' ),
+					'unconfirmed'  => __( 'Unconfirmed', 'wp-fusion-lite' ),
+					'unsubscribed' => __( 'Unsubscribed', 'wp-fusion-lite' ),
+				),
+			),
+		);
+
+		$new_settings['mailerlite_optin']['desc'] .= ' ' . sprintf( __( 'For more information, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/crm-specific-docs/mailerlite-double-opt-ins/" target="_blank">', '</a>' );
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
 
 	}
 
+
 	/**
-	 * Creates / destroys / updates webhooks on field changes
+	 * Creates or destroys webhooks when the Import Group setting is changed.
 	 *
-	 * @access public
-	 * @return mixed
+	 * @since 3.10.0
+	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
+	 *
+	 * @param array $input The settings input.
+	 * @return array|WP_Error The settings input or a WP_Error object.
 	 */
+	public function validate_import_trigger( $input ) {
 
-	public function validate_import_trigger( $input, $setting ) {
+		// See if we need to destroy an existing webhook before creating a new one.
+		$rule_id = wpf_get_option( 'mailerlite_add_tag_rule_id' );
 
-		$prev_value = wpf_get_option('mailerlite_add_tag');
+		if ( ! empty( $rule_id ) ) {
+			$this->crm->destroy_webhook( $rule_id );
+			add_filter( 'validate_field_mailerlite_add_tag_rule_id', '__return_false' );
+		}
 
-		// If no changes have been made, quit early
-		if($input == $prev_value) {
+		// Abort if tag has been removed and no new one provided.
+		if ( empty( $input ) ) {
 			return $input;
 		}
 
-		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wpf_get_option('mailerlite_add_tag_rule_id');
+		// Add new rule and save.
+		$rule_ids = $this->crm->register_webhooks( 'add' );
 
-		if( ! empty( $rule_id ) ) {
-			wp_fusion()->crm->destroy_webhook( $rule_id );
-			add_filter( 'validate_field_mailerlite_add_tag_rule_id', function() { return false; } );
+		// If there was an error, make the user select the tag again.
+		if ( is_wp_error( $rule_ids ) || empty( $rule_ids ) ) {
+			return $rule_ids;
 		}
 
-		// Abort if tag has been removed and no new one provided
-		if( empty( $input ) ) {
-			return $input;
-		}
+		// Save it.
 
-		// Add new rule and save
-		$rule_ids = wp_fusion()->crm->register_webhooks( 'add' );
+		add_filter(
+			'wpf_initialize_options',
+			function( $options ) use ( &$rule_ids ) {
 
-		// If there was an error, make the user select the tag again
-		if( is_wp_error( $rule_ids ) || empty( $rule_ids ) ) {
-			return false;
-		}
+				$options['mailerlite_add_tag_rule_id'] = $rule_ids[0];
+				return $options;
 
-		add_filter( 'validate_field_mailerlite_add_tag_rule_id', function() use (&$rule_ids) { return $rule_ids[0]; } );
+			}
+		);
 
 		return $input;
 
 	}
 
 	/**
-	 * Creates / destroys / updates webhooks on field changes
+	 * Creates or destroys webhooks when the Update Trigger setting is changed.
 	 *
-	 * @access public
-	 * @return mixed
+	 * @since 3.10.0
+	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
+	 *
+	 * @param bool $input The settings input.
+	 * @return bool|WP_Error The settings input or a WP_Error object.
 	 */
+	public function validate_update_trigger( $input ) {
 
-	public function validate_update_trigger( $input, $setting ) {
+		// See if we need to destroy existing webhooks before creating a new one.
+		$rule_ids = array_filter(
+			array(
+				wpf_get_option( 'mailerlite_update_trigger_rule_id' ),
+				wpf_get_option( 'mailerlite_update_trigger_group_add_rule_id' ),
+				wpf_get_option( 'mailerlite_update_trigger_group_remove_rule_id' ),
+			)
+		);
 
-		$prev_value = wpf_get_option('mailerlite_update_trigger');
+		if ( ! empty( $rule_ids ) ) {
 
-		// If no changes have been made, quit early
-		if( $input == $prev_value ) {
-			return $input;
-		}
-
-		// See if we need to destroy an existing webhook before creating a new one
-		$rule_ids = array();
-
-		$update_rule = wpf_get_option('mailerlite_update_trigger_rule_id');
-
-		if( ! empty( $update_rule ) ) {
-			$rule_ids[] = $update_rule;
-		}
-
-		$group_add_rule = wpf_get_option('mailerlite_update_trigger_group_add_rule_id');
-
-		if( ! empty( $group_add_rule ) ) {
-			$rule_ids[] = $group_add_rule;
-		}
-
-		$group_remove_rule = wpf_get_option('mailerlite_update_trigger_group_remove_rule_id');
-
-		if( ! empty( $group_remove_rule ) ) {
-			$rule_ids[] = $group_remove_rule;
-		}
-
-		if( ! empty( $rule_ids ) ) {
-
-			foreach( $rule_ids as $rule_id ) {
-				wp_fusion()->crm->destroy_webhook($rule_id);
+			foreach ( $rule_ids as $rule_id ) {
+				$this->crm->destroy_webhook( $rule_id );
 			}
 
-			add_filter( 'validate_field_mailerlite_update_trigger_rule_id', function() { return false; } );
-			add_filter( 'validate_field_mailerlite_update_trigger_group_add_rule_id', function() { return false; } );
-			add_filter( 'validate_field_mailerlite_update_trigger_group_remove_rule_id', function() { return false; } );
+			add_filter( 'validate_field_mailerlite_update_trigger_rule_id', '__return_false' );
+			add_filter( 'validate_field_mailerlite_update_trigger_group_add_rule_id', '__return_false' );
+			add_filter( 'validate_field_mailerlite_update_trigger_group_remove_rule_id', '__return_false' );
 
 		}
 
-		// Abort if tag has been removed and no new one provided
-		if( $input == false ) {
+		// Abort if tag has been removed and no new one provided.
+		if ( empty( $input ) ) {
 			return $input;
 		}
 
-		// Add new rule and save
-		$rule_ids = wp_fusion()->crm->register_webhooks( 'update' );
+		// Add new rule and save.
+		$rule_ids = $this->crm->register_webhooks( 'update' );
 
-		// If there was an error, make the user select the tag again
-		if( is_wp_error( $rule_ids ) || empty( $rule_ids ) ) {
-			return false;
+		// If there was an error, make the user select the tag again.
+		if ( is_wp_error( $rule_ids ) || empty( $rule_ids ) ) {
+			return $rule_ids;
 		}
 
-		$update_rule = $rule_ids[0];
-		$group_add_rule = $rule_ids[1];
-		$group_remove_rule = $rule_ids[2];
+		// Save it.
 
-		add_filter( 'validate_field_mailerlite_update_trigger_rule_id', function() use (&$update_rule) { return $update_rule; } );
-		add_filter( 'validate_field_mailerlite_update_trigger_group_add_rule_id', function() use (&$group_add_rule) { return $group_add_rule; } );
-		add_filter( 'validate_field_mailerlite_update_trigger_group_remove_rule_id', function() use (&$group_remove_rule) { return $group_remove_rule; } );
+		add_filter(
+			'wpf_initialize_options',
+			function( $options ) use ( &$rule_ids ) {
+
+				$options['mailerlite_update_trigger_rule_id'] = $rule_ids[0];
+
+				if ( ! $this->crm->is_v2() ) {
+
+					// The v1 API registers 3 webhooks for update.
+					$options['mailerlite_update_trigger_group_add_rule_id']    = $rule_ids[1];
+					$options['mailerlite_update_trigger_group_remove_rule_id'] = $rule_ids[2];
+
+				}
+
+				return $options;
+
+			}
+		);
 
 		return $input;
 
 	}
 
 	/**
-	 * Delete webhooks when settings are reset
+	 * Delete webhooks when settings are reset.
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.10.0
+	 *
+	 * @param array $options The options.
 	 */
-
 	public function delete_webhooks( $options ) {
 
 		if ( ! empty( $options['mailerlite_add_tag_rule_id'] ) ) {
 
-			// The add webhook
+			// The add webhook.
 			$this->crm->destroy_webhook( $options['mailerlite_add_tag_rule_id'] );
 
 		}
 
 		if ( ! empty( $options['mailerlite_update_trigger_rule_id'] ) ) {
 
-			// The three update webhooks
+			// The three update webhooks.
 
 			$this->crm->destroy_webhook( $options['mailerlite_update_trigger_rule_id'] );
 			$this->crm->destroy_webhook( $options['mailerlite_update_trigger_group_add_rule_id'] );

@@ -16,6 +16,12 @@ $wp_fields['user_email'] = array(
 	'label' => __( 'E-mail Address', 'wp-fusion-lite' ),
 );
 
+$wp_fields['previous_user_email'] = array(
+	'type'   => 'text',
+	'label'  => __( 'Previous E-mail Address', 'wp-fusion-lite' ),
+	'pseudo' => true,
+);
+
 $wp_fields['display_name'] = array(
 	'type'  => 'text',
 	'label' => __( 'Profile Display Name', 'wp-fusion-lite' ),

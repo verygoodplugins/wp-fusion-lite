@@ -32,12 +32,13 @@ class WPF_Admin_Interfaces {
 	 */
 
 	public static $meta_box_defaults = array(
-		'lock_content'   => 0,
+		'lock_content'   => false,
 		'allow_tags'     => array(),
 		'allow_tags_all' => array(),
 		'allow_tags_not' => array(),
 		'apply_tags'     => array(),
 		'remove_tags'    => array(),
+		'check_tags'     => false,
 		'apply_delay'    => 0,
 		'redirect'       => '',
 		'redirect_url'   => '',
@@ -87,7 +88,7 @@ class WPF_Admin_Interfaces {
 			add_action( 'wpf_meta_box_content', array( $this, 'restrict_content_checkbox' ), 10, 2 );
 			add_action( 'wpf_meta_box_content', array( $this, 'required_tags_select' ), 15, 2 );
 			add_action( 'wpf_meta_box_content', array( $this, 'page_redirect_select' ), 20, 2 );
-			add_action( 'wpf_meta_box_content', array( $this, 'external_redirect_input' ), 25, 2 );
+			add_action( 'wpf_meta_box_content', array( $this, 'force_check_tags_checkbox' ), 25, 2 );
 
 			// Widget interfaces.
 			add_action( 'in_widget_form', array( $this, 'widget_form' ), 5, 3 );
@@ -730,7 +731,7 @@ class WPF_Admin_Interfaces {
 
 			$tags = get_user_meta( $user_id, WPF_TAGS_META_KEY, true );
 
-			if ( ! empty( $tags ) ) {
+			if ( ! empty( $tags ) && is_array( $tags ) ) {
 
 				return '<div class="wpf-users-tags">' . esc_html( implode( ', ', array_map( 'wpf_get_tag_label', $tags ) ) ) . '</div>';
 
@@ -810,7 +811,6 @@ class WPF_Admin_Interfaces {
 				</div>
 				<?php $this->required_tags_select( $post, self::$meta_box_defaults ); ?>
 				<?php $this->page_redirect_select( $post, self::$meta_box_defaults ); ?>
-				<?php $this->external_redirect_input( $post, self::$meta_box_defaults ); ?>
 
 				<div style="margin: 20px 10px 10px;">
 					<input type="checkbox" name="wpf-settings[bulk_edit_merge]" value="1"> Merge Changes <br />
@@ -1126,18 +1126,8 @@ class WPF_Admin_Interfaces {
 
 	public function restrict_content_checkbox( $post, $settings ) {
 
-		$post_type_object = get_post_type_object( $post->post_type );
-
-		if ( is_a( $post_type_object, 'WP_Post_Type' ) ) {
-			$label = strtolower( $post_type_object->labels->singular_name );
-		} else {
-			$label = 'content';
-		}
-
-		$post_type_object_label = apply_filters( 'wpf_restrict_content_post_type_object_label', $label, $post );
-
 		echo '<input class="checkbox wpf-restrict-access-checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <label for="wpf-lock-content" class="wpf-restrict-access">';
-		$message = sprintf( __( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), $post_type_object_label );
+		$message = sprintf( __( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), $post->post_type_singular_name );
 		$message = apply_filters( 'wpf_restrict_content_checkbox_label', $message, $post );
 		echo esc_html( $message );
 		echo '</label>';
@@ -1153,13 +1143,13 @@ class WPF_Admin_Interfaces {
 
 	public function required_tags_select( $post, $settings ) {
 
-		if ( $settings['lock_content'] != true ) {
-			$disabled = true;
-		} else {
+		if ( $settings['lock_content'] ) {
 			$disabled = false;
+		} else {
+			$disabled = true;
 		}
 
-		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? '' : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>' . esc_html__( 'Required tags (any)', 'wp-fusion-lite' ) . ':</small>';
+		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] ? '' : ' class="disabled"' ) . ' for="wpf-allow-tags"><small>' . esc_html__( 'Required tags (any)', 'wp-fusion-lite' ) . ':</small>';
 
 		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'The user must be logged in and have at least one of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
 
@@ -1175,7 +1165,7 @@ class WPF_Admin_Interfaces {
 
 		echo '</p>';
 
-		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] != true ? '' : ' class="disabled"' ) . ' for="wpf-allow-tags-all"><small>' . esc_html__( 'Required tags (all)', 'wp-fusion-lite' ) . ':</small>';
+		echo '<p class="wpf-required-tags-select"><label' . ( $settings['lock_content'] ? '' : ' class="disabled"' ) . ' for="wpf-allow-tags-all"><small>' . esc_html__( 'Required tags (all)', 'wp-fusion-lite' ) . ':</small>';
 
 		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'The user must be logged in and have <em>all</em> of the tags specified to access the content.', 'wp-fusion-lite' ) . '"></span></label>';
 
@@ -1222,7 +1212,7 @@ class WPF_Admin_Interfaces {
 
 	public function page_redirect_select( $post, $settings, $disabled = false ) {
 
-		echo '<p class="wpf-page-redirect-select"><label for="wpf-redirect"><small>' . esc_html__( 'Redirect if access is denied:', 'wp-fusion-lite' ) . '</small>';
+		echo '<p class="wpf-page-redirect-select"><label for="wpf-redirect"><small>' . esc_html__( 'Redirect if access is denied (page or URL):', 'wp-fusion-lite' ) . '</small>';
 
 		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'If you do not specify a redirect WP Fusion will try to replace the content area of the post with the restricted content message configured in the WP Fusion settings.', 'wp-fusion-lite' ) . '"></span></label>';
 
@@ -1230,27 +1220,49 @@ class WPF_Admin_Interfaces {
 
 		echo '<option></option>';
 
+		if ( ! empty( $settings['redirect_url'] ) ) {
+			$settings['redirect'] = $settings['redirect_url']; // pre 3.41.0 data storage.
+		}
+
+		if ( is_numeric( $settings['redirect'] ) ) {
+			$title = get_the_title( $settings['redirect'] ); // posts.
+		} else {
+			$title = $settings['redirect']; // URLs.
+		}
+
 		if ( ! empty( $settings['redirect'] ) ) {
-			echo '<option value="' . esc_attr( $settings['redirect'] ) . '" selected>' . esc_html( get_the_title( $settings['redirect'] ) ) . '</option>';
+			echo '<option value="' . esc_attr( $settings['redirect'] ) . '" selected>' . esc_html( $title ) . '</option>';
 		}
 
 		echo '</select></p>';
 
+
 	}
 
-
 	/**
-	 * Shows external redirect text input
+	 * Shows Force Check tags checkbox.
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.41.0
+	 *
+	 * @param  object $post     The post object.
+	 * @param  array  $settings The settings array.
+	 * @return mixed HTML output.
 	 */
+	public function force_check_tags_checkbox( $post, $settings ) {
 
-	public function external_redirect_input( $post, $settings ) {
+		$disabled = true;
 
-		echo '<p class="wpf-external-redirect-input"><label for="wpf-redirect-url"><small>' . esc_html__( 'Or enter a URL below:', 'wp-fusion-lite' ) . '</small></label>';
-		echo '<input type="text" id="wpf-redirect-url" name="wpf-settings[redirect_url]" value="' . esc_attr( $settings['redirect_url'] ) . '" />';
-		echo '</p>';
+		if ( ! empty( $settings['allow_tags'] ) || ! empty( $settings['allow_tags_all'] ) ) {
+			$disabled = false;
+		}
+
+		echo '<input class="checkbox" type="checkbox" ' . disabled( $disabled, true, false ) . ' id="wpf-check-tags" name="wpf-settings[check_tags]" value="1" ' . checked( $settings['check_tags'], 1, false ) . ' />';
+		echo '<label id="wpf-check-tags-label" for="wpf-check-tags" class="' . ( $disabled ? 'disabled' : '' ) . '">';
+
+		esc_html_e( 'Refresh tags if access is denied', 'wp-fusion-lite' );
+		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . sprintf( esc_attr__( 'If the user is logged in and does not have the required tags, this will force-refresh their tags from %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '"></span></label>';
+
+		echo '</label>';
 
 		echo '<hr />';
 
@@ -1266,17 +1278,7 @@ class WPF_Admin_Interfaces {
 
 	public function apply_tags_select( $post, $settings ) {
 
-		$post_type_object = get_post_type_object( $post->post_type );
-
-		if ( is_a( $post_type_object, 'WP_Post_Type' ) ) {
-			$label = strtolower( $post_type_object->labels->singular_name );
-		} else {
-			$label = 'content';
-		}
-
-		$post_type_object_label = apply_filters( 'wpf_restrict_content_post_type_object_label', $label, $post );
-
-		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>' . sprintf( __( 'Apply tags when a user views this %s', 'wp-fusion-lite' ), esc_html( $post_type_object_label ) ) . ':</small></label>';
+		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>' . __( 'Apply tags on view', 'wp-fusion-lite' ) . ':</small></label>';
 
 		$args = array(
 			'setting'   => $settings['apply_tags'],
@@ -1288,7 +1290,7 @@ class WPF_Admin_Interfaces {
 
 		echo '</p>';
 
-		echo '<p class="wpf-apply-tags-select"><label for="wpf-remove-tags"><small>' . sprintf( __( 'Remove tags when a user views this %s', 'wp-fusion-lite' ), esc_html( $post_type_object_label ) ) . ':</small></label>';
+		echo '<p class="wpf-apply-tags-select"><label for="wpf-remove-tags"><small>' . __( 'Remove tags on view', 'wp-fusion-lite' ) . ':</small></label>';
 
 		$args = array(
 			'setting'   => $settings['remove_tags'],
@@ -1559,6 +1561,18 @@ class WPF_Admin_Interfaces {
 			$post = new WP_Post( (object) 0 );
 
 		}
+
+		// Get the object label.
+
+		$post_type_object = get_post_type_object( $post->post_type );
+
+		if ( is_a( $post_type_object, 'WP_Post_Type' ) ) {
+			$label = strtolower( $post_type_object->labels->singular_name );
+		} else {
+			$label = 'content';
+		}
+
+		$post->post_type_singular_name = apply_filters( 'wpf_restrict_content_post_type_object_label', $label, $post );
 
 		// Outputs the different input fields for the WPF meta box.
 		do_action( 'wpf_meta_box_content', $post, $settings );

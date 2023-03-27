@@ -229,7 +229,7 @@ class WPF_Log_Handler {
 		$message  = '<ul>';
 		$message .= '<li><strong>Request URI:</strong> ' . esc_url_raw( $url ) . '</li>';
 
-		if ( ! is_array( $parsed_args['body'] ) ) {
+		if ( ! is_array( $parsed_args['body'] ) && ! empty( $parsed_args['body'] ) ) {
 			$maybe_json = json_decode( $parsed_args['body'] );
 
 			if ( ! is_null( $maybe_json ) ) {
@@ -455,8 +455,9 @@ class WPF_Log_Handler {
 	 * @return void
 	 */
 	public function flush_logs() {
+
 		// Flush logs.
-		if ( ! empty( $_REQUEST['flush-logs'] ) ) { // phpcs:ignore
+		if ( ! empty( $_REQUEST['wpf-flush-logs'] ) ) { // phpcs:ignore
 
 			if ( empty( $_REQUEST['wpf_logs_submit'] ) || ! wp_verify_nonce( $_REQUEST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) { // @codingStandardsIgnoreLine.
 				wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
@@ -521,7 +522,7 @@ class WPF_Log_Handler {
 
 				<input type="submit" id="search-submit" class="button" style="display:none;" value="Search logs"> <?php // This is here so that hitting enter on the pagination won't flush the logs. ?>
 
-				<input style="vertical-align: baseline;" type="submit" name="flush-logs" id="flush-logs" class="button delete" value="<?php esc_attr_e( 'Flush all logs', 'wp-fusion-lite' ); ?>">
+				<input style="vertical-align: baseline;" type="submit" name="wpf-flush-logs" id="flush-logs" class="button delete" value="<?php esc_attr_e( 'Flush all logs', 'wp-fusion-lite' ); ?>">
 
 				<input style="vertical-align: baseline;" type="submit" name="export-logs" id="export-logs" class="button" value="<?php esc_attr_e( 'Export to .csv', 'wp-fusion-lite' ); ?>">
 
@@ -544,7 +545,7 @@ class WPF_Log_Handler {
 
 				<?php $log_table_list->display(); ?>
 
-				<?php submit_button( esc_html__( 'Flush all logs', 'wp-fusion-lite' ), 'delete', 'flush-logs' ); ?>
+				<?php submit_button( esc_html__( 'Flush all logs', 'wp-fusion-lite' ), 'delete', 'wpf-flush-logs' ); ?>
 
 			</form>
 		</div>
@@ -574,7 +575,7 @@ class WPF_Log_Handler {
 		if ( self::is_valid_level( $level ) ) {
 			$severity = self::$level_to_severity[ strtolower( $level ) ];
 		} else {
-			$severity = 0;
+			$severity = 500; // unknown errors are 500.
 		}
 		return $severity;
 	}
@@ -905,7 +906,7 @@ class WPF_Log_Handler {
 
 		// Get the available files that are valid as a log source.
 
-		$slugs = array( 'user-profile', 'api', 'access-control', 'auto-login', 'ajax', 'shortcodes' );
+		$slugs = array( 'user-profile', 'api', 'access-control', 'auto-login', 'ajax', 'class-shortcodes' );
 
 		foreach ( wp_fusion()->get_integrations() as $slug => $integration ) {
 			$slugs[] = $slug;
@@ -931,7 +932,7 @@ class WPF_Log_Handler {
 
 		$full_trace = array_reverse( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 15 ) );
 
-		foreach ( $full_trace as $i => $trace ) {
+		foreach ( $full_trace as $trace ) {
 
 			if ( isset( $trace['file'] ) ) {
 

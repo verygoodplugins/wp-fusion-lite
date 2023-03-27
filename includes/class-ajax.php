@@ -48,7 +48,7 @@ class WPF_AJAX {
 
 			if ( false === $tag_id ) {
 
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Unable to determine tag ID from tag with name <strong>' . $tag . '</strong>. Tag will not be applied.' );
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Unable to determine tag ID from tag with name <strong>' . $tag . '</strong>. Tag will not be applied. Please make sure this tag exists in ' . wp_fusion()->crm->name . '. If you\'ve just added a new tag, click Resync Available Tags in the WP Fusion settings.' );
 				continue;
 
 			}

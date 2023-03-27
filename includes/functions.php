@@ -499,6 +499,8 @@ function wpf_clean_tags( $tags ) {
 
 	$tags = array_filter( $tags ); // Remove any empties.
 
+	// $tags = array_unique( $tags ); // Remove any duplicates. @TODO add this once Norm is ready.
+
 	$tags = array_map( 'sanitize_text_field', $tags ); // Tags should be treated as an array of strings.
 
 	$tags = array_map( 'htmlspecialchars_decode', $tags ); // sanitize_text_field removes HTML special characters so we'll add them back.

@@ -29,7 +29,7 @@ class WPF_FluentCRM {
 		$this->slug      = 'fluentcrm';
 		$this->name      = 'FluentCRM';
 		$this->menu_name = 'FluentCRM (This Site)';
-		$this->supports  = array('add_tags_api');
+		$this->supports  = array( 'add_tags_api' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -144,7 +144,7 @@ class WPF_FluentCRM {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'datepicker' == $field_type || 'date' == $field_type && ! empty( $value ) ) {
+		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields
 			$date = date( 'Y-m-d', $value );
@@ -366,7 +366,7 @@ class WPF_FluentCRM {
 	public function add_contact( $data ) {
 
 		$custom_fields = $this->get_custom_fields();
-		$custom_data   = array_filter( \FluentCrm\Includes\Helpers\Arr::only( $data, array_keys( $custom_fields ) ) );
+		$custom_data   = array_filter( \FluentCrm\Framework\Support\Arr::only( $data, array_keys( $custom_fields ) ) );
 
 		if ( $custom_data ) {
 			$data['custom_values'] = $custom_data;
@@ -376,6 +376,14 @@ class WPF_FluentCRM {
 
 		if ( ! empty( $lists ) ) {
 			$data['lists'] = $lists;
+		}
+
+		if ( empty( $data['status'] ) ) {
+			$data['status'] = wpf_get_option( 'default_status', 'subscribed' );
+		}
+
+		if ( 'susbcribed' === $data['status'] ) {
+			$data['status'] = 'subscribed'; // fixes typo between v3.40.40 and 3.40.57.
 		}
 
 		$model = FluentCrmApi( 'contacts' )->getInstance();

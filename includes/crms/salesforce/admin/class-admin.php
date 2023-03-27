@@ -34,47 +34,6 @@ class WPF_Salesforce_Admin {
 
 	}
 
-	/**
-	 * Gets the OAuth URL for the initial connection.
-	 *
-	 * If we're using the WP Fusion app, send the request through wpfusion.com,
-	 * otherwise allow a custom app.
-	 *
-	 * @since  3.38.20
-	 *
-	 * @return string The URL.
-	 */
-	public function get_oauth_url() {
-
-		$url       = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
-		$admin_url = str_replace( 'http://', 'https://', get_admin_url() ); // must be HTTPS for the redirect to work.
-
-		$args = array(
-			'action'   => 'wpf_get_salesforce_token',
-			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=salesforce' ),
-		);
-
-		if ( 'https://login.salesforce.com/services/oauth2/token' === $url ) {
-
-			// Standard URL.
-			return apply_filters( 'wpf_salesforce_init_auth_url', add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
-
-		} elseif ( 'https://test.salesforce.com/services/oauth2/token' === $url ) {
-
-			$args['sandbox'] = true;
-
-			// Sandbox URLs.
-			return apply_filters( 'wpf_salesforce_init_auth_url', add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
-
-		} else {
-
-			// Custom URL, we don't need to send it through wpfusion.com.
-			return $url;
-
-		}
-
-	}
-
 
 	/**
 	 * Hooks to run when this CRM is selected as active
@@ -85,30 +44,11 @@ class WPF_Salesforce_Admin {
 
 	public function init() {
 
-		add_action( 'wpf_settings_notices', array( $this, 'oauth_warning' ) );
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_action( 'validate_field_sf_tag_type', array( $this, 'validate_tag_type' ), 10, 3 );
 		add_filter( 'wpf_get_setting_crm_tag_type', array( $this, 'get_setting_crm_tag_type' ) );
 
-	}
-
-	/**
-	 * Check if we need to upgrade to the new OAuth.
-	 *
-	 * @since 3.38.17
-	 */
-	public function oauth_warning() {
-
-		if ( empty( wpf_get_option( 'sf_refresh_token' ) ) ) {
-
-			echo '<div class="notice notice-warning wpf-notice"><p>';
-
-			echo wp_kses_post( sprintf( __( '<strong>Heads up:</strong> WP Fusion\'s Salesforce integration has been updated to use OAuth authentication. Please %1$sclick here to re-authorize the connection%2$s before the end of 2021 to avoid service interruption.', 'wp-fusion-lite' ), '<a href="' . $this->get_oauth_url() . '">', '</a>' ) );
-
-			echo '</p></div>';
-
-		}
 	}
 
 
@@ -134,7 +74,7 @@ class WPF_Salesforce_Admin {
 
 			$new_settings['salesforce_header']['desc']  = '<table class="form-table"><tr>';
 			$new_settings['salesforce_header']['desc'] .= '<th scope="row"><label>' . esc_html__( 'Authorize', 'wp-fusion-lite' ) . '</label></th>';
-			$new_settings['salesforce_header']['desc'] .= '<td><a id="dynamics-auth-btn" class="button button-primary" href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Authorize with %s', 'wp-fusion-lite' ), $this->name ) . '</a><br />';
+			$new_settings['salesforce_header']['desc'] .= '<td><a id="dynamics-auth-btn" class="button button-primary" href="' . esc_url( $this->crm->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Authorize with %s', 'wp-fusion-lite' ), $this->name ) . '</a><br />';
 			$new_settings['salesforce_header']['desc'] .= '<span class="description">' . sprintf( esc_html__( 'You\'ll be taken to %s to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ), $this->name ) . '</td>';
 			$new_settings['salesforce_header']['desc'] .= '</tr></table>';
 
@@ -170,7 +110,7 @@ class WPF_Salesforce_Admin {
 
 				$new_settings['sf_tag_picklist'] = array(
 					'title'    => __( 'Tags Picklist' ),
-					'disabled' => 'Picklist' === $options['sf_tag_type'] ? false : true,
+					'disabled' => isset( $options['sf_tag_type'] ) && 'Picklist' === $options['sf_tag_type'] ? false : true,
 					'type'     => 'crm_field',
 					'section'  => 'setup',
 					'desc'     => __( 'Select a picklist type field to be used for segmentation with WP Fusion. For more information, see <a href="https://wpfusion.com/documentation/crm-specific-docs/salesforce-tags/" target="_blank">Tags with Salesforce</a>.', 'wp-fusion-lite' ),
@@ -190,7 +130,7 @@ class WPF_Salesforce_Admin {
 				'section'     => 'setup',
 				'class'       => 'api_key',
 				'post_fields' => array( 'sf_access_token', 'sf_refresh_token', 'sf_instance_url' ),
-				'desc'        => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
+				'desc'        => '<a href="' . esc_url( $this->crm->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
 			);
 
 			$new_settings['sf_refresh_token']['desc'] .= __( 'To avoid having to repeatedly re-authorize, make sure the WP Fusion app is <a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/#complete-installation" target="_blank">completely installed</a>.', 'wp-fusion-lite' );
@@ -222,24 +162,28 @@ class WPF_Salesforce_Admin {
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
-		$new_settings = array();
+		if ( isset( $options['sf_tag_type'] ) && 'Picklist' !== $options['sf_tag_type'] ) {
 
-		$text = __(
-			'<strong>Note:</strong> WP Fusion\'s import tool is based around Topics (or Tags) in your CRM.
-			However with Salesforce it can be very difficult to bulk-assign topics to contact records.<br /><br />
-			We recommend exporting a .csv of your contacts out of Salesforce, and using the 
-			<a href="https://wordpress.org/plugins/wp-all-import/" target="_blank">WP All Import plugin</a> to import 
-			your users from the .csv. As the users are imported WP Fusion will automatically link them up with
-			their corresponding Salesforce contact records, and they will be enabled for sync going forward.'
-		);
+			$new_settings = array();
 
-		$new_settings['sf_import_p'] = array(
-			'desc'    => '<div class="alert alert-info">' . $text . '</div>',
-			'type'    => 'paragraph',
-			'section' => 'import',
-		);
+			$text = __(
+				'<strong>Note:</strong> WP Fusion\'s import tool is based around Topics (or Tags) in your CRM.
+				However with Salesforce it can be very difficult to bulk-assign topics to contact records.<br /><br />
+				We recommend exporting a .csv of your contacts out of Salesforce, and using the 
+				<a href="https://wordpress.org/plugins/wp-all-import/" target="_blank">WP All Import plugin</a> to import 
+				your users from the .csv. As the users are imported WP Fusion will automatically link them up with
+				their corresponding Salesforce contact records, and they will be enabled for sync going forward.'
+			);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'import_users_p', $settings, $new_settings );
+			$new_settings['sf_import_p'] = array(
+				'desc'    => '<div class="alert alert-info">' . $text . '</div>',
+				'type'    => 'paragraph',
+				'section' => 'import',
+			);
+
+			$settings = wp_fusion()->settings->insert_setting_after( 'import_users_p', $settings, $new_settings );
+
+		}
 
 		return $settings;
 
@@ -259,19 +203,22 @@ class WPF_Salesforce_Admin {
 
 		if ( ! empty( $options->options['sf_tag_type'] ) && $input !== $options->options['sf_tag_type'] ) {
 
-			if ( 'Picklist' === $input && empty( $options->post_data['sf_tag_picklist']['crm_field'] ) ) {
+			if ( 'Picklist' === $input && empty( $options->post_data['sf_tag_picklist'] ) ) {
 				return new WP_Error( 'error', 'To use a picklist for tags you must select a picklist from the Tags Picklist dropdown on the Setup tab.' );
 			}
 
 			// Set these temporarily so sync_tags() works.
 			wp_fusion()->settings->options['sf_tag_type']     = $input;
-			wp_fusion()->settings->options['sf_tag_picklist'] = $options->post_data['sf_tag_picklist']['crm_field'];
+			wp_fusion()->settings->options['sf_tag_picklist'] = $options->post_data['sf_tag_picklist'];
 
 			$result = $this->crm->sync_tags();
 
 			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
+
+			// Resync tags for all users.
+			wp_fusion()->batch->batch_init( 'users_tags_sync' );
 
 		}
 
@@ -351,10 +298,12 @@ class WPF_Salesforce_Admin {
 			}
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
 			if ( isset( $body->error ) ) {
 				return false;
 			}
 
+			wp_fusion()->settings->set( 'sf_id', $body->id );
 			wp_fusion()->settings->set( 'sf_access_token', $body->access_token );
 			wp_fusion()->settings->set( 'sf_refresh_token', $body->refresh_token );
 			wp_fusion()->settings->set( 'sf_instance_url', $body->instance_url );

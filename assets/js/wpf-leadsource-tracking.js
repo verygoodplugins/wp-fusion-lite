@@ -28,9 +28,13 @@ jQuery(document).ready(function($){
 		var value = getParameterByName( param );
 
 		if ( value ) {
-            CookiesWPF.set( 'wpf_leadsource[' + param + ']', value, { expires: 90 } );
+            cookie[ param ] = value;
 		}
 
 	} );
+
+    if ( Object.keys( cookie ).length > 0 ) {
+        CookiesWPF.set( 'wpf_leadsource', cookie );
+    }
 
 } );

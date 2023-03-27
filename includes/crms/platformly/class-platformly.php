@@ -107,46 +107,6 @@ class WPF_Platformly {
 
 	}
 
-	/**
-	 * Platform.ly requires an email to be submitted when updating a contact
-	 *
-	 * @access private
-	 * @return string Email
-	 */
-
-	private function get_email_from_cid( $contact_id ) {
-
-		$args = array(
-			'meta_key'   => 'platformly_contact_id',
-			'meta_value' => $contact_id,
-			'fields'     => array( 'user_email' )
-		);
-
-		$users = get_users( $args );
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			// Try and get it via API call
-
-			$response = $this->request( 'fetch_contact', array( 'contact_id' => $contact_id ) );
-
-			if( is_wp_error( $response ) ) {
-				return false;
-			}
-
-			if ( ! isset( $response->email ) ) {
-				return false;
-			}
-
-			return $response->email;
-
-		}
-
-	}
 
 	/**
 	 * Perform a Platform.ly request
@@ -531,7 +491,7 @@ class WPF_Platformly {
 		$data['project_id'] = $project;
 
 		if( ! isset( $data['email'] ) ) {
-			$data['email'] = $this->get_email_from_cid( $contact_id );
+			$data['email'] = wp_fusion()->crm->get_email_from_cid( $contact_id );
 		}
 
 		$response = $this->request( 'update_contact', $data );
@@ -541,7 +501,7 @@ class WPF_Platformly {
 			if( $response->get_error_message() == 'The action was not processed.' ) {
 
 				// Email address changes
-				$email = $this->get_email_from_cid( $contact_id );
+				$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 				if( $email == false ) {
 

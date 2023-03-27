@@ -52,7 +52,7 @@ class WPF_Drip {
 
 		$this->slug     = 'drip';
 		$this->name     = 'Drip';
-		$this->supports = array( 'add_tags', 'add_fields', 'events' );
+		$this->supports = array( 'add_tags', 'add_fields', 'events', 'events_multi_key' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -73,9 +73,6 @@ class WPF_Drip {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
-
-		// Add tracking code to footer
-		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
 		// HTTP response filter for API calls outside the SDK
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
@@ -237,15 +234,15 @@ class WPF_Drip {
 	}
 
 	/**
-	 * Output tracking code
+	 * Output tracking code.
 	 *
-	 * @access public
-	 * @return mixed
+	 * @deprecated 3.40.40
+	 *
+	 * @return mixed HTML and JavaScript output.
 	 */
-
 	public function tracking_code_output() {
 
-		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
+		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
 
@@ -310,76 +307,6 @@ class WPF_Drip {
 
 		echo '</script>';
 		echo '<!-- end Drip -->';
-
-	}
-
-	/**
-	 * Drip requires an email to be submitted when contacts are updated
-	 *
-	 * @access public
-	 * @return string Email
-	 */
-
-	public function get_email_from_cid( $contact_id ) {
-
-		if ( empty( $contact_id ) ) {
-			return false;
-		}
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'drip_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} elseif ( class_exists( 'WooCommerce' ) ) {
-
-			$args = array(
-				'numberposts' => 1,
-				'post_type'   => 'shop_order',
-				'post_status' => array( 'wc-processing', 'wc-completed' ),
-				'fields'      => 'ids',
-				'meta_key'    => 'drip_contact_id',
-				'meta_value'  => $contact_id,
-			);
-
-			$orders = get_posts( $args );
-
-			if ( ! empty( $orders ) ) {
-
-				$order = wc_get_order( $orders[0] );
-
-				return $order->get_billing_email();
-
-			}
-		}
-
-		$this->connect();
-
-		// Try and get CID from Drip
-
-		$result = $this->app->fetch_subscriber(
-			array(
-				'account_id'    => $this->account_id,
-				'subscriber_id' => $contact_id,
-			)
-		);
-
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		if ( ! empty( $result ) && ! empty( $result['email'] ) ) {
-			return $result['email'];
-		} else {
-			return false;
-		}
 
 	}
 
@@ -661,7 +588,7 @@ class WPF_Drip {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$email = $this->get_email_from_cid( $contact_id );
+		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		if ( is_wp_error( $email ) ) {
 			return $email;
@@ -700,7 +627,7 @@ class WPF_Drip {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		$email = $this->get_email_from_cid( $contact_id );
+		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
 		if ( is_wp_error( $email ) ) {
 			return $email;
@@ -1018,6 +945,10 @@ class WPF_Drip {
 			'email'      => $email_address,
 			'properties' => array( 'data' => $event_data ),
 		);
+
+		if ( is_array( $event_data ) ) {
+			$data['properties'] = $event_data; // multi-key data.
+		}
 
 		$result = $this->app->record_event( $data );
 

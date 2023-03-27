@@ -18,7 +18,7 @@ class WPF_HighLevel {
 	 * @var array $supports The supported features.
 	 */
 
-	public $supports = array( 'add_tags' );
+	public $supports = array( 'add_tags', 'web_id' );
 
 	/**
 	 * API parameters.
@@ -36,7 +36,7 @@ class WPF_HighLevel {
 	 * @var string
 	 */
 
-	public $edit_url = false;
+	public $edit_url = '%s';
 
 	/**
 	 * Get things started
@@ -71,45 +71,6 @@ class WPF_HighLevel {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-	}
-
-	/**
-	 * Get user edit url
-	 *
-	 * @param string $email_address
-	 * @param integer $user_id
-	 * @return string
-	 */
-	public function get_user_edit_url( $email_address, $user_id ) {
-		if ( empty( $email_address ) ) {
-			return;
-		}
-
-		$edit_url = get_user_meta( $user_id, 'wpf_highlevel_edit_url', true );
-		if ( ! empty( $edit_url ) ) {
-			return $edit_url;
-		}
-
-		$request  = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
-		$response = wp_safe_remote_get( $request, $this->get_params() );
-
-		if ( is_wp_error( $response ) && 'email: The email address is invalid.' == $response->get_error_message() ) {
-
-			// Contact not found
-			return false;
-
-		} elseif ( is_wp_error( $response ) ) {
-
-			// Generic error
-			return false;
-
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-		$contact  = $response->contacts[0];
-		$edit_url = 'https://app.gohighlevel.com/location/' . $contact->locationId . '/customers/detail/' . $contact->id . '';
-		update_user_meta( $user_id, 'wpf_highlevel_edit_url', $edit_url );
-		return $edit_url;
 	}
 
 	/**
@@ -150,65 +111,12 @@ class WPF_HighLevel {
 	 */
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'date' == $field_type || 'datepicker' == $field_type ) {
+		if ( 'date' === $field_type ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'Y-m-d', $value );
+			// Adjust formatting for date fields.
+			$date = gmdate( 'Y-m-d', $value );
 
 			return $date;
-
-		} elseif ( 'checkbox' == $field_type && $value == null ) {
-
-			// Sendinblue only treats false as a No for checkboxes
-			return false;
-
-		} elseif ( 'checkbox' == $field_type && ! empty( $value ) ) {
-
-			// Sendinblue only treats true as a Yes for checkboxes
-			return true;
-
-		} elseif ( 'tel' == $field_type ) {
-
-			// Format phone. Sendinblue requires a country code and + for phone numbers. With or without dashes is fine
-
-			if ( strpos( $value, '+' ) !== 0 ) {
-
-				// Default to US if no country code is provided
-
-				if ( strpos( $value, '1' ) === 0 ) {
-
-					$value = '+' . $value;
-
-				} else {
-
-					$value = '+1' . $value;
-
-				}
-			}
-
-			return $value;
-
-		} elseif ( ! is_array( $value ) && is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
-
-			$length = strlen( trim( str_replace( array( '-', ' ' ), '', $value ) ) );
-
-			// Maybe another phone number
-
-			if ( 10 == $length ) {
-
-				// Let's assume this is a US phone number and needs a +1
-
-				$value = '+1' . $value;
-
-			} elseif ( $length >= 11 && $length <= 13 && strpos( $value, '+' ) === false ) {
-
-				// Let's assume this is a phone number and needs a plus??
-
-				$value = '+' . $value;
-
-			}
-
-			return $value;
 
 		} else {
 
@@ -275,38 +183,6 @@ class WPF_HighLevel {
 
 	}
 
-
-	/**
-	 * Get user email by contact id.
-	 *
-	 * @since 3.36.0
-	 * @access private
-	 *
-	 * @param string $contact_id HighLevel user id.
-	 * @return string User email.
-	 */
-	private function get_email_from_cid( $contact_id ) {
-
-		$users = get_users(
-			array(
-				'meta_key'   => 'highlevel_contact_id',
-				'meta_value' => $contact_id,
-				'fields'     => array( 'user_email' ),
-			)
-		);
-
-		if ( ! empty( $users ) ) {
-
-			return $users[0]->user_email;
-
-		} else {
-
-			$user = $this->load_contact( $contact_id );
-
-			return $user['user_email'];
-
-		}
-	}
 
 	/**
 	 * Gets params for API calls
@@ -482,17 +358,24 @@ class WPF_HighLevel {
 
 		if ( is_wp_error( $response ) && 'email: The email address is invalid.' == $response->get_error_message() ) {
 
-			// Contact not found
+			// Contact not found.
 			return false;
 
 		} elseif ( is_wp_error( $response ) ) {
 
-			// Generic error
+			// Generic error.
 			return $response;
 
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$user = get_user_by( 'email', $email_address );
+
+		if ( $user ) {
+			$edit_url = 'https://app.gohighlevel.com/location/' . $response->contacts[0]->locationId . '/customers/detail/' . $response->contacts[0]->id;
+			update_user_meta( $user->ID, 'highlevel_web_id', $edit_url );
+		}
 
 		return $response->contacts[0]->id;
 

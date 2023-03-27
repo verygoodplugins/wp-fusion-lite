@@ -28,7 +28,7 @@ class WPF_Bento {
 	 * @since 3.38.4
 	 */
 
-	public $supports = array( 'add_tags', 'add_fields', 'events', 'web_id' );
+	public $supports = array( 'add_tags', 'add_fields', 'events', 'web_id', 'events_multi_key' );
 
 
 	/**
@@ -82,7 +82,12 @@ class WPF_Bento {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
-		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_script' ) );
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ), 100 );
+
+		// Guest site tracking.
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 
 		// Slow down the batch processses to get around the 10 requests per 10 second limit.
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
@@ -125,6 +130,21 @@ class WPF_Bento {
 	}
 
 	/**
+	 * Load tracking script.
+	 *
+	 * @since 3.40.58
+	 */
+	public function enqueue_tracking_script() {
+
+		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
+			return;
+		}
+
+		wp_enqueue_script( 'bento', 'https://app.bentonow.com/' . wpf_get_option( 'site_uuid' ) . '.js', array(), WP_FUSION_VERSION, true );
+
+	}
+
+	/**
 	 * Output tracking code.
 	 *
 	 * @return mixed JavaScript tracking code.
@@ -137,26 +157,42 @@ class WPF_Bento {
 			return;
 		}
 
+		$email = wpf_get_current_user_email();
+
 		echo '<!-- Bento (via WP Fusion) -->';
-		echo '<script src="' . esc_url( 'https://app.bentonow.com/' . wpf_get_option( 'site_uuid' ) . '.js' ) . '"></script>';
 		echo "
 		<script>
 		if (typeof(bento$) != 'undefined') {
 		  bento$(function() {";
 
-		if ( wpf_is_user_logged_in() ) {
-
-			$userdata = wpf_get_current_user();
-			echo "bento.identify('" . esc_js( strtolower( $userdata->user_email ) ) . "');";
+		if ( $email ) {
+			echo "bento.identify('" . esc_js( strtolower( $email ) ) . "');";
 		}
 
 		echo '
-			bento.autofill();
 			bento.view();
 		  });
 		}
 		</script>';
 		echo '<!-- end Bento -->';
+
+	}
+
+	/**
+	 * Set a cookie to fix tracking for guest checkouts / form submissions.
+	 *
+	 * @since 3.40.55
+	 *
+	 * @param string $contact_id The subscriber ID.
+	 * @param string $email      The email address.
+	 */
+	public function set_tracking_cookie_guest( $contact_id, $email ) {
+
+		if ( wpf_is_user_logged_in() || headers_sent() ) {
+			return;
+		}
+
+		setcookie( 'wpf_guest', $email, time() + HOUR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
 
 	}
 
@@ -495,12 +531,8 @@ class WPF_Bento {
 
 		$tags = array();
 
-		if ( empty( $response ) ) {
-			return false;
-		}
-
-		if ( empty( $response->data->attributes->cached_tag_ids ) ) {
-			return false;
+		if ( empty( $response ) || empty( $response->data->attributes->cached_tag_ids ) ) {
+			return $tags;
 		}
 
 		$tag_ids = wpf_get_option( 'bento_tag_ids', array() );
@@ -616,8 +648,10 @@ class WPF_Bento {
 		// Bento can't create a subscriber with custom fields.
 
 		$contact_data = array(
-			'site_uuid' => wpf_get_option( 'site_uuid' ),
-			'email'     => strtolower( $data['email'] ),
+			'site_uuid'  => wpf_get_option( 'site_uuid' ),
+			'subscriber' => array(
+				'email' => strtolower( $data['email'] )
+			),
 		);
 
 		$request        = $this->url . '/fetch/subscribers/';
@@ -642,6 +676,13 @@ class WPF_Bento {
 			$this->update_contact( $contact_id, $data, false );
 		}
 
+		$user_id = wpf_get_user_id( $contact_id );
+
+		if ( $user_id ) {
+			// Save the web ID so we can link to it later.
+			update_user_meta( $user->ID, 'bento_web_id', $body->data->attributes->navigation_url );
+		}
+
 		return $contact_id;
 
 	}
@@ -657,17 +698,22 @@ class WPF_Bento {
 	 */
 	public function update_contact( $contact_id, $data ) {
 
-		if ( isset( $data['email'] ) ) {
-			$data['email'] = strtolower( $data['email'] );
-		}
-
 		$body = array(
 			'site_uuid' => wpf_get_option( 'site_uuid' ),
 			'command'   => array(),
 		);
 
-		if ( isset( $data['first_name'] ) && isset( $data['last_name'] ) ) {
-			$data['name'] = $data['first_name'] . ' ' . $data['last_name'];
+		if ( isset( $data['email'] ) ) {
+
+			$body['command'][] = array(
+				'command' => 'change_email',
+				'uuid'    => $contact_id,
+				'query'   => strtolower( $data['email'] ),
+			);
+
+			// Don't send it with the fields or else it will show up as a custom field.
+			unset( $data['email'] );
+
 		}
 
 		foreach ( $data as $field => $value ) {
@@ -774,10 +820,10 @@ class WPF_Bento {
 			$email_address = $user->user_email;
 		}
 
-		if ( is_object( json_decode( $event_data ) ) ) {
-			$details = json_decode( $event_data );
-		} elseif ( is_array( $event_data ) ) {
+		if ( is_array( $event_data ) ) {
 			$details = (object) $event_data;
+		} elseif ( is_object( json_decode( $event_data ) ) ) {
+			$details = json_decode( $event_data ); // json string.
 		} else {
 			$details = (object) array(
 				'name' => $event,
