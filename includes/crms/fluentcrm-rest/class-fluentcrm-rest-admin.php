@@ -260,7 +260,7 @@ class WPF_FluentCRM_REST_Admin {
 				'std'         => 'subscribed',
 				'section'     => 'main',
 				'choices'     => array(
-					'susbcribed' => 'Subscribed',
+					'subscribed' => 'Subscribed',
 					'pending'    => 'Pending',
 				),
 			),

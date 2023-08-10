@@ -265,7 +265,7 @@ class WPF_Pipedrive {
 			),
 			'user_email'   => array(
 				'crm_label' => 'Email',
-				'crm_field' => 'email',
+				'crm_field' => 'email+work',
 			),
 			'phone_number' => array(
 				'crm_label' => 'Phone',
@@ -765,7 +765,7 @@ class WPF_Pipedrive {
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		// First implode the compoubnt fields.
+		// First implode the compound fields.
 		foreach ( $response['data'] as $field => $value ) {
 
 			if ( is_array( $value ) && isset( $value[0]['label'] ) ) {
@@ -797,7 +797,42 @@ class WPF_Pipedrive {
 	 * @return array Contact IDs returned.
 	 */
 	public function load_contacts( $tag ) {
-		return array();
+
+		$tag_field = wpf_get_option( 'pipedrive_tag' );
+
+		$continue = true;
+		$start    = 0;
+
+		while ( $continue ) {
+
+			$request  = $this->url . '/itemSearch/field/?field_key=' . $tag_field . '&field_type=personField&term=' . $tag . '&return_item_ids=1&start=' . $start;
+			$response = wp_safe_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $body->data as $contact ) {
+
+				// The search will return partial matches on the tag ID so this ensures that
+				// the contact really has the tag.
+				$tags = explode( ',', $contact->{ $tag_field } );
+
+				if ( in_array( $tag, $tags ) ) {
+					$contact_ids[] = $contact->id;
+				}
+			}
+
+			if ( $body->additional_data->pagination->more_items_in_collection ) {
+				$start += $body->additional_data->pagination->limit;
+			} else {
+				$continue = false;
+			}
+		}
+
+		return $contact_ids;
 	}
 
 }

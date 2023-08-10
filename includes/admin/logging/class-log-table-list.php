@@ -196,9 +196,15 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		// Add links to edit contact in CRM, if supported.
 
-		if ( false !== strpos( $output, ' contact #' ) ) {
+		if ( isset( wp_fusion()->crm->object_type ) ) {
+			$type = strtolower( rtrim( wp_fusion()->crm->object_type, 's' ) ); // make singular (for D365).
+		} else {
+			$type = 'contact';
+		}
 
-			preg_match( '/(?<=contact #)\w*/', $output, $contact_id );
+		if ( false !== strpos( $output, ' ' . $type . ' #' ) ) {
+
+			preg_match( '/(?<=' . $type . ' #)[\w-]*/', $output, $contact_id );
 
 			if ( ! empty( $contact_id ) ) {
 
@@ -207,7 +213,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 				$url = wp_fusion()->crm->get_contact_edit_url( $contact_id );
 
 				if ( false !== $url ) {
-					$output = preg_replace( '/contact\ #\w*/', 'contact <a href="' . $url . '" target="_blank">#' . $contact_id . '<span class="dashicons dashicons-external"></span></a>', $output );
+					$output = preg_replace( '/' . $type . '\ #[\w-]*/', $type . ' <a href="' . $url . '" target="_blank">#' . $contact_id . '<span class="dashicons dashicons-external"></span></a>', $output );
 				}
 			}
 		}

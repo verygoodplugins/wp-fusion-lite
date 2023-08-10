@@ -62,19 +62,23 @@ class WPF_ConvertKit_Admin {
 
 		$new_settings['convertkit_header'] = array(
 			'title'   => __( 'ConvertKit Configuration', 'wp-fusion-lite' ),
-			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
+		);
+
+		$new_settings['ck_key'] = array(
+			'title'   => __( 'API Key', 'wp-fusion-lite' ),
+			'section' => 'setup',
+			'type'    => 'text',
 		);
 
 		$new_settings['ck_secret'] = array(
 			'title'       => __( 'API Secret', 'wp-fusion-lite' ),
-			'desc'        => __( 'Enter the API Secret for your ConvertKit account (you can find your API Secret in the ConvertKit Account page).', 'wp-fusion-lite' ),
-			'std'         => '',
+			'desc'        => __( 'Enter the API Key and API Secret for your ConvertKit account (you can find your API keys in the <a href="https://app.convertkit.com/account_settings/advanced_settings" target="_blank">ConvertKit Account</a> page).', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'ck_secret' )
+			'post_fields' => array( 'ck_secret' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
@@ -93,7 +97,6 @@ class WPF_ConvertKit_Admin {
 	public function register_settings( $settings, $options ) {
 
 		$settings['access_key_desc'] = array(
-			'std'     => 0,
 			'type'    => 'paragraph',
 			'section' => 'main',
 			'desc'    => __( 'Configuring the fields below allows ConvertKit to add new users to your site and update existing users when specific tags are applied from within ConvertKit. Read our <a href="https://wpfusion.com/documentation/webhooks/convertkit-webhooks/" target="_blank">documentation</a> for more information.', 'wp-fusion-lite' ),
@@ -102,20 +105,20 @@ class WPF_ConvertKit_Admin {
 		$new_settings = array();
 
 		$new_settings['ck_update_tag'] = array(
-			'title' 	=> __( 'Update Trigger', 'wp-fusion-lite' ),
-			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion-lite' ),
-			'type'		=> 'assign_tags',
-			'section'	=> 'main',
+			'title' 	  => __( 'Update Trigger', 'wp-fusion-lite' ),
+			'desc'		  => __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion-lite' ),
+			'type'		  => 'assign_tags',
+			'section'	  => 'main',
 			'placeholder' => 'Select a tag',
-			'action'	=> 'update',
-			'limit'		=> 1
-			);
+			'action'	  => 'update',
+			'limit'		  => 1
+		);
 
 		$new_settings['ck_update_tag_rule_id'] = array(
 			'std'		=> false,
 			'type'		=> 'hidden',
 			'section'	=> 'main'
-			);
+		);
 
 		$new_settings['ck_add_tag'] = array(
 			'title' 	=> __( 'Import Trigger', 'wp-fusion-lite' ),
@@ -125,13 +128,13 @@ class WPF_ConvertKit_Admin {
 			'placeholder' => 'Select a tag',
 			'action'	=> 'add',
 			'limit'		=> 1
-			);
+		);
 
 		$new_settings['ck_add_tag_rule_id'] = array(
 			'std'		=> false,
 			'type'		=> 'hidden',
 			'section'	=> 'main'
-			);
+		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
 

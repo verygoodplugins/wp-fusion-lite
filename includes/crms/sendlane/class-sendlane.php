@@ -8,30 +8,11 @@ class WPF_Sendlane {
 
 	public $params;
 
-
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
-
-	/**
-	 * API Key
-	 */
-
-	public $api_key;
-
-	/**
-	 * API Hash
-	 */
-
-	public $api_hash;
-
-	/**
-	 * API Domain
-	 */
-
-	public $api_domain;
+	public $supports = array();
 
 	/**
 	 * Default List
@@ -51,8 +32,7 @@ class WPF_Sendlane {
 	/**
 	 * Get things started
 	 *
-	 * @access  public
-	 * @since   2.0
+	 * @since   3.24.0
 	 */
 
 	public function __construct() {
@@ -63,7 +43,7 @@ class WPF_Sendlane {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once dirname( __FILE__ ) . '/class-sendlane-admin.php';
 			new WPF_Sendlane_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -72,7 +52,6 @@ class WPF_Sendlane {
 	/**
 	 * Sets up hooks specific to this CRM
 	 *
-	 * @access public
 	 * @return void
 	 */
 
@@ -81,18 +60,19 @@ class WPF_Sendlane {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
+		$this->list = wpf_get_option( 'default_list' );
+
 	}
 
 	/**
 	 * Formats POST data received from HTTP Posts into standard format
 	 *
-	 * @access public
 	 * @return array
 	 */
 
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
@@ -106,24 +86,45 @@ class WPF_Sendlane {
 
 
 	/**
-	 * Check HTTP Response for errors and return WP_Error if found
+	 * Check HTTP Response for errors and return WP_Error if found.
+	 * 
+	 * @since 3.24.0
+	 * 
+	 * @param  HTTP_Response $response HTTP Response.
+	 * @param  array         $args     HTTP Request Args.
+	 * @param  string        $url      URL.
 	 *
-	 * @access public
-	 * @return HTTP Response
+	 * @return HTTP_Response|WP_Error HTTP Response or WP_Error
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'sendlane') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'sendlane' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
-			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( 202 < wp_remote_retrieve_response_code( $response ) ) {
 
-			if( isset( $body_json->error ) ) {
+				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-				$response = new WP_Error( 'error', $body_json->error->message );
+				$message = '';
+
+				if ( isset( $body_json->message ) ) {
+
+					if ( 'The selected email is invalid.' === $body_json->message ) {
+						return false; // this one is ok.
+					}
+
+					$message = $body_json->message . ' ';
+				}
+
+				if ( isset( $body_json->errors ) ) {
+
+					foreach ( $body_json->errors as $error ) {
+						$message .= $error[0] . ' ';
+					}
+				}
+
+				$response = new WP_Error( 'error', $message );
 
 			}
-
 		}
 
 		return $response;
@@ -133,32 +134,26 @@ class WPF_Sendlane {
 	/**
 	 * Gets params for API calls
 	 *
-	 * @access  public
-	 * @return  array Params
+	 * @since 3.24.0
+	 *
+	 * @param  string $api_token API Token.
+	 *
+	 * @return array Params.
 	 */
+	public function get_params( $api_token = false ) {
 
-	public function get_params( $api_key = false, $api_hash = false, $api_domain = false ) {
-
-		if( empty( $api_key ) || empty( $api_hash ) || empty( $api_domain ) ) {
-
-			$api_key = wpf_get_option( 'sendlane_key' );
-			$api_hash = wpf_get_option( 'sendlane_hash' );
-			$api_domain = wpf_get_option( 'sendlane_domain' );
-
+		if ( ! $api_token ) {
+			$api_token = wpf_get_option( 'sendlane_token' );
 		}
 
 		$this->params = array(
-			'timeout'     => 15,
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'headers'     => array(
-				'Content-Type'  	  => 'application/json',
-			)
+			'timeout'    => 15,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $api_token,
+			),
 		);
-
-		$this->api_key = $api_key;
-		$this->api_hash = $api_hash;
-		$this->api_domain = $api_domain;
-		$this->list = wpf_get_option( 'default_list', false );
 
 		return $this->params;
 	}
@@ -167,29 +162,18 @@ class WPF_Sendlane {
 	/**
 	 * Initialize connection
 	 *
-	 * @access  public
 	 * @return  bool
 	 */
 
-	public function connect( $api_key = null, $api_hash = null, $api_domain = null, $test = false ) {
+	public function connect( $api_token = false, $test = false ) {
 
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
-		if ( ! $this->params ) {
-			$this->get_params( $api_key, $api_hash, $api_domain );
-		}
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/senders', $this->get_params( $api_token ) );
 
-		$args = array(
-			'api' 	=> $this->api_key,
-			'hash' 	=> $this->api_hash
-		);
-
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/lists' );
-		$response = wp_safe_remote_post( $request, $this->params );
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -197,17 +181,12 @@ class WPF_Sendlane {
 	}
 
 	/**
-	 * Performs initial sync once connection is configured
+	 * Performs initial sync once connection is configured.
 	 *
-	 * @access public
 	 * @return bool
 	 */
 
 	public function sync() {
-
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
-		}
 
 		$this->sync_tags();
 		$this->sync_lists();
@@ -222,34 +201,23 @@ class WPF_Sendlane {
 	/**
 	 * Gets all available tags and saves them to options
 	 *
-	 * @access public
 	 * @return array Lists
 	 */
 
 	public function sync_tags() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$available_tags = array();
 
-		$args = array(
-			'api' 	=> $this->api_key,
-			'hash' 	=> $this->api_hash
-		);
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/tags?limit=1000', $this->get_params() );
 
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/tags' );
-		$response = wp_safe_remote_post( $request, $this->params );
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $body as $tag ) {
-			$available_tags[ $tag->tag_id ] = $tag->tag_name;
+		foreach ( $body->data as $tag ) {
+			$available_tags[ $tag->id ] = $tag->name;
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -262,43 +230,30 @@ class WPF_Sendlane {
 	/**
 	 * Gets all available lists and saves them to options
 	 *
-	 * @access public
 	 * @return array Lists
 	 */
 
 	public function sync_lists() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$available_lists = array();
 
-		$args = array(
-			'api' 	=> $this->api_key,
-			'hash' 	=> $this->api_hash
-		);
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/lists?limit=1000', $this->get_params() );
 
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/lists' );
-		$response = wp_safe_remote_post( $request, $this->params );
-
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach( $body as $list ) {
-			$available_lists[ $list->list_id ] = $list->list_name;
+		foreach ( $body->data as $list ) {
+			$available_lists[ $list->id ] = $list->name;
 		}
 
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
-		// Set default
+		// Set default.
 
-		$default_list = wpf_get_option( 'default_list', false );
-
-		if( empty( $default_list ) ) {
+		if ( ! empty( $available_lists ) && empty( wpf_get_option( 'default_list' ) ) ) {
 
 			reset( $available_lists );
 			$default_list = key( $available_lists );
@@ -316,26 +271,47 @@ class WPF_Sendlane {
 	/**
 	 * Loads all custom fields from CRM and merges with local list
 	 *
-	 * @access public
 	 * @return array CRM Fields
 	 */
 
 	public function sync_crm_fields() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		// Load built in fields to get field types and subtypes.
+		require dirname( __FILE__ ) . '/sendlane-fields.php';
 
-		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/sendlane-fields.php';
-
-		$crm_fields = array();
+		$standard_fields = array();
 
 		foreach ( $sendlane_fields as $index => $data ) {
-			$crm_fields[ $data['crm_field'] ] = $data['crm_label'];
+			$standard_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
-		asort( $crm_fields );
+		asort( $standard_fields );
+
+		// Custom fields.
+
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/custom-fields?limit=1000', $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$custom_fields = array();
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		foreach ( $body->data as $field ) {
+
+			$custom_fields[ $field->id ] = $field->name;
+
+		}
+
+		asort( $custom_fields );
+
+		$crm_fields = array(
+			'Standard Fields' => $standard_fields,
+			'Custom Fields'   => $custom_fields,
+		);
+
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
@@ -343,93 +319,59 @@ class WPF_Sendlane {
 	}
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
-	 * @access public
+	 * @param string $email_address The email address.
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/contacts/search?email=' . $email_address, $this->get_params() );
+
+		if ( is_wp_error( $response ) || false === $response ) {
+			return $response; // error or contact not found.
 		}
 
-		$args = array(
-			'api' 		=> $this->api_key,
-			'hash' 		=> $this->api_hash,
-			'list_id'	=> $this->list,
-			'email'		=> $email_address
-		);
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/subscriber-exists' );
-		$response = wp_safe_remote_post( $request, $this->params );
+		return $response->data->id;
+	}
 
-		if( is_wp_error( $response ) ) {
+
+	/**
+	 * Gets all tags currently applied to the contact.
+	 *
+	 * @param int $contact_id The contact ID.
+	 * @return array The tags.
+	 */
+	public function get_tags( $contact_id ) {
+
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/contacts/' . $contact_id, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( ! isset( $body->subscribe_id ) ) {
-			return false;
-		}
-		
-		return $body->subscribe_id;
-	}
-
-
-	/**
-	 * Gets all tags currently applied to the user
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function get_tags( $contact_id ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		// Sendlane doesn't support this
-
-		$user_id = wp_fusion()->user->get_user_id( $contact_id );
-
-		$user_tags = get_user_meta( $user_id, 'sendlane_tags', true );
-
-		if( empty( $user_tags ) ) {
-			$user_tags = array();
-		}
-
-		return $user_tags;
+		return $response->data->tags;
 
 	}
 
 	/**
-	 * Applies tags to a contact
+	 * Applies tags to a contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @return bool|WP_Error True if successful, WP_Error if not.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$params = $this->get_params();
 
-		$args = array(
-			'api' 		=> $this->api_key,
-			'hash' 		=> $this->api_hash,
-			'email'		=> $contact_id,
-			'tag_names' => implode(',', $tags)
-		);
+		$params['body'] = wp_json_encode( array( 'tag_ids' => $tags ) );
 
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/tag-subscriber-add' );
-		$response = wp_safe_remote_post( $request, $this->params );
+		$response = wp_safe_remote_post( "https://api.sendlane.com/v2/contacts/{$contact_id}/tags/", $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -439,30 +381,23 @@ class WPF_Sendlane {
 
 
 	/**
-	 * Removes tags from a contact
+	 * Removes tags from a contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @return bool|WP_Error True if successful, WP_Error if not.
 	 */
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$params           = $this->get_params();
+		$params['method'] = 'DELETE';
 
-		$args = array(
-			'api' 		=> $this->api_key,
-			'hash' 		=> $this->api_hash,
-			'email'		=> $contact_id,
-			'tag_names' => implode(',', $tags)
-		);
+		foreach ( $tags as $tag_id ) {
 
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/tag-subscriber-remove' );
-		$response = wp_safe_remote_post( $request, $this->params );
+			$response = wp_safe_remote_request( "https://api.sendlane.com/v2/contacts/{$contact_id}/tags/{$tag_id}/", $params );
 
-		if( is_wp_error( $response ) ) {
-			return $response;
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 		}
 
 		return true;
@@ -471,95 +406,143 @@ class WPF_Sendlane {
 
 
 	/**
-	 * Adds a new contact
+	 * Adds a new contact.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @return false|int Contact ID.
 	 */
-
 	public function add_contact( $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$standard_fields = array( 'first_name', 'last_name', 'email', 'phone' );
 
-		$args = array(
-			'api' 		=> $this->api_key,
-			'hash' 		=> $this->api_hash,
-			'list_id'	=> $this->list
+		$update_data = array(
+			'contacts' => array( array() ),
 		);
 
-		$args = array_merge( $args, $data );
+		foreach ( $data as $key => $value ) {
 
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/list-subscriber-add' );
-		$response = wp_safe_remote_post( $request, $this->params );
-		if( is_wp_error( $response ) ) {
+			if ( in_array( $key, $standard_fields, true ) ) {
+				$update_data['contacts'][0][ $key ] = $value;
+			} else {
+
+				if ( ! isset( $update_data['contacts'][0]['custom_fields'] ) ) {
+					$update_data['contacts'][0]['custom_fields'] = array();
+				}
+
+				$update_data['contacts'][0]['custom_fields'][] = array(
+					'id'    => $key,
+					'value' => $value,
+				);
+			}
+		}
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $update_data );
+
+		$response = wp_safe_remote_post( "https://api.sendlane.com/v2/lists/{$this->list}/contacts", $params );
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		return $data['email'];
+		// For some reason Sendlane doesn't return the contact ID when adding a new contact, so we have to look it up.
+
+		$contact_id = $this->get_contact_id( $data['email'] );
+
+		if ( false === $contact_id ) {
+			wpf_log( 'notice', wpf_get_current_user_id(), 'Subscriber was added to Sendlane and is pending email verification.' );
+		}
+
+		return $contact_id;
 
 	}
 
 	/**
-	 * Update contact
+	 * Update contact. Sendlane doesn't have an update method, so we just trigger
+	 * add_contact() again.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since  3.24.0
+	 *
+	 * @param  int   $contact_id Contact ID.
+	 * @param  array $data       Contact data.
+	 *
+	 * @return bool|WP_Error True if successful, WP_Error if not.
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		return $this->add_contact( $data );
 
-		$args = array(
-			'api' 		=> $this->api_key,
-			'hash' 		=> $this->api_hash,
-			'list_id'	=> $this->list
-		);
-
-		$args = array_merge( $args, $data );
-
-		$request  = add_query_arg( $args, 'https://' . $this->api_domain . '/api/v1/list-subscriber-add' );
-		$response = wp_safe_remote_post( $request, $this->params );
-
-		if( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		return true;
 	}
 
 
 	/**
 	 * Loads a contact and updates local user meta
 	 *
-	 * @access public
 	 * @return array User meta data that was returned
 	 */
 
 	public function load_contact( $contact_id ) {
 
-		// Not supported
+		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/contacts/' . $contact_id, $this->get_params() );
 
-		return array();
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$contact_data = array(
+			'first_name' => $response->data->first_name,
+			'last_name'  => $response->data->last_name,
+			'email'      => $response->data->email,
+			'phone'      => $response->data->phone,
+		);
+
+		foreach ( $response->data->custom_fields as $custom_field ) {
+			$contact_data[ $custom_field->id ] = $custom_field->value;
+		}
+
+		$user_meta = array();
+
+		// Map contact fields.
+		$contact_fields = wpf_get_option( 'contact_fields', array() );
+
+		// Standard fields.
+		foreach ( $contact_data as $field_name => $value ) {
+
+			foreach ( $contact_fields as $meta_key => $field_data ) {
+
+				if ( $field_data['crm_field'] === $field_name && true === $field_data['active'] ) {
+					$user_meta[ $meta_key ] = $value;
+				}
+			}
+		}
+
+		return $user_meta;
 
 	}
 
 	/**
 	 * Gets a list of contact IDs based on tag
 	 *
-	 * @access public
 	 * @return array Contact IDs returned
 	 */
+	public function load_contacts( $tag_id ) {
 
-	public function load_contacts( $tag ) {
+		$response = wp_safe_remote_get( "https://api.sendlane.com/v2/tags/{$tag_id}/contacts", $this->get_params() );
 
-		// Not supported
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
 
-		return false;
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$contact_ids = array();
+
+		foreach ( $response->data as $contact ) {
+			$contact_ids[] = $contact->id;
+		}
+
+		return $contact_ids;
 
 	}
 

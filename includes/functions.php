@@ -484,6 +484,27 @@ function wpf_clean( $var ) {
 }
 
 /**
+ * Validates a phone number.
+ *
+ * @since 3.41.24
+ *
+ * @param string $input The number.
+ * @return bool Whether or not the number is valid.
+ */
+function wpf_validate_phone_number( $input ) {
+
+	// Remove all non-digit characters from the input.
+	$cleaned_input = preg_replace( '/[^0-9+]/', '', $input );
+
+	// Validate the phone number format
+	// The pattern allows for an optional '+' at the start, followed by digits, spaces, dashes, and parentheses.
+	$pattern = '/^\+?\d[\d\s\-()]*$/';
+
+	return preg_match( $pattern, $cleaned_input ) === 1;
+
+}
+
+/**
  * Sanitizes an array of tags while preserving special characters.
  *
  * @since  3.38.15

@@ -12,11 +12,9 @@ class WPF_AJAX {
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_apply_tags', array( $this, 'apply_tags' ) );
-		add_action( 'wp_ajax_nopriv_apply_tags', array( $this, 'apply_tags' ) );
-
+		add_action( 'wp_ajax_nopriv_apply_tags', array( $this, 'apply_tags' ) ); // needed for applying tags via auto-login.
 		add_action( 'wp_ajax_remove_tags', array( $this, 'remove_tags' ) );
-		add_action( 'wp_ajax_nopriv_remove_tags', array( $this, 'remove_tags' ) );
-
+		add_action( 'wp_ajax_nopriv_remove_tags', array( $this, 'remove_tags' ) ); // needed for applying tags via auto-login.
 		add_action( 'wp_ajax_update_user', array( $this, 'update_user' ) );
 
 	}
@@ -30,14 +28,25 @@ class WPF_AJAX {
 
 	public function apply_tags() {
 
-		if ( ! isset( $_POST['tags'] ) ) {
-			wp_die();
+		$tags = array();
+
+		if ( isset( $_POST['tags'] ) && is_array( $_POST['tags'] ) ) {
+			$tags = array_map( 'sanitize_text_field', wp_unslash( $_POST['tags'] ) );
+		} elseif ( isset( $_POST['tags'] ) ) {
+			$tags = explode( ',', sanitize_text_field( wp_unslash( $_POST['tags'] ) ) );
+		} else {
+
+			$data = json_decode( file_get_contents( 'php://input' ), true ); // check JSON payload.
+
+			if ( ! empty( $data ) && isset( $data['tags'] ) ) {
+				$tags = explode( ',', sanitize_text_field( wp_unslash( $data['tags'] ) ) );
+			}
 		}
 
-		if ( is_array( $_POST['tags'] ) ) {
-			$tags = array_map( 'sanitize_text_field', wp_unslash( $_POST['tags'] ) );
-		} else {
-			$tags = explode( ',', sanitize_text_field( wp_unslash( $_POST['tags'] ) ) );
+		$tags = array_filter( $tags );
+
+		if ( empty( $tags ) ) {
+			wp_send_json_success();
 		}
 
 		$tags_to_apply = array();
@@ -62,7 +71,7 @@ class WPF_AJAX {
 
 		}
 
-		wp_die();
+		wp_send_json_success();
 
 	}
 

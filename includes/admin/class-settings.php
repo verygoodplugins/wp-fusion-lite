@@ -115,6 +115,9 @@ class WPF_Settings {
 		// Resync button at top.
 		add_action( 'wpf_settings_page_title', array( $this, 'header_resync_button' ) );
 
+		// Debugging stuff.
+		add_action( 'wpf_settings_page_init', array( $this, 'debug_settings_output' ) );
+
 		// AJAX.
 		add_action( 'wp_ajax_sync_tags', array( $this, 'sync_tags' ) );
 		add_action( 'wp_ajax_add_tags_api', array( $this, 'add_tag' ) );
@@ -388,6 +391,7 @@ class WPF_Settings {
 
 		$defaults = array(
 			'active'    => false,
+			'pull'      => false,
 			'type'      => 'text',
 			'crm_field' => false,
 		);
@@ -397,6 +401,8 @@ class WPF_Settings {
 			foreach ( $fields as $usermeta_key => $data ) {
 				$fields[ $usermeta_key ]           = wp_parse_args( $data, $defaults );
 				$fields[ $usermeta_key ]['active'] = boolval( $fields[ $usermeta_key ]['active'] ); // we want this to be a bool, not "1".
+				$fields[ $usermeta_key ]['pull']   = boolval( $fields[ $usermeta_key ]['pull'] );
+
 			}
 		}
 
@@ -508,12 +514,6 @@ class WPF_Settings {
 	}
 
 
-	/**
-	 * Utility function for adding a setting after an existing setting
-	 *
-	 * @since 1.0
-	 * @return array
-	 */
 	/**
 	 * Utility function for adding a setting after an existing setting.
 	 *
@@ -717,6 +717,9 @@ class WPF_Settings {
 					$translation = str_replace( ' tag', ' ' . strtolower( $tag_type ), $translation );
 
 				}
+
+				$translation = str_replace( ' \tag', ' tag', $translation ); // escaped tags, for example AcccessAlly.
+
 			}
 		}
 
@@ -1237,6 +1240,8 @@ class WPF_Settings {
 					$license_data = $response; // for unknown errors.
 				}
 
+				update_option( 'wpf_license_check', time() ); // license was checked.
+
 				wp_send_json_error( $message . '<br /><pre>' . esc_html( wpf_print_r( $license_data, true ) ) . '</pre>' );
 			}
 		} else {
@@ -1250,6 +1255,8 @@ class WPF_Settings {
 
 					$this->set( 'license_status', $license_data->license );
 					$this->set( 'license_key', $license_key );
+
+					update_option( 'wpf_license_check', time() ); // license was checked.
 
 					return true;
 
@@ -1303,6 +1310,8 @@ class WPF_Settings {
 
 		$this->set( 'license_status', 'invalid' );
 		$this->set( 'license_key', false );
+
+		delete_option( 'wpf_license_check' );
 
 		wp_send_json_success( 'deactivated' );
 
@@ -2237,7 +2246,7 @@ class WPF_Settings {
 			$type = 'text';
 		}
 
-		echo '<input id="' . esc_attr( $id ) . '" class="form-control api_key ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->{ $id } ) . '">';
+		echo '<input id="' . esc_attr( $id ) . '" ' . disabled( $field['input_disabled'], true, false ) . ' class="form-control api_key ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->{ $id } ) . '">';
 
 		if ( $this->connection_configured ) {
 
@@ -2561,8 +2570,15 @@ class WPF_Settings {
 			if ( empty( $this->options[ $id ][ $meta_key ] ) || ! isset( $this->options[ $id ][ $meta_key ]['crm_field'] ) || ! isset( $this->options[ $id ][ $meta_key ]['active'] ) ) {
 				$this->options[ $id ][ $meta_key ] = array(
 					'active'    => false,
+					'pull'      => false,
 					'crm_field' => false,
 				);
+			}
+
+			// Set Pull to on by default.
+
+			if ( ! empty( $this->options[ $id ][ $meta_key ] ) && ! empty( $this->options[ $id ][ $meta_key ]['active'] ) && ! isset( $this->options[ $id ][ $meta_key ]['pull'] ) && empty( $data['pseudo'] ) ) {
+				$this->options[ $id ][ $meta_key ]['pull'] = true;
 			}
 
 			if ( ! empty( $this->options['custom_metafields'] ) && in_array( $meta_key, $this->options['custom_metafields'] ) ) {
@@ -2625,6 +2641,7 @@ class WPF_Settings {
 		echo '<thead>';
 		echo '<tr>';
 		echo '<th class="sync">' . esc_html__( 'Sync', 'wp-fusion-lite' ) . '</th>';
+		//echo '<th class="sync">' . esc_html__( 'Pull', 'wp-fusion-lite' ) . '</th>'; @TODO.
 		echo '<th>' . esc_html__( 'Name', 'wp-fusion-lite' ) . '</th>';
 		echo '<th>' . esc_html__( 'Meta Field', 'wp-fusion-lite' ) . '</th>';
 		echo '<th>' . esc_html__( 'Type', 'wp-fusion-lite' ) . '</th>';
@@ -2695,6 +2712,7 @@ class WPF_Settings {
 
 				echo '<tr' . ( $this->options[ $id ][ $user_meta ]['active'] == true ? ' class="success" ' : '' ) . '>';
 				echo '<td><input class="checkbox contact-fields-checkbox"' . ( empty( $this->options[ $id ][ $user_meta ]['crm_field'] ) || 'user_email' == $user_meta ? ' disabled' : '' ) . ' type="checkbox" id="wpf_cb_' . esc_attr( $user_meta ) . '" name="wpf_options[' . esc_attr( $id ) . '][' . esc_attr( $user_meta ) . '][active]" value="1" ' . checked( $this->options[ $id ][ $user_meta ]['active'], 1, false ) . '/></td>';
+				// echo '<td><input class="checkbox"' . ( empty( $this->options[ $id ][ $user_meta ]['crm_field'] ) || ! empty( $data['pseudo'] ) ? ' disabled' : '' ) . ' type="checkbox" id="wpf_cb_pull_' . esc_attr( $user_meta ) . '" name="wpf_options[' . esc_attr( $id ) . '][' . esc_attr( $user_meta ) . '][pull]" value="1" ' . checked( $this->options[ $id ][ $user_meta ]['pull'], 1, false ) . '/></td>';
 				echo '<td class="wp_field_label">' . ( isset( $data['label'] ) ? esc_html( wp_strip_all_tags( $data['label'] ) ) : '' );
 
 				if ( 'user_pass' === $user_meta ) {
@@ -2956,9 +2974,9 @@ class WPF_Settings {
 
 				foreach ( $hook->callbacks as $priority => $callbacks ) {
 
-					foreach ( $callbacks as $id => $callback ) {
+					foreach ( $callbacks as $callback ) {
 
-						if ( is_array( $callback['function'] ) && 0 === strpos( get_class( $callback['function'][0] ), 'WPF_' ) ) {
+						if ( is_array( $callback['function'] ) && is_object( $callback['function'][0] ) && 0 === strpos( get_class( $callback['function'][0] ), 'WPF_' ) ) {
 							continue;
 						}
 
@@ -3001,7 +3019,9 @@ class WPF_Settings {
 
 				if ( is_object( $hook['callback']['function'] ) ) {
 					echo '<em>' . esc_html__( 'anonymous function', 'wp-fusion-lite' ) . '</em>';
-				} elseif ( is_array( $hook['callback']['function'] ) ) {
+				} elseif ( is_array( $hook['callback']['function'] ) && is_string( $hook['callback']['function'][0] ) ) {
+					echo '<code>' . esc_html( $hook['callback']['function'][0] . '::' . $hook['callback']['function'][1] ) . '()</code>';
+				} elseif ( is_array( $hook['callback']['function'] ) && is_object( $hook['callback']['function'][0] ) ) {
 					echo '<code>' . esc_html( get_class( $hook['callback']['function'][0] ) . '::' . $hook['callback']['function'][1] ) . '()</code>';
 				} else {
 					echo '<code>' . esc_html( $hook['callback']['function'] ) . '()</code>';
@@ -3054,6 +3074,23 @@ class WPF_Settings {
 			echo '<span class="text">' . esc_html__( 'Refresh Available Tags &amp; Fields', 'wp-fusion-lite' ) . '</span>';
 			echo '</a>';
 
+		}
+
+	}
+
+	/**
+	 * Tool for debugging settings in the database.
+	 *
+	 * @since 3.41.7
+	 */
+	public function debug_settings_output() {
+
+		if ( isset( $_GET['debug'] ) ) {
+			echo '<div class="notice notice-inline">';
+			echo '<pre>';
+			print_r( $this->options );
+			echo '</pre>';
+			echo '</div>';
 		}
 
 	}

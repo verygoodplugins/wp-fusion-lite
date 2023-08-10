@@ -55,6 +55,15 @@ class WPF_MailerLite {
 			new WPF_MailerLite_Admin( $this->slug, $this->name, $this );
 		}
 
+		// API URL.
+		if ( $this->is_v2() ) {
+			$this->api_url  = 'https://connect.mailerlite.com/api/';
+			$this->edit_url = 'https://dashboard.mailerlite.com/subscribers/%d';
+		} else {
+			$this->api_url  = 'https://api.mailerlite.com/api/v2/';
+			$this->edit_url = 'https://app.mailerlite.com/subscribers/single/%d';
+		}
+
 	}
 
 	/**
@@ -75,13 +84,7 @@ class WPF_MailerLite {
 
 		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
 
-		if ( $this->is_v2() ) {
-			$this->api_url  = 'https://connect.mailerlite.com/api/';
-			$this->edit_url = 'https://dashboard.mailerlite.com/subscribers/%d';
-		} else {
-			$this->api_url  = 'https://api.mailerlite.com/api/v2/';
-			$this->edit_url = 'https://app.mailerlite.com/subscribers/single/%d';
-		}
+		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
 	}
 
@@ -113,6 +116,41 @@ class WPF_MailerLite {
 	public function set_sleep_time( $seconds ) {
 
 		return 2;
+
+	}
+
+	/**
+	 * Outputs the MailerLite tracking code in the header.
+	 *
+	 * @since 3.41.15
+	 */
+	public function tracking_code_output() {
+
+		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
+			return;
+		}
+
+		$account_id = wpf_get_option( 'ml_account_id' );
+
+		if ( empty( $account_id ) ) {
+			// in case they're activating the feature after setting up the plugin pre 3.41.15.
+			$account_id = $this->connect( null, true );
+		}
+
+		?>
+
+		<!-- MailerLite Universal (by WP Fusion) -->
+		<script>
+			(function(w,d,e,u,f,l,n){w[f]=w[f]||function(){(w[f].q=w[f].q||[])
+			.push(arguments);},l=d.createElement(e),l.async=1,l.src=u,
+			n=d.getElementsByTagName(e)[0],n.parentNode.insertBefore(l,n);})
+			(window,document,'script','https://assets.mailerlite.com/js/universal.js','ml');
+			ml('account', '<?php echo esc_js( $account_id ); ?>');
+		</script>
+		<!-- End MailerLite Universal -->
+
+
+		<?php
 
 	}
 
@@ -390,14 +428,18 @@ class WPF_MailerLite {
 			$this->get_params( $api_key );
 		}
 
-		$request  = 'https://api.mailerlite.com/api/v2/groups';
+		$request  = 'https://api.mailerlite.com/api/v2/me';
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		return true;
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		wp_fusion()->settings->set( 'ml_account_id', $response->account->id );
+
+		return $response->account->id;
 	}
 
 	/**
@@ -487,7 +529,7 @@ class WPF_MailerLite {
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach ( $body_json as $key => $field_data ) {
+		foreach ( $body_json as $field_data ) {
 			$crm_fields[ $field_data['key'] ] = ucwords( str_replace( '_', ' ', $field_data['key'] ) );
 		}
 
@@ -512,9 +554,8 @@ class WPF_MailerLite {
 			$this->get_params();
 		}
 
-		$contact_info = array();
-		$request      = 'https://api.mailerlite.com/api/v2/subscribers/' . urlencode( $email_address );
-		$response     = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.mailerlite.com/api/v2/subscribers/' . urlencode( $email_address );
+		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) && false !== strpos( strtolower( $response->get_error_message() ), 'not found' ) ) {
 
@@ -588,23 +629,38 @@ class WPF_MailerLite {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		if ( $this->is_v2() ) {
 
-		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
+			// New faster way.
 
-		foreach ( $tags as $tag ) {
+			$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
+			$params           = $this->get_params();
+			$params['method'] = 'PUT';
+			$params['body']   = wp_json_encode( array( 'groups' => $tags ) );
 
-			$request          = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers';
-			$params           = $this->params;
-			$params['method'] = 'POST';
-			$params['body']   = wp_json_encode( array( 'email' => $email ) );
-
-			$response = wp_safe_remote_post( $request, $params );
+			$response = wp_safe_remote_request( $url, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
+			}
+		} else {
+
+			// Old API still requires multiple calls.
+
+			$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
+
+			foreach ( $tags as $tag ) {
+
+				$request          = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers';
+				$params           = $this->get_params();
+				$params['method'] = 'POST';
+				$params['body']   = wp_json_encode( array( 'email' => $email ) );
+
+				$response = wp_safe_remote_post( $request, $params );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
 			}
 		}
 
@@ -622,16 +678,12 @@ class WPF_MailerLite {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$params           = $this->get_params();
+		$params['method'] = 'DELETE';
 
 		foreach ( $tags as $tag ) {
 
-			$request          = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers/' . $contact_id;
-			$params           = $this->params;
-			$params['method'] = 'DELETE';
-
+			$request  = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers/' . $contact_id;
 			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
@@ -666,7 +718,7 @@ class WPF_MailerLite {
 		}
 
 		// Checkboxes on checkout send bool values.
-		if ( 1 === $data['type'] || true === $data['type'] ) {
+		if ( isset( $data['type'] ) && ( 1 === $data['type'] || true === $data['type'] || '1' === $data['type'] ) ) {
 			$data['type'] = 'active';
 		}
 
@@ -759,6 +811,16 @@ class WPF_MailerLite {
 			$send_data['status'] = $send_data['type'];
 			unset( $send_data['type'] );
 
+		}
+
+		// We won't sync these if they're empty.
+
+		if ( isset( $send_data['type'] ) && empty( $send_data['type'] ) ) {
+			unset( $send_data['type'] );
+		}
+
+		if ( isset( $send_data['status'] ) && empty( $send_data['status'] ) ) {
+			unset( $send_data['status'] );
 		}
 
 		return $send_data;

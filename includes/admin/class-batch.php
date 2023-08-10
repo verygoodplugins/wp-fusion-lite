@@ -195,13 +195,15 @@ class WPF_Batch {
 
 		if ( isset( $_GET['wpf-cancel-batch'] ) ) {
 
-			echo '<pre>';
+			echo '<pre>Cancelled:<br/>';
 			print_r( $keys );
 			echo '</pre>';
 
 			foreach ( $keys as $key ) {
 				$this->process->cancel_process( $key );
 			}
+
+			delete_transient( 'wpf_background_process_process_lock' );
 
 			return;
 
@@ -216,7 +218,7 @@ class WPF_Batch {
 			$status = array(
 				'total'     => 0,
 				'remaining' => 0,
-				'key'       => 0
+				'key'       => 0,
 			);
 		}
 
@@ -262,8 +264,6 @@ class WPF_Batch {
 
 		if ( isset( $_POST['args'] ) && is_array( $_POST['args'] ) ) {
 			$args = array_map( 'sanitize_text_field', wp_unslash( $_POST['args'] ) );
-		} else {
-			$args = array();
 		}
 
 		$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );

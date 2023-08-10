@@ -26,7 +26,7 @@ class WPF_Ontraport {
 	 * Lets outside functions override the object type (Leads for example)
 	 */
 
-	public $object_type;
+	public $object_type = 0;
 
 
 	/**
@@ -47,10 +47,8 @@ class WPF_Ontraport {
 
 	public function __construct() {
 
-		$this->slug     = 'ontraport';
-		$this->name     = 'Ontraport';
-
-		$this->object_type = 0;
+		$this->slug = 'ontraport';
+		$this->name = 'Ontraport';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -78,6 +76,8 @@ class WPF_Ontraport {
 		// Add tracking code to footer
 		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+
+		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
 
 	}
 
@@ -161,6 +161,10 @@ class WPF_Ontraport {
 					$value = $option_id;
 				}
 			}
+		} elseif ( ( 'bulk_mail' === $field || 'bulk_sms' === $field ) && empty( $value ) ) {
+
+			$value = '0'; // allows setting contacts to transactional over the API.
+
 		}
 
 		return $value;
@@ -372,8 +376,6 @@ class WPF_Ontraport {
 				'Api-Key'   => $api_key,
 			),
 		);
-
-		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
 
 		return $this->params;
 	}
@@ -671,14 +673,14 @@ class WPF_Ontraport {
 
 	public function add_contact( $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		// Referral data.
 		if ( isset( $_COOKIE['aff_'] ) ) {
 			$data['freferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
 			$data['lreferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
+		}
+
+		if ( isset( $data['bulk_sms'] ) && '0' === $data['bulk_sms'] ) {
+			$data['force_sms_opt_out'] = '1'; // this force opts-out even when "API SMS opt-ins" is enabled in OP.
 		}
 
 		// To automatically update Campaign / Lead Source / Medium relational fields. @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
@@ -691,7 +693,7 @@ class WPF_Ontraport {
 			$data['objectID'] = $this->object_type;
 		}
 
-		$params         = $this->params;
+		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $url, $params );
@@ -721,10 +723,6 @@ class WPF_Ontraport {
 
 	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		// Referral data
 		if ( isset( $_COOKIE['aff_'] ) ) {
 			$data['lreferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
@@ -733,17 +731,15 @@ class WPF_Ontraport {
 		$data['objectID'] = $this->object_type;
 		$data['id']       = $contact_id;
 
-		// $data['bulk_mail'] = 1; // Contacts can only be set to 0 (transactional) over the API
-
 		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request.
 		$data['use_utm_names']      = true; // @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
 
-		$params           = $this->params;
+		$params           = $this->get_params();;
 		$params['method'] = 'PUT';
 		$params['body']   = wp_json_encode( $data );
 
 		$request  = 'https://api.ontraport.com/1/objects';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

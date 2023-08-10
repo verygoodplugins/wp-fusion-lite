@@ -81,6 +81,9 @@ class WPF_Groundhogg {
 		remove_action( 'user_register', array( \Groundhogg\Plugin::instance()->user_syncing, 'sync_new_user' ) );
 		remove_action( 'profile_update', array( \Groundhogg\Plugin::instance()->user_syncing, 'sync_existing_user' ) );
 
+		// Syncs GH tags with the WP User.
+		add_action( 'wpf_user_created', array( $this, 'user_registered' ), 10, 2 );
+
 		add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
 		add_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
 		add_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
@@ -247,17 +250,34 @@ class WPF_Groundhogg {
 
 	}
 
+	/**
+	 * Loads tags applied by Groundhogg during user registration back to the WPF cache.
+	 *
+	 * @since 3.41.16
+	 *
+	 * @param int $user_id    The user ID.
+	 * @param int $contact_id The contact ID.
+	 */
+	public function user_registered( $user_id, $contact_id ) {
+
+		$tags = $this->get_tags( $contact_id );
+
+		wp_fusion()->user->set_tags( $tags, $user_id );
+
+	}
+
 
 	/**
 	 * Update WPF tags when tags applied in Groundhogg
 	 *
+	 * @since 3.41.16
 	 * @access  public
-	 * @return  void
+	 * @param object $contact The Groundhogg Contact object.
+	 * @param mixed  $tag_id The ID of the tag applied.
 	 */
-
 	public function tag_applied( $contact, $tag_id ) {
 
-		// This action triggers apply_tags_to_contact_from_new_roles in GH and can create a situation where recently applied tags get overwritten
+		// This action triggers apply_tags_to_contact_from_new_roles in GH and can create a situation where recently applied tags get overwritten.
 		if ( did_action( 'add_user_role' ) > 0 || did_action( 'set_user_role' ) > 0 ) {
 			return;
 		}
@@ -675,7 +695,7 @@ class WPF_Groundhogg {
 		// Update failed for some reason.
 
 		if ( isset( $data['email'] ) && strtolower( $data['email'] ) !== strtolower( $contact->email ) ) {
-			$result = new WP_Error( 'error', ' Could not update email address from <strong>' . $contact->email . '</strong> to <strong>' . $data['email'] . '</strong> because there is already a contact with that email address. Please merge the duplicate contacts and try again.' );
+			$result = new WP_Error( 'notice', ' Could not update email address from <strong>' . $contact->email . '</strong> to <strong>' . $data['email'] . '</strong> because there is already a contact with that email address. Please merge the duplicate contacts and try again. For now the email address change will be ignored.' );
 		}
 
 		unset( $data['user_id'] );

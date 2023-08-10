@@ -495,16 +495,72 @@ class WPF_Shortcodes {
 				break;
 			case 'IN':
 				if ( is_array( $meta_value ) ) {
-					$show_content = in_array( $value, $meta_value, true );
+					$value = explode( ',', $value );
+					$value = array_intersect( $meta_value, $value );
+					if ( empty( $value ) ) {
+						$show_content = false;
+					} else {
+						$show_content = true;
+					}
 				} else {
-					$show_content = ( false === strpos( $meta_value, $value ) ? false : true );
+
+					$value = explode( ',', $value );
+
+					foreach ( $value as $search ) {
+						if ( false !== strpos( $meta_value, trim( $search ) ) ) {
+							$show_content = true;
+							break;
+						}
+					}
 				}
 				break;
 			case 'NOT IN':
 				if ( is_array( $meta_value ) ) {
-					$show_content = ! in_array( $value, $meta_value, true );
+					$value = explode( ',', $value );
+					$value = array_map( 'trim', $value );
+					$value = array_intersect( $meta_value, $value );
+					if ( empty( $value ) ) {
+						$show_content = true;
+					} else {
+						$show_content = false;
+					}
 				} else {
-					$show_content = ( false === strpos( $meta_value, $value ) ? true : false );
+					$value = explode( ',', $value );
+
+					foreach ( $value as $search ) {
+						if ( false !== strpos( trim( $meta_value ), trim( $search ) ) ) {
+							$show_content = false;
+							break;
+						} else {
+							$show_content = true;
+						}
+					}
+				}
+				break;
+			case 'ALL':
+				if ( is_array( $meta_value ) ) {
+					$value = explode( ',', $value );
+					$value = array_map( 'trim', $value );
+					if ( count( $value ) === count( $meta_value ) ) {
+						$value = array_diff( $meta_value, $value );
+						if ( empty( $value ) ) {
+							$show_content = true;
+						}
+					}
+				} else {
+					$value      = explode( ',', $value );
+					$value      = array_map( 'trim', $value );
+					$meta_value = explode( ',', $meta_value );
+					$meta_value = array_map( 'trim', $meta_value );
+
+					if ( count( $value ) === count( $meta_value ) ) {
+						$value = array_diff( $meta_value, $value );
+						if ( empty( $value ) ) {
+							$show_content = true;
+						} else {
+							$show_content = false;
+						}
+					}
 				}
 				break;
 			case 'EMPTY':

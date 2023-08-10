@@ -9,7 +9,7 @@ class WPF_HighLevel {
 	 * @var string $url The API URL.
 	 */
 
-	public $url = 'https://rest.gohighlevel.com/v1/';
+	public $url;
 
 	/**
 	 * Lets core plugin know which features are supported by the CRM.
@@ -18,7 +18,7 @@ class WPF_HighLevel {
 	 * @var array $supports The supported features.
 	 */
 
-	public $supports = array( 'add_tags', 'web_id' );
+	public $supports = array( 'add_tags' );
 
 	/**
 	 * API parameters.
@@ -29,14 +29,39 @@ class WPF_HighLevel {
 
 	public $params = array();
 
+	/**
+	 * Highlevel OAuth.
+	 *
+	 * @since 3.41.11
+	 * @var string $client_id The client ID.
+	 */
+
+	public $client_id = '640f1d950acf1dc6569948aa-lfuxfec7';
+
+	/**
+	 * Highlevel OAuth.
+	 *
+	 * @since 3.41.11
+	 * @var string $client_secret The client secret.
+	 */
+	public $client_secret = '3fb38a9c-0db9-45d8-a184-016b28c2bc02';
+
+	/**
+	 * The account location id.
+	 *
+	 * @var string
+	 */
+	public $location_id;
+
 
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * Each contact has a unique id other than his account id.
+	 *
 	 * @var string
 	 */
 
-	public $edit_url = '%s';
+	public $edit_url;
 
 	/**
 	 * Get things started
@@ -49,17 +74,22 @@ class WPF_HighLevel {
 		$this->slug = 'highlevel';
 		$this->name = 'HighLevel';
 
-		// Set up admin options
+		if ( $this->is_v2() ) {
+			$this->url = 'https://services.leadconnectorhq.com/';
+		} else {
+			$this->url = 'https://rest.gohighlevel.com/v1/';
+		}
+
+		// Set up admin options.
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
 			new WPF_HighLevel_Admin( $this->slug, $this->name, $this );
 		}
 
-		// Error handling
+		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 	}
-
 
 	/**
 	 * Sets up hooks specific to this CRM
@@ -69,8 +99,12 @@ class WPF_HighLevel {
 
 	public function init() {
 
+		$this->location_id = wpf_get_option( 'highlevel_location_id' );
+		$this->edit_url    = 'https://app.gohighlevel.com/v2/location/' . $this->location_id . '/contacts/detail/%s';
+
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+
 	}
 
 	/**
@@ -80,7 +114,7 @@ class WPF_HighLevel {
 	 *
 	 * @since  3.36.0
 	 *
-	 * @param  array  $post_data  The post data
+	 * @param  array $post_data  The post data
 	 * @return array The post data
 	 */
 
@@ -111,18 +145,30 @@ class WPF_HighLevel {
 	 */
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'date' === $field_type ) {
+		$field_types = wpf_get_option( 'crm_field_types', array() );
+
+		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'Y-m-d', $value );
+			$value = gmdate( 'Y-m-d', $value );
 
-			return $date;
+		} elseif ( 'date' === $field_type && empty( $value ) ) {
 
-		} else {
+			return ''; // GHL converts empty dates to 1/1/1970. This will prevent them from syncing at all.
 
-			return $value;
+		} elseif ( isset( $field_types[ $field ] ) ) {
 
+			// HighLevel will throw an error if phone number is not formatted correctly.
+
+			if ( 'PHONE' === $field_types[ $field ] && ! wpf_validate_phone_number( $value ) ) {
+
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Invalid phone number: <code>' . $value  . '</code> for field <code>' . $field . '</code>. Value will not be synced.' );
+				$value = ''; // returning an empty string will omit the field from the data.
+
+			}
 		}
+
+		return $value;
 
 	}
 
@@ -145,7 +191,7 @@ class WPF_HighLevel {
 
 			$response_code = wp_remote_retrieve_response_code( $response );
 
-			if ( 200 == $response_code ) {
+			if ( 200 == $response_code || 201 == $response_code ) {
 
 				return $response; // Success. Nothing more to do
 
@@ -157,29 +203,100 @@ class WPF_HighLevel {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-				if ( isset( $body_json->msg ) ) {
+				if ( isset( $body_json->message ) && is_array( $body_json->message ) ) {
+					$body_json->message = implode( ' ', $body_json->message );
+				}
 
-					// Single error message
+				if ( ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
 
-					$response = new WP_Error( 'error', $body_json->msg );
+					$access_token = $this->refresh_token();
 
-				} else {
-
-					// Multiple errors
-
-					$messages = array();
-
-					foreach ( $body_json as $field => $error ) {
-						$messages[] = $field . ': ' . $error->message;
+					if ( is_wp_error( $access_token ) ) {
+						return new WP_Error( 'error', 'Error refreshing access token: ' . $access_token->get_error_message() );
 					}
 
-					$response = new WP_Error( 'error', implode( ' ', $messages ) );
+					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
+					$response = wp_safe_remote_request( $url, $args );
+
+				} elseif ( isset( $body_json->error_description ) ) {
+					$response = new WP_Error( 'error', $body_json->error_description );
+
+				} elseif ( isset( $body_json->message ) ) {
+
+					// Maybe append the metadata.
+
+					if ( isset( $body_json->meta ) ) {
+						$body_json->message .= ' <pre>' . print_r( $body_json->meta, true ) . '</pre>';
+					}
+
+					$response = new WP_Error( 'error', $body_json->message );
 				}
+
 			}
 		}
 
 		return $response;
+
+	}
+
+	/**
+	 * Checks the API version based on auth.
+	 *
+	 * @since 3.41.11
+	 *
+	 * @return bool True if v2, false if v1.
+	 */
+	public function is_v2() {
+
+		if ( wpf_get_option( 'highlevel_token' ) ) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+
+	/**
+	 * Refresh an access token from a refresh token
+	 *
+	 * @since 3.34.11
+	 *
+	 * @return string|WP_Error The access token, or error.
+	 */
+	public function refresh_token() {
+
+		$refresh_token = wpf_get_option( 'highlevel_refresh_token' );
+
+		$params = array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type' => 'application/x-www-form-urlencoded',
+			),
+			'body'       => array(
+				'grant_type'    => 'refresh_token',
+				'client_id'     => $this->client_id,
+				'client_secret' => $this->client_secret,
+				'redirect_uri'  => get_admin_url() . '/options-general.php?page=wpf-settings&crm=highlevel',
+				'refresh_token' => $refresh_token,
+			),
+		);
+
+		$response = wp_safe_remote_post( $this->url . 'oauth/token', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$this->get_params( $body_json->access_token );
+
+		wp_fusion()->settings->set( 'highlevel_token', $body_json->access_token );
+		wp_fusion()->settings->set( 'highlevel_refresh_token', $body_json->refresh_token );
+
+		return $body_json->access_token;
 
 	}
 
@@ -194,19 +311,23 @@ class WPF_HighLevel {
 	 * @return array $params The API params.
 	 */
 
-	public function get_params( $api_key = null ) {
+	public function get_params( $access_token = null ) {
 
-		// Get saved data from DB
-		if ( empty( $api_key ) ) {
-			$api_key = wpf_get_option( 'highlevel_api_key' );
+		if ( empty( $access_token ) ) {
+			$access_token = wpf_get_option( 'highlevel_token' );
+		}
+
+		if ( ! $this->is_v2() ) {
+			$access_token = wpf_get_option( 'highlevel_api_key' );
 		}
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 15,
 			'headers'    => array(
-				'Authorization' => 'Bearer ' . $api_key,
+				'Authorization' => 'Bearer ' . $access_token,
 				'Content-Type'  => 'application/json',
+				'Version'       => '2021-07-28',
 			),
 		);
 
@@ -221,15 +342,15 @@ class WPF_HighLevel {
 	 * @return  bool|object true or WP_Error object with custom error message if connection fails.
 	 */
 
-	public function connect( $api_key = null, $test = false ) {
+	public function connect( $access_token = null, $location_id = null, $test = false ) {
 
-		$params = $this->get_params( $api_key );
+		$params = $this->get_params( $access_token );
 
 		if ( ! $test ) {
 			return true;
 		}
 
-		$response = wp_safe_remote_get( $this->url . 'contacts/', $params );
+		$response = wp_safe_remote_get( $this->url . 'contacts/?locationId=' . $location_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -272,8 +393,11 @@ class WPF_HighLevel {
 	 */
 
 	public function sync_tags() {
-
-		$response = wp_safe_remote_get( $this->url . 'tags/', $this->get_params() );
+		if ( $this->is_v2() ) {
+			$response = wp_safe_remote_get( $this->url . 'locations/' . $this->location_id . '/tags/', $this->get_params() );
+		} else {
+			$response = wp_safe_remote_get( $this->url . 'tags/', $this->get_params() );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -303,7 +427,6 @@ class WPF_HighLevel {
 	 */
 
 	public function sync_crm_fields() {
-
 		// Load built in fields first
 		require dirname( __FILE__ ) . '/admin/highlevel-fields.php';
 
@@ -316,7 +439,11 @@ class WPF_HighLevel {
 		asort( $built_in_fields );
 
 		// Custom fields
-		$response = wp_safe_remote_get( $this->url . 'custom-fields/', $this->get_params() );
+		if ( $this->is_v2() ) {
+			$response = wp_safe_remote_get( $this->url . 'locations/' . $this->location_id . '/customFields', $this->get_params() );
+		} else {
+			$response = wp_safe_remote_get( $this->url . 'custom-fields/', $this->get_params() );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -324,9 +451,14 @@ class WPF_HighLevel {
 
 		$response      = json_decode( wp_remote_retrieve_body( $response ) );
 		$custom_fields = array();
+		$field_types   = array( 'phone' => 'PHONE' );
 
 		foreach ( $response->customFields as $field ) { //phpcs:ignore
 			$custom_fields[ $field->id ] = $field->name;
+
+			if ( 'TEXT' !== $field->{'dataType'} ) {
+				$field_types[ $field->id ] = $field->{'dataType'};
+			}
 		}
 
 		asort( $custom_fields );
@@ -337,6 +469,7 @@ class WPF_HighLevel {
 		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+		wp_fusion()->settings->set( 'crm_field_types', $field_types );
 
 		return $crm_fields;
 	}
@@ -353,28 +486,22 @@ class WPF_HighLevel {
 
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
+		if ( $this->is_v2() ) {
+			$request = $this->url . 'contacts/?locationId=' . $this->location_id . '&query=' . urlencode( $email_address );
+		} else {
+			$request = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
+		}
+
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
-		if ( is_wp_error( $response ) && 'email: The email address is invalid.' == $response->get_error_message() ) {
-
-			// Contact not found.
-			return false;
-
-		} elseif ( is_wp_error( $response ) ) {
-
-			// Generic error.
+		if ( is_wp_error( $response ) ) {
 			return $response;
-
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$user = get_user_by( 'email', $email_address );
-
-		if ( $user ) {
-			$edit_url = 'https://app.gohighlevel.com/location/' . $response->contacts[0]->locationId . '/customers/detail/' . $response->contacts[0]->id;
-			update_user_meta( $user->ID, 'highlevel_web_id', $edit_url );
+		if ( empty( $response->contacts ) ) {
+			return false;
 		}
 
 		return $response->contacts[0]->id;
@@ -432,14 +559,33 @@ class WPF_HighLevel {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$request = $this->url . 'contacts/' . $contact_id . '/tags/';
-		$params  = $this->get_params();
+		$params = $this->get_params();
 
-		$data = (object) array( 'tags' => $tags );
+		if ( $this->is_v2() ) {
+
+			$user_tags = $this->get_tags( $contact_id );
+
+			if ( is_wp_error( $user_tags ) ) {
+				return $user_tags;
+			}
+
+			$tags             = array_merge( $user_tags, $tags );
+			$data             = array( 'tags' => $tags );
+			$params['method'] = 'PUT';
+			$params['body']   = wp_json_encode( $data );
+
+			$request  = $this->url . 'contacts/' . $contact_id;
+			$response = wp_safe_remote_request( $request, $params );
+
+		} else {
+
+			$request = $this->url . 'contacts/' . $contact_id . '/tags/';
+			$data    = (object) array( 'tags' => $tags );
+
+		}
 
 		$params['body'] = wp_json_encode( $data );
-
-		$response = wp_safe_remote_post( $request, $params );
+		$response       = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -461,13 +607,38 @@ class WPF_HighLevel {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		$request = $this->url . 'contacts/' . $contact_id . '/tags/';
-		$params  = $this->get_params();
+		$params = $this->get_params();
 
-		$data = (object) array( 'tags' => $tags );
+		if ( $this->is_v2() ) {
 
-		$params['body']   = wp_json_encode( $data );
-		$params['method'] = 'DELETE';
+			$user_tags = $this->get_tags( $contact_id );
+
+			if ( empty( $user_tags ) ) {
+				return true;
+			}
+
+			foreach ( $tags as $tag ) {
+				$key = array_search( $tag, $user_tags );
+				if ( $key !== false ) {
+					unset( $user_tags[ $key ] );
+				}
+			}
+
+			$user_tags = array_values( $user_tags );
+
+			$data             = array( 'tags' => $user_tags );
+			$params['method'] = 'PUT';
+			$params['body']   = wp_json_encode( $data );
+			$request          = $this->url . 'contacts/' . $contact_id;
+
+		} else {
+			$request = $this->url . 'contacts/' . $contact_id . '/tags/';
+
+			$data = (object) array( 'tags' => $tags );
+
+			$params['body']   = wp_json_encode( $data );
+			$params['method'] = 'DELETE';
+		}
 
 		$response = wp_safe_remote_request( $request, $params );
 
@@ -488,7 +659,11 @@ class WPF_HighLevel {
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
 	public function add_contact( $contact_data ) {
-
+		if ( $this->is_v2() ) {
+			$custom_field_name = 'customFields';
+		} else {
+			$custom_field_name = 'customField';
+		}
 		// Separate the built in fields from custom ones.
 		$crm_fields = wpf_get_option( 'crm_fields' );
 
@@ -496,17 +671,25 @@ class WPF_HighLevel {
 
 			if ( ! isset( $crm_fields['Standard Fields'][ $key ] ) ) {
 
-				if ( ! isset( $contact_data['customField'] ) ) {
-					$contact_data['customField'] = array();
+				if ( ! isset( $contact_data[ $custom_field_name ] ) ) {
+					$contact_data[ $custom_field_name ] = array();
 				}
 
-				$contact_data['customField'][ $key ] = $value;
-
+				if ( $this->is_v2() ) {
+					$contact_data[ $custom_field_name ][] = array(
+						'id'          => $key,
+						'field_value' => $value,
+					);
+					unset( $contact_data[ $key ] );
+				} else {
+					$contact_data['customField'][ $key ] = $value;
+				}
 			}
 		}
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $contact_data );
+		$contact_data['locationId'] = $this->location_id;
+		$params                     = $this->get_params();
+		$params['body']             = wp_json_encode( $contact_data );
 
 		$response = wp_safe_remote_post( $this->url . 'contacts/', $params );
 
@@ -530,7 +713,11 @@ class WPF_HighLevel {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
-
+		if ( $this->is_v2() ) {
+			$custom_field_name = 'customFields';
+		} else {
+			$custom_field_name = 'customField';
+		}
 		// Separate the built in fields from custom ones.
 		$crm_fields = wpf_get_option( 'crm_fields' );
 
@@ -538,12 +725,19 @@ class WPF_HighLevel {
 
 			if ( ! isset( $crm_fields['Standard Fields'][ $key ] ) ) {
 
-				if ( ! isset( $contact_data['customField'] ) ) {
-					$contact_data['customField'] = array();
+				if ( ! isset( $contact_data[ $custom_field_name ] ) ) {
+					$contact_data[ $custom_field_name ] = array();
 				}
 
-				$contact_data['customField'][ $key ] = $value;
-
+				if ( $this->is_v2() ) {
+					$contact_data[ $custom_field_name ][] = array(
+						'id'          => $key,
+						'field_value' => $value,
+					);
+					unset( $contact_data[ $key ] );
+				} else {
+					$contact_data['customField'][ $key ] = $value;
+				}
 			}
 		}
 
@@ -584,15 +778,21 @@ class WPF_HighLevel {
 
 		$response = $response['contact'];
 
-		// Load the custom fields up into the main response
+		if ( $this->is_v2() ) {
+			$custom_field_name = 'customFields';
+		} else {
+			$custom_field_name = 'customField';
+		}
 
-		if ( isset( $response['customField'] ) ) {
+		// Load the custom fields up into the main response.
 
-			foreach ( $response['customField'] as $field ) {
+		if ( isset( $response[ $custom_field_name ] ) ) {
+
+			foreach ( $response[ $custom_field_name ] as $field ) {
 				$response[ $field['id'] ] = $field['value'];
 			}
 
-			unset( $response['customField'] );
+			unset( $response[ $custom_field_name ] );
 		}
 
 		$user_meta      = array();
@@ -600,7 +800,7 @@ class WPF_HighLevel {
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
-			if ( true == $field_data['active'] && isset( $response[ $field_data['crm_field'] ] ) ) {
+			if ( $field_data['active'] && isset( $response[ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $response[ $field_data['crm_field'] ];
 			}
 		}
@@ -622,10 +822,14 @@ class WPF_HighLevel {
 		$page        = 1;
 		$proceed     = true;
 		$contact_ids = array();
-
+		if ( $this->is_v2() ) {
+			$main_request = "{$this->url}contacts/?locationId=" . $this->location_id . '';
+		} else {
+			$main_request = "{$this->url}contacts/";
+		}
 		while ( $proceed ) {
 
-			$request  = "{$this->url}contacts/?page={$page}&limit=100&query={$tag}";
+			$request  = $main_request . "&page={$page}&limit=100&query={$tag}";
 			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {

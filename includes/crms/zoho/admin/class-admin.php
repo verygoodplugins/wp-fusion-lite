@@ -46,7 +46,7 @@ class WPF_Zoho_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
+		add_action( 'validate_field_zoho_tag_type', array( $this, 'validate_tag_type' ), 10, 3 );
 	}
 
 	/**
@@ -64,13 +64,13 @@ class WPF_Zoho_Admin {
 			$code            = sanitize_text_field( wp_unslash( $_GET['code'] ) );
 			$accounts_server = esc_url_raw( wp_unslash( $_GET['accounts-server'] ) );
 
-			if( $location == 'eu' ) {
+			if ( $location == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
 				$api_domain    = 'https://www.zohoapis.eu';
-			} elseif( $location == 'in' ) {
+			} elseif ( $location == 'in' ) {
 				$client_secret = $this->crm->client_secret_in;
 				$api_domain    = 'https://www.zohoapis.in';
-			} elseif( $location == 'au' ) {
+			} elseif ( $location == 'au' ) {
 				$client_secret = $this->crm->client_secret_au;
 				$api_domain    = 'https://www.zohoapis.com.au';
 			} else {
@@ -128,26 +128,52 @@ class WPF_Zoho_Admin {
 
 		if ( empty( $options['zoho_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
 
-			$new_settings['zoho_header']['desc'] = '<table class="form-table"><tr>';
+			$new_settings['zoho_header']['desc']  = '<table class="form-table"><tr>';
 			$new_settings['zoho_header']['desc'] .= '<th scope="row"><label>Authorize</label></th>';
 			$new_settings['zoho_header']['desc'] .= '<td><a class="button button-primary" href="' . esc_url( $auth_url ) . '">Authorize with Zoho</a><br /><span class="description">You\'ll be taken to Zoho to authorize WP Fusion and generate access keys for this site.</td>';
 			$new_settings['zoho_header']['desc'] .= '</tr></table></div><table class="form-table">';
 
 		} else {
 
+			if ( ! empty( $options['connection_configured'] ) && 'zoho' === wpf_get_option( 'crm' ) ) {
+				$new_settings['zoho_tag_type'] = array(
+					'title'   => __( 'Segmentation Type', 'wp-fusion-lite' ),
+					'std'     => 'tags',
+					'type'    => 'radio',
+					'section' => 'setup',
+					'choices' => array(
+						'tags'        => 'Tags',
+						'multiselect' => 'Multi-Select',
+					),
+					'desc'    => __( 'For more information, see <a href="https://wpfusion.com/documentation/crm-specific-docs/zoho-tags/" target="_blank">Tags with Zoho</a>.', 'wp-fusion-lite' ),
+				);
+
+				$new_settings['zoho_multiselect_field'] = array(
+					'title'       => __( 'Multi-select Field', 'wp-fusion-lite' ),
+					'disabled'    => isset( $options['zoho_tag_type'] ) && 'multiselect' === $options['zoho_tag_type'] ? false : true,
+					'type'        => 'select',
+					'choices'     => wpf_get_option( 'zoho_multiselect_fields', array() ),
+					'placeholder' => __( 'Select a field', 'wp-fusion-lite' ),
+					'section'     => 'setup',
+				);
+
+			}
+
 			$new_settings['zoho_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'type'    => 'text',
-				'section' => 'setup',
+				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
+				'type'           => 'text',
+				'section'        => 'setup',
+				'input_disabled' => true,
 			);
 
 			$new_settings['zoho_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'        => 'api_validate',
-				'section'     => 'setup',
-				'class'       => 'api_key',
-				'post_fields' => array( 'zoho_token', 'zoho_refresh_token' ),
-				'desc'        => '<a href="' . esc_url( $auth_url ) . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->name ) . '</a>',
+				'title'          => __( 'Refresh Token', 'wp-fusion-lite' ),
+				'type'           => 'api_validate',
+				'section'        => 'setup',
+				'class'          => 'api_key',
+				'post_fields'    => array( 'zoho_token', 'zoho_refresh_token' ),
+				'desc'           => '<a href="' . esc_url( $auth_url ) . '">' . sprintf( __( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->name ) . '</a>',
+				'input_disabled' => true,
 			);
 
 		}
@@ -157,6 +183,44 @@ class WPF_Zoho_Admin {
 		return $settings;
 
 	}
+
+	/**
+	 * Resync tags/multiselect field when the tag type is saved and validate the tag type.
+	 *
+	 * @since  3.41.16
+	 *
+	 * @param  string      $input   The input.
+	 * @param  array       $setting The setting configuration.
+	 * @param  WPF_Options $options The options class.
+	 * @return string|WP_Error The input or error on validation failure.
+	 */
+	public function validate_tag_type( $input, $setting, $options ) {
+
+		if ( ! empty( $options->options['zoho_tag_type'] ) && $input !== $options->options['zoho_tag_type'] ) {
+
+			if ( 'multiselect' === $input && empty( $options->post_data['zoho_multiselect_field'] ) ) {
+				return new WP_Error( 'error', 'To use multiselect for tags you must select a multiselect field from the multiselect dropdown on the Setup tab.' );
+			}
+
+			// Set these temporarily so sync_tags() works.
+			wp_fusion()->settings->options['zoho_tag_type']          = $input;
+			wp_fusion()->settings->options['zoho_multiselect_field'] = $options->post_data['zoho_multiselect_field'];
+
+			$result = $this->crm->sync_tags();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			// Resync tags for all users.
+			wp_fusion()->batch->batch_init( 'users_tags_sync' );
+
+		}
+
+		return $input;
+
+	}
+
 
 	/**
 	 * Adds Zoho specific setting fields
@@ -200,10 +264,10 @@ class WPF_Zoho_Admin {
 
 		$new_settings = array(
 			'import_notice' => array(
-				'desc'        => __( '<strong>Note:</strong> Imports with Zoho use a loose word match on the contact record. That means if your import tag is "gmail", it will also import any contacts with an <em>@gmail.com</em> email address. Please use a unique tag name for imports.', 'wp-fusion-lite' ),
-				'type'        => 'paragraph',
-				'section'     => 'import',
-			)
+				'desc'    => __( '<strong>Note:</strong> Imports with Zoho use a loose word match on the contact record. That means if your import tag is "gmail", it will also import any contacts with an <em>@gmail.com</em> email address. Please use a unique tag name for imports.', 'wp-fusion-lite' ),
+				'type'    => 'paragraph',
+				'section' => 'import',
+			),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'import_users', $settings, $new_settings );
@@ -231,9 +295,7 @@ class WPF_Zoho_Admin {
 				if ( isset( $zoho_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $zoho_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;

@@ -24,7 +24,7 @@ $highlevel_fields['phone_number'] = array(
 
 $highlevel_fields['billing_phone'] = array(
 	'crm_label' => 'Phone Number',
-	'crm_field' => 'phone',
+	'crm_field' => 'phone+PHONE',
 );
 
 $highlevel_fields['billing_address_1'] = array(

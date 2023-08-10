@@ -371,13 +371,8 @@ class WPF_GetResponse {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$params   = $this->params;
 		$request  = 'https://api.getresponse.com/v3/contacts?query%5Bemail%5D=' . $email_address;
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -396,7 +391,7 @@ class WPF_GetResponse {
 	 * Gets all tags currently applied to the user, also update the list of available tags
 	 *
 	 * @access public
-	 * @return void
+	 * @return array Tags.
 	 */
 
 	public function get_tags( $contact_id ) {
@@ -460,26 +455,48 @@ class WPF_GetResponse {
 	}
 
 
-	/**
-	 * Removes tags from a contact
-	 *
-	 * @access public
-	 * @return bool
-	 */
 
+	/**
+	 * Removes tags.
+	 * 
+	 * At the moment the only way to do this is to load the current tags, intersect
+	 * with the tags to remove, and then patch the contact with the remaining tags.
+	 *
+	 * @since 3.41.19
+	 *
+	 * @param array  $tags       The tags.
+	 * @param string $contact_id The contact ID.
+	 */
 	public function remove_tags( $tags, $contact_id ) {
 
-		// Currently not Possible
-		return true;
+		$current_tags = $this->get_tags( $contact_id );
+
+		if ( is_wp_error( $current_tags ) ) {
+			return $current_tags;
+		}
+
+		if ( ! $current_tags ) {
+			return false;
+		}
+
+		$data = array(
+			'tags' => array_diff( $current_tags, $tags ),
+		);
+
+		return $this->update_contact( $contact_id, $data );
 
 	}
 
 
 	/**
-	 * Adds a new contact
+	 * Adds a new contact.
+	 * 
+	 * @since 3.24.8
+	 * 
+	 * @link https://apireference.getresponse.com/#operation/createContact
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @param array $data Contact data.
+	 * @return string Contact ID.
 	 */
 
 	public function add_contact( $data ) {
@@ -493,7 +510,10 @@ class WPF_GetResponse {
 		// Allow filtering
 		$list = apply_filters( 'wpf_add_contact_lists', $list );
 
-		$contact_data = array();
+		$contact_data = array(
+			'dayOfCycle' => 0, // Add to the beginning of the autoresponder cycle.
+			'ipAddress'  => wp_fusion()->user->get_ip(),
+		);
 
 		if ( ! empty( $list ) ) {
 
@@ -577,25 +597,28 @@ class WPF_GetResponse {
 
 	public function update_contact( $contact_id, $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		if ( empty( $data ) ) {
 			return false;
 		}
 
 		$contact_data = array();
 
-		if ( isset( $data['name'] ) ) {
-			$contact_data['name'] = $data['name'];
-			unset( $data['name'] );
+		$core_fields = array(
+			'name',
+			'email',
+			'tags',
+		);
+
+		// Core fields.
+
+		foreach( $core_fields as $field ) {
+			if ( isset( $data[ $field ] ) ) {
+				$contact_data[ $field ] = $data[ $field ];
+				unset( $data[ $field ] );
+			}
 		}
 
-		if ( isset( $data['email'] ) ) {
-			$contact_data['email'] = $data['email'];
-			unset( $data['email'] );
-		}
+		// Custom fields.
 
 		if ( ! empty( $data ) ) {
 
@@ -612,7 +635,7 @@ class WPF_GetResponse {
 		}
 
 		$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
-		$params         = $this->params;
+		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $contact_data );
 
 		$response = wp_safe_remote_post( $url, $params );

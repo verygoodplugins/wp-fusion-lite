@@ -202,8 +202,13 @@ class WPF_Constant_Contact {
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
+		if ( empty( $body_json ) || ! isset( $body_json->access_token ) ) {
+			return new WP_Error( 'error', 'Unknown error refreshing access token: ' . wp_remote_retrieve_body( $response ) );
+		}
+
 		$this->get_params( $body_json->access_token );
 
+		wp_fusion()->settings->set( "{$this->slug}_refresh_token", $body_json->refresh_token );
 		wp_fusion()->settings->set( "{$this->slug}_token", $body_json->access_token );
 
 		return $body_json->access_token;
@@ -324,7 +329,12 @@ class WPF_Constant_Contact {
 
 				if ( 'unauthorized' === $body_json->error_key ) {
 
-					$access_token                     = $this->refresh_token();
+					$access_token = $this->refresh_token();
+
+					if ( is_wp_error( $access_token ) ) {
+						return $access_token;
+					}
+
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
 					$response = wp_safe_remote_request( $url, $args );
@@ -454,7 +464,7 @@ class WPF_Constant_Contact {
 	 */
 	public function sync_tags() {
 
-		$request = $this->url . '/contact_tags/';
+		$request = $this->url . '/contact_tags/?limit=500';
 
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 

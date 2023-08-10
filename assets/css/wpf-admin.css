@@ -324,6 +324,16 @@ table.wp-list-table.users div.wpf-users-tags.expanded:after {
 	background-color: #eee;
 }
 
+/* Gutenberg */
+
+form.metabox-location-side #wpf-meta .postbox-header h2 {
+	padding: 0 16px;
+}
+
+form.metabox-location-side #wpf-meta > .inside {
+	padding: 0 16px 24px;
+}
+
 #wp_fusion_tab .select4-container {
 	min-width: 377px;
 }
@@ -393,6 +403,12 @@ body .select4-drop.select4-drop-active {
 	min-width: 360px;
 }
 
+/* BuddyBoss */
+
+.buddyboss_page_bp-settings .access-control-checkbox-list {
+	max-height: 500px;
+	overflow: scroll;
+}
 
 /* WP Job Manager */
 
@@ -564,6 +580,7 @@ i#wpf-select4-tags-loading {
 
 .select4-container .select4-selection > .select4-selection__rendered {
 	padding: 2px 8px 2px;
+	margin: 0 !important;
 }
 
 /* Labels in select */
@@ -627,6 +644,12 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	width: 300px !important;
 }
 
+/* WP Booking System */
+
+.wpbs-tab-wpf_field_mapping .select4-container {
+	width: 100% !important;
+}
+
 /* WPForms */
 
 #wpforms-settings-providers #wpforms-integration-wp-fusion {
@@ -671,7 +694,7 @@ body.memberships_page_pmpro-discountcodes .select4-container {
     line-height: 1;
 }
 
-.options_group.wpf-product small {
+.options_group.wpf-product .description small {
 	display: block;
 	margin-top: 5px;
 }

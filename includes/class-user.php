@@ -509,6 +509,7 @@ class WPF_User {
 			// Maybe detect email address changes.
 
 			if ( isset( $userdata['user_email'] ) && is_a( $old_user_data, 'WP_User' ) && strtolower( $userdata['user_email'] ) !== strtolower( $old_user_data->user_email ) ) {
+				$post_data['user_email']          = $userdata['user_email'];
 				$post_data['previous_user_email'] = $old_user_data->user_email;
 			}
 
@@ -788,12 +789,19 @@ class WPF_User {
 		}
 
 		// Start by getting everything in the database.
+
+		$user_meta = get_user_meta( $user_id );
+
+		if ( ! $user_meta )  {
+			return apply_filters( 'wpf_get_user_meta', array(), $user_id );
+		}
+
 		$user_meta = array_filter(
 			array_map(
 				function( $a ) {
 					return maybe_unserialize( $a[0] );
 				},
-				get_user_meta( $user_id )
+				$user_meta,
 			)
 		);
 
@@ -2006,7 +2014,7 @@ class WPF_User {
 
 	public function push_user_meta( $user_id, $user_meta = false ) {
 
-		if ( ! wpf_get_option( 'push' ) || ! did_action( 'wpf_crm_loaded' ) ) {
+		if ( ! wpf_get_option( 'push' ) || ! wp_fusion()->crm ) {
 			return;
 		}
 

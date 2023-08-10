@@ -48,7 +48,7 @@ class WPF_Salesforce {
 	 *
 	 * @var string
 	 */
-	 public $auth_url;
+	public $auth_url;
 
 	/**
 	 * Get things started
@@ -104,8 +104,9 @@ class WPF_Salesforce {
 		add_action( 'wpf_api_fail', array( $this, 'api_success' ), 10, 2 );
 
 		$instance_url = wpf_get_option( 'sf_instance_url' );
+
 		if ( ! empty( $instance_url ) ) {
-			$this->edit_url = trailingslashit( $instance_url ) . 'lightning/r/Contact/%s/view';
+			$this->edit_url = trailingslashit( $instance_url ) . 'lightning/r/' . $this->object_type . '/%s/view';
 		}
 
 		$this->auth_url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
@@ -253,7 +254,7 @@ class WPF_Salesforce {
 
 			// Don't sync read only fields, they'll just throw an error anyway.
 
-			return false;
+			return '';
 
 		} elseif ( ( 'datepicker' == $field_type || 'date' == $field_type ) && is_numeric( $value ) ) {
 
@@ -484,7 +485,7 @@ class WPF_Salesforce {
 		);
 
 		$this->instance_url = apply_filters( 'wpf_salesforce_instance_url', wpf_get_option( 'sf_instance_url' ) );
-		$this->object_type  = apply_filters( 'wpf_crm_object_type', $this->object_type );
+		$this->object_type  = apply_filters( 'wpf_crm_object_type', wpf_get_option( 'sf_object_type', $this->object_type ) );
 
 		return $this->params;
 
@@ -534,6 +535,7 @@ class WPF_Salesforce {
 			return false;
 		}
 
+		$this->sync_objects();
 		$this->sync_tags();
 		$this->sync_crm_fields();
 
@@ -543,6 +545,37 @@ class WPF_Salesforce {
 
 	}
 
+	/**
+	 * Gets all available objects and saves them to options.
+	 *
+	 * @since 3.41.6
+	 *
+	 * @return array Objects.
+	 */
+	public function sync_objects() {
+
+		$response = wp_safe_remote_get( $this->instance_url . '/services/data/v42.0/sobjects/', $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$objects = array();
+
+		foreach ( $body->sobjects as $object ) {
+
+			if ( $object->createable && $object->searchable && $object->updateable ) {
+				$objects[ $object->name ] = $object->{'labelPlural'};
+			}
+		}
+
+		update_option( 'wpf_salesforce_objects', $objects, false );
+
+		return $objects;
+
+	}
 
 	/**
 	 * Gets all available tags and saves them to options

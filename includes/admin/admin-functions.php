@@ -116,7 +116,9 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		$tag_categories = array();
 
 		foreach ( $available_tags as $value ) {
-			$tag_categories[] = $value['category'];
+			if ( is_array( $value ) ) {
+				$tag_categories[] = $value['category'];
+			}
 		}
 
 		$tag_categories = array_unique( $tag_categories );
@@ -124,8 +126,11 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		foreach ( $tag_categories as $tag_category ) {
 
 			// (read only) lists with HubSpot.
-
 			if ( false !== strpos( $tag_category, 'Read Only' ) && false === $args['read_only'] ) {
+				continue;
+			}
+
+			if ( false !== strpos( $tag_category, 'Forms' ) && true === $args['read_only'] ) {
 				continue;
 			}
 
@@ -133,10 +138,18 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 			foreach ( $available_tags as $id => $field_data ) {
 
+				if ( ! is_array( $field_data ) ) {
+					continue; // if tag got saved as string somehow.
+				}
+
 				// If we are showing read only lists/tags, add a badge to indicate it.
 
 				if ( strpos( $tag_category, 'Read Only' ) !== false ) {
 					$field_data['label'] .= '<small>(' . esc_html__( 'read only', 'wp-fusion-lite' ) . ')</small>';
+				}
+
+				if ( strpos( $tag_category, 'Forms' ) !== false ) {
+					$field_data['label'] .= '<small>(' . esc_html__( 'form', 'wp-fusion-lite' ) . ')</small>';
 				}
 
 				if ( $field_data['category'] === $tag_category ) {
@@ -210,7 +223,15 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 		$name = $meta_name . '[' . $field_id . '][' . $field_sub_id . '][crm_field]';
 	}
 
-	echo '<select id="' . esc_attr( $field_id . ( ! empty( $field_sub_id ) ? '-' . $field_sub_id : '' ) ) . '" class="select4-crm-field" name="' . esc_attr( $name ) . '" data-placeholder="Select a field">';
+	// ID.
+
+	if ( false === $field_id ) {
+		$id = sanitize_html_class( $meta_name );
+	} else {
+		$id = sanitize_html_class( $meta_name ) . '-' . $field_id;
+	}
+
+	echo '<select id="' . esc_attr( $id . ( ! empty( $field_sub_id ) ? '-' . $field_sub_id : '' ) ) . '" class="select4-crm-field" name="' . esc_attr( $name ) . '" data-placeholder="Select a field">';
 
 	echo '<option></option>';
 

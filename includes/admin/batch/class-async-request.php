@@ -141,7 +141,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 
 			$cookies = $_COOKIE;
 
-			// Some cookies cause the request to be blocked so we'll only allow desired cookies through
+			// Some cookies cause the request to be blocked so we'll only allow desired cookies through.
 			$allowed_cookies = apply_filters( 'wpf_async_allowed_cookies', array() );
 
 			foreach ( $cookies as $key => $value ) {
@@ -151,12 +151,20 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 				}
 			}
 
-			return array(
+			$args = array(
 				'timeout'   => 0.01,
 				'blocking'  => false,
 				'cookies'   => $cookies,
 				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
 			);
+
+			if ( isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+				$args['headers'] = array(
+					'Authorization' => sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) ),
+				);
+			}
+
+			return $args;
 
 		}
 

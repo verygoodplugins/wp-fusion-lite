@@ -80,10 +80,10 @@ class WPF_Drip {
 		// Slow down the batch processses to get around the 3600 requests per hour limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
-		$account_id = wpf_get_option( 'drip_account' );
+		$this->account_id = wpf_get_option( 'drip_account' );
 
-		if ( ! empty( $account_id ) ) {
-			$this->edit_url = 'https://www.getdrip.com/' . $account_id . '/subscribers/%s';
+		if ( $this->account_id ) {
+			$this->edit_url = 'https://www.getdrip.com/' . $this->account_id . '/subscribers/%s';
 		}
 	}
 
@@ -152,8 +152,7 @@ class WPF_Drip {
 
 	public function get_params() {
 
-		$this->account_id = wpf_get_option( 'drip_account' );
-		$api_token        = wpf_get_option( 'drip_token' );
+		$api_token = wpf_get_option( 'drip_token' );
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
@@ -251,18 +250,16 @@ class WPF_Drip {
 			return;
 		}
 
-		$account_id = wpf_get_option( 'drip_account' );
-
 		echo '<!-- Drip (via WP Fusion) -->';
 		echo '<script type="text/javascript">';
 		echo 'var _dcq = _dcq || [];';
 		echo 'var _dcs = _dcs || {};';
-		echo "_dcs.account = '" . esc_js( $account_id ) . "';";
+		echo "_dcs.account = '" . esc_js( $this->account_id ) . "';";
 
 		echo '(function() {';
 		echo "var dc = document.createElement('script');";
 		echo "dc.type = 'text/javascript'; dc.async = true;";
-		echo "dc.src = '//tag.getdrip.com/" . esc_js( $account_id ) . ".js';";
+		echo "dc.src = '//tag.getdrip.com/" . esc_js( $this->account_id ) . ".js';";
 		echo "var s = document.getElementsByTagName('script')[0];";
 		echo 's.parentNode.insertBefore(dc, s);';
 		echo '})();';
@@ -590,29 +587,31 @@ class WPF_Drip {
 
 		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
-		if ( is_wp_error( $email ) ) {
+		if ( is_wp_error( $email ) || false === $email ) {
 			return $email;
 		}
 
-		if ( $email == false ) {
-			return false;
-		}
-
-		$this->connect();
+		$params = $this->get_params();
 
 		foreach ( $tags as $tag ) {
 
-			$result = $this->app->tag_subscriber(
-				array(
-					'account_id' => $this->account_id,
-					'email'      => $email,
-					'tag'        => $tag,
-				)
+			$data = array(
+				'tags' => array(
+					array(
+						'email' => $email,
+						'tag'   => $tag,
+					),
+				),
 			);
+
+			$params['body'] = wp_json_encode( $data );
+
+			$result = wp_safe_remote_post( "https://api.getdrip.com/v2/{$this->account_id}/tags", $params );
 
 			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
+
 		}
 
 		return true;
@@ -629,25 +628,16 @@ class WPF_Drip {
 
 		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
-		if ( is_wp_error( $email ) ) {
+		if ( is_wp_error( $email ) || false === $email ) {
 			return $email;
 		}
 
-		if ( $email == false ) {
-			return false;
-		}
-
-		$this->connect();
+		$params           = $this->get_params();
+		$params['method'] = 'DELETE';
 
 		foreach ( $tags as $tag ) {
 
-			$result = $this->app->untag_subscriber(
-				array(
-					'account_id' => $this->account_id,
-					'email'      => $email,
-					'tag'        => $tag,
-				)
-			);
+			$result = wp_safe_remote_request( "https://api.getdrip.com/v2/{$this->account_id}/subscribers/{$email}/tags/{$tag}/", $params );
 
 			if ( is_wp_error( $result ) ) {
 				return $result;

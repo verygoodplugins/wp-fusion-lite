@@ -47,6 +47,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Customerly
 * Drift
 * Drip
+* EmailOctopus
 * Emercury
 * Engage
 * EngageBay

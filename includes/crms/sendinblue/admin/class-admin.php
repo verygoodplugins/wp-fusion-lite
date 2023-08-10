@@ -58,14 +58,14 @@ class WPF_SendinBlue_Admin {
 		$new_settings = array();
 
 		$new_settings['sendinblue_header'] = array(
-			'title'   => __( 'SendinBlue Configuration', 'wp-fusion-lite' ),
+			'title'   => __( 'Brevo Configuration', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
 		$new_settings['sendinblue_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion-lite' ),
-			'desc'        => __( 'You can find your API v3 key in the <a href="https://account.sendinblue.com/advanced/api/" target="_blank">API settings</a> of your SendinBlue account.', 'wp-fusion-lite' ),
+			'desc'        => __( 'You can find your API v3 key in the <a href="https://account.brevo.com/advanced/api/" target="_blank">API settings</a> of your Brevo account.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -80,7 +80,7 @@ class WPF_SendinBlue_Admin {
 
 
 	/**
-	 * Loads standard SendinBlue field names and attempts to match them up with standard local ones
+	 * Loads standard Brevo field names and attempts to match them up with standard local ones
 	 *
 	 * @access  public
 	 * @since   1.0

@@ -76,6 +76,26 @@ class WPF_Dynamics_365 {
 	 */
 	public $callback_url;
 
+
+	/**
+	 * Lets outside functions override the object type (Leads for example)
+	 *
+	 * @var  string
+	 *
+	 * @since 3.41.19
+	 */
+	public $object_type = 'contacts';
+
+	/**
+	 * Lets outside functions override the object type (Lead for example)
+	 *
+	 * @access private
+	 * @var    string
+	 *
+	 * @since 3.41.24
+	 */
+	private $object_type_singular = 'contact';
+
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation
 	 * labels (groups, lists, etc)
@@ -101,8 +121,6 @@ class WPF_Dynamics_365 {
 		$this->callback_url  = 'https://wpfusion.com/oauth/';
 		$this->url           = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/api/data/v9.0';
 
-		$this->edit_url = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/main.aspx?forceUCI=1&pagetype=entityrecord&etn=contact&id=%s';
-
 		// Set up admin options.
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/class-dynamics-365-admin.php';
@@ -126,9 +144,12 @@ class WPF_Dynamics_365 {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
-		$url = wpf_get_option( 'dynamics_365_rest_url' );
-		if ( ! empty( $url ) ) {
-			$this->edit_url = $url . '/main.aspx?forceUCI=1&pagetype=entityrecord&etn=contact&id=%s';
+		$this->object_type = apply_filters( 'wpf_crm_object_type', wpf_get_option( 'dynamics_365_object_type', $this->object_type ) );
+
+		$this->object_type_singular = substr( $this->object_type, 0, -1 );
+
+		if ( ! empty( wpf_get_option( 'dynamics_365_rest_url' ) ) ) {
+			$this->edit_url = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/main.aspx?forceUCI=1&pagetype=entityrecord&etn=' . $this->object_type_singular . '&id=%s';
 		}
 
 	}
@@ -213,7 +234,7 @@ class WPF_Dynamics_365 {
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
-			'timeout'    => 40,
+			'timeout'    => 20,
 			'headers'    => array(
 				'Content-Type'     => 'application/json; charset=utf-8',
 				'Authorization'    => 'Bearer ' . $access_token,
@@ -333,7 +354,6 @@ class WPF_Dynamics_365 {
 
 	}
 
-
 	/**
 	 * Gets all available lists and saves them to options.
 	 *
@@ -347,7 +367,7 @@ class WPF_Dynamics_365 {
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 */
 	public function sync_tags() {
-		$request  = $this->url . '/lists?$select=listid,listname';
+		$request  = $this->url . '/lists?$select=listid,listname,type';
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
@@ -356,25 +376,30 @@ class WPF_Dynamics_365 {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$tag_ids        = array();
 		$available_tags = array();
 
 		// Load available tags into $available_tags like 'tag_id' => 'Tag Label'.
 		if ( ! empty( $response->value ) ) {
 
-			foreach ( $response->value as $tag ) {
+			foreach ( $response->value as $list ) {
 
-				$name = sanitize_text_field( $tag->listname );
-				$id   = $tag->listid;
+				if ( empty( $list->type ) ) {
+					$category = 'Static Lists';
+				} else {
+					$category = 'Dynamic Lists (Read Only)';
+				}
 
-				$available_tags[ $id ] = $name;
-				$tag_ids[ $id ]        = $name;
+				$available_tags[ $list->listid ] = array(
+					'label'    => sanitize_text_field( $list->listname ),
+					'category' => $category,
+				);
+
 			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
-		return $tag_ids;
+		return $available_tags;
 	}
 
 
@@ -433,7 +458,7 @@ class WPF_Dynamics_365 {
 	 */
 	public function sync_crm_fields() {
 
-		$response = wp_safe_remote_get( $this->url . '/EntityDefinitions(LogicalName=\'contact\')/Attributes', $this->get_params() );
+		$response = wp_safe_remote_get( $this->url . '/EntityDefinitions(LogicalName=\'' . $this->object_type_singular . '\')/Attributes', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -447,15 +472,41 @@ class WPF_Dynamics_365 {
 				continue;
 			}
 
-			$id    = $field->{'LogicalName'};
-			$label = $field->{'DisplayName'}->{'UserLocalizedLabel'}->{'Label'};
+			$id         = $field->{'LogicalName'};
+			$label_base = $field->{'DisplayName'}->{'UserLocalizedLabel'}->{'Label'};
 
-			$label = str_replace( '(', '&#40;', $label ); // normally () content gets made small so HTML-escaping it will avoid that.
-			$label = str_replace( ')', '&#41;', $label );
+			$label_base = str_replace( '(', '&#40;', $label_base ); // normally () content gets made small so HTML-escaping it will avoid that.
+			$label_base = str_replace( ')', '&#41;', $label_base );
 
-			if ( 'Lookup' === $field->{'AttributeType'} || 'Owner' === $field->{'AttributeType'} ) {
-				$id     = '_' . $id . '_value';
-				$label .= ' (Lookup Field)';
+			if ( 'Lookup' === $field->{'AttributeType'} || 'Owner' === $field->{'AttributeType'} || 'Customer' === $field->{'AttributeType'} ) {
+
+				if ( 1 < count( $field->{'Targets'} ) ) {
+
+					// Multi-valued navigation properties.
+					// see https://learn.microsoft.com/en-us/troubleshoot/power-platform/power-apps/dataverse/web-api-client-errors#cause-4.
+
+					foreach ( $field->{'Targets'} as $target ) {
+
+						$id    = '_' . $id . '_' . $target . '_value';
+						$label = $label_base . ' (Lookup Field &raquo; ' . ucwords( $target ) . ')';
+
+						if ( $field->{'IsCustomAttribute'} ) {
+							$custom_fields[ $id ] = $label;
+						} else {
+							$built_in_fields[ $id ] = $label;
+						}
+					}
+
+					continue;
+
+				}
+
+				// Single-valued navigation properties.
+				$id    = '_' . $id . '_value';
+				$label = $label_base . ' (Lookup Field)';
+
+			} else {
+				$label = $label_base;
 			}
 
 			if ( $field->{'IsCustomAttribute'} ) {
@@ -489,9 +540,12 @@ class WPF_Dynamics_365 {
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->url . '/contacts?$filter=emailaddress1 eq \'' . $email_address . '\'';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$lookup_field = wp_fusion()->crm->get_crm_field( 'user_email', 'emailaddress1' );
 
+		$lookup_field = apply_filters( 'wpf_dynamics_365_lookup_field', $lookup_field );
+
+		$request  = $this->url . '/' . $this->object_type . '?$filter=' . $lookup_field . ' eq \'' . $email_address . '\'';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -502,7 +556,7 @@ class WPF_Dynamics_365 {
 			return false;
 		}
 
-		return $response->value[0]->contactid;
+		return $response->value[0]->{ $this->object_type_singular . 'id' };
 	}
 
 
@@ -516,22 +570,14 @@ class WPF_Dynamics_365 {
 	 */
 	public function get_tags( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = $this->url . '/listmembers?$filter=_entityid_value%20eq%20\'' . $contact_id . '\'&$select=_listid_value';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( empty( $response->value ) ) {
-			return array();
-		}
 
 		return wp_list_pluck( $response->value, '_listid_value' );
 
@@ -596,9 +642,9 @@ class WPF_Dynamics_365 {
 	 * Formats lookup fields for the API.
 	 *
 	 * @link https://learn.microsoft.com/en-us/previous-versions/dynamicscrm-2016/developers-guide/mt607875(v=crm.8)
-	 * 
+	 *
 	 * @since 3.40.57
-	 * 
+	 *
 	 * @param array $data The contact data.
 	 */
 	public function format_lookup_fields( $data ) {
@@ -646,7 +692,7 @@ class WPF_Dynamics_365 {
 
 		$data = $this->format_lookup_fields( $data );
 
-		$request                     = $this->url . '/contacts/';
+		$request                     = $this->url . '/' . $this->object_type . '/';
 		$params                      = $this->get_params();
 		$params['body']              = wp_json_encode( $data );
 		$params['headers']['Prefer'] = 'return=representation';
@@ -659,9 +705,7 @@ class WPF_Dynamics_365 {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$contact_id = $response->contactid;
-
-		return $contact_id;
+		return $response->{ $this->object_type_singular . 'id' };
 
 	}
 
@@ -679,7 +723,7 @@ class WPF_Dynamics_365 {
 
 		$data = $this->format_lookup_fields( $data );
 
-		$request          = $this->url . '/contacts(' . $contact_id . ')';
+		$request          = $this->url . '/' . $this->object_type . '(' . $contact_id . ')';
 		$params           = $this->get_params();
 		$params['method'] = 'PATCH';
 		$params['body']   = wp_json_encode( $data );
@@ -702,7 +746,7 @@ class WPF_Dynamics_365 {
 	 */
 	public function load_contact( $contact_id ) {
 
-		$request  = $this->url . '/contacts(' . $contact_id . ')';
+		$request  = $this->url . '/' . $this->object_type . '(' . $contact_id . ')';
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -741,13 +785,9 @@ class WPF_Dynamics_365 {
 	 * @return array Contact IDs returned.
 	 */
 	public function load_contacts( $tag ) {
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
-		$contact_ids = array();
-		$request     = $this->url . '/listmembers?$filter=_listid_value eq \'' . $tag . '\'&$select=listmemberid';
-		$response    = wp_safe_remote_get( $request, $this->params );
+		$request  = $this->url . '/listmembers?$filter=_listid_value eq \'' . $tag . '\'&$select=_entityid_value';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -755,11 +795,8 @@ class WPF_Dynamics_365 {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach ( $response->value as $contact ) {
-			$contact_ids[] = $contact->listmemberid;
-		}
+		return wp_list_pluck( $response->value, '_entityid_value' );
 
-		return $contact_ids;
 	}
 
 

@@ -574,6 +574,10 @@ class WPF_FluentCRM_REST {
 			$data['status'] = wpf_get_option( 'default_status', 'subscribed' );
 		}
 
+		if ( 'susbcribed' === $data['status'] ) {
+			$data['status'] = 'subscribed'; // fixes typo between v3.40.40 and 3.41.5.
+		}
+
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );
 

@@ -162,18 +162,20 @@ class WPF_HubSpot_Admin {
 		} else {
 
 			$new_settings['hubspot_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'type'    => 'text',
-				'section' => 'setup',
+				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
+				'type'           => 'text',
+				'section'        => 'setup',
+				'input_disabled' => true,
 			);
 
 			$new_settings['hubspot_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'        => 'api_validate',
-				'section'     => 'setup',
-				'class'       => 'api_key',
-				'post_fields' => array( 'hubspot_token', 'hubspot_refresh_token' ),
-				'desc'        => '<a href="' . esc_url( $auth_url ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
+				'title'          => __( 'Refresh Token', 'wp-fusion-lite' ),
+				'type'           => 'api_validate',
+				'section'        => 'setup',
+				'class'          => 'api_key',
+				'post_fields'    => array( 'hubspot_token', 'hubspot_refresh_token' ),
+				'desc'           => '<a href="' . esc_url( $auth_url ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
+				'input_disabled' => true,
 			);
 
 		}

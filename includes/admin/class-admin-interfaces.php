@@ -211,6 +211,7 @@ class WPF_Admin_Interfaces {
 		$localize = array(
 			'crm_supports'  => wp_fusion()->crm->supports,
 			'nonce'         => wp_create_nonce( 'wpf_admin_nonce' ),
+			'tag_type'   => wpf_get_option( 'crm_tag_type' ),
 			'connected'  => (bool) wpf_get_option( 'connection_configured' ),
 			'tagSelect4'    => false == apply_filters( 'wpf_disable_tag_select4', false ) ? true : false,
 			'fieldSelect4'  => false == apply_filters( 'wpf_disable_crm_field_select4', false ) ? true : false,
@@ -222,7 +223,7 @@ class WPF_Admin_Interfaces {
 				'resyncComplete'   => __( 'Resync complete. Please try searching again.', 'wp-fusion-lite' ),
 				'loadingFields'    => __( 'Loading fields, please wait...', 'wp-fusion-lite' ),
 				'linkedTagChanged' => sprintf(
-					__( 'It looks like you\'ve just changed a linked tag. To manually trigger automated enrollments, run a <em>Resync Tags</em> operation from the <a target="_blank" href="%1$s">WP Fusion settings page</a>. Any user with the <strong>%2$s</strong> tag will be enrolled. Any user without the <strong>%2$s</strong> tag will be unenrolled.', 'wp-fusion-lite' ),
+					__( 'It looks like you\'ve just changed a linked tag. To manually trigger automated enrollments, run a <em>Resync tags for every user</em> operation from the <a target="_blank" href="%1$s">WP Fusion settings page</a>. Any user with the <strong>%2$s</strong> tag will be enrolled. Any user without the <strong>%2$s</strong> tag will be unenrolled.', 'wp-fusion-lite' ),
 					esc_url( admin_url( 'options-general.php?page=wpf-settings' ) ) . '#advanced',
 					'TAGNAME'
 				),
@@ -1214,7 +1215,7 @@ class WPF_Admin_Interfaces {
 
 		echo '<p class="wpf-page-redirect-select"><label for="wpf-redirect"><small>' . esc_html__( 'Redirect if access is denied (page or URL):', 'wp-fusion-lite' ) . '</small>';
 
-		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'If you do not specify a redirect WP Fusion will try to replace the content area of the post with the restricted content message configured in the WP Fusion settings.', 'wp-fusion-lite' ) . '"></span></label>';
+		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'Select a page on your site, or enter an external URL. If you do not specify a redirect WP Fusion will try to replace the content area of the post with the restricted content message configured in the WP Fusion settings.', 'wp-fusion-lite' ) . '"></span></label>';
 
 		echo '<select ' . ( $disabled ? 'disabled' : '' ) . ' id="wpf-redirect" class="select4-select-page" style="width: 100%;" data-placeholder="' . __( 'Show restricted content message', 'wp-fusion-lite' ) . '" name="wpf-settings[redirect]">';
 
@@ -1404,6 +1405,10 @@ class WPF_Admin_Interfaces {
 		$temp_data = array();
 
 		foreach ( $results as $result ) {
+
+			if ( false === strpos( strtolower( $result->post_title ), strtolower( $search ) ) ) {
+				continue; // lets only search in the title.
+			}
 
 			if ( ! isset( $temp_data[ $result->post_type ] ) ) {
 				$temp_data[ $result->post_type ] = array();
@@ -1611,7 +1616,7 @@ class WPF_Admin_Interfaces {
 	 * @return void
 	 */
 
-	function save_meta_box_data( $post_id ) {
+	public function save_meta_box_data( $post_id ) {
 
 		if ( isset( $_POST['post_ID'] ) && $_POST['post_ID'] != $post_id ) {
 			return;

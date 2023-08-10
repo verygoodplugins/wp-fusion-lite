@@ -637,6 +637,10 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		public function handle_cron_healthcheck() {
 
+			if ( ! wpf_get_option( 'connection_configured' ) ) {
+				exit; // the WPF settings have been reset.
+			}
+
 			if ( $this->is_process_running() ) {
 
 				// Background process already running.

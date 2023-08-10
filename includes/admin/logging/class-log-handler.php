@@ -799,8 +799,15 @@ class WPF_Log_Handler {
 
 		if ( ! empty( $results ) ) {
 
-			$delimiter = ',';
-			$filename  = 'wp-fusion-activity-logs' . gmdate( 'Y-m-d' ) . '.csv';
+			$filename = 'wp-fusion-activity-logs' . gmdate( 'Y-m-d' ) . '.csv';
+
+			header( 'Pragma: public' );
+			header( 'Expires: 0' );
+			header( 'Cache-Control: must-revalidate, post-check=0, pre-check=0' );
+			header( 'Cache-Control: private', false );
+			header( 'Content-Type: text/csv; charset=utf-8' );
+			header( 'Content-Disposition: attachment; filename=' . $filename . ';' );
+			header( 'Content-Transfer-Encoding: binary' );
 
 			// Create a file pointer.
 			$output = fopen( 'php://output', 'w' );
@@ -814,7 +821,7 @@ class WPF_Log_Handler {
 				$line_data = array(
 					$result->log_id,
 					$result->timestamp,
-					$result->level,
+					self::get_severity_level( $result->level ),
 					$result->user,
 					print_r( maybe_unserialize( $result->source ), true ),
 					wp_strip_all_tags( htmlspecialchars_decode( $result->message ) ),
@@ -824,13 +831,7 @@ class WPF_Log_Handler {
 				fputcsv( $output, $line_data );
 			}
 
-			header( 'Pragma: public' );
-			header( 'Expires: 0' );
-			header( 'Cache-Control: must-revalidate, post-check=0, pre-check=0' );
-			header( 'Cache-Control: private', false );
-			header( 'Content-Type: text/csv; charset=utf-8' );
-			header( 'Content-Disposition: attachment; filename=' . $filename . '' );
-			header( 'Content-Transfer-Encoding: binary' );
+			fclose( $output ) or die ( 'Can\'t close output file' );
 			exit;
 		}
 

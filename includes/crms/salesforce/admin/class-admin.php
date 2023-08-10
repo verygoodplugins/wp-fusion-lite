@@ -116,21 +116,32 @@ class WPF_Salesforce_Admin {
 					'desc'     => __( 'Select a picklist type field to be used for segmentation with WP Fusion. For more information, see <a href="https://wpfusion.com/documentation/crm-specific-docs/salesforce-tags/" target="_blank">Tags with Salesforce</a>.', 'wp-fusion-lite' ),
 				);
 
+				$new_settings['sf_object_type'] = array(
+					'title'   => __( 'Object Type' ),
+					'type'    => 'select',
+					'section' => 'setup',
+					'choices' => get_option( 'wpf_salesforce_objects', array() ),
+					'std'     => $this->crm->object_type,
+					'desc'    => __( 'Select an object type to use with WP Fusion.', 'wp-fusion-lite' ),
+				);
+
 			}
 
 			$new_settings['sf_access_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'type'    => 'text',
-				'section' => 'setup',
+				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
+				'type'           => 'text',
+				'section'        => 'setup',
+				'input_disabled' => true,
 			);
 
 			$new_settings['sf_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'        => 'api_validate',
-				'section'     => 'setup',
-				'class'       => 'api_key',
-				'post_fields' => array( 'sf_access_token', 'sf_refresh_token', 'sf_instance_url' ),
-				'desc'        => '<a href="' . esc_url( $this->crm->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
+				'title'          => __( 'Refresh token', 'wp-fusion-lite' ),
+				'type'           => 'api_validate',
+				'section'        => 'setup',
+				'input_disabled' => true,
+				'class'          => 'api_key',
+				'post_fields'    => array( 'sf_access_token', 'sf_refresh_token', 'sf_instance_url' ),
+				'desc'           => '<a href="' . esc_url( $this->crm->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
 			);
 
 			$new_settings['sf_refresh_token']['desc'] .= __( 'To avoid having to repeatedly re-authorize, make sure the WP Fusion app is <a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/#complete-installation" target="_blank">completely installed</a>.', 'wp-fusion-lite' );

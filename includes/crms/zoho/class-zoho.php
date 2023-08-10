@@ -38,6 +38,7 @@ class WPF_Zoho {
 
 	/**
 	 * Lets us link directly to editing a contact record.
+	 *
 	 * @var string
 	 */
 
@@ -397,7 +398,12 @@ class WPF_Zoho {
 
 	public function sync_tags() {
 
-		$request  = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.ALL';
+		if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
+			$request = $this->api_domain . '/crm/v2/settings/fields?module=' . $this->object_type . '&scope=ZohoCRM.settings.ALL';
+		} else {
+			$request = $this->api_domain . '/crm/v2/settings/tags?module=' . $this->object_type . '&scope=ZohoCRM.settings.ALL';
+		}
+
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -408,12 +414,25 @@ class WPF_Zoho {
 
 		$available_tags = array();
 
-		if ( ! empty( $response->tags ) ) {
+		if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
+			$tags = $response->fields;
+		} else {
+			$tags = $response->tags;
+		}
 
-			foreach ( $response->tags as $tag ) {
-
-				$available_tags[ $tag->name ] = $tag->name;
-
+		if ( ! empty( $tags ) ) {
+			if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
+				foreach ( $tags as $tag ) {
+					if ( $tag->api_name === wpf_get_option( 'zoho_multiselect_field' ) && ! empty( $tag->pick_list_values ) ) {
+						foreach ( $tag->pick_list_values as $value ) {
+							$available_tags[ $value->actual_value ] = $value->display_value;
+						}
+					}
+				}
+			} else {
+				foreach ( $tags as $tag ) {
+					$available_tags[ $tag->name ] = $tag->name;
+				}
 			}
 		}
 
@@ -441,8 +460,9 @@ class WPF_Zoho {
 			return $response;
 		}
 
-		$built_in_fields = array();
-		$custom_fields   = array();
+		$built_in_fields    = array();
+		$custom_fields      = array();
+		$multiselect_fields = array();
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -450,10 +470,15 @@ class WPF_Zoho {
 
 			foreach ( $body_json->fields as $field ) {
 
-				if ( false == $field->custom_field ) {
+				if ( ! $field->custom_field ) {
 					$built_in_fields[ $field->api_name ] = $field->field_label;
 				} else {
 					$custom_fields[ $field->api_name ] = $field->field_label;
+				}
+
+				// Store the multiselects for the tag type dropdown.
+				if ( 'multiselectpicklist' === $field->data_type ) {
+					$multiselect_fields[ $field->api_name ] = $field->field_label;
 				}
 			}
 		}
@@ -467,6 +492,9 @@ class WPF_Zoho {
 		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+
+		// Store the multiselects for the tag type dropdown.
+		wp_fusion()->settings->set( 'zoho_multiselect_fields', $multiselect_fields );
 
 		return $crm_fields;
 
@@ -549,7 +577,7 @@ class WPF_Zoho {
 
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?email=' . urlencode( $email_address );
+		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?criteria=(Email:equals:' . rawurlencode( $email_address ) . ')';
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -568,12 +596,11 @@ class WPF_Zoho {
 
 
 	/**
-	 * Gets all tags currently applied to the user, also update the list of available tags
+	 * Gets all tags currently applied to the user, also update the list of available tags.
 	 *
-	 * @access public
-	 * @return void
+	 * @param int $contact_id The contact ID.
+	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
@@ -587,20 +614,37 @@ class WPF_Zoho {
 
 		$tags = array();
 
-		if ( empty( $body_json ) || empty( $body_json->data[0]->Tag ) ) {
+		if ( empty( $body_json ) ) {
 			return $tags;
 		}
 
-		foreach ( $body_json->data[0]->Tag as $tag ) {
-			$tags[] = $tag->name;
+		if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
+
+			$field = wpf_get_option( 'zoho_multiselect_field' );
+
+			if ( empty( $body_json->data[0]->{ $field } ) ) {
+				return $tags;
+			}
+
+			$tags = $body_json->data[0]->{ $field };
+
+		} else {
+
+			if ( empty( $body_json->data[0]->Tag ) ) {
+				return $tags;
+			}
+
+			foreach ( $body_json->data[0]->Tag as $tag ) {
+				$tags[] = $tag->name;
+			}
 		}
 
-		// Maybe update available tags list
+		// Maybe update available tags list.
 
 		$available_tags = wpf_get_option( 'available_tags' );
 
-		foreach ( $body_json->data[0]->Tag as $tag ) {
-			$available_tags[ $tag->name ] = $tag->name;
+		foreach ( $tags as $tag ) {
+			$available_tags[ $tag ] = $tag;
 		}
 
 		asort( $available_tags );
@@ -619,8 +663,26 @@ class WPF_Zoho {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/add_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
-		$response = wp_safe_remote_post( $request, $this->params );
+		$params = $this->get_params();
+
+		if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
+
+			$field = wpf_get_option( 'zoho_multiselect_field' );
+			$data  = array(
+				'$append_values' => array(
+					$field => true,
+				),
+				$field => $tags,
+			);
+
+			$params['body']   = wp_json_encode( array( 'data' => array( $data ) ) );
+			$params['method'] = 'PUT';
+			$request          = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		} else {
+			$request = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/add_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
+		}
+
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -639,8 +701,37 @@ class WPF_Zoho {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		$request  = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/remove_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
-		$response = wp_safe_remote_post( $request, $this->params );
+		$params = $this->get_params();
+
+		if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
+
+			$current_tags = $this->get_tags( $contact_id );
+
+			if ( ! empty( $current_tags ) ) {
+				foreach ( $tags as $tag ) {
+					$key = array_search( $tag, $current_tags );
+					if ( false !== $key ) {
+						unset( $current_tags[ $key ] );
+					}
+				}
+			} else {
+				return true;
+			}
+
+			$field = wpf_get_option( 'zoho_multiselect_field' );
+
+			$data = array(
+				$field => array_values( $current_tags ),
+			);
+
+			$params['body']   = wp_json_encode( array( 'data' => array( $data ) ) );
+			$params['method'] = 'PUT';
+			$request          = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id;
+		} else {
+			$request = $this->api_domain . '/crm/v2/' . $this->object_type . '/' . $contact_id . '/actions/remove_tags?tag_names=' . implode( ',', $tags ) . '&over_write=false';
+		}
+
+		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -676,7 +767,7 @@ class WPF_Zoho {
 			$data['Owner'] = $owner;
 		}
 
-		// Contact creation will fail if there isn't a last name
+		// Contact creation will fail if there isn't a last name.
 		if ( empty( $data['Last_Name'] ) && ( 'Contacts' == $this->object_type || 'Leads' == $this->object_type ) ) {
 			$data['Last_Name'] = 'unknown';
 		}
@@ -773,9 +864,18 @@ class WPF_Zoho {
 		$page        = 1;
 		$proceed     = true;
 
-		while ( $proceed == true ) {
+		while ( $proceed ) {
+			if ( 'multiselect' === wpf_get_option( 'zoho_tag_type' ) ) {
 
-			$url      = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?word=' . urlencode( $tag ) . '&page=' . $page;
+				$request       = $this->api_domain . '/crm/v2/' . $this->object_type . '/search';
+				$search_query  = '((' . wpf_get_option( 'zoho_multiselect_field' ) . ':equals:' . $tag . '))';
+				$encoded_query = urlencode( $search_query );
+				$url           = $request . '?criteria=' . $encoded_query . '&page=' . $page;
+
+			} else {
+				$url = $this->api_domain . '/crm/v2/' . $this->object_type . '/search?word=' . urlencode( $tag ) . '&page=' . $page;
+			}
+
 			$response = wp_safe_remote_get( $url, $this->params );
 
 			if ( is_wp_error( $response ) ) {

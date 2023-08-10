@@ -213,10 +213,6 @@ class AC_Connector {
 			//return "An unexpected problem occurred with the API request. Some causes include: invalid JSON or XML returned. Here is the actual response from the server: ---- " . $response;
 		}
 
-		if ( $this->debug ) {
-			error_log( print_r( $debug_str1, true ) );
-		}
-
 //		header("HTTP/1.1 " . $http_code);
 		$object->http_code = $http_code;
 

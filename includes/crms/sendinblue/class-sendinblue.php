@@ -15,7 +15,7 @@ class WPF_SendinBlue {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'events', 'events_multi_key' );
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -27,12 +27,11 @@ class WPF_SendinBlue {
 
 	/**
 	 * Lets us link directly to editing a contact record.
-	 * Not working, get_contact_id() returns an email but the edit URL uses a different variable
 	 *
 	 * @var string
 	 */
 
-	public $edit_url = false;
+	public $edit_url = 'https://app.brevo.com/contact/index/%d';
 
 	/**
 	 * Get things started
@@ -43,9 +42,8 @@ class WPF_SendinBlue {
 
 	public function __construct() {
 
-		$this->slug     = 'sendinblue';
-		$this->name     = 'Sendinblue';
-		$this->supports = array( 'events', 'events_multi_key' );
+		$this->slug = 'sendinblue';
+		$this->name = 'Brevo';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -72,7 +70,6 @@ class WPF_SendinBlue {
 		// Add tracking code to header.
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
-		// $this->edit_url = 'https://app.sendinblue.com/contact/index/%d';
 	}
 
 	/**
@@ -90,18 +87,24 @@ class WPF_SendinBlue {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if ( isset( $payload->email ) ) {
+		if ( isset( $payload->properties ) ) {
 
-			$post_data['contact_id'] = sanitize_email( $payload->email );
+			$post_data['contact_id'] = absint( $payload->properties->contact_id );
 
-		} elseif ( isset( $payload->content ) ) {
+		} elseif ( isset( $payload->email ) ) {
 
-			// Global webhooks
+			// Global webhooks.
 
-			$email                   = sanitize_email( $payload->content[0]->email );
-			$post_data['contact_id'] = $email;
+			$email = sanitize_email( $payload->email );
+			$user  = get_user_by( 'email', $email );
 
-			// Handle email changes
+			if ( $user ) {
+				$post_data['contact_id'] = wpf_get_contact_id( $user->ID );
+			} else {
+				$post_data['contact_id'] = $this->get_contact_id( $email );
+			}
+
+			// Handle email changes.
 
 			if ( ! empty( $payload->content[0]->updated_email ) ) {
 
@@ -120,7 +123,7 @@ class WPF_SendinBlue {
 
 					update_user_meta( $user->ID, 'sendinblue_contact_id', $updated_email );
 
-					$post_data['contact_id'] = $updated_email;
+					$post_data['contact_id'] = wpf_get_contact_id( $user->ID );
 
 				}
 			}
@@ -150,17 +153,17 @@ class WPF_SendinBlue {
 
 		} elseif ( $field_type == 'checkbox' && $value == null ) {
 
-			// Sendinblue only treats false as a No for checkboxes
+			// Brevo only treats false as a No for checkboxes
 			return false;
 
 		} elseif ( $field_type == 'checkbox' && ! empty( $value ) ) {
 
-			// Sendinblue only treats true as a Yes for checkboxes
+			// Brevo only treats true as a Yes for checkboxes
 			return true;
 
 		} elseif ( $field_type == 'tel' ) {
 
-			// Format phone. Sendinblue requires a country code and + for phone numbers. With or without dashes is fine
+			// Format phone. Brevo requires a country code and + for phone numbers. With or without dashes is fine
 
 			if ( strpos( $value, '+' ) !== 0 ) {
 
@@ -272,7 +275,7 @@ class WPF_SendinBlue {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, 'sendinblue' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'brevo' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -288,7 +291,7 @@ class WPF_SendinBlue {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
-			} elseif ( 400 == wp_remote_retrieve_response_code( $response ) ) {
+			} elseif ( 400 === wp_remote_retrieve_response_code( $response ) ) {
 
 				// Sales CRM responses.
 
@@ -314,7 +317,7 @@ class WPF_SendinBlue {
 
 	public function get_params( $api_key = null ) {
 
-		// Get saved data from DB
+		// Get saved data from DB.
 		if ( empty( $api_key ) ) {
 			$api_key = wpf_get_option( 'sendinblue_key' );
 		}
@@ -341,7 +344,7 @@ class WPF_SendinBlue {
 
 	public function connect( $api_key = null, $test = false ) {
 
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
@@ -349,7 +352,7 @@ class WPF_SendinBlue {
 			$this->get_params( $api_key );
 		}
 
-		$request  = 'https://api.sendinblue.com/v3/account';
+		$request  = 'https://api.brevo.com/v3/account';
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -400,9 +403,9 @@ class WPF_SendinBlue {
 		$limit   = 50;
 		$proceed = true;
 
-		while ( $proceed == true ) {
+		while ( $proceed ) {
 
-			$request  = 'https://api.sendinblue.com/v3/contacts/lists?limit=' . $limit . '&offset=' . $offset;
+			$request  = 'https://api.brevo.com/v3/contacts/lists?limit=' . $limit . '&offset=' . $offset;
 			$response = wp_safe_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
@@ -412,7 +415,7 @@ class WPF_SendinBlue {
 			$body_json = json_decode( $response['body'], true );
 
 			foreach ( $body_json['lists'] as $row ) {
-				$available_tags[ $row['id'] ] = $row['name'];
+				$available_tags[ absint( $row['id'] ) ] = $row['name'];
 			}
 
 			if ( count( $body_json['lists'] ) < $limit ) {
@@ -441,7 +444,7 @@ class WPF_SendinBlue {
 		}
 
 		$crm_fields = array( 'email' => 'Email Address' );
-		$request    = 'https://api.sendinblue.com/v3/contacts/attributes';
+		$request    = 'https://api.brevo.com/v3/contacts/attributes';
 		$response   = wp_safe_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -462,48 +465,45 @@ class WPF_SendinBlue {
 	}
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @since 3.16.0
+	 *
+	 * @param string $email_address Email address.
+	 * @return int Contact ID.
 	 */
-
 	public function get_contact_id( $email_address ) {
 
-		// Sendinblue converts email addresses to lowercase so we'll do the same for contact ID lookups.
+		// Brevo converts email addresses to lowercase so we'll do the same for contact ID lookups.
 
-		$request  = 'https://api.sendinblue.com/v3/contacts/' . rawurlencode( strtolower( $email_address ) );
+		$request  = 'https://api.brevo.com/v3/contacts/' . rawurlencode( strtolower( $email_address ) );
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json = json_decode( $response['body'], true );
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( empty( $body_json['email'] ) ) {
+		if ( 404 === wp_remote_retrieve_response_code( $response ) || empty( $body_json ) ) {
 			return false;
 		}
 
-		return $body_json['email'];
+		return absint( $body_json->id );
 	}
 
 	/**
-	 * Gets all tags currently applied to the user, also update the list of available tags
+	 * Gets all lists currently applied to the user.
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.16.0
+	 *
+	 * @param string|int $contact_id Contact ID or email.
+	 * @return array List IDs.
 	 */
-
 	public function get_tags( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$contact_tags = array();
-		$request      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
-		$response     = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.brevo.com/v3/contacts/' . rawurlencode( $contact_id );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -520,30 +520,26 @@ class WPF_SendinBlue {
 	}
 
 	/**
-	 * Applies tags to a contact
+	 * Applies lists to a contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since 3.16.0
+	 *
+	 * @param array      $tags       The list IDs to apply.
+	 * @param string|int $contact_id Contact ID or email.
+	 * @return WP_Error|bool True on success, WP_Error on failure.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$body = array(
+			'listIds' => array_map( 'absint', $tags ),
+		);
 
-		$contact_id = strtolower( $contact_id );
+		$request          = 'https://api.brevo.com/v3/contacts/' . rawurlencode( $contact_id );
+		$params           = $this->get_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode( $body );
 
-		foreach ( $tags as $tag ) {
-
-			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/add';
-			$params           = $this->params;
-			$params['method'] = 'POST';
-			$params['body']   = wp_json_encode( array( 'emails' => array( $contact_id ) ) );
-
-			$response = wp_safe_remote_post( $request, $params );
-
-		}
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -555,30 +551,26 @@ class WPF_SendinBlue {
 
 
 	/**
-	 * Removes tags from a contact
+	 * Removes lists from a contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since 3.16.0
+	 *
+	 * @param array      $tags       The list IDs to remove.
+	 * @param string|int $contact_id Contact ID or email.
+	 * @return WP_Error|bool True on success, WP_Error on failure.
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$body = array(
+			'unlinkListIds' => array_map( 'absint', $tags ),
+		);
 
-		$contact_id = strtolower( $contact_id );
+		$request          = 'https://api.brevo.com/v3/contacts/' . rawurlencode( $contact_id );
+		$params           = $this->get_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode( $body );
 
-		foreach ( $tags as $tag ) {
-
-			$request          = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts/remove';
-			$params           = $this->params;
-			$params['method'] = 'POST';
-			$params['body']   = wp_json_encode( array( 'emails' => array( $contact_id ) ) );
-
-			$response = wp_safe_remote_post( $request, $params );
-
-		}
+		$response = wp_safe_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -590,7 +582,7 @@ class WPF_SendinBlue {
 
 
 	/**
-	 * Adds a new contact
+	 * Adds a new contact.
 	 *
 	 * @access public
 	 * @return int Contact ID
@@ -598,13 +590,9 @@ class WPF_SendinBlue {
 
 	public function add_contact( $data ) {
 
-		if ( empty( $data['email'] ) ) {
-			return false;
-		}
-
 		$post_data = array();
 
-		// Email name is included in the top level of the contact data
+		// Email name is included in the top level of the contact data.
 		$post_data['email'] = $data['email'];
 		unset( $data['email'] );
 
@@ -612,7 +600,7 @@ class WPF_SendinBlue {
 			$post_data['attributes'] = $data;
 		}
 
-		$url            = 'https://api.sendinblue.com/v3/contacts';
+		$url            = 'https://api.brevo.com/v3/contacts';
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $post_data );
 
@@ -625,7 +613,7 @@ class WPF_SendinBlue {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( isset( $body->id ) ) {
-			return strtolower( $post_data['email'] );
+			return absint( $body->id );
 		} else {
 			return new WP_Error( 'error', 'Unknown error adding contact:<pre>' . wpf_print_r( $body, true ) . '</pre>' );
 		}
@@ -633,7 +621,7 @@ class WPF_SendinBlue {
 	}
 
 	/**
-	 * Update contact
+	 * Update contact.
 	 *
 	 * @access public
 	 * @return bool
@@ -643,28 +631,16 @@ class WPF_SendinBlue {
 
 		// Email address changes.
 
-		if ( isset( $data['email'] ) && strtolower( $data['email'] ) != strtolower( $contact_id ) ) {
+		if ( isset( $data['email'] ) ) {
 
 			$data['EMAIL'] = $data['email'];
+			unset( $data['email'] );
 
-			$user_id = wp_fusion()->user->get_user_id( $contact_id );
-
-			if ( $user_id ) {
-
-				update_user_meta( $user_id, 'sendinblue_contact_id', $data['email'] );
-
-			}
-		}
-
-		unset( $data['email'] );
-
-		if ( empty( $data ) ) {
-			return;
 		}
 
 		$post_data = array( 'attributes' => $data );
 
-		$url                     = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
+		$url                     = 'https://api.brevo.com/v3/contacts/' . rawurlencode( $contact_id );
 		$post_data['attributes'] = $data;
 		$params                  = $this->get_params();
 		$params['method']        = 'PUT';
@@ -693,11 +669,15 @@ class WPF_SendinBlue {
 			$this->get_params();
 		}
 
-		$url      = 'https://api.sendinblue.com/v3/contacts/' . urlencode( $contact_id );
+		$url      = 'https://api.brevo.com/v3/contacts/' . rawurlencode( $contact_id );
 		$response = wp_safe_remote_get( $url, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
+		}
+
+		if ( 404 === wp_remote_retrieve_response_code( $response ) ) {
+			return new WP_Error( 'not_found', 'Contact not found.' );
 		}
 
 		$user_meta      = array();
@@ -710,11 +690,11 @@ class WPF_SendinBlue {
 
 			foreach ( $contact_fields as $field_id => $field_data ) {
 
-				if ( $field_data['active'] == true && $field == $field_data['crm_field'] ) {
+				if ( $field_data['active'] && $field === $field_data['crm_field'] ) {
 
-					// Checkboxes
+					// Checkboxes.
 
-					if ( $value === false ) {
+					if ( false === $value ) {
 						$value = null;
 					}
 
@@ -747,7 +727,7 @@ class WPF_SendinBlue {
 
 		while ( $continue ) {
 
-			$url     = 'https://api.sendinblue.com/v3/contacts/lists/' . $tag . '/contacts?limit=500&offset=' . $offset;
+			$url     = 'https://api.brevo.com/v3/contacts/lists/' . $tag . '/contacts?limit=500&offset=' . $offset;
 			$results = wp_safe_remote_get( $url, $this->params );
 
 			if ( is_wp_error( $results ) ) {
@@ -757,7 +737,7 @@ class WPF_SendinBlue {
 			$body_json = json_decode( $results['body'], true );
 
 			foreach ( $body_json['contacts'] as $row => $contact ) {
-				$contact_ids[] = $contact['email'];
+				$contact_ids[] = $contact['id'];
 			}
 
 			if ( count( $body_json['contacts'] ) < 500 ) {
@@ -774,9 +754,11 @@ class WPF_SendinBlue {
 	/**
 	 * Track event.
 	 *
-	 * Track an event with the Sendinblue site tracking API.
+	 * Track an event with the Brevo site tracking API.
 	 *
 	 * @since  3.38.16
+	 *
+	 * @link https://developers.brevo.com/docs/track-events-2.
 	 *
 	 * @param  string      $event      The event title.
 	 * @param  bool|string $event_data The event description.
@@ -798,18 +780,19 @@ class WPF_SendinBlue {
 		$key = wpf_get_option( 'site_tracking_key' );
 
 		if ( empty( $key ) ) {
-			wpf_log( 'notice', wpf_get_current_user_id(), 'To track events with Sendinblue you must first <a href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#sendinblue" target="_blank">add your client key to the settings</a>.' );
+			wpf_log( 'notice', wpf_get_current_user_id(), 'To track events with Brevo you must first <a href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#sendinblue" target="_blank">add your client key to the settings</a>.' );
+			return;
 		}
 
 		$body = array(
-			'email'     => $email_address,
-			'event'     => $event,
+			'email' => $email_address,
+			'event' => $event,
 		);
 
 		if ( is_array( $event_data ) ) {
-			$body['eventdata'] = (object) $event_data;
+			$body['properties'] = (object) $event_data;
 		} else {
-			$body['eventdata'] = (object) array( 'details' => $event_data );
+			$body['properties'] = (object) array( 'details' => $event_data );
 		}
 
 		$request                     = 'https://in-automate.sendinblue.com/api/v2/trackEvent';

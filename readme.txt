@@ -1,10 +1,10 @@
-=== WP Fusion Lite - Marketing Automation for WordPress ===
+=== WP Fusion Lite - Marketing Automation and CRM Integration for WordPress ===
 Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 6.2.0
-Stable tag: 3.41.2
+Tested up to: 6.3.0
+Stable tag: 3.41.24
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -84,6 +84,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Customerly
 * Drift
 * Drip
+* EmailOctopus
 * Engage
 * EngageBay
 * Flexie
@@ -189,6 +190,115 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.41.24 - 8/10/2023 =
+
+##### Tech stuff
+
+* Tested for WordPress 6.3.0
+
+
+##### New CRMs
+
+* Added [EmailOctopus CRM integration](https://wpfusion.com/documentation/installation-guides/how-to-connect-emailoctopus-to-wordpress/)
+
+##### New Features
+
+* Added an `ALL` operator to the [`user_meta_if` shortcode](https://wpfusion.com/documentation/getting-started/shortcodes/#displaying-content-based-on-user-meta-values)
+* Added support for multiple parameters using the `IN` operator with the [`user_meta_if` shortcode](https://wpfusion.com/documentation/getting-started/shortcodes/#displaying-content-based-on-user-meta-values)
+
+* Added View in CRM links to Brevo integration
+* Added option to [subscribe ConvertKit subscribers to a form when applying tags](https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/#re-subscribing-unsubscribed-subscribers)
+* Added HTTP API logging for applying and removing tags with Drip
+* Added support for [multi-value lookup fields with Dynamics 365](https://wpfusion.com/documentation/crm-specific-docs/dynamics-365-associating-entities/#multi-value-lookup-fields)
+* Added option with Dynamics 365 to sync with Leads or Cases instead of Contacts
+* Added "View in CRM" links to HighLevel
+* Added "Resubscribe" option with MailerLite— if enabled, and a contact is unsubscribed, they will be resubscribed when they are added to a new group
+* Added support for automatically embedding [the MailerLite tracking script](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#mailerlite)
+* Added support for setting the `bulk_mail` and `bulk_sms` fields to Transactional Only with Ontraport
+* Added an object type dropdown for Salesforce
+* Added option to [use a multi-select for segmentation with Zoho](https://wpfusion.com/documentation/crm-specific-docs/zoho-tags/) (instead of tags)
+
+
+##### Improvements
+
+* Improved - [Force killing the background worker](https://wpfusion.com/documentation/tutorials/batch-operations/#cancelling) will now also unlock the process lock so a new operation can be started
+* Improved - If a post type or category/term is protected and configured with a redirect, any redirect on the underlying post will now take priority
+* Improved support for detecting email address changes from non-supported plugins (i.e. JetEngine Forms)
+* Improved - CRMs that use OAuth will now have the refresh token and access token fields disabled in the settings to prevent browsers from accidentally filling the fields
+* Improved - Exported logs will now include the error level string instead of numeric ID
+* Improved - When updating a user profile in the admin, the log source will say `user-profile` instead of `unknown`
+* Improved styling of the WP Fusion metabox when using the Gutenberg editor
+* Improved "Redirect if access is denied" dropdown in admin - Will now only search for pages by title, not content, and will validate external URLs
+* Improved - The View in CRM links in the logs and elsewhere now work when using custom object types (with CRMs that support custom object types)
+
+* Improved - Shortened ActiveCampaign API timeout to 10 seconds instead of 20
+* Improved - With WordPress 6.3+ the [Bento tracking script](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#bento) will now be loaded `async` by default
+* Improved - The Bento tracking script will now wait for the `bento:ready` event
+* Updated Sendinblue integration to Brevo
+* Improved performance for applying and removing lists with Brevo (aka Sendinblue)
+* Improved - Brevo integration will now use numeric contact IDs instead of email addresses as unique identifiers (backwards compatible with users who are still linked via email)
+* Improved error handling for failed access token refreshes with Constant Contact
+* Improved - With Dynamics 365, dynamic marketing lists will now show as Read Only in the WP Fusion UI, and won't be selectable for "Assign Lists"
+* Improved - The GetResponse integration can now trigger autoresponders when a contact is added to a list
+* Improved - The GetResponse integration can now remove tags
+* Updated HighLevel integration to use the 2.0 API (allows us to add Enhanced Ecommerce and UTM tracking)
+* Improved HighLevel error reporting for duplicate contact errors
+* Improved HubSpot error handling
+* Improved API performance while applying groups with MailerLite
+* Improved Maropost error handling
+* Improved - Updated [Sendlane integration](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendlane-to-wordpress/) to use the v2 API (requires generating a new access token)
+* Improved - Contacts synced to Ontraport with `bulk_sms` set to no will also be synced with `force_sms_opt_out` set to true, to ensure they are opted out of bulk SMS
+
+
+##### Bug Fixes
+
+* Fixed an infinite redirect if a guest tried to access a piece of protected content and "Refresh tags if access is denied" was enabled on that content
+* Fixed "Exclude Administrators" setting not being respected for the site lockout feature
+* Fixed View in CRM links in the logs not working correctly with Dynamics 365
+* Fixed a fatal error if the WP Fusion settings were reset in the middle of a batch operation
+* Fixed background worker not working on sites protected by HTTP Basic Authentication
+* Fixed fatal error in the Custom Code section of the main settings page when a static class method had been attached to a `wpf_*` filter
+* Fixed Filter Queries - Advanced not working with Search & Filter Pro (changed priority from 10 to 100)
+* Fixed a fatal error calling `wp_fusion()->user->push_user_meta()` on an invalid user ID
+* Fixed a fatal error trying to access the CRM PHP API before it was loaded
+
+* Fixed event tracking not sending the value (i.e. `details`) to Brevo
+* Fixed Constant Contact integration not loading more than 50 tags
+* Fixed unhandled error refreshing access token with Constant Contact
+* Fixed Constant Contact refresh token expiring after two refreshes
+* Fixed empty dates syncing to ConvertKit as 1/1/1970
+* Fixed ConvertKit integration removing times from date + time fields
+* Fixed dynamic lists showing as options for import with Dynamics 365
+* Fixed import tool not working with Dynamics 365
+* Fixed fatal error connecting to EmailOctopus when there were no lists or tags in the account
+* Fixed FluentCRM (same site) processing tags modified by automations before tags edited on the subscriber record, causing the WP user's tag cache to lose the tags applied by the automation
+* Fixed a fatal error with FluentCRM when a user changed their email address to the email address of an existing (other) subscriber in FluentCRM (same site)
+* Fixed typo "susbcribed" in default optin status for FluentCRM (REST API)
+* Fixed bug in HighLevel error handling, errors with a `meta` parameter were triggering a fatal error when logged
+* Fixed empty dates synced to HighLevel getting converted to 1-1-1970
+* Fixed first API call after refreshing a HighLevel access token being treated as an error
+* Fixed Klaviyo integration not loading more than ten lists
+* Fixed MailerLite (Classic) integration giving an Unauthorized error when applying groups via a batch operation
+* Fixed custom fields not loading with Maropost
+* Misc Maropost bugfixes
+* Fixed import tool not working with Pipedrive
+* Fixed read-only fields being synced back to Salesforce and causing API errors
+* Fixed Zoho integration linking users with contact records who had a matching email address on Secondary Email or other email fields than the primary Email field
+
+
+##### Developer
+
+* Added function `wpf_validate_phone_number()`
+* Added filter `wpf_dynamics_365_lookup_field`
+* Improved - The AJAX endpoint for applying tags can now accept form-encoded or JSON encoded data
+* Improved - the WP Fusion section on the admin user profile will now require the `edit_users` capability instead of `manage_options`
+* Improved - CRMs with an `init()` method will now run on the `init` action at priority 5, instead of `plugins_loaded`. This makes it easier for custom code added to the theme's `functions.php` to modify CRM parameters such as the API URL or object type
+* Improved - Removed redundant check for `wpf_is_user_logged_in()` in the WP Fusion secure block access logic
+* Fixed - the `wpf_admin_override` filter did not apply to the core `user_can_access()` function
+* Fixed custom args passed to `wp_fusion()->batch->batch_init()` being ignored
+
+
 
 = 3.41.2 - 3/27/2023 =
 

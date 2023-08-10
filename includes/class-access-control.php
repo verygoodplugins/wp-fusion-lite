@@ -99,7 +99,7 @@ class WPF_Access_Control {
 	public function get_post_access_meta( $post_id ) {
 
 		$settings = wp_parse_args( get_post_meta( $post_id, 'wpf-settings', true ), WPF_Admin_Interfaces::$meta_box_defaults );
-		$settings = apply_filters( 'wpf_post_access_meta', $settings, $post_id );
+		$settings = apply_filters( 'wpf_post_access_meta', $settings, $post_id ); // also see WPF_Access_Control::check_post_type().
 
 		// Parse args again in case the filter messed them up.
 		return wp_parse_args( $settings, WPF_Admin_Interfaces::$meta_box_defaults );
@@ -148,13 +148,13 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		if ( empty( $user_id ) ) {
-			$user_id = wpf_get_current_user_id();
+		// If admins are excluded from restrictions.
+		if ( wpf_admin_override() && ! $user_id ) {
+			return true;
 		}
 
-		// If admins are excluded from restrictions.
-		if ( wpf_get_option( 'exclude_admins' ) && user_can( $user_id, 'manage_options' ) ) {
-			return true;
+		if ( ! $user_id ) {
+			$user_id = wpf_get_current_user_id();
 		}
 
 		// Allow inheriting protections from another post.
@@ -234,7 +234,7 @@ class WPF_Access_Control {
 
 			// Possibly refresh the tags.
 
-			if ( false === $can_access && doing_action( 'template_redirect' ) && ! did_action( 'wpf_tags_modified' ) && ! empty( $settings['check_tags'] ) ) {
+			if ( false === $can_access && wpf_is_user_logged_in() && doing_action( 'template_redirect' ) && ! did_action( 'wpf_tags_modified' ) && ! empty( $settings['check_tags'] ) ) {
 
 				wpf_get_tags( $user_id, true );
 				$can_access = $this->user_can_access( $post_id, $user_id );
@@ -439,17 +439,18 @@ class WPF_Access_Control {
 
 	public function get_redirect( $post_id ) {
 
-		// Get settings
+		// Get settings.
 		$post_restrictions = $this->get_post_access_meta( $post_id );
 
-		// If term restrictions are in place, they override the post restrictions
+		// If term restrictions are in place, they override the post restrictions.
 		$term_restrictions = $this->get_redirect_term( $post_id );
 
-		if ( ! empty( $term_restrictions ) ) {
-			$post_restrictions = $term_restrictions;
+		// The term redirect only applies if no post redirect is set.
+		if ( ! empty( $term_restrictions ) && empty( $post_restrictions['redirect'] ) ) {
+			$post_restrictions = array_merge( $post_restrictions, $term_restrictions );
 		}
 
-		// Not logged in redirect
+		// Not logged in redirect.
 
 		$redirect = wpf_get_option( 'default_not_logged_in_redirect' );
 
@@ -459,7 +460,7 @@ class WPF_Access_Control {
 
 		$default_redirect = wpf_get_option( 'default_redirect' );
 
-		// Get redirect URL if one is set
+		// Get redirect URL if one is set. (old data storage, pre 3.41.0)
 		if ( ! empty( $post_restrictions['redirect_url'] ) ) {
 
 			$redirect = $post_restrictions['redirect_url'];
@@ -825,6 +826,11 @@ class WPF_Access_Control {
 
 	public function maybe_do_lockout() {
 
+		// If the user is an admin and exclude admins is enabled, return.
+		if ( wpf_admin_override() ) {
+			return;
+		}
+
 		if ( ! wpf_is_user_logged_in() ) {
 			return;
 		}
@@ -1038,10 +1044,10 @@ class WPF_Access_Control {
 					$item_id = $item->menu_item_parent;
 
 					// Also hide if parent is hidden.
-					$settings = get_post_meta( $item_id, 'wpf-settings', true );
+					$parent_settings = get_post_meta( $item_id, 'wpf-settings', true );
 
-					if ( empty( $settings ) ) {
-						continue;
+					if ( ! empty( $parent_settings ) ) {
+						$settings = $parent_settings;
 					}
 				}
 
@@ -1216,6 +1222,10 @@ class WPF_Access_Control {
 			return false;
 		}
 
+		if ( doing_filter( 'wpf_user_can_access' ) ) {
+			return false; // if we're already inside the access check filter, don't filter queries again.
+		}
+
 		if ( $query->is_main_query() && ! $query->is_archive() && ! $query->is_search() && ! $query->is_home() ) {
 			return false;
 		}
@@ -1286,6 +1296,8 @@ class WPF_Access_Control {
 		if ( wpf_admin_override() ) {
 			return array();
 		}
+
+		$post_types = array_values( $post_types );
 
 		$user_id = wpf_get_current_user_id();
 		$not_in  = wp_cache_get( "wpf_query_filter_{$user_id}_{$post_types[0]}" );
@@ -1409,8 +1421,6 @@ class WPF_Access_Control {
 		if ( empty( $user_id ) ) {
 			$user_id = wpf_get_current_user_id();
 		}
-
-		$user_tags = wpf_get_tags( $user_id );
 
 		$term_ids = array();
 
@@ -1619,6 +1629,11 @@ class WPF_Access_Control {
 
 		if ( ! isset( $settings[ $post_type ] ) ) {
 			return $access_meta;
+		}
+
+		// Let the post redirect override the global redirect if applicable.
+		if ( ! empty( $access_meta['redirect'] ) ) {
+			unset( $settings[ $post_type ]['redirect'] );
 		}
 
 		$access_meta = array_merge( $access_meta, array_filter( $settings[ $post_type ] ) );

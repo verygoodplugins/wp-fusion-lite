@@ -65,6 +65,7 @@ class WPF_Dynamics_365_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
+		add_filter( 'wpf_render_tag_multiselect_args', array( $this, 'import_multiselect_args' ) );
 
 	}
 
@@ -182,7 +183,7 @@ class WPF_Dynamics_365_Admin {
 
 		$new_settings['dynamics_365_rest_header'] = array(
 			'title'   => __( 'Dynamics 365 Configuration', 'wp-fusion-lite' ),
-			'url'     => 'https://wpfusion.com/documentation/installation-guides/how-to-connect-dynamics-365-to-wordpress/',
+			'url'     => 'https://wpfusion.com/documentation/installation-guides/how-to-connect-dynamics-365-marketing-to-wordpress/',
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -209,20 +210,38 @@ class WPF_Dynamics_365_Admin {
 
 		} else {
 
+			if ( ! empty( $options['connection_configured'] ) && 'dynamics-365' === wpf_get_option( 'crm' ) ) {
+
+				$new_settings['dynamics_365_object_type'] = array(
+					'title'   => __( 'Object Type' ),
+					'type'    => 'select',
+					'section' => 'setup',
+					'choices' => array(
+						'contacts'  => 'Contacts',
+						'leads'     => 'Leads',
+						'incidents' => 'Cases',
+					),
+					'std'     => 'contacts',
+					'desc'    => __( 'Select an object type to use with WP Fusion.', 'wp-fusion-lite' ),
+				);
+
+			}
+
 			$new_settings['dynamics_365_access_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'std'     => '',
-				'type'    => 'text',
-				'section' => 'setup',
+				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
+				'type'           => 'text',
+				'section'        => 'setup',
+				'input_disabled' => true,
 			);
 
 			$new_settings['dynamics_365_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'        => 'api_validate',
-				'section'     => 'setup',
-				'class'       => 'api_key',
-				'post_fields' => array( 'dynamics_365_rest_url', 'dynamics_365_access_token', 'dynamics_365_refresh_token' ),
-				'desc'        => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
+				'title'          => __( 'Refresh token', 'wp-fusion-lite' ),
+				'type'           => 'api_validate',
+				'section'        => 'setup',
+				'class'          => 'api_key',
+				'post_fields'    => array( 'dynamics_365_rest_url', 'dynamics_365_access_token', 'dynamics_365_refresh_token' ),
+				'desc'           => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>',
+				'input_disabled' => true,
 			);
 		}
 
@@ -289,6 +308,24 @@ class WPF_Dynamics_365_Admin {
 		}
 
 		return $options;
+
+	}
+
+	/**
+	 * Disable read only tags on the import users dropdown multiselect.
+	 *
+	 * @since 3.41.19
+	 *
+	 * @param  array $args The multiselect args.
+	 * @return array The multiselect args.
+	 */
+	public function import_multiselect_args( $args ) {
+
+		if ( isset( $args['field_id'] ) && 'import_users' === $args['field_id'] ) {
+			$args['read_only'] = false;
+		}
+
+		return $args;
 
 	}
 

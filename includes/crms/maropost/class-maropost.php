@@ -5,7 +5,6 @@ class WPF_Maropost {
 	/**
 	 * Contains API params
 	 */
-
 	public $params;
 
 	/**
@@ -16,15 +15,13 @@ class WPF_Maropost {
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
-
-	public $supports;
+	public $supports = array( 'add_tags' );
 
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * Each contact has a unique id other than his account id.
 	 * @var string
 	 */
-
 	public $edit_url = false;
 
 	/**
@@ -32,8 +29,14 @@ class WPF_Maropost {
 	 *
 	 * @var string
 	 */
-
 	public $api_url;
+
+	/**
+	 * The API Key.
+	 *
+	 * @var string
+	 */
+	public $api_key;
 
 	/**
 	 * Get things started
@@ -44,9 +47,8 @@ class WPF_Maropost {
 
 	public function __construct() {
 
-		$this->slug     = 'maropost';
-		$this->name     = 'Maropost';
-		$this->supports = array( 'add_tags' );
+		$this->slug = 'maropost';
+		$this->name = 'Maropost';
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -179,15 +181,14 @@ class WPF_Maropost {
 
 		$this->api_key = $api_key;
 
-		// Get the list.
-		$this->list_id = wpf_get_option( 'mp_list' );
-
-		if ( 112216 === $account_id ) {
-			// Our sandbox account.
-			$this->api_url = 'https://sandbox.maropost.com/accounts/112216/';
+		if ( 112216 === intval( $account_id ) ) {
+			$this->api_url = "https://sandbox.maropost.com/accounts/{$account_id}/"; // sandbox account.
 		} else {
 			$this->api_url = "https://api.maropost.com/accounts/{$account_id}/";
 		}
+
+		// Get the list.
+		$this->list_id = wpf_get_option( 'mp_list' );
 
 		// If no list set, use the first list.
 		if ( empty( $this->list_id ) ) {
@@ -288,8 +289,10 @@ class WPF_Maropost {
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach ( $body_json as $tag ) {
-			$available_tags[ $tag['name'] ] = $tag['name'];
+		if ( ! empty( $body_json ) ) {
+			foreach ( $body_json as $tag ) {
+				$available_tags[ $tag['name'] ] = $tag['name'];
+			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -315,7 +318,7 @@ class WPF_Maropost {
 
 		$built_in_fields = array();
 
-		foreach ( $maropost_fields as $index => $data ) {
+		foreach ( $maropost_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
@@ -329,12 +332,15 @@ class WPF_Maropost {
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach ( $body_json as $field_data ) {
+		if ( ! empty( $body_json ) ) {
 
-			if ( ! empty( $field_data['display_name'] ) ) {
-				$custom_fields[ $field_data['name'] ] = $field_data['display_name'];
-			} else {
-				$custom_fields[ $field_data['name'] ] = $field_data['name'];
+			foreach ( $body_json as $field_data ) {
+
+				if ( ! empty( $field_data['display_name'] ) ) {
+					$custom_fields[ $field_data['name'] ] = $field_data['display_name'];
+				} else {
+					$custom_fields[ $field_data['name'] ] = $field_data['name'];
+				}
 			}
 		}
 
@@ -374,6 +380,10 @@ class WPF_Maropost {
 		}
 
 		$body_json = json_decode( $response['body'], true );
+
+		if ( empty( $body_json ) ) {
+			return array();
+		}
 
 		foreach ( $body_json as $list ) {
 			$mp_lists[ $list['id'] ] = $list['name'];
@@ -542,20 +552,16 @@ class WPF_Maropost {
 			$this->get_params();
 		}
 
-		$crm_fields = wpf_get_option( 'crm_fields' );
+		$crm_fields = wpf_get_option( 'crm_fields', array() );
 
-		$standard_fields = $crm_fields['Standard Fields'];
-		$custom_fields   = $crm_fields['Custom Fields'];
-
-		$custom_data   = array_intersect_key( $data, $custom_fields );
-		$standard_data = array_intersect_key( $data, $standard_fields );
+		$standard_data = array_intersect_key( $data, $crm_fields['Standard Fields'] );
 
 		$field_data = array(
 			'contact' => $standard_data,
 		);
 
-		if ( ! empty( $custom_data ) ) {
-			$field_data['contact']['custom_field'] = $custom_data;
+		if ( ! empty( $crm_fields['Custom Fields'] ) ) {
+			$field_data['contact']['custom_field'] = array_intersect_key( $data, $crm_fields['Custom Fields'] );
 		}
 
 		$url            = $this->api_url . 'lists/' . $this->list_id . '/contacts.json?auth_token=' . $this->api_key;
@@ -638,11 +644,15 @@ class WPF_Maropost {
 
 	public function load_contact( $contact_id ) {
 
-		$url      = $this->api_url . 'lists/' . $this->list_id . '/contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
+		$url      = $this->api_url . 'contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
 		$response = wp_safe_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
+		}
+
+		if ( 404 === wp_remote_retrieve_response_code( $response ) ) {
+			return new WP_Error( 'error', wp_remote_retrieve_body( $response ) );
 		}
 
 		$user_meta      = array();

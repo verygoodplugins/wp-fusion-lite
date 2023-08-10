@@ -72,8 +72,8 @@ class WPF_FluentCRM {
 
 		// Sync contact tags when modified
 
-		add_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
-		add_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
+		add_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 5, 2 );
+		add_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 5, 2 );
 
 		// Sync contact fields when modified
 		add_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
@@ -124,12 +124,17 @@ class WPF_FluentCRM {
 
 		$payload = json_decode( stripslashes( file_get_contents( 'php://input' ) ) );
 
+		wpf_log( 'notice', 0, 'Doing it wrong! WP Fusion is connected to FluentCRM on the same site. There\'s no reason to send webhooks. Tag and field changes are synced automatically in the background.', array( 'source' => 'fluentcrm' ) );
+
 		if ( ! is_object( $payload ) ) {
 			return false;
 		}
 
 		$post_data['contact_id'] = absint( $payload->id );
-		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
+
+		if ( ! empty( $payload->tags ) ) {
+			$post_data['tags'] = wp_list_pluck( (array) $payload->tags, 'slug' );
+		}
 
 		return $post_data;
 
@@ -146,8 +151,8 @@ class WPF_FluentCRM {
 
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'Y-m-d', $value );
+			// Adjust formatting for date fields.
+			$date = gmdate( 'Y-m-d', $value );
 
 			return $date;
 
@@ -276,10 +281,13 @@ class WPF_FluentCRM {
 	 */
 
 	public function get_contact_id( $email_address ) {
+
 		$contact = FluentCrmApi( 'contacts' )->getContact( $email_address );
+
 		if ( $contact ) {
-			return $contact->id;
+			return absint( $contact->id );
 		}
+
 		return false;
 	}
 
@@ -453,6 +461,15 @@ class WPF_FluentCRM {
 			return new WP_Error( 'error', 'No contact ID #' . $contact_id . ' found in FluentCRM.' );
 		}
 
+		if ( isset( $data['email'] ) && strtolower( $data['email'] ) !== strtolower( $model->email ) && $this->get_contact_id( $data['email'] ) ) {
+
+			// This prevents a fatal error when trying to update a subscriber's email address to one that already exists.
+
+			wpf_log( 'notice', wpf_get_user_id( $contact_id ), 'Attempted to update contact #' . $contact_id . '\'s email address from <strong>' . $model->email . '</strong> to <strong>' . $data['email'] . '</strong>, but <strong>' . $data['email'] . '</strong> is already subscribed. The email address change will be ignored.' );
+			unset( $data['email'] );
+
+		}
+
 		// Prevent looping.
 		remove_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
 		remove_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
@@ -599,6 +616,7 @@ class WPF_FluentCRM {
 
 			wp_fusion()->user->pull_user_meta( $user_id );
 		}
+
 
 	}
 

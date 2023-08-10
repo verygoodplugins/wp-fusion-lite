@@ -38,3 +38,8 @@
 #wp-admin-bar-wpf > .ab-sub-wrapper > ul input.wpf_search_preview_tag::placeholder {
     color: #fff
 }
+
+.wpf-visibility-hidden{
+    outline: 1px dashed #E55B10 !important;
+    outline-offset: -1px;
+}

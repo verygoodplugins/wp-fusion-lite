@@ -56,6 +56,10 @@ class WPF_CRM_Base {
 
 		$this->init(); // initiate the CRM and set $this->crm.
 
+		if ( $this->crm && method_exists( $this->crm, 'init' ) ) {
+			add_action( 'init', array( $this->crm, 'init' ), 5 );
+		}
+
 		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
 
 		// Guest tracking.
@@ -142,6 +146,10 @@ class WPF_CRM_Base {
 	 * @return mixed  The API result or WP_Error if failed.
 	 */
 	public function __call( $method, $args ) {
+
+		if ( 'init' === $method ) {
+			return $this->init();
+		}
 
 		if ( wpf_is_staging_mode() ) {
 
@@ -435,10 +443,6 @@ class WPF_CRM_Base {
 			}
 
 			$this->crm = new $configured_crms[ $slug ](); // the value is the class name.
-
-			if ( method_exists( $this->crm, 'init' ) ) {
-				$this->crm->init();
-			}
 
 			$this->available_crms[ $slug ] = array(
 				'name'      => $this->crm->name,

@@ -886,6 +886,10 @@ class WPF_MailChimp {
 
 		$response = wp_safe_remote_post( $request, $params );
 
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
 		return true;
 	}
 

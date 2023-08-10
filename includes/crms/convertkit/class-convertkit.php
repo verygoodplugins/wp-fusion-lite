@@ -8,9 +8,18 @@ class WPF_ConvertKit {
 
 	/**
 	 * Contains API secret
+	 * @var string
 	 */
-
 	public $api_secret;
+
+	/**
+	 * Contains API key.
+	 *
+	 * @since 3.41.16
+	 *
+	 * @var string
+	 */
+	public $api_key;
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
@@ -178,12 +187,19 @@ class WPF_ConvertKit {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'date' === $field_type && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			// Format it as date + time only if the timestamp does not come out to midnight
 
-			return $date;
+			if ( gmdate( 'H:i:s', $value ) !== '00:00:00' ) {
+
+				return gmdate( wpf_get_datetime_format(), $value );
+
+			} else {
+
+				return gmdate( get_option( 'date_format' ), $value );
+
+			}
 
 		} else {
 
@@ -236,9 +252,7 @@ class WPF_ConvertKit {
 			$this->api_secret = $api_secret;
 		}
 
-		if ( $this->params ) {
-			return $this->params;
-		}
+		$this->api_key = wpf_get_option( 'ck_key' );
 
 		$this->params = array(
 			'timeout'    => 15,
@@ -346,7 +360,7 @@ class WPF_ConvertKit {
 			$this->get_params( $api_secret );
 		}
 
-		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $api_secret, $this->get_params() );
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/account?api_secret=' . $api_secret, $this->get_params() );
 		$result   = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( isset( $result->error ) ) {
@@ -406,8 +420,28 @@ class WPF_ConvertKit {
 		if ( isset( $result->tags ) && is_array( $result->tags ) ) {
 
 			foreach ( $result->tags as $tag ) {
-				$available_tags[ $tag->id ] = $tag->name;
+				$available_tags[ $tag->id ] = array(
+					'label'    => $tag->name,
+					'category' => 'Tags',
+				);
 			}
+		}
+
+		// Now we get the forms
+
+		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/forms?api_secret=' . $this->api_secret, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$result = json_decode( wp_remote_retrieve_body( $response ) );
+
+		foreach ( $result->forms as $form ) {
+			$available_tags[ 'form_' . $form->id ] = array(
+				'label'    => $form->name,
+				'category' => 'Forms',
+			);
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -549,26 +583,63 @@ class WPF_ConvertKit {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$tag_string = implode( ',', $tags );
+		// Let's see if we're dealing with a form.
 
-		$email_address = wp_fusion()->crm->get_email_from_cid( $contact_id );
+		$form_ids = array();
 
-		$data = array(
-			'api_secret' => $this->api_secret,
-			'email'      => $email_address,
-			'tags'       => $tag_string,
-		);
+		foreach ( $tags as $i => $tag ) {
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $data );
-
-		$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', $params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			if ( strpos( $tag, 'form_' ) !== false ) {
+				$form_ids[] = str_replace( 'form_', '', $tag );
+				unset( $tags[ $i ] );
+			}
 		}
 
-		$result = json_decode( wp_remote_retrieve_body( $response ) );
+		if ( ! empty( $form_ids ) && ! $this->api_key ) {
+
+			wpf_log( 'notice', wpf_get_user_id( $contact_id ), 'ConvertKit API Key not set. Unable to subscribe to forms. Please set your API key in the WP Fusion settings on the Setup tab.' );
+
+		} elseif ( ! empty( $form_ids ) && $this->api_key ) {
+
+			// Tagging while adding someone to a form (resubscribes unsubscribed subscribers).
+
+			$data = array(
+				'api_key' => $this->api_key,
+				'email'   => wp_fusion()->crm->get_email_from_cid( $contact_id ),
+				'tags'    => implode( ',', $tags ),
+			);
+
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $data );
+
+			foreach ( $form_ids as $form_id ) {
+
+				$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/forms/' . $form_id . '/subscribe', $params );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+			}
+		} else {
+
+			// Regular tagging.
+
+			$data = array(
+				'api_secret' => $this->api_secret,
+				'email'      => wp_fusion()->crm->get_email_from_cid( $contact_id ),
+				'tags'       => implode( ',', $tags ),
+			);
+
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $data );
+
+			$response = wp_safe_remote_post( 'https://api.convertkit.com/v3/tags/' . $tags[0] . '/subscribe', $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+		}
 
 		return true;
 	}

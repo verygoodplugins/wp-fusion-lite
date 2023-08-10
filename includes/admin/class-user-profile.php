@@ -155,6 +155,9 @@ class WPF_User_Profile {
 
 		check_admin_referer( 'update-user_' . $user_id );
 
+		// This sets the log source for the WPF_User::profile_update() function.
+		wp_fusion()->logger->add_source( 'user-profile' );
+
 		// See if tags have manually been modified on the user edit screen.
 		if ( ! empty( $_POST['wpf_tags_field_edited'] ) ) {
 
@@ -316,7 +319,7 @@ class WPF_User_Profile {
 
 	public function user_profile( $user ) {
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'edit_users' ) ) {
 			return;
 		}
 

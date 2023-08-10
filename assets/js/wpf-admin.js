@@ -253,6 +253,30 @@ jQuery(document).ready(function($){
 	if( typeof(wpf_admin) !== undefined ) {
 		initializeTagsSelect('#wpbody');
 	}
+
+	function setTagLabels( translation, text, domain ) {
+		if ( typeof domain === 'string' && domain.includes( 'wp-fusion-lite' ) ) {
+			if( wpf_admin.tag_type ){
+				if( translation.includes( 'tag' ) ){
+					return translation.replace( 'tag', wpf_admin.tag_type );
+				}
+
+				if( translation.includes( 'Tag' ) ){
+					return translation.replace( 'Tag', wpf_admin.tag_type.charAt(0).toUpperCase() + wpf_admin.tag_type.slice(1) );
+				}
+			}
+		}
+
+		return translation;
+	}
+
+	wp.hooks.addFilter(
+		'i18n.gettext',
+		'wp-fusion-media-tools/overwrite-tag-label',
+		setTagLabels
+	);
+
+
 	// Standard select
 
 	if( $("select.select4").length ) {
@@ -281,9 +305,33 @@ jQuery(document).ready(function($){
 			allowClear: true,
 			minimumInputLength: 3,
 			tags : true,
-			insertTag : function(data, tag){
-				tag.text = tag.text + " (add URL)"
-				data.push(tag);
+			createTag: function (params) {
+
+				var term = $.trim( params.term );
+			
+				if ( term === '' ) {
+					return null;
+				}
+
+				// Regular expression to check if the input text looks like a URL
+				var urlPattern = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;
+
+				// Check if the input text looks like a URL
+				if (urlPattern.test(term)) {
+					// Validate that the URL starts with https:// or http://
+					if (!/^https?:\/\//i.test(term)) {
+						// Prepend https:// to the URL if it doesn't start with https:// or http://
+						term = 'https://' + term;
+					}
+				} else {
+					return null;
+				}
+
+				return {
+				  id: term,
+				  text: term + ' (add URL)',
+				  newTag: true // add additional parameters
+				}
 			},
 			ajax: {
     			url: ajaxurl,
@@ -963,6 +1011,34 @@ jQuery(document).ready(function($){
 			}
 
 		});
+
+	}
+
+	// AccessAlly
+
+	if ( $( 'body' ).hasClass( 'accessally_page_accessally-wpf' ) ) {
+
+		$( 'select.select4-wpf-tags' ).change( function() {
+
+			if( $( this ).find('option:selected').length ) {
+				$( this ).closest( 'tr' ).find( 'input.checkbox' ).prop( 'checked', true );
+				$( this ).closest( 'tr' ).addClass( 'success' );
+			} else {
+				$( this ).closest( 'tr' ).find( 'input.checkbox' ).prop( 'checked', false );
+				$( this ).closest( 'tr' ).removeClass( 'success' );
+			}
+
+		});
+
+		$( 'input.checkbox' ).change( function() {
+
+			if( $( this ).is(':checked') ) {
+				$( this ).closest( 'tr' ).addClass( 'success' );
+			} else {
+				$( this ).closest( 'tr' ).removeClass( 'success' );
+			}
+
+		} );
 
 	}
 

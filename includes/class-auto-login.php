@@ -328,7 +328,7 @@ class WPF_Auto_Login {
 		// Load meta data.
 		$user = wp_fusion()->user->pull_user_meta( $user_id );
 
-		if ( is_wp_error( $user ) ) {
+		if ( is_wp_error( $user ) || false === $user ) {
 			return $user;
 		}
 

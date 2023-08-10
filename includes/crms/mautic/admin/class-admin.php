@@ -179,13 +179,13 @@ class WPF_Mautic_Admin {
 			);
 
 			$new_settings['mautic_client_id'] = array(
-				'title'   => __( 'Client ID', 'wp-fusion-lite' ),
+				'title'   => __( 'Public Key', 'wp-fusion-lite' ),
 				'type'    => 'text',
 				'section' => 'setup',
 			);
 
 			$new_settings['mautic_client_secret'] = array(
-				'title'   => __( 'Client Secret', 'wp-fusion-lite' ),
+				'title'   => __( 'Secret Key', 'wp-fusion-lite' ),
 				'type'    => 'text',
 				'section' => 'setup',
 			);
@@ -359,7 +359,7 @@ class WPF_Mautic_Admin {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$mautic_url = esc_url_raw( wp_unslash( $_POST['mautic_url'] ) );
+		$mautic_url = esc_url_raw( trim( wp_unslash( $_POST['mautic_url'] ) ) );
 
 		if ( isset( $_POST['mautic_username'] ) ) {
 			$mautic_username = sanitize_text_field( wp_unslash( $_POST['mautic_username'] ) );

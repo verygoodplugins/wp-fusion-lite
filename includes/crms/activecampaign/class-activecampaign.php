@@ -123,6 +123,10 @@ class WPF_ActiveCampaign {
 
 			return $date;
 
+		} elseif ( 'date' === $field_type && empty( $value ) ) {
+
+			return ''; // AC can't sync empty dates. This will prevent the field from syncing.
+
 		} elseif ( is_array( $value ) ) {
 
 			return implode( '||', array_filter( $value ) );
@@ -150,7 +154,7 @@ class WPF_ActiveCampaign {
 
 		$params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
-			'timeout'    => 20,
+			'timeout'    => 10,
 			'headers'    => array(
 				'Content-Type' => 'application/json; charset=utf-8',
 				'Api-Token'    => $api_key ? $api_key : wpf_get_option( 'ac_key' ),
@@ -845,9 +849,9 @@ class WPF_ActiveCampaign {
 
 							// Convert multiselects back into an array.
 
-							if ( 'multiselect' === $field_data['type'] ) {
+							if ( 'multiselect' === $field_data['type'] && ! empty( $value ) ) {
 								$value = array_values( array_filter( explode( '||', $value ) ) );
-							} else {
+							} elseif ( ! empty( $value ) ) {
 								$value = trim( $value, '||' ); // in case it's a multiselect being loaded as text.
 							}
 

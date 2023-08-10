@@ -208,7 +208,31 @@ class WPF_MailerLite_Admin {
 
 		$new_settings['mailerlite_optin']['desc'] .= ' ' . sprintf( __( 'For more information, %1$ssee our documentation%2$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/crm-specific-docs/mailerlite-double-opt-ins/" target="_blank">', '</a>' );
 
+		$new_settings['mailerlite_resubscribe'] = array(
+			'title'   => __( 'Resubscribe', 'wp-fusion-lite' ),
+			'desc'    => __( 'When adding a subscriber to a new group, resubscribe them in case they have unsubscribed.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+		);
+
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+
+		$new_settings = array();
+
+		$new_settings['site_tracking_header'] = array(
+			'title'   => __( 'MailerLite Site Tracking', 'wp-fusion-lite' ),
+			'type'    => 'heading',
+			'section' => 'main',
+		);
+
+		$new_settings['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#mailerlite">MailerLite site tracking</a>.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'main',
+		);
+
+		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $new_settings );
 
 		return $settings;
 

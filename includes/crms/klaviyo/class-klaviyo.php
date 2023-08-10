@@ -186,31 +186,37 @@ class WPF_Klaviyo {
 
 
 	/**
-	 * Gets all available tags and saves them to options
+	 * Sync Tags.
 	 *
-	 * @access public
-	 * @return array Lists
+	 * Gets all available tags and saves them to options.
+	 *
+	 * @since 3.41.21 Added support for pagination.
+	 *
+	 * @return array Lists.
 	 */
-
 	public function sync_tags() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$available_tags = array();
+		$continue       = true;
 
-		$request  = 'https://a.klaviyo.com/api/lists';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$request = 'https://a.klaviyo.com/api/lists';
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
+		while ( $continue ) {
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
-		foreach ( $response->data as $list ) {
-			$available_tags[ $list->id ] = $list->attributes->name;
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $response->data as $list ) {
+				$available_tags[ $list->id ] = $list->attributes->name;
+			}
+
+			$response->links->next ? $request = $response->links->next : $continue = false;
+
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -228,25 +234,24 @@ class WPF_Klaviyo {
 
 	public function sync_crm_fields() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$default = array(
+			'Standard Fields' => array(),
+			'Custom Fields'   => array(),
+		);
 
-		$built_in_fields = array();
+		$crm_fields = wp_parse_args( wpf_get_option( 'crm_fields' ), $default );
 
 		// Load built in fields first.
 		require dirname( __FILE__ ) . '/admin/klaviyo-fields.php';
 
 		foreach ( $klaviyo_fields as $field ) {
-			$built_in_fields[ $field['crm_field'] ] = $field['crm_label'];
+			$crm_fields['Standard Fields'][ $field['crm_field'] ] = $field['crm_label'];
 		}
 
 		// Custom fields.
 
-		$custom_fields = array();
-
 		$request  = 'https://a.klaviyo.com/api/profiles/';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -261,7 +266,7 @@ class WPF_Klaviyo {
 				if ( ! empty( $person->attributes->properties ) ) {
 					foreach ( $person->attributes->properties as $key => $value ) {
 						if ( ! isset( $custom_fields[ $key ] ) ) {
-							$custom_fields[ $key ] = $key;
+							$crm_fields['Custom Fields'][ $key ] = $key;
 						}
 					}
 				}
@@ -270,12 +275,7 @@ class WPF_Klaviyo {
 
 		}
 
-		asort( $custom_fields );
-
-		$crm_fields = array(
-			'Standard Fields' => $built_in_fields,
-			'Custom Fields'   => $custom_fields,
-		);
+		asort( $crm_fields['Custom Fields'] );
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 

@@ -92,6 +92,8 @@ class WPF_Bento {
 		// Slow down the batch processses to get around the 10 requests per 10 second limit.
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
+		add_filter( 'wpf_event_tracking_replace_tags', array( $this, 'event_tracking_replace_tags' ), 10, 2 );
+
 	}
 
 	/**
@@ -140,7 +142,12 @@ class WPF_Bento {
 			return;
 		}
 
-		wp_enqueue_script( 'bento', 'https://app.bentonow.com/' . wpf_get_option( 'site_uuid' ) . '.js', array(), WP_FUSION_VERSION, true );
+		$args = array(
+			'in_footer' => true,
+			'strategy'  => 'async',
+		);
+
+		wp_enqueue_script( 'bento', 'https://app.bentonow.com/' . wpf_get_option( 'site_uuid' ) . '.js', array(), WP_FUSION_VERSION, $args );
 
 	}
 
@@ -162,17 +169,19 @@ class WPF_Bento {
 		echo '<!-- Bento (via WP Fusion) -->';
 		echo "
 		<script>
-		if (typeof(bento$) != 'undefined') {
-		  bento$(function() {";
+		window.addEventListener('bento:ready', function () {
+			if (typeof(bento$) != 'undefined') {
+				bento$(function() {";
 
-		if ( $email ) {
-			echo "bento.identify('" . esc_js( strtolower( $email ) ) . "');";
-		}
+				if ( $email ) {
+					echo "bento.identify('" . esc_js( strtolower( $email ) ) . "');";
+				}
 
-		echo '
-			bento.view();
-		  });
-		}
+				echo '
+					bento.view();
+				});
+			}
+		});
 		</script>';
 		echo '<!-- end Bento -->';
 
@@ -645,14 +654,21 @@ class WPF_Bento {
 	 */
 	public function add_contact( $data ) {
 
-		// Bento can't create a subscriber with custom fields.
-
 		$contact_data = array(
 			'site_uuid'  => wpf_get_option( 'site_uuid' ),
 			'subscriber' => array(
-				'email' => strtolower( $data['email'] )
+				'email' => strtolower( $data['email'] ),
 			),
 		);
+
+		unset( $data['email'] );
+
+		if ( ! empty( $data ) ) {
+
+			// Custom fields. Not working at the moment.
+			$contact_data['subscriber']['fields'] = $data;
+
+		}
 
 		$request        = $this->url . '/fetch/subscribers/';
 		$params         = $this->get_params();
@@ -669,16 +685,14 @@ class WPF_Bento {
 		// Get new contact ID out of response.
 		$contact_id = $body->data->attributes->uuid;
 
-		unset( $data['email'] );
-
-		// If there are custom fields in addition to email, send those in a separate request.
+		// // If there are custom fields in addition to email, send those in a separate request.
 		if ( ! empty( $data ) ) {
-			$this->update_contact( $contact_id, $data, false );
+			$this->update_contact( $contact_id, $data );
 		}
 
-		$user_id = wpf_get_user_id( $contact_id );
+		$user = get_user_by( 'email', $body->data->attributes->email );
 
-		if ( $user_id ) {
+		if ( $user ) {
 			// Save the web ID so we can link to it later.
 			update_user_meta( $user->ID, 'bento_web_id', $body->data->attributes->navigation_url );
 		}
@@ -849,6 +863,40 @@ class WPF_Bento {
 		}
 
 		return true;
+	}
+
+	/**
+	 * When sending events to Bento, multiply price fields by 100 to update LTV.
+	 *
+	 * @since 3.41.23
+	 *
+	 * @param array $event The event.
+	 * @param array $args  The event args.
+	 * @return array The updated event.
+	 */
+	public function event_tracking_replace_tags( $event, $args ) {
+
+		$keywords = array( 'total', 'price', 'amount' );
+
+		foreach ( $event['value'] as $i => $value ) {
+
+			if ( is_numeric( $value['value'] ) && ! isset( $value['fixed'] ) ) {
+
+				foreach ( $keywords as $keyword ) {
+
+					if ( false !== strpos( $value['key'], $keyword ) ) {
+
+						$event['value'][ $i ]['value'] *= 100; // Bento stores currencies multiplied by 100.
+						$event['value'][ $i ]['fixed']  = true; // Prevents double multiplication when processing Woo + global tag replace on the same event.
+						continue;
+
+					}
+				}
+			}
+		}
+
+		return $event;
+
 	}
 
 

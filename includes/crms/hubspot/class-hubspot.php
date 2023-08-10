@@ -332,10 +332,10 @@ class WPF_HubSpot {
 				// Contextual help
 
 				if ( 'resource not found' == $message ) {
-					$message .= '.<br /><br />This error usually means that you\'ve deleted or merged a contact record in HubSpot, and then tried to update a contact ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
+					$message .= '.<br /><br />This error can mean that you\'ve deleted or merged a record in HubSpot, and then tried to update an ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
 				} elseif ( 'Can not operate manually on a dynamic list' == $message ) {
 					$message .= '.<br /><br />' . __( 'This error means you tried to apply an Active list over the API. Only Static lists can be assigned over the API. For an overview of HubSpot lists, see <a href="https://knowledge.hubspot.com/lists/create-active-or-static-lists#types-of-lists" target="_blank">this documentation page</a>.', 'wp-fusion-lite' );
-				} elseif ( 'MISSING_SCOPES' === $body_json->category ) {
+				} elseif ( isset( $body_json->category ) && 'MISSING_SCOPES' === $body_json->category ) {
 					$message .= '<br /><br />' . __( 'This error means you\'re trying to access a feature that requires additional permissions. You can grant these permissions by clicking Reauthorize with HubSpot on the Setup tab in the WP Fusion settings.', 'wp-fusion-lite' );
 				}
 
@@ -351,11 +351,7 @@ class WPF_HubSpot {
 
 				if ( isset( $body_json->errors ) ) {
 
-					$message .= '<ul>';
-					foreach ( $body_json->errors as $error ) {
-						$message .= '<li>' . $error->message . '</li>';
-					}
-					$message .= '</ul>';
+					$message .= '<pre>' . print_r( $body_json->errors, true ) . '</pre>';
 
 				}
 

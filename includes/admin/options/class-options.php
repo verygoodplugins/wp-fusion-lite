@@ -110,15 +110,16 @@ class WP_Fusion_Options {
 	);
 
 	private $default_setting = array(
-		'title'    => null,
-		'desc'     => null,
-		'std'      => null,
-		'type'     => 'checkbox',
-		'section'  => '',
-		'class'    => null,
-		'disabled' => false,
-		'unlock'   => null,
-		'lock'     => null,
+		'title'          => null,
+		'desc'           => null,
+		'std'            => null,
+		'type'           => 'checkbox',
+		'section'        => '',
+		'class'          => null,
+		'disabled'       => false,
+		'input_disabled' => false,
+		'unlock'         => null,
+		'lock'           => null,
 	);
 
 	/**
@@ -1204,7 +1205,7 @@ class WP_Fusion_Options {
 		if ( isset( $field['format'] ) && $field['format'] == 'phone' ) {
 			echo '<input id="' . esc_attr( $id ) . '" class="form-control bfh-phone ' . esc_attr( $field['class'] ) . '" data-format="(ddd) ddd-dddd" type="text" id="' . esc_attr( $id ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 		} else {
-			echo '<input id="' . esc_attr( $id ) . '" class="form-control ' . esc_attr( $field['class'] ) . '" type="text" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+			echo '<input id="' . esc_attr( $id ) . '" class="form-control ' . esc_attr( $field['class'] ) . '" type="text" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] || $field['input_disabled'] ? 'disabled="true"' : '' ) . '>';
 		}
 	}
 
@@ -1551,8 +1552,9 @@ class WP_Fusion_Options {
 	private function default_field_number() {
 
 		$args = array(
-			'min' => 0,
-			'max' => null,
+			'min'  => 0,
+			'max'  => null,
+			'step' => 1,
 		);
 
 		return $args;
@@ -1567,7 +1569,11 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_number( $id, $field, $subfield_id = null ) {
 
-		echo '<input id="' . esc_attr( $id ) . '" type="number" class="select form-control ' . esc_attr( $field['class'] ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" min="' . (int) $field['min'] . '" ' . ( $field['max'] ? 'max=' . (int) $field['max'] : '' ) . ' value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
+		if ( empty( $this->options[ $id ] ) ) {
+			$this->options[ $id ] = 0;
+		}
+
+		echo '<input id="' . esc_attr( $id ) . '" type="number" class="select form-control ' . esc_attr( $field['class'] ) . '" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" min="' . (int) $field['min'] . '" ' . ( $field['max'] ? 'max=' . (int) $field['max'] : '' ) . ' step="' . floatval( $field['step'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
 	}
 
 	/**
@@ -1587,7 +1593,7 @@ class WP_Fusion_Options {
 			return new WP_Error( 'error', __( 'Number must be less than or equal to ' . $setting['max'] . '.' ), $input );
 		} else {
 
-			return (int) $input;
+			return floatval( $input );
 		}
 	}
 
