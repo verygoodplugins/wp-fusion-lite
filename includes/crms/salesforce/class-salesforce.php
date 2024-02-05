@@ -3,10 +3,38 @@
 class WPF_Salesforce {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'salesforce';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Salesforce';
+
+	/**
+	 * The client ID.
+	 *
+	 * @var string
+	 */
+	public $client_id = '3MVG9CEn_O3jvv0xMf5rhesocm_5czidz9CFtu_qNZ2V0Zw.bmL0LTRRylD5fhkAKYwGxRDDRXjV4TOowpNmg';
+
+	/**
+	 * The client secret.
+	 *
+	 * @var string
+	 */
+	public $client_secret = '9BB0BD5237B1EA6ED8AFE2618053BDB181459DD61AB3B49567A8BA5013C35D76';
+
+	/**
 	 * Contains API params
 	 */
 
-	public $params;
+	public $params = array();
 
 	/**
 	 * Contains SF instance URL
@@ -17,8 +45,7 @@ class WPF_Salesforce {
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
-
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Lets outside functions override the object type (Leads for example)
@@ -58,14 +85,6 @@ class WPF_Salesforce {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'salesforce';
-		$this->name     = 'Salesforce';
-		$this->supports = array();
-
-		// OAuth.
-		$this->client_id     = '3MVG9CEn_O3jvv0xMf5rhesocm_5czidz9CFtu_qNZ2V0Zw.bmL0LTRRylD5fhkAKYwGxRDDRXjV4TOowpNmg';
-		$this->client_secret = '9BB0BD5237B1EA6ED8AFE2618053BDB181459DD61AB3B49567A8BA5013C35D76';
 
 		// Figure out what kinds of tags we're using.
 
@@ -109,7 +128,8 @@ class WPF_Salesforce {
 			$this->edit_url = trailingslashit( $instance_url ) . 'lightning/r/' . $this->object_type . '/%s/view';
 		}
 
-		$this->auth_url = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
+		$this->auth_url    = apply_filters( 'wpf_salesforce_auth_url', 'https://login.salesforce.com/services/oauth2/token' );
+		$this->object_type = apply_filters( 'wpf_crm_object_type', wpf_get_option( 'sf_object_type', $this->object_type ) );
 
 	}
 
@@ -121,6 +141,10 @@ class WPF_Salesforce {
 	 */
 
 	public function format_post_data( $post_data ) {
+
+		if ( isset( $post_data['contact_id'] ) ) {
+			return $post_data;
+		}
 
 		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
 
@@ -256,13 +280,20 @@ class WPF_Salesforce {
 
 			return '';
 
-		} elseif ( ( 'datepicker' == $field_type || 'date' == $field_type ) && is_numeric( $value ) ) {
+		} elseif (  'date' === $field_type && is_numeric( $value ) ) {
 
 			// Adjust formatting for date fields.
 			$date = gmdate( 'Y-m-d', $value );
 
 			return $date;
 
+		} elseif ( 'checkbox' === $field_type ) {
+
+			if ( empty( $value ) ) {
+				return 'false';
+			} else {
+				return 'true';
+			}
 		} elseif ( is_array( $value ) ) {
 
 			// Multiselects
@@ -452,6 +483,23 @@ class WPF_Salesforce {
 
 				$response = new WP_Error( (int) $response_code, $response_message );
 
+			} elseif ( isset( $body->{'compositeResponse'} ) ) {
+
+				// Composite requests (like from Enhanced Ecommerce) have errors in an array.
+
+				$errors = array();
+
+				foreach ( $body->{'compositeResponse'} as $res ) {
+
+					if ( 200 !== $res->{'httpStatusCode'} && 201 !== $res->{'httpStatusCode'} ) {
+						$errors[] = '<pre>' . wpf_print_r( $res->body, true ) . '</pre>';
+					}
+				}
+
+				if ( ! empty( $errors ) ) {
+					return new WP_Error( 'error', implode( '', $errors ) );
+				}
+
 			}
 		}
 
@@ -485,7 +533,7 @@ class WPF_Salesforce {
 		);
 
 		$this->instance_url = apply_filters( 'wpf_salesforce_instance_url', wpf_get_option( 'sf_instance_url' ) );
-		$this->object_type  = apply_filters( 'wpf_crm_object_type', wpf_get_option( 'sf_object_type', $this->object_type ) );
+		$this->object_type  = apply_filters( 'wpf_crm_object_type', wpf_get_option( 'sf_object_type', $this->object_type ) ); // set it again in case it's changed.
 
 		return $this->params;
 
@@ -708,6 +756,7 @@ class WPF_Salesforce {
 		$standard_fields  = array();
 		$custom_fields    = array();
 		$read_only_fields = array();
+		$required_fields  = array();
 
 		$request  = $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/describe/';
 		$response = wp_safe_remote_get( $request, $this->params );
@@ -720,7 +769,7 @@ class WPF_Salesforce {
 
 		foreach ( $response->fields as $field ) {
 
-			if ( false == $field->updateable ) {
+			if ( false === $field->updateable ) {
 				$field->label      .= ' (' . __( 'read only', 'wp-fusion-lite' ) . ')';
 				$read_only_fields[] = $field->name;
 			}
@@ -729,11 +778,16 @@ class WPF_Salesforce {
 				$field->label .= ' (' . __( 'compound field', 'wp-fusion-lite' ) . ')';
 			}
 
-			if ( true == $field->custom ) {
+			if ( true === $field->custom ) {
 				$custom_fields[ $field->name ] = $field->label;
 			} else {
 				$standard_fields[ $field->name ] = $field->label;
 			}
+
+			if ( false === $field->nillable && true === $field->createable && false === $field->{'defaultedOnCreate'} ) {
+				$required_fields[] = $field->name;
+			}
+
 		}
 
 		asort( $standard_fields );
@@ -745,8 +799,8 @@ class WPF_Salesforce {
 		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
-
 		wp_fusion()->settings->set( 'read_only_fields', $read_only_fields );
+		wp_fusion()->settings->set( 'required_fields', $required_fields );
 
 		return $crm_fields;
 	}
@@ -1076,8 +1130,18 @@ class WPF_Salesforce {
 		$params = $this->get_params();
 
 		// LastName is required to create a new contact.
-		if ( $this->object_type == 'Contact' && ! isset( $data['LastName'] ) ) {
+		if ( $this->object_type === 'Contact' && ! isset( $data['LastName'] ) ) {
 			$data['LastName'] = 'unknown';
+		}
+
+		// Since 3.41.45 we support checking against all required fields.
+		$required_fields = wpf_get_option( 'required_fields', array() );
+
+		foreach ( $required_fields as $field ) {
+
+			if ( ! array_key_exists( $field, $data ) ) {
+				$data[ $field ] = '-';
+			}
 		}
 
 		$default_account = wpf_get_option( 'salesforce_account' );
@@ -1149,8 +1213,10 @@ class WPF_Salesforce {
 
 			if ( $field_data['active'] && array_key_exists( $field_data['crm_field'], $body ) ) {
 
-				if ( 'multiselect' == $field_data['type'] || 'checkboxes' == $field_data['type'] ) {
+				if ( 'multiselect' === $field_data['type'] || 'checkboxes' == $field_data['type'] ) {
 					$user_meta[ $field_id ] = explode( ';', $body[ $field_data['crm_field'] ] );
+				} elseif ( 'checkbox' === $field_data['type'] && false === $body[ $field_data['crm_field'] ] ) {
+					$user_meta[ $field_id ] = null; // this lets us pass the is_null() check in WPF_User::set_user_meta() and load the empty value.
 				} else {
 					$user_meta[ $field_id ] = $body[ $field_data['crm_field'] ];
 				}

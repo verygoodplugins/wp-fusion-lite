@@ -678,6 +678,10 @@ class WPF_Lite_Helper {
 	 */
 	public function contact_fields_upgrade_message( $id, $field ) {
 
+		if ( ! class_exists( 'WooCommerce' ) && ! class_exists( 'BuddyPress' ) && ! class_exists( 'Affiliate_WP' ) ) {
+			return;
+		}
+
 		echo '<div id="contact-fields-pro-notice">';
 
 		echo '<div class="wpf-upgrade-nag-container">';

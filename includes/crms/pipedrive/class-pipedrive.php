@@ -665,10 +665,14 @@ class WPF_Pipedrive {
 	 */
 	public function format_contact_data( $contact_data ) {
 
-		// Name is required.
+		// Name is required for creating a contact, but not updating.
 
-		$contact_data['name']  = isset( $contact_data['first_name'] ) ? $contact_data['first_name'] : '';
-		$contact_data['name'] .= ' ' . isset( $contact_data['last_name'] ) ? $contact_data['last_name'] : '';
+		if ( isset( $contact_data['first_name'] ) || isset( $contact_data['last_name'] ) ) {
+
+			$contact_data['name']  = isset( $contact_data['first_name'] ) ? $contact_data['first_name'] : '';
+			$contact_data['name'] .= isset( $contact_data['last_name'] ) ? ' ' . $contact_data['last_name'] : '';
+
+		}
 
 		// Compound fields.
 		foreach ( $contact_data as $field => $value ) {

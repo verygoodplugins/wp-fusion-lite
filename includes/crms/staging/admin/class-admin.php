@@ -24,6 +24,10 @@ class WPF_Staging_Admin {
 		add_action( 'show_field_staging_header_begin', array( $this, 'show_field_staging_header_begin' ) );
 		add_action( 'show_field_staging_header_end', array( $this, 'show_field_staging_header_end' ) );
 
+		if ( wpf_get_option( 'crm' ) == $this->slug ) {
+			add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ) );
+		}
+
 	}
 
 
@@ -76,6 +80,27 @@ class WPF_Staging_Admin {
 	public function show_field_staging_header_end() {
 
 		echo '</div>';
+
+	}
+
+	/**
+	 * Make sure email is enabled and mapped.
+	 *
+	 * @since 3.41.26
+	 * @param array $options The options
+	 * @return array The options.
+	 */
+	public function add_default_fields( $options ) {
+
+		if ( $options['connection_configured'] ) {
+
+			$options['contact_fields']['user_email'] = array(
+				'crm_field' => 'email',
+			);
+
+		}
+
+		return $options;
 
 	}
 

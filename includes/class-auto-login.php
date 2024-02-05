@@ -61,16 +61,10 @@ class WPF_Auto_Login {
 
 		$contact_id = false;
 
-		$alt_query_var = apply_filters( 'wpf_auto_login_query_var', false );
+		$query_var = apply_filters( 'wpf_auto_login_query_var', 'cid' );
 
-		if ( isset( $_GET['cid'] ) ) {
-
-			$contact_id = sanitize_text_field( wp_unslash( $_GET['cid'] ) );
-
-		} elseif ( empty( $contact_id ) && false !== $alt_query_var && isset( $_GET[ $alt_query_var ] ) ) {
-
-			$contact_id = sanitize_text_field( wp_unslash( $_GET[ $alt_query_var ] ) );
-
+		if ( isset( $_GET[ $query_var ] ) ) {
+			$contact_id = sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) );
 		}
 
 		$contact_id = apply_filters( 'wpf_auto_login_contact_id', $contact_id );
@@ -128,6 +122,15 @@ class WPF_Auto_Login {
 		}
 
 		if ( empty( $contact_id ) && empty( $_COOKIE['wpf_contact'] ) ) {
+
+			$query_var = apply_filters( 'wpf_auto_login_query_var', 'cid' );
+
+			if ( isset( $_GET[ $query_var ] ) ) {
+
+				// An auto-login link was visited but the contact ID couldn't be found.
+				wpf_log( 'notice', 0, 'Unable to determine contact ID from provided URL parameter <code>' . sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) ) . '</code>' );
+			}
+
 			return;
 		}
 
@@ -352,6 +355,7 @@ class WPF_Auto_Login {
 
 		$existing_user_id = wpf_get_user_id( $contact_id );
 
+		// Make sure it's not a temp user.
 		if ( $existing_user_id ) {
 			wp_fusion()->user->set_tags( $user_tags, $existing_user_id );
 		}

@@ -3,10 +3,24 @@
 class WPF_Zoho {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'zoho';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Zoho';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Contains API params
@@ -18,15 +32,12 @@ class WPF_Zoho {
 	 * Zoho OAuth stuff
 	 */
 
-	public $client_id;
+	public $client_id = '1000.BC6W0X67OT9F47300RAHN6TOPDG0E3';
 
-	public $client_secret_us;
-
-	public $client_secret_eu;
-
-	public $client_secret_in;
-
-	public $client_secret_au;
+	public $client_secret_us = '3618d9156bc0e54d177585fcc0d6443c6791460c2a';
+	public $client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
+	public $client_secret_in = 'bd920ac806f5fe45c63e52fa6ab9416c14d479d20e';
+	public $client_secret_au = '08dcc7d1734284158f1819af1e06490777a4682323';
 
 	public $api_domain;
 
@@ -34,7 +45,7 @@ class WPF_Zoho {
 	 * Lets outside functions override the object type (Leads for example)
 	 */
 
-	public $object_type;
+	public $object_type = 'Contacts';
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -52,20 +63,6 @@ class WPF_Zoho {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'zoho';
-		$this->name     = 'Zoho';
-		$this->supports = array();
-
-		// OAuth
-		$this->client_id = '1000.BC6W0X67OT9F47300RAHN6TOPDG0E3';
-
-		$this->client_secret_us = '3618d9156bc0e54d177585fcc0d6443c6791460c2a';
-		$this->client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
-		$this->client_secret_in = 'bd920ac806f5fe45c63e52fa6ab9416c14d479d20e';
-		$this->client_secret_au = '08dcc7d1734284158f1819af1e06490777a4682323';
-
-		$this->object_type = 'Contacts';
 
 		// Set up admin options
 		if ( is_admin() ) {

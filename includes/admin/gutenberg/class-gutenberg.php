@@ -44,8 +44,7 @@ class Main {
 
 	public function editor_assets() {
 
-		$scripts = '/assets/js/editor.js';
-		$styles  = '/assets/css/editor.css';
+		$scripts = '/build/index.js';
 
 		// Enqueue editor JS.
 		wp_enqueue_script(
@@ -53,14 +52,6 @@ class Main {
 			plugins_url( $scripts, __FILE__ ),
 			array( 'wp-i18n', 'wp-element', 'wp-blocks', 'wp-components', 'wp-api', 'wp-editor' ),
 			filemtime( plugin_dir_path( __FILE__ ) . $scripts )
-		);
-
-		// Enqueue edtior Styles.
-		wp_enqueue_style(
-			'wpf-secure-blocks-for-gutenberg-editor-css',
-			plugins_url( $styles, __FILE__ ),
-			array(),
-			filemtime( plugin_dir_path( __FILE__ ) . $styles )
 		);
 
 	}
@@ -74,7 +65,7 @@ class Main {
 
 	public function admin_assets() {
 
-		$styles = '/assets/css/admin.css';
+		$styles = '/build/index.css';
 
 		// Enqueue Styles.
 		wp_enqueue_style(
@@ -95,7 +86,7 @@ class Main {
 	public function includes() {
 
 		// Load Classes
-		require_once plugin_dir_path( __FILE__ ) . 'blocks/secure-block/php/class-secure-block.php';
+		require_once plugin_dir_path( __FILE__ ) . 'src/secure-block/php/class-secure-block.php';
 		$secure_block = new Secure_Block();
 		$secure_block->run();
 

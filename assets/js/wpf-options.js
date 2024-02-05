@@ -89,6 +89,18 @@ jQuery(document).ready(function($){
 
 		});
 
+		// Integrations checkboxes.
+
+		$( '.wpf-integration input[type="checkbox"]' ).on( 'change', function() {
+			
+			if ( $(this).is(':checked') ) {
+				$(this).closest('a').addClass('active');
+			} else {
+				$(this).closest('a').removeClass('active');
+			}
+
+		} );
+
 		//
 		// Batch process status checker
 		//
@@ -531,6 +543,10 @@ jQuery(document).ready(function($){
 					var total = parseFloat(button.attr('data-total-users'));
 					syncTags(button, total, crmContainer);
 
+					// remove disabled on submit button:
+
+					$('p.submit input[type="submit"]').removeAttr('disabled');
+
 				}
 
 			});
@@ -722,20 +738,20 @@ jQuery(document).ready(function($){
 
 
 		//
-		// Zoho tags
+		// Zoho/Hubspot tags
 		// 
 
-		$('#zoho.crm-config input[type="radio"]').on('change', function() {
+		$('#zoho.crm-config input[type="radio"],#hubspot.crm-config input[type="radio"]').on('change', function() {
 
 			if ( $(this).val() == 'multiselect' ) {
-
-				$( '#zoho_multiselect_field' ).closest( 'tr' ).removeClass( 'disabled' );
-				$( '#zoho_multiselect_field' ).prop( 'disabled', false );
+		
+				$( '#zoho_multiselect_field,#hubspot_multiselect_field' ).closest( 'tr' ).removeClass( 'disabled' );
+				$( '#zoho_multiselect_field,#hubspot_multiselect_field' ).prop( 'disabled', false );
 
 			} else {
 
-				$( '#zoho_multiselect_field' ).closest( 'tr' ).addClass( 'disabled' );
-				$( '#zoho_multiselect_field' ).prop( 'disabled', true );
+				$( '#zoho_multiselect_field,#hubspot_multiselect_field' ).closest( 'tr' ).addClass( 'disabled' );
+				$( '#zoho_multiselect_field,#hubspot_multiselect_field' ).prop( 'disabled', true );
 
 			}
 

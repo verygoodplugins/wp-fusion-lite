@@ -16,3 +16,8 @@ $sendinblue_fields['user_email'] = array(
 	'crm_label' => 'Email',
 	'crm_field' => 'email'
 );
+
+$sendinblue_fields[] = array(
+	'crm_label' => 'WhatsApp',
+	'crm_field' => 'WHATSAPP'
+);

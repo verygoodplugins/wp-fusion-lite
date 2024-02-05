@@ -42,6 +42,7 @@ class WPF_SendinBlue_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_filter( 'validate_field_double_optin_template', array( $this, 'validate_double_optin' ), 10, 3 );
 
 	}
 
@@ -121,29 +122,86 @@ class WPF_SendinBlue_Admin {
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'Sendinblue Site Tracking', 'wp-fusion-lite' ),
-			'url'     => 'https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#sendinblue',
+			'title'   => __( 'Brevo Site Tracking', 'wp-fusion-lite' ),
+			'url'     => 'https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#brevo',
 			'type'    => 'heading',
 			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enable Sendinblue site tracking scripts.', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable Brevo site tracking scripts.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking_key'] = array(
 			'title'   => __( 'Tracking Client Key', 'wp-fusion-lite' ),
-			'desc'    => __( 'Your tracking <code>client_key</code> can be found in the Tracking Code <a href="https://automation.sendinblue.com/parameters" target="_blank">in the Automation settings of your Sendinblue account</a>. For example: <code>l7u0448l6oipghl8v7k92</code>', 'wp-fusion-lite' ),
+			'desc'    => __( 'Your tracking <code>client_key</code> can be found in the Tracking Code <a href="https://automation.brevo.com/parameters" target="_blank">in the Automation settings of your Brevo account</a>. For example: <code>l7u0448l6oipghl8v7k92</code>', 'wp-fusion-lite' ),
 			'type'    => 'text',
+			'section' => 'main',
+		);
+
+		$site_tracking['double_optin_header'] = array(
+			'title'   => __( 'Double Opt-in Settings', 'wp-fusion-lite' ),
+			'url'     => 'https://wpfusion.com/documentation/tutorials/double-opt-ins/#brevo',
+			'type'    => 'heading',
+			'section' => 'main',
+		);
+
+		$site_tracking['double_optin_template'] = array(
+			'title'       => __( 'Double Opt-in Template', 'wp-fusion-lite' ),
+			'desc'        => __( 'Select a template to use for double opt-in. For more information see the <a href="https://help.brevo.com/hc/en-us/articles/360019540880-Create-a-double-opt-in-DOI-confirmation-template-for-Brevo-form" target="_blank">Brevo documentation</a>.', 'wp-fusion-lite' ),
+			'type'        => 'select',
+			'placeholder' => __( 'None', 'wp-fusion-lite' ),
+			'choices'     => isset( $options['optin_templates'] ) ? $options['optin_templates'] : (array) wp_fusion()->crm->sync_optin_templates(),
+			'section'     => 'main',
+		);
+
+		$site_tracking['double_optin_redirect_url'] = array(
+			'title'   => __( 'Opt-in Redirect URL', 'wp-fusion-lite' ),
+			'desc'    => __( 'URL that user will be redirected to after clicking on the double opt-in URL. When editing your DOI template you can reference this URL by using <code>{{ params.DOIurl }}</code>.', 'wp-fusion-lite' ),
+			'type'    => 'text',
+			'std'     => home_url(),
+			'section' => 'main',
+		);
+
+		$site_tracking['double_optin_lists'] = array(
+			'title'   => __( 'Opt-in List(s)', 'wp-fusion-lite' ),
+			'desc'    => __( 'You must select at least one list to add subscribers to once they have confirmed their subscription.', 'wp-fusion-lite' ),
+			'type'    => 'assign_tags',
 			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
+
+	}
+
+	/**
+	 * Ensures a redirect URI and lists are set for double optin.
+	 *
+	 * @since 3.42.5
+	 *
+	 * @param string            $value         The selected opt-in template.
+	 * @param array             $field         The field properties.
+	 * @param WP_Fusion_Options $options_class The options class.
+	 * @return string|WP_Error The value or error.
+	 */
+	public function validate_double_optin( $value, $field, $options_class ) {
+
+		if ( ! empty( $value ) ) {
+
+			if ( false === filter_var( $options_class->post_data['double_optin_redirect_url'], FILTER_VALIDATE_URL ) ) {
+				return new WP_Error( 'invalid_redirect_url', __( 'You must enter a valid redirect URL.', 'wp-fusion-lite' ) );
+			} elseif ( empty( $options_class->post_data['double_optin_lists'] ) ) {
+				return new WP_Error( 'no_optin_lists', __( 'You must select at least one list to add subscribers to once they have confirmed their subscription.', 'wp-fusion-lite' ) );
+			}
+
+		}
+
+		return $value;
 
 	}
 

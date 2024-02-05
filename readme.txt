@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 6.3.0
-Stable tag: 3.41.24
+Tested up to: 6.4.0
+Stable tag: 3.42.10 / 3.41.24
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -82,6 +82,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * ConvertKit
 * Copper
 * Customerly
+* Customer.io
 * Drift
 * Drip
 * EmailOctopus
@@ -112,6 +113,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * Microsoft Dynamics 365
 * MooSend
 * NationBuilder
+* Omnisend
 * Ontraport
 * Ortto
 * Pipedrive
@@ -190,6 +192,109 @@ If you'd prefer not to see these you can disable them with the filter:
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.42.10 - 2/5/2024 =
+
+##### Tech Stuff
+
+* Tested for WordPress 6.4.0
+
+
+##### New CRMS
+
+* Added a CRM integration with Customer.io
+* Added a CRM integation with [Omnisend](https://wpfusion.com/documentation/installation-guides/how-to-connect-omnisend-to-wordpress/)
+
+
+##### New Features
+
+* Added multi-select option instead of static lists to HubSpot Integration
+* Added Source, Time Zone, and Company Name fields for sync with HighLevel
+* Added support for syncing optin statuses with Infusionsoft and Keap
+* Added WhatsApp field for sync with Brevo
+* Added View in CRM links with Klaviyo
+* Added support for syncing to date + time fields with FluentCRM (same site and REST API)
+* Added support for webhooks in [Mailchimp journeys](https://wpfusion.com/documentation/webhooks/mailchimp-webhooks/#webhooks-in-journeys)
+* Added contextual tooltips to some fields in the Contact Fields tab of the WP Fusion settings
+* Added an option to apply the current user's CRM tags [as CSS classes to the HTML <body> element](https://wpfusion.com/documentation/getting-started/access-control/#protecting-content-via-css)
+* Added support for [using an API key with HighLevel](https://wpfusion.com/documentation/crm-specific-docs/highlevel-white-labelled-accounts/#overview) instead of OAuth
+* Added support for [double opt-ins with Brevo](https://wpfusion.com/documentation/tutorials/double-opt-ins/#brevo)
+* Added support for [setting a default opt-in status with Groundhogg](https://wpfusion.com/documentation/tutorials/double-opt-ins/#groundhogg) (REST API)
+* Added support for saving the field type for each remote field in the CRM. Improves data format conversion (currently just Brevo)
+* Added support for lists with FluentCRM (REST API)
+* Added support for the [new FluentCRM event tracking module](https://fluentcrm.com/fluentcrm-2-8-40/#dynamic-contact-activity-tracking) (same site and REST API)
+* Added [Customer.io site tracking scripts](https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#customer-io)
+* Added [Customer.io webhooks](https://wpfusion.com/documentation/webhooks/customer-io-webhooks/)
+
+
+##### Improvements
+
+* The "Enable API Queue" setting will be hidden when connected to Groundhogg (Same site), as it's unnecessary when not sending API calls
+* New custom field created in Groundhogg (same site) will now appear immediately in WP Fusion (no Resync Fields required)
+* The HighLevel integration will now also attempt to refresh the access token when it encounters a 401 response
+* Improved tags select UI when using the block editor— now supports typing in new tags, tag groups, refreshing tags via an API call, and creating tags via an API call
+* With Brevo, the keys name and id will now show as reserved and can't be used for event tracking
+* Improved CRM error logging
+* Improved performance when looking up a user ID from a contact ID
+* Updated the 'add', 'update', and 'load' contact methods with ActiveCampaign to use the new v3 API (should be faster)
+* Fixed missing Reset Deep Data checkbox on the advanced tab (with ActiveCampaign)
+* Improved duplicate record error handling for ActiveCampaign and Kaviyo
+* You can now use "less" and "greater" instead of < and > in the 'user_meta_if' shortcode attributes
+* If a user registers with a missing 'first_name' and 'last_name' but their 'display_name' is set, the Display Name will be used for the first and last names
+* If you try to sync multiselect or array-formatted data to a text field in HighLevel, WP Fusion will automatically combine the items to prevent an API error
+* If you add 'define( 'WPF_STAGING_MODE', false );' to wp-config.php, this will disable [automatic staging site detection](https://wpfusion.com/documentation/faq/staging-sites/#automatic-staging-site-detection)
+* Improved performance with checking permissions on a post based on access rules configured on a taxonomy term
+* If staging mode is enabled via wp-config.php ('WPF_STAGING_MODE') the "It looks like this site has moved or is a duplicate" notice will not be displayed
+* Extended the timeout with ActiveCampaign to 15 seconds
+* Post content restricted by WP Fusion will no longer be accessible over the REST API to unauthorized users
+* Fixed a fatal error and custom fields not syncing with Jetpack CRM
+* With Brevo, select and multiselect fields will now automatically be synced to their numeric values required by the Brevo API (requires a one-time Refresh Available Tags and Fields via the settings)
+* The background worker will now return instead of exit when the queue is empty, to prevent the worker from blocking subsequent cron tasks
+* Improved HubSpot error handling
+* Updated Omnisend event tracking to use new '/customer-events' endpoint
+* Multi-key FluentCRM events will now be sent JSON-encoded
+* Improved WP Fusion settings
+* The [JavaScript-based lead source tracking method](https://wpfusion.com/documentation/tutorials/lead-source-tracking/#caching) no longer requires jQuery
+
+
+
+##### Bug Fixes
+
+* Fixed tags not applying via AJAX for auto-login users since 3.41.22
+* Fixed Groundhogg (REST API) and Groundhogg (same site) bugs
+* Fixed Email not enabled for sync by default and tagging not working when using the Staging CRM
+* Fixed unhandled error when looking up a contact by email address failed during a guest checkout or registration
+* Fixed duplicate Phone Number field in HighLevel integration
+* Fixed Mailchimp bugs
+* Fixed ActiveCampaign bugs and fatal errors
+* Fixed FluentCRM (REST API) and FluentCRM (same site) bugs
+* Fixed a bug with MailerLite, and HubSpot whereby auto-login links were not being properly detected on the initial page load (only on the second page load)
+* Fixed inverted timezone offset for syncing date fields with HubSpot
+* Fixed shortcode attributes added to the block editor getting saved with curly quotes
+* Fixed PHP errors with Brevo
+* Fixed deprecated JavaScript console messages
+* Fixed Pipedrive error "Name must be given" when updating a contact and the name field was not present
+* Fixed WP Fusion fatal errors and bugs
+* Fixed PHP error 'Parse error: syntax error, unexpected ')'' when gathering the user metadata for a user in PHP < 7.3
+* Fixed users who registered without a first name getting their first name synced to the CRM as their username
+* Fixed 'wpf_get_user_id( $contact_id )' returning the IDs of temporary auto-login users
+* Fixed PHP warning 'foreach() argument must be of type array|object, bool given' after deleting all taxonomy-based access rules
+* Fixed special characters in tag names breaking If-Menu tag condition dropdowns
+* Fixed lead source data for new user registrations being synced even if there was an existing contact in the CRM
+* Fixed PHP warnings when no custom fields are available for Omnisend and Drip
+* Fixed security vulnerability in the ['user_meta_if' shortcode](https://wpfusion.com/documentation/getting-started/shortcodes/#displaying-content-based-on-user-meta-values), an editor could potentially execute arbitrary PHP code by passing a function name to the 'field_format' parameter
+
+
+##### Developer
+
+* Added filter 'wpf_hubspot_redirect_uri'
+* Deprecated filter 'learndash_settings_fields_wpf' in favor of 'learndash_course_settings_fields_wpf' and 'learndash_quiz_settings_fields_wpf'
+* The 'wp_fusion_init' hook has been moved from 'init' priority 0 to priority 6 so that 'wp_fusion()->crm->init()'' has finished
+* Removed an 'array_filter()' from the 'WPF_User::get_user_meta()' function (was preventing exporting empty values to the CRM)
+* Extended the ActiveCampaign API timeout to 20 seconds for loading, applying and removing tags
+* The [wpf_get_user_id filter](https://wpfusion.com/documentation/filters/wpf_get_user_id_filter/) can now return 0, and only runs before the database query
+
+
 
 = 3.41.24 - 8/10/2023 =
 

@@ -216,6 +216,7 @@ class WPF_Admin_Interfaces {
 			'tagSelect4'    => false == apply_filters( 'wpf_disable_tag_select4', false ) ? true : false,
 			'fieldSelect4'  => false == apply_filters( 'wpf_disable_crm_field_select4', false ) ? true : false,
 			'settings_page' => esc_url( admin_url( 'options-general.php?page=wpf-settings' ) ),
+			'reserved_events_keys'=>(isset(wp_fusion()->crm->reserved_events_keys) ? wp_fusion()->crm->reserved_events_keys : ''),
 			'strings'       => array(
 				'addNew'           => __( 'add new', 'wp-fusion-lite' ),
 				'noResults'        => __( 'No results found: click to resynchronize', 'wp-fusion-lite' ),
@@ -238,7 +239,10 @@ class WPF_Admin_Interfaces {
 				),
 				'error'            => __( 'Error', 'wp-fusion-lite' ),
 				'syncTags'         => __( 'Syncing Tags', 'wp-fusion-lite' ),
+				'applyTags'        => __( 'Apply Tags', 'wp-fusion-lite' ),
+				'linkWithTag'      => __( 'Link with Tag', 'wp-fusion-lite' ),
 				'connecting'       => __( 'Connecting', 'wp-fusion-lite' ),
+				'reserved_keys_warning'=>sprintf(__('%s prevents the "{key_name}" string to be part of the event key.','wp-fusion-event-tracking'),wp_fusion()->crm->name),
 			),
 		);
 

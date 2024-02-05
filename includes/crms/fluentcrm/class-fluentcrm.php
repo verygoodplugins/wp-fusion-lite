@@ -3,10 +3,30 @@
 class WPF_FluentCRM {
 
 	/**
-	 * Lets pluggable functions know which features are supported by the CRM
+	 * The CRM slug.
+	 *
+	 * @var string
 	 */
+	public $slug = 'fluentcrm';
 
-	public $supports;
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'FluentCRM';
+
+	/**
+	 * The CRM menu name.
+	 *
+	 * @var string
+	 */
+	public $menu_name = 'FluentCRM (This Site)';
+
+	/**
+	 * The features supported by the CRM.
+	 */
+	public $supports = array( 'add_tags_api', 'events', 'events_multi_key', 'same_site' );
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -14,7 +34,6 @@ class WPF_FluentCRM {
 	 * @since 3.37.3
 	 * @var  string
 	 */
-
 	public $edit_url = '';
 
 	/**
@@ -25,11 +44,6 @@ class WPF_FluentCRM {
 	 */
 
 	public function __construct() {
-
-		$this->slug      = 'fluentcrm';
-		$this->name      = 'FluentCRM';
-		$this->menu_name = 'FluentCRM (This Site)';
-		$this->supports  = array( 'add_tags_api' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -58,10 +72,6 @@ class WPF_FluentCRM {
 		if ( wpf_is_staging_mode() || ! defined( 'FLUENTCRM' ) ) {
 			return;
 		}
-
-		// Disable the API queue
-
-		add_filter( 'wpf_get_setting_enable_queue', '__return_false' );
 
 		// Sync global tag and list changes
 
@@ -152,7 +162,7 @@ class WPF_FluentCRM {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'Y-m-d', $value );
+			$date = gmdate( 'Y-m-d h:i:s', $value );
 
 			return $date;
 
@@ -303,6 +313,10 @@ class WPF_FluentCRM {
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
+		if ( ! $contact ) {
+			return new WP_Error( 'not_found', 'No contact ID #' . $contact_id . ' found in FluentCRM.' );
+		}
+
 		$tags = array();
 
 		foreach ( $contact->tags as $tag ) {
@@ -321,8 +335,9 @@ class WPF_FluentCRM {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		// Prevent looping
-		remove_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
+		if ( ! defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) ) {
+			define( 'FLUENTCRM_SKIP_TAG_SYNC', true ); // Prevents infinite loop (see contact_tags_added_removed() below).
+		}
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -331,8 +346,6 @@ class WPF_FluentCRM {
 		}
 
 		$contact->attachTags( $tags );
-
-		add_action( 'fluentcrm_contact_added_to_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
 
 		return true;
 	}
@@ -347,8 +360,9 @@ class WPF_FluentCRM {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		// Prevent looping
-		remove_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
+		if ( ! defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) ) {
+			define( 'FLUENTCRM_SKIP_TAG_SYNC', true ); // Prevents infinite loop (see contact_tags_added_removed() below).
+		}
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -357,8 +371,6 @@ class WPF_FluentCRM {
 		}
 
 		$contact->detachTags( $tags );
-
-		add_action( 'fluentcrm_contact_removed_from_tags', array( $this, 'contact_tags_added_removed' ), 10, 2 );
 
 		return true;
 	}
@@ -554,6 +566,13 @@ class WPF_FluentCRM {
 	 */
 	public function contact_tags_added_removed( $tags, $subscriber ) {
 
+		if ( defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_add_contact_to_tag' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_detach_contact_from_tag' ) ) {
+			// Don't sync tag changes if we've just applied them and aren't currently in a funnel sequence.
+			return;
+		}
+
+		// If we're in a funnel let's wait until the end.
+
 		// We need all the tags, not just the ones that were added / removed
 		$tags = array();
 
@@ -569,8 +588,27 @@ class WPF_FluentCRM {
 		}
 
 		if ( $user_id ) {
+
+			if ( defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) ) {
+
+				// If we're currently in the process of applying tags, then we need to wait
+				// until WPF_User::apply_tags() has updated the usermeta before we can load them.
+
+				add_filter( 'update_user_metadata', function( $update, $user_id, $meta_key, $meta_value ) use ( &$tags ) {
+
+					if ( WPF_TAGS_META_KEY === $meta_key && count( $meta_value ) !== count( $tags ) ) {
+						return true;
+					}
+
+					return $update;
+
+				}, 10, 4 );
+
+			}
+
 			wp_fusion()->logger->add_source( 'fluentcrm' );
 			wp_fusion()->user->set_tags( $tags, $user_id );
+
 		}
 
 	}
@@ -655,5 +693,53 @@ class WPF_FluentCRM {
 			}
 		}
 		return $custom_fields;
+	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event.
+	 *
+	 * @since  3.41.45
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  array       $event_data The event data.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error|FluentCrm\App\Models\EventTracker The event tracker or error.
+	 */
+	public function track_event( $event, $event_data = array(), $email_address = false ) {
+
+		if ( empty( $email_address ) ) {
+			$email_address = wpf_get_current_user_email();
+		}
+
+		if ( false === $email_address ) {
+			return false; // can't track without an email.
+		}
+
+		if ( function_exists( 'fcrm_events_add_event' ) ) {
+			// Old WP Fusion way of doing it.
+			fcrm_events_add_event( $email_address, 'wp_fusion', $event, $event_data );
+		} else {
+
+			if ( 1 === count( $event_data ) ) {
+				$event_text = reset( $event_data );
+			} else {
+				$event_text = wp_json_encode( $event_data, JSON_NUMERIC_CHECK );
+			}
+
+			$data = array(
+				'event_key' => sanitize_title( $event ),
+				'title'     => $event,
+				'value'     => $event_text,
+				'email'     => $email_address,
+				'provider'  => 'wp_fusion', // If left empty, 'custom' will be added.
+			);
+
+			$tracker = FluentCrmApi( 'event_tracker' )->track( $data, true );
+
+			return $tracker;
+
+		}
 	}
 }

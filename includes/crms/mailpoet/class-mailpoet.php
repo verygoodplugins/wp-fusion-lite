@@ -2,23 +2,34 @@
 
 class WPF_MailPoet {
 
+
+	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'mailpoet';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'MailPoet';
+
 	/**
 	 * Contains API params
 	 */
-
 	public $params;
-
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
-
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * MailPoet API
 	 */
-
 	public $app;
 
 	/**
@@ -26,7 +37,6 @@ class WPF_MailPoet {
 	 *
 	 * @var tag_type
 	 */
-
 	public $tag_type = 'List';
 
 	/**
@@ -38,9 +48,7 @@ class WPF_MailPoet {
 
 	public function __construct() {
 
-		$this->slug     = 'mailpoet';
-		$this->name     = __( 'MailPoet', 'wp-fusion-lite' );
-		$this->supports = array();
+		$this->name = __( 'MailPoet', 'wp-fusion-lite' ); // lets people translate it.
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -202,16 +210,7 @@ class WPF_MailPoet {
 
 		}
 
-		$available_tags = wpf_get_option( $available_tags );
-
-		foreach ( $contact['subscriptions'] as $subscription ) {
-
-			if ( isset( $available_tags[ $subscription['segment_id'] ] ) ) {
-				$tags[] = $subscription['segment_id'];
-			}
-		}
-
-		return $tags;
+		return wp_list_pluck( $contact['subscriptions'], 'segment_id' );
 
 	}
 

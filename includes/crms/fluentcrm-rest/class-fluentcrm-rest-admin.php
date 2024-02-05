@@ -237,6 +237,11 @@ class WPF_FluentCRM_REST_Admin {
 			'crm_field' => 'avatar',
 		);
 
+		$fields[] = array(
+			'crm_label' => 'Lists',
+			'crm_field' => 'lists',
+		);
+
 		return $fields;
 
 	}
@@ -266,7 +271,7 @@ class WPF_FluentCRM_REST_Admin {
 			),
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_lists', $settings, $new_settings );
 
 		return $settings;
 

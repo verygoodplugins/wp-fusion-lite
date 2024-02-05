@@ -3,6 +3,20 @@
 class WPF_ActiveCampaign {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'activecampaign';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'ActiveCampaign';
+
+	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
 	 */
 
@@ -12,7 +26,7 @@ class WPF_ActiveCampaign {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags', 'lists', 'events' );
 
 	/**
 	 * HTTP API parameters
@@ -44,10 +58,7 @@ class WPF_ActiveCampaign {
 
 	public function __construct() {
 
-		$this->slug     = 'activecampaign';
-		$this->name     = 'ActiveCampaign';
-		$this->supports = array( 'add_tags', 'add_lists', 'events' );
-		$this->api_url  = trailingslashit( wpf_get_option( 'ac_url' ) );
+		$this->api_url = trailingslashit( wpf_get_option( 'ac_url' ) );
 
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
@@ -119,7 +130,7 @@ class WPF_ActiveCampaign {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'm/d/Y H:i:s', intval( $value ) );
+			$date = gmdate( 'Y-m-d H:i:s', intval( $value ) );
 
 			return $date;
 
@@ -154,7 +165,7 @@ class WPF_ActiveCampaign {
 
 		$params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
-			'timeout'    => 10,
+			'timeout'    => 15,
 			'headers'    => array(
 				'Content-Type' => 'application/json; charset=utf-8',
 				'Api-Token'    => $api_key ? $api_key : wpf_get_option( 'ac_key' ),
@@ -195,7 +206,7 @@ class WPF_ActiveCampaign {
 
 			} elseif ( isset( $body->result_code ) && 0 === $body->result_code ) {
 
-				if ( false !== strpos( $body->result_message, 'Invalid contact ID' ) || false !== strpos( $body->result_message, 'Contact does not exist' ) ) {
+				if ( false !== strpos( $body->result_message, 'Invalid contact ID' ) || false !== strpos( $body->result_message, 'Contact does not exist' ) || false !== strpos( $body->result_message, 'Nothing is returned' ) ) {
 					$code = 'not_found';
 				} else {
 					$code = 'error';
@@ -582,7 +593,8 @@ class WPF_ActiveCampaign {
 			$this->api_url . 'admin/api.php'
 		);
 
-		$params                            = $this->params;
+		$params                            = $this->get_params();
+		$params['timeout']                 = 20;
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
 
 		$response = wp_remote_post( $request, $params );
@@ -593,7 +605,11 @@ class WPF_ActiveCampaign {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $response->tags;
+		if ( empty( $response->tags ) ) {
+			return array();
+		}
+
+		return (array) $response->tags;
 
 	}
 
@@ -620,7 +636,8 @@ class WPF_ActiveCampaign {
 			'tags' => $tags,
 		);
 
-		$params                            = $this->params;
+		$params                            = $this->get_params();
+		$params['timeout']                 = 20;
 		$params['body']                    = $data;
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
 
@@ -672,7 +689,8 @@ class WPF_ActiveCampaign {
 			'tags' => $tags,
 		);
 
-		$params                            = $this->params;
+		$params                            = $this->get_params();
+		$params['timeout']                 = 20;
 		$params['body']                    = $data;
 		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
 
@@ -686,6 +704,56 @@ class WPF_ActiveCampaign {
 
 	}
 
+	private function format_contact_data( $data ) {
+
+		$update_data = array(
+			'contact' => array(),
+		);
+
+		// Fill out the contact array.
+		if ( isset( $data['email'] ) ) {
+			$update_data['contact']['email'] = $data['email'];
+			unset( $data['email'] );
+		}
+
+		if ( isset( $data['first_name'] ) ) {
+			$update_data['contact']['firstName'] = $data['first_name'];
+			unset( $data['first_name'] );
+		}
+
+		if ( isset( $data['last_name'] ) ) {
+			$update_data['contact']['lastName'] = $data['last_name'];
+			unset( $data['last_name'] );
+		}
+
+		if ( isset( $data['phone'] ) ) {
+			$update_data['contact']['phone'] = $data['phone'];
+			unset( $data['phone'] );
+		}
+
+		// Fill out the custom fields array.
+
+		if ( ! empty( $data ) ) {
+
+			$update_data['contact']['fieldValues'] = array();
+
+			foreach ( $data as $field => $value ) {
+
+				// Old api.php field format.
+				$field = str_replace( 'field[', '', $field );
+				$field = str_replace( ',0]', '', $field );
+
+				$update_data['contact']['fieldValues'][] = array(
+					'field' => $field,
+					'value' => $value,
+				);
+			}
+		}
+
+		return $update_data;
+
+	}
+
 
 	/**
 	 * Adds a new contact (using v1 API since v3 doesn't support adding custom fields in the same API call)
@@ -696,32 +764,10 @@ class WPF_ActiveCampaign {
 
 	public function add_contact( $data ) {
 
-		// Get lists.
-		$lists = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'ac_lists', array() ) );
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $this->format_contact_data( $data ) );
 
-		if ( ! empty( $lists ) ) {
-			foreach ( $lists as $list_id ) {
-				if ( ! empty( $list_id ) ) {
-					$data[ 'p[' . $list_id . ']' ]                 = $list_id;
-					$data[ 'instantresponders[' . $list_id . ']' ] = 1;
-				}
-			}
-		}
-
-		$request = add_query_arg(
-			array(
-				'api_key'    => wpf_get_option( 'ac_key' ),
-				'api_action' => 'contact_sync',
-				'api_output' => 'json',
-			),
-			$this->api_url . 'admin/api.php'
-		);
-
-		$params                            = $this->params;
-		$params['body']                    = $data;
-		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
-
-		$response = wp_remote_post( $request, $params );
+		$response = wp_remote_post( $this->api_url . 'api/3/contacts', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -729,8 +775,56 @@ class WPF_ActiveCampaign {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $response->subscriber_id;
+		$contact_id = $response->contact->id;
 
+		// Get lists.
+
+		if ( empty( $data['lists'] ) ) {
+			$data['lists'] = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'assign_lists', array() ) );
+		}
+
+		if ( ! empty( $data['lists'] ) ) {
+			foreach ( $data['lists'] as $list_id ) {
+
+				// Add contact to list.
+				$this->add_contact_to_list( $contact_id, $list_id );
+
+			}
+		}
+
+		return $contact_id;
+
+	}
+
+	/**
+	 * Adds a contact to a list.
+	 *
+	 * @since 3.41.36
+	 *
+	 * @param int $contact ID The contact ID.
+	 * @param int $list_id The list ID.
+	 * @return WP_Error|bool True on success, WP_Error on failure.
+	 */
+	public function add_contact_to_list( $contact_id, $list_id ) {
+
+		$data = array(
+			'contactList' => array(
+				'list'    => $list_id,
+				'contact' => $contact_id,
+				'status'  => 1,
+			),
+		);
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $data );
+
+		$response = wp_remote_post( $this->api_url . 'api/3/contactLists', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
 	}
 
 
@@ -743,35 +837,11 @@ class WPF_ActiveCampaign {
 
 	public function update_contact( $contact_id, $data ) {
 
-		// Allow filtering.
-		$lists = apply_filters( 'wpf_update_contact_lists', array() );
+		$params           = $this->get_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode( $this->format_contact_data( $data ) );
 
-		if ( ! empty( $lists ) ) {
-			foreach ( $lists as $list_id ) {
-				$data[ 'p[' . $list_id . ']' ] = $list_id;
-			}
-		}
-
-		$data['id']        = $contact_id;
-		$data['overwrite'] = 0;
-
-		// you can pass $data['status[1]'] = 1; to re-subscribe an unsubscribed contact to a list. [1] is the ID of the list.
-		// for this to work you must also have $data['p[1]'] = 1;.
-
-		$request = add_query_arg(
-			array(
-				'api_key'    => wpf_get_option( 'ac_key' ),
-				'api_action' => 'contact_edit',
-				'api_output' => 'json',
-			),
-			$this->api_url . 'admin/api.php'
-		);
-
-		$params                            = $this->params;
-		$params['body']                    = $data;
-		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
-
-		$response = wp_remote_post( $request, $params );
+		$response = wp_remote_request( $this->api_url . 'api/3/contacts/' . $contact_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -790,20 +860,7 @@ class WPF_ActiveCampaign {
 
 	public function load_contact( $contact_id ) {
 
-		$request = add_query_arg(
-			array(
-				'api_key'    => wpf_get_option( 'ac_key' ),
-				'api_action' => 'contact_view',
-				'api_output' => 'json',
-				'id'         => $contact_id,
-			),
-			$this->api_url . 'admin/api.php'
-		);
-
-		$params                            = $this->params;
-		$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
-
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $this->api_url . 'api/3/contacts/' . $contact_id, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -820,44 +877,41 @@ class WPF_ActiveCampaign {
 		// Map contact fields.
 		$contact_fields = wpf_get_option( 'contact_fields', array() );
 
+		$loaded_data = array(
+			'first_name' => $response->contact->{'firstName'},
+			'last_name'  => $response->contact->{'lastName'},
+			'email'      => $response->contact->{'email'},
+			'phone'      => $response->contact->{'phone'},
+		);
+
+		// Maybe merge custom fields.
+		$custom_fields = wp_list_pluck( $response->{'fieldValues'}, 'value', 'field' );
+
+		if ( ! empty( $custom_fields ) ) {
+			$loaded_data = $loaded_data + $custom_fields;
+		}
+
 		// Standard fields.
-		foreach ( $response as $field_name => $value ) {
+		foreach ( $loaded_data as $field_name => $value ) {
 
 			foreach ( $contact_fields as $meta_key => $field_data ) {
 
-				if ( $field_data['crm_field'] === $field_name && true === $field_data['active'] ) {
-					$user_meta[ $meta_key ] = $value;
-				}
-			}
-		}
+				if ( $field_data['active'] ) {
 
-		if ( ! empty( $response->fields ) ) {
+					// Convert stored v1 custom field names.
+					$field_id = str_replace( 'field[', '', $field_data['crm_field'] );
+					$field_id = str_replace( ',0]', '', $field_id );
 
-			// Custom fields.
-			foreach ( $response->fields as $field_object ) {
+					if ( 'multiselect' === $field_data['type'] && ! empty( $value ) ) {
+						$meta_value = array_values( array_filter( explode( '||', $value ) ) );
+					} elseif ( ! empty( $value ) ) {
+						$meta_value = trim( $value, '||' ); // in case it's a multiselect being loaded as text.
+					} else {
+						$meta_value = $value;
+					}
 
-				foreach ( $contact_fields as $meta_key => $field_data ) {
-
-					if ( true === $field_data['active'] ) {
-
-						// Get field ID from stored CRM field value.
-						$field_array = explode( ',', str_replace( 'field[', '', str_replace( ']', '', $field_data['crm_field'] ) ) );
-
-						if ( $field_object->id === $field_array[0] ) {
-
-							$value = $field_object->val;
-
-							// Convert multiselects back into an array.
-
-							if ( 'multiselect' === $field_data['type'] && ! empty( $value ) ) {
-								$value = array_values( array_filter( explode( '||', $value ) ) );
-							} elseif ( ! empty( $value ) ) {
-								$value = trim( $value, '||' ); // in case it's a multiselect being loaded as text.
-							}
-
-							$user_meta[ $meta_key ] = $value;
-
-						}
+					if ( strval( $field_id ) === strval( $field_name ) ) {
+						$user_meta[ $meta_key ] = $meta_value;
 					}
 				}
 			}

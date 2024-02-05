@@ -3,6 +3,22 @@
 class WPF_Autonami {
 
 	/**
+	 * The integration slug.
+	 *
+	 * @since 3.37.14
+	 * @var string $slug The slug.
+	 */
+	public $slug = 'autonami';
+
+	/**
+	 * The integration name.
+	 *
+	 * @since 3.37.14
+	 * @var string $name The name.
+	 */
+	public $name = 'FunnelKit Automations';
+
+	/**
 	 * Declares how this CRM handles tags and fields.
 	 *
 	 * @var array
@@ -47,9 +63,6 @@ class WPF_Autonami {
 
 	public function __construct() {
 
-		$this->slug = 'autonami';
-		$this->name = 'FunnelKit Automations';
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/class-autonami-admin.php';
@@ -57,6 +70,13 @@ class WPF_Autonami {
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		$url = wpf_get_option( 'autonami_url' );
+
+		if ( ! empty( $url ) ) {
+			$this->url      = trailingslashit( $url ) . 'wp-json/' . wpf_get_option( 'autonami_namespace', 'autonami-app' );
+			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=autonami&path=/contact/%d#/';
+		}
 
 	}
 
@@ -69,13 +89,6 @@ class WPF_Autonami {
 	 */
 
 	public function init() {
-
-		$url = wpf_get_option( 'autonami_url' );
-
-		if ( ! empty( $url ) ) {
-			$this->url      = trailingslashit( $url ) . 'wp-json/autonami-admin';
-			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=autonami&path=/contact/%d#/';
-		}
 
 		// Hooks for when Autonami is installed on the same site.
 
@@ -116,6 +129,37 @@ class WPF_Autonami {
 
 					if ( 'rest_no_route' == $body->code ) {
 
+						// Try the old namespace.
+
+						if ( 'autonami-app' === wpf_get_option( 'autonami_namespace', 'autonami-app' ) ) {
+
+							$url = str_replace( 'autonami-app', 'autonami-admin', $url );
+
+							$response = wp_safe_remote_get( $url, $args );
+
+							if ( ! is_wp_error( $response ) ) {
+
+								wp_fusion()->settings->set( 'autonami_namespace', 'autonami-admin' );
+								return $response;
+
+							}
+						} elseif ( 'autonami-admin' === wpf_get_option( 'autonami_namespace' ) ) {
+
+							// Upgrade to new API.
+
+							$url = str_replace( 'autonami-admin', 'autonami-app', $url );
+
+							$response = wp_safe_remote_get( $url, $args );
+
+							if ( ! is_wp_error( $response ) ) {
+
+								wp_fusion()->settings->set( 'autonami_namespace', 'autonami-app' );
+								return $response;
+
+							}
+
+						}
+
 						$body->message .= ' <strong>' . __( 'This could mean the FunnelKit Automations Pro plugin isn\'t active.', 'wp-fusion-lite' ) . '</strong>';
 						$body->message .= ' ' . __( 'Try again or <a href="http://wpfusion.com/contact">contact support</a>.', 'wp-fusion-lite' ) . ' (URL: ' . $url . ')';
 
@@ -125,7 +169,14 @@ class WPF_Autonami {
 
 				} else {
 
-					$response = new WP_Error( 'error', wp_remote_retrieve_response_message( $response ) );
+					$body    = wp_remote_retrieve_body( $response );
+					$message = wp_remote_retrieve_response_message( $response );
+
+					if ( ! empty( $body ) && false !== strpos( $body, 'Enable JavaScript' ) ) {
+						$message .= '. ' . __( 'The API request is being blocked by a CloudFlare challenge page.', 'wp-fusion-lite' );
+					}
+
+					$response = new WP_Error( 'error', $message );
 
 				}
 			}
@@ -191,9 +242,7 @@ class WPF_Autonami {
 
 	public function connect( $url = null, $username = null, $password = null, $test = false ) {
 
-		if ( ! $this->params ) {
-			$this->get_params( $url, $username, $password );
-		}
+		$this->get_params( $url, $username, $password );
 
 		if ( false === $test ) {
 			return true;
@@ -234,7 +283,7 @@ class WPF_Autonami {
 			$password = wpf_get_option( 'autonami_password' );
 		}
 
-		$this->url = trailingslashit( $url ) . 'wp-json/autonami-admin';
+		$this->url = trailingslashit( $url ) . 'wp-json/' . wpf_get_option( 'autonami_namespace', 'autonami-app' );
 
 		$this->params = array(
 			'timeout'    => 15,

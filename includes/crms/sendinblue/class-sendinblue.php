@@ -4,12 +4,37 @@
 
 class WPF_SendinBlue {
 
+
+	/**
+	 * The integration slug.
+	 *
+	 * @since 3.16.0
+	 * @var string $slug The slug.
+	 */
+	public $slug = 'sendinblue';
+
+	/**
+	 * The integration name.
+	 *
+	 * @since 3.16.0
+	 * @var string $name The name.
+	 */
+	public $name = 'Brevo';
+
 	/**
 	 * Contains API params
 	 */
 
 	public $params;
 
+	/**
+	 * Reserved events keys that users cannot use in keys fields.
+	 *
+	 * @since 3.41.31
+	 *
+	 * @var array
+	 */
+	public $reserved_events_keys = array( 'name', 'id' );
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
@@ -20,9 +45,8 @@ class WPF_SendinBlue {
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
 	 *
-	 * @var tag_type
+	 * @var string
 	 */
-
 	public $tag_type = 'List';
 
 	/**
@@ -41,9 +65,6 @@ class WPF_SendinBlue {
 	 */
 
 	public function __construct() {
-
-		$this->slug = 'sendinblue';
-		$this->name = 'Brevo';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -142,12 +163,36 @@ class WPF_SendinBlue {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		// Categories are stored numerically, like https://share.getcloudapp.com/L1uNjnLA
+		// Categories are stored numerically, like https://share.getcloudapp.com/L1uNjnLA.
+		// We'll try and convert them back here.
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		$dropdown_mappings = wpf_get_option( 'dropdown_mappings', array() );
+
+		if ( isset( $dropdown_mappings[ $field ] ) ) {
+
+			// We used this briefly for about a week in January 2024. Will keep it for now for backwards compat.
+
+			if ( is_array( $value ) ) {
+
+				foreach ( $value as $key => $val ) {
+
+					if ( isset( $dropdown_mappings[ $field ][ $val ] ) ) {
+
+						$value[ $key ] = $dropdown_mappings[ $field ][ $val ];
+					}
+				}
+			} else {
+
+				if ( isset( $dropdown_mappings[ $field ][ $value ] ) ) {
+					$value = $dropdown_mappings[ $field ][ $value ];
+				}
+			}
+		}
+
+		if ( $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( 'Y-m-d', $value );
+			$date = gmdate( 'Y-m-d', intval( $value ) );
 
 			return $date;
 
@@ -161,9 +206,9 @@ class WPF_SendinBlue {
 			// Brevo only treats true as a Yes for checkboxes
 			return true;
 
-		} elseif ( $field_type == 'tel' ) {
+		} elseif ( 'tel' === $field_type ) {
 
-			// Format phone. Brevo requires a country code and + for phone numbers. With or without dashes is fine
+			// Format phone. Brevo requires a country code and + for phone numbers. With or without dashes is fine.
 
 			if ( strpos( $value, '+' ) !== 0 ) {
 
@@ -171,13 +216,15 @@ class WPF_SendinBlue {
 
 				if ( strpos( $value, '1' ) === 0 ) {
 
-					$value = '+' . $value;
+					// The plus was causing an error with WhatsApp field.
+					// $value = '+' . $value;
 
 				} else {
 
-					$value = '+1' . $value;
+					$value = '1' . $value;
 
 				}
+
 			}
 
 			return $value;
@@ -186,7 +233,7 @@ class WPF_SendinBlue {
 
 			return implode( ', ', array_filter( $value ) );
 
-		} elseif ( is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) ) {
+		} elseif ( 'raw' !== $field_type && is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) && 'tel' === wpf_get_remote_field_type( $field, 'tel' ) ) {
 
 			$length = strlen( trim( str_replace( array( '-', ' ' ), '', $value ) ) );
 
@@ -196,17 +243,25 @@ class WPF_SendinBlue {
 
 				// Let's assume this is a US phone number and needs a +1
 
-				$value = '+1' . $value;
+				$value = '1' . $value;
 
 			} elseif ( $length >= 11 && $length <= 13 && strpos( $value, '+' ) === false ) {
 
 				// Let's assume this is a phone number and needs a plus??
 
-				$value = '+' . $value;
+				// Plus throws errors with some fields: https://developers.brevo.com/reference/createcontact .
+
+				// $value = '+' . $value;
 
 			}
 
 			return $value;
+
+		} elseif ( false !== wpf_get_remote_option_value( $value, $field ) ) {
+
+			// Maybe a dropdown value
+
+			return wpf_get_remote_option_value( $value, $field );
 
 		} else {
 
@@ -377,6 +432,7 @@ class WPF_SendinBlue {
 
 		$this->sync_tags();
 		$this->sync_crm_fields();
+		$this->sync_optin_templates();
 
 		do_action( 'wpf_sync' );
 
@@ -393,10 +449,6 @@ class WPF_SendinBlue {
 
 	public function sync_tags() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$available_tags = array();
 
 		$offset  = 0;
@@ -406,7 +458,7 @@ class WPF_SendinBlue {
 		while ( $proceed ) {
 
 			$request  = 'https://api.brevo.com/v3/contacts/lists?limit=' . $limit . '&offset=' . $offset;
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -434,18 +486,30 @@ class WPF_SendinBlue {
 	 * Loads all custom fields from CRM and merges with local list
 	 *
 	 * @access public
-	 * @return array CRM Fields
+	 * @return array|WP_Error CRM Fields or error.
 	 */
 
 	public function sync_crm_fields() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$crm_fields = array(
+			'Standard Fields' => array(
+				'email'    => array(
+					'crm_label' => 'Email Address',
+					'crm_type'  => 'email',
+				),
+				'WHATSAPP' => array(
+					'crm_label' => 'WhatsApp',
+					'crm_type'  => 'tel',
+				),
+				'SMS' => array(
+					'crm_label' => 'SMS',
+					'crm_type'  => 'tel',
+				),
+			),
+		);
 
-		$crm_fields = array( 'email' => 'Email Address' );
-		$request    = 'https://api.brevo.com/v3/contacts/attributes';
-		$response   = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.brevo.com/v3/contacts/attributes';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -454,13 +518,65 @@ class WPF_SendinBlue {
 		$body_json = json_decode( $response['body'], true );
 
 		foreach ( $body_json['attributes'] as $field_data ) {
-			$crm_fields[ $field_data['name'] ] = ucwords( str_replace( '_', ' ', $field_data['name'] ) );
+
+			if ( 'SMS' === $field_data['name'] ) {
+				continue; // this is a standard field.
+			}
+
+			$crm_fields['Custom Fields'][ $field_data['name'] ] = array(
+				'crm_label' => ucwords( str_replace( '_', ' ', $field_data['name'] ) ),
+				'crm_type'  => isset( $field_data['type'] ) ? $field_data['type'] : 'text',
+			);
+
+			// Handle category mappings.
+			if ( isset( $field_data['enumeration'] ) ) {
+
+				$crm_fields['Custom Fields'][ $field_data['name'] ]['crm_type'] = 'select';
+				$crm_fields['Custom Fields'][ $field_data['name'] ]['choices']     = array();
+
+				foreach ( $field_data['enumeration'] as $option ) {
+					$crm_fields['Custom Fields'][ $field_data['name'] ]['choices'][ $option['value'] ] = $option['label'];
+				}
+			}
 		}
 
-		asort( $crm_fields );
+		uasort( $crm_fields['Custom Fields'], 'wpf_sort_remote_fields' );
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
+
+	}
+
+	/**
+	 * Syncs and stores the available optin templates.
+	 *
+	 * @since 3.42.5
+	 *
+	 * @return array|WP_Error The optin templates or error.
+	 */
+	public function sync_optin_templates() {
+
+		$optin_templates = array();
+
+		$request  = 'https://api.brevo.com/v3/smtp/templates?limit=100';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( $response['body'], true );
+
+		foreach ( $body_json['templates'] as $row ) {
+
+			if ( 'optin' === $row['tag'] ) {
+				$optin_templates[ $row['id'] ] = $row['name'];
+			}
+		}
+
+		wp_fusion()->settings->set( 'optin_templates', $optin_templates );
+
+		return $optin_templates;
 
 	}
 
@@ -584,8 +700,10 @@ class WPF_SendinBlue {
 	/**
 	 * Adds a new contact.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @since 3.16.0
+	 *
+	 * @param array $data Contact data.
+	 * @return int|WP_Error Contact ID on success or error on failure.
 	 */
 
 	public function add_contact( $data ) {
@@ -600,7 +718,18 @@ class WPF_SendinBlue {
 			$post_data['attributes'] = $data;
 		}
 
-		$url            = 'https://api.brevo.com/v3/contacts';
+		if ( wpf_get_option( 'double_optin_template' ) ) {
+
+			// Add via double optin.
+
+			$post_data['templateId']     = wpf_get_option( 'double_optin_template' );
+			$post_data['redirectionUrl'] = wpf_get_option( 'double_optin_redirect_url' );
+			$post_data['includeListIds'] = array_map( 'intval', wpf_get_option( 'double_optin_lists' ) );
+
+			$url = 'https://api.brevo.com/v3/contacts/doubleOptinConfirmation';
+		} else {
+			$url = 'https://api.brevo.com/v3/contacts';
+		}
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $post_data );
 
@@ -614,6 +743,11 @@ class WPF_SendinBlue {
 
 		if ( isset( $body->id ) ) {
 			return absint( $body->id );
+		} elseif ( 201 === wp_remote_retrieve_response_code( $response ) ) {
+
+			// Subscribers added via double opt-in don't get IDs until they're confirmed.
+			return new WP_Error( 'notice', 'Subscriber was added to Brevo and sent the double opt-in email. You can\'t apply lists or update them until they have confirmed their subscription.' );
+
 		} else {
 			return new WP_Error( 'error', 'Unknown error adding contact:<pre>' . wpf_print_r( $body, true ) . '</pre>' );
 		}

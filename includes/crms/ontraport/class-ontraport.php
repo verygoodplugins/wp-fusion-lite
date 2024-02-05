@@ -2,6 +2,20 @@
 
 class WPF_Ontraport {
 
+	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'ontraport';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Ontraport';
+
 	// Note: OP support says their API can take up to 60s to give a response
 
 	/**
@@ -35,7 +49,6 @@ class WPF_Ontraport {
 	 * @since 3.37.30
 	 * @var  string
 	 */
-
 	public $edit_url = 'https://app.ontraport.com/#!/contact/edit&id=%d';
 
 	/**
@@ -47,8 +60,6 @@ class WPF_Ontraport {
 
 	public function __construct() {
 
-		$this->slug = 'ontraport';
-		$this->name = 'Ontraport';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -433,26 +444,21 @@ class WPF_Ontraport {
 
 
 	/**
-	 * Gets all available tags and saves them to options
+	 * Gets all available tags and saves them to options.
 	 *
-	 * @access public
-	 * @return array Lists
+	 * @return array|WP_Eror The tags, or error.
 	 */
 
 	public function sync_tags() {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$available_tags = array();
 		$offset         = 0;
 		$continue       = true;
 
-		while ( $continue == true ) {
+		while ( $continue ) {
 
 			$request  = 'https://api.ontraport.com/1/objects?objectID=14&start=' . $offset;
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -473,6 +479,8 @@ class WPF_Ontraport {
 
 			$offset = $offset + 50;
 		}
+
+		natcasesort( $available_tags );
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 

@@ -39,6 +39,16 @@ class WPF_Staging {
 	 */
 	public function __call( $method, $args ) {
 
+		wpf_log(
+			'notice',
+			wpf_get_current_user_id(),
+			'Staging mode enabled (' . get_site_url() . '). Method <code>' . $method . '</code>.',
+			array(
+				'source'              => wp_fusion()->crm->slug,
+				'meta_array_nofilter' => $args,
+			)
+		);
+
 		return false;
 
 	}
@@ -102,7 +112,11 @@ class WPF_Staging {
 
 	public function sync_crm_fields() {
 
-		return wpf_get_option( 'crm_fields', array() );
+		$fields = array(
+			'email' => 'Email Address',
+		);
+
+		array_merge( wpf_get_option( 'crm_fields', array() ), $fields );
 
 	}
 
@@ -117,6 +131,10 @@ class WPF_Staging {
 	public function get_contact_id( $email_address ) {
 
 		$user = get_user_by( 'email', $email_address );
+
+		if ( ! $user ) {
+			return false;
+		}
 
 		$staging_id = get_user_meta( $user->ID, WPF_CONTACT_ID_META_KEY, true );
 
@@ -229,6 +247,22 @@ class WPF_Staging {
 	public function load_contacts( $tag ) {
 
 		return array();
+
+	}
+
+	/**
+	 * Track event.
+	 *
+	 * @since 3.41.42
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  bool|string $event_data The event description.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = false, $email_address = false ) {
+
+		return true;
 
 	}
 

@@ -37,7 +37,7 @@ class WPF_Admin_Notices {
 
 			echo '<div id="wpf-needs-setup" data-notice="wpf-needs-setup" class="notice notice-warning wpf-notice is-dismissible">';
 			echo '<p>';
-			echo sprintf( esc_html__( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( get_admin_url() . '/options-general.php?page=wpf-settings#setup' ) . '">', '</a>' );
+			echo sprintf( esc_html__( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( get_admin_url() . 'options-general.php?page=wpf-settings#setup' ) . '">', '</a>' );
 			echo '</p>';
 			echo '</div>';
 

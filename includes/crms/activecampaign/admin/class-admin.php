@@ -99,27 +99,6 @@ class WPF_ActiveCampaign_Admin {
 
 	public function register_settings( $settings, $options ) {
 
-		if( ! isset( $options['available_lists'] ) ) {
-			$options['available_lists'] = array();
-		}
-
-		$new_settings['ac_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion-lite' ),
-			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion-lite' ),
-			'type'        => 'multi_select',
-			'placeholder' => 'Select lists',
-			'section'     => 'main',
-			'choices'     => $options['available_lists']
-		);
-
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
-
-		if ( ! isset( $settings['create_users']['unlock']['ac_lists'] ) ) {
-			$settings['create_users']['unlock'][] = 'ac_lists';
-		}
-
-		$settings['ac_lists']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
-
 		// Add site tracking option
 		$new_settings = array();
 

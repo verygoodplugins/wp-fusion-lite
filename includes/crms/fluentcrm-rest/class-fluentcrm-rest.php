@@ -3,13 +3,34 @@
 class WPF_FluentCRM_REST {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'fluentcrm-rest';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'FluentCRM';
+
+	/**
+	 * The CRM menu name.
+	 *
+	 * @var string
+	 */
+	public $menu_name = 'FluentCRM (REST API)';
+
+	/**
 	 * Declares how this CRM handles tags and fields.
 	 *
 	 * @var array
 	 * @since 3.37.14
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags_api', 'lists', 'events', 'events_multi_key' );
 
 	/**
 	 * API authentication parameters and headers.
@@ -23,7 +44,7 @@ class WPF_FluentCRM_REST {
 	/**
 	 * API URL.
 	 *
-	 * @var array
+	 * @var string
 	 * @since 3.37.14
 	 */
 
@@ -47,11 +68,6 @@ class WPF_FluentCRM_REST {
 
 	public function __construct() {
 
-		$this->slug      = 'fluentcrm-rest';
-		$this->name      = 'FluentCRM';
-		$this->menu_name = 'FluentCRM (REST API)';
-		$this->supports  = array('add_tags_api');
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/class-fluentcrm-rest-admin.php';
@@ -59,6 +75,13 @@ class WPF_FluentCRM_REST {
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		$url = wpf_get_option( 'fluentcrm_rest_url' );
+
+		if ( ! empty( $url ) ) {
+			$this->url      = trailingslashit( $url ) . 'wp-json/fluent-crm/v2';
+			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=fluentcrm-admin#/subscribers/%d/';
+		}
 
 	}
 
@@ -75,13 +98,6 @@ class WPF_FluentCRM_REST {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
-		$url = wpf_get_option( 'fluentcrm_rest_url' );
-
-		if ( ! empty( $url ) ) {
-			$this->url      = trailingslashit( $url ) . 'wp-json/fluent-crm/v2';
-			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=fluentcrm-admin#/subscribers/%d/';
-		}
-
 	}
 
 
@@ -94,14 +110,15 @@ class WPF_FluentCRM_REST {
 
 	public function format_post_data( $post_data ) {
 
-		$payload = json_decode( stripslashes( file_get_contents( 'php://input' ) ) );
+		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if ( ! is_object( $payload ) ) {
-			return false;
+		if ( $payload && isset( $payload->id ) ) {
+			$post_data['contact_id'] = absint( $payload->id );
+
+			if ( ! empty( $payload->tags ) ) {
+				$post_data['tags'] = wp_list_pluck( $payload->tags, 'slug' );
+			}
 		}
-
-		$post_data['contact_id'] = absint( $payload->id );
-		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
 
 		return $post_data;
 
@@ -122,7 +139,7 @@ class WPF_FluentCRM_REST {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'Y-m-d', $value );
+			$date = gmdate( 'Y-m-d h:i:s', $value );
 
 			return $date;
 
@@ -210,7 +227,18 @@ class WPF_FluentCRM_REST {
 
 				} else {
 
-					$response = new WP_Error( 'error', wp_remote_retrieve_response_message( $response ) );
+					$body    = wp_remote_retrieve_body( $response );
+					$message = wp_remote_retrieve_response_message( $response );
+
+					if ( ! empty( json_decode( $body ) ) ) {
+
+						$message .= '. <pre>' . print_r( json_decode( $body, true ), true ) . '</pre>';
+
+					} elseif ( ! empty( $body ) && false !== strpos( $body, 'Enable JavaScript' ) ) {
+						$message .= '. ' . __( 'The API request is being blocked by a CloudFlare challenge page.', 'wp-fusion-lite' );
+					}
+
+					$response = new WP_Error( 'error', $message );
 
 				}
 			}
@@ -272,6 +300,7 @@ class WPF_FluentCRM_REST {
 		$this->connect();
 
 		$this->sync_tags();
+		$this->sync_lists();
 		$this->sync_crm_fields();
 
 		do_action( 'wpf_sync' );
@@ -326,6 +355,54 @@ class WPF_FluentCRM_REST {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
+
+	}
+
+	/**
+	 * Gets all available lists and saves them to options.
+	 *
+	 * @since  3.42.6
+	 *
+	 * @return array|WP_Error Either the available lists in the CRM, or a WP_Error.
+	 */
+	public function sync_lists() {
+
+		$available_lists = array();
+		$continue        = true;
+		$page            = 1;
+
+		while ( $continue ) {
+
+			$request  = $this->url . '/lists?sort_by=id&sort_order=DESC&per_page=100&page=' . $page;
+			$response = wp_safe_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->lists ) ) {
+
+				foreach ( $response->lists as $list ) {
+
+					$available_lists[ $list->id ] = $list->title;
+
+				}
+			}
+
+			if ( empty( $response->lists ) || count( $response->lists ) < 100 ) {
+				$continue = false;
+			} else {
+				++$page;
+			}
+		}
+
+		asort( $available_lists );
+
+		wp_fusion()->settings->set( 'available_lists', $available_lists );
+
+		return $available_lists;
 
 	}
 
@@ -390,7 +467,7 @@ class WPF_FluentCRM_REST {
 	 * @since  3.37.14
 	 *
 	 * @param  string $email_address The email address to look up.
-	 * @return int|WP_Error The contact ID in the CRM.
+	 * @return int|false|WP_Error The contact ID in the CRM, false if not found, or error.
 	 */
 	public function get_contact_id( $email_address ) {
 
@@ -407,7 +484,7 @@ class WPF_FluentCRM_REST {
 			return false;
 		}
 
-		return $response->subscribers->data[0]->id;
+		return absint( $response->subscribers->data[0]->id );
 
 	}
 
@@ -418,12 +495,12 @@ class WPF_FluentCRM_REST {
 	 * @since  3.38.42
 	 *
 	 * @param  string $tag_name The tag name.
-	 * @return int    $tag_id the tag id returned from API.
+	 * @return string|WP_Error $tag_slug The tag slug returned by the API, or error.
 	 */
 	public function add_tag( $tag_name ) {
 		$body = array(
 			'title' => $tag_name,
-			'slug'  => $tag_name,
+			'slug'  => sanitize_title( $tag_name ),
 		);
 
 		$params         = $this->get_params();
@@ -438,9 +515,7 @@ class WPF_FluentCRM_REST {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$tag_id = $response->lists->id;
-
-		return $tag_id;
+		return $response->lists->slug;
 	}
 
 
@@ -576,6 +651,11 @@ class WPF_FluentCRM_REST {
 
 		if ( 'susbcribed' === $data['status'] ) {
 			$data['status'] = 'subscribed'; // fixes typo between v3.40.40 and 3.41.5.
+		}
+
+		if ( empty( $data['lists'] ) && get_user_by( 'email', $data['email'] ) ) {
+			// Default lists for new users.
+			$data['lists'] = wpf_get_option( 'assign_lists', array() );
 		}
 
 		$params         = $this->get_params();
@@ -743,6 +823,58 @@ class WPF_FluentCRM_REST {
 
 		return $contact_ids;
 
+	}
+
+	/**
+	 * Track event.
+	 *
+	 * Track an event with the FluentCRM events API.
+	 *
+	 * @since  3.41.45
+	 *
+	 * @param  string      $event      The event title.
+	 * @param  array       $event_data The event details.
+	 * @param  bool|string $email_address The user email address.
+	 * @return bool|WP_Error True if success, WP_Error if failed.
+	 */
+	public function track_event( $event, $event_data = array(), $email_address = false ) {
+
+		if ( empty( $email_address ) ) {
+			$email_address = wpf_get_current_user_email();
+		}
+
+		if ( false === $email_address ) {
+			return false; // can't track without an email.
+		}
+
+		if ( 1 === count( $event_data ) ) {
+			$event_text = reset( $event_data );
+		} else {
+			$event_text = wp_json_encode( $event_data, JSON_NUMERIC_CHECK );
+		}
+
+		$body = array(
+			'event_key' => sanitize_title( $event ),
+			'title'     => $event,
+			'value'     => $event_text,
+			'email'     => $email_address,
+			'provider'  => 'wp_fusion', // If left empty, 'custom' will be added.
+		);
+
+		$request            = $this->url . '/subscribers/track-event';
+		$params             = $this->get_params();
+		$params['body']     = wp_json_encode( $body );
+		$params['blocking'] = false;
+
+		$response = wp_remote_post( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+
+			wpf_log( 'error', 0, 'Error tracking event to ' . $request . ': ' . $response->get_error_message() );
+			return $response;
+		}
+
+		return true;
 	}
 
 

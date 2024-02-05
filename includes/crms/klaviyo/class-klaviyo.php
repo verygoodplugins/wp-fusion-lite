@@ -31,12 +31,11 @@ class WPF_Klaviyo {
 
 	/**
 	 * Lets us link directly to editing a contact record.
-	 * Each contact has a unique id other than his account id.
 	 *
 	 * @var string
 	 */
 
-	public $edit_url = false;
+	public $edit_url = 'https://www.klaviyo.com/profile/%s';
 
 	/**
 	 * Get things started
@@ -73,7 +72,7 @@ class WPF_Klaviyo {
 	 * Check HTTP Response for errors and return WP_Error if found
 	 *
 	 * @access public
-	 * @return HTTP Response
+	 * @return array|WP_Error
 	 */
 
 	public function handle_http_response( $response, $args, $url ) {
@@ -81,8 +80,6 @@ class WPF_Klaviyo {
 		if ( false !== strpos( $url, 'klaviyo' ) && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-
-			$code = wp_remote_retrieve_response_code( $response );
 
 			if ( isset( $body_json->message ) ) {
 
@@ -93,6 +90,30 @@ class WPF_Klaviyo {
 				$response = new WP_Error( 'error', $body_json->detail );
 
 			} elseif ( isset( $body_json->errors ) ) {
+
+				foreach ( $body_json->errors as $error ) {
+
+					if ( 'duplicate_profile' === $error->code && ! empty( $error->meta ) ) {
+
+						// Duplicate handling. Take the duplicate ID out of the
+						// response and update them instead.
+
+						$body           = json_decode( $args['body'] );
+						$body->data->id = $error->meta->duplicate_profile_id;
+						$args['body']   = wp_json_encode( $body );
+						$args['method'] = 'PATCH';
+
+						$response = wp_safe_remote_post( $url . '/' . $body->data->id, $args );
+
+						if ( is_wp_error( $response ) ) {
+							return $response;
+						} else {
+							return $args; // return the body so add_contact() can get the ID.
+						}
+
+					}
+
+				}
 
 				$response = new WP_Error( 'error', implode( ' ', wp_list_pluck( $body_json->errors, 'detail' ) ) );
 			}

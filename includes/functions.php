@@ -328,6 +328,39 @@ function wpf_get_field_type( $meta_key, $default = 'text' ) {
 
 }
 
+
+/**
+ * Gets a remote fields type from the field ID.
+ *
+ * @since 3.42.5
+ *
+ * @param string $remote_id The field ID to look up.
+ * @param string $default   The default value to return if no type is found.
+ * @return string The field type.
+ */
+
+function wpf_get_remote_field_type( $field_id, $default = 'text' ) {
+
+	return wp_fusion()->crm->get_remote_field_type( $field_id, $default );
+
+}
+
+/**
+ * Tries to get a remote field's option ID from a value.
+ *
+ * @since 3.42.5
+ *
+ * @param string $value    The value to search for.
+ * @param string $field_id The CRM field ID.
+ * @return string|bool The value or false if not found.
+ */
+
+function wpf_get_remote_option_value( $value, $field_id ) {
+
+	return wp_fusion()->crm->get_remote_option_value( $value, $field_id );
+
+}
+
 /**
  * Is a WordPress meta key a pseudo field and should only be sent to the CRM, not loaded
  *
@@ -355,6 +388,21 @@ function wpf_is_pseudo_field( $meta_key ) {
 function wpf_get_lookup_field() {
 
 	return wp_fusion()->crm->get_lookup_field();
+
+}
+
+/**
+ * Helper for sorting an array of CRM fields based on their label.
+ *
+ * @since  3.42.5
+ *
+ * @param  array $a The first field.
+ * @param  array $b The second field.
+ * @return int   The comparison result.
+ */
+function wpf_sort_remote_fields( $a, $b ) {
+
+	return strcmp( $a['crm_label'], $b['crm_label'] );
 
 }
 
@@ -527,6 +575,29 @@ function wpf_clean_tags( $tags ) {
 	$tags = array_map( 'htmlspecialchars_decode', $tags ); // sanitize_text_field removes HTML special characters so we'll add them back.
 
 	return $tags;
+
+}
+
+/**
+ * Shortcodes added to the block editor sometimes have their quotes encoded. This fixes that.
+ *
+ * @since  3.41.39
+ *
+ * @param  array<string,string> $atts The attributes.
+ * @return array<string,string> The attributes.
+ */
+function wpf_shortcode_atts( $atts ) {
+
+	foreach ( $atts as $key => $value ) {
+
+		// Remove encoded quotes.
+		$atts[ $key ] = str_replace( array( '&#8220;', '&#8221;', '&#8243;', '&#8242;' ), array( '', '', '', '' ), $value );
+
+	}
+
+	$atts = array_map( 'sanitize_text_field', $atts );
+
+	return $atts;
 
 }
 

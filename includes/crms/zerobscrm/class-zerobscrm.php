@@ -3,10 +3,24 @@
 class WPF_ZeroBSCRM {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'zerobscrm';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Jetpack CRM';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags', 'same_site' );
 
 	public $edit_url = '';
 
@@ -19,10 +33,6 @@ class WPF_ZeroBSCRM {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'zerobscrm';
-		$this->name     = 'Jetpack CRM';
-		$this->supports = array( 'add_tags' );
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -43,6 +53,7 @@ class WPF_ZeroBSCRM {
 	public function init() {
 
 		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		// Don't watch ZBS for changes if staging mode is active
 		if ( wpf_get_option( 'staging_mode' ) ) {
@@ -76,6 +87,26 @@ class WPF_ZeroBSCRM {
 
 		return true;
 
+	}
+
+	/**
+	 * Formats user entered data to match ZBS field formats.
+	 *
+	 * @since 3.42.2
+	 * 
+	 * @param mixed  $value      The value to format.
+	 * @param string $field_type The field type.
+	 * @param string $field      The CRM field name.
+	 * @return mixed The formatted value.
+	 */
+
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( is_array( $value ) ) {
+			$value = implode( ', ', $value ); // ZBS crashes if we sync arrays to text fields.
+		}
+
+		return $value;
 	}
 
 
@@ -386,10 +417,22 @@ class WPF_ZeroBSCRM {
 			);
 		}
 
+		// If we don't pass an email, ZBS ignores the update.
+
+		if ( ! isset( $data['email'] ) ) {
+			$fields[] = array(
+				'key'  => 'zbsc_email',
+				'val'  => wp_fusion()->crm->get_email_from_cid( $contact_id ),
+				'type' => '%s',
+			);
+		}
+
 		$args = array(
 			'id'            => $contact_id,
 			'limitedFields' => $fields, // only update, don't erase existing.
 		);
+
+		remove_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) ); // prevent looping.
 
 		$result = $zbs->DAL->contacts->addUpdateContact( $args );
 
@@ -415,7 +458,7 @@ class WPF_ZeroBSCRM {
 
 		foreach ( $contact_fields as $key => $data ) {
 
-			if ( $data['active'] == true && ! empty( $data['crm_field'] ) && ! empty( $contact[ $data['crm_field'] ] ) ) {
+			if ( $data['active'] && ! empty( $data['crm_field'] ) && ! empty( $contact[ $data['crm_field'] ] ) ) {
 
 				$user_meta[ $key ] = $contact[ $data['crm_field'] ];
 

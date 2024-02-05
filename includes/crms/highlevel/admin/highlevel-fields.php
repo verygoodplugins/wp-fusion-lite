@@ -22,11 +22,6 @@ $highlevel_fields['phone_number'] = array(
 	'crm_field' => 'phone',
 );
 
-$highlevel_fields['billing_phone'] = array(
-	'crm_label' => 'Phone Number',
-	'crm_field' => 'phone+PHONE',
-);
-
 $highlevel_fields['billing_address_1'] = array(
 	'crm_label' => 'Address',
 	'crm_field' => 'address1',
@@ -65,6 +60,21 @@ $highlevel_fields['user_url'] = array(
 $highlevel_fields[] = array(
 	'crm_label' => 'Gender',
 	'crm_field' => 'gender',
+);
+
+$highlevel_fields[] = array(
+	'crm_label' => 'Source',
+	'crm_field' => 'source',
+);
+
+$highlevel_fields[] = array(
+	'crm_label' => 'Time Zone',
+	'crm_field' => 'timezone',
+);
+
+$highlevel_fields[] = array(
+	'crm_label' => 'Company Name',
+	'crm_field' => 'companyName',
 );
 
 $highlevel_fields[] = array(

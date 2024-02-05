@@ -120,6 +120,7 @@ class WP_Fusion_Options {
 		'input_disabled' => false,
 		'unlock'         => null,
 		'lock'           => null,
+		'placeholder'    => false,
 	);
 
 	/**
@@ -263,6 +264,13 @@ class WP_Fusion_Options {
 			if ( empty( $this->post_data[ $id ] ) && 'hidden' === $setting['type'] ) {
 				// Don't erase saved values with empty hidden fields.
 				unset( $this->post_data[ $id ] );
+			}
+
+			if ( true === $setting['input_disabled'] ) {
+
+				// OAuth refresh tokens, etc., don't need to be saved.
+				unset( $this->post_data[ $id ] );
+
 			}
 
 			if ( isset( $this->post_data[ $id ] ) && $this->post_data[ $id ] !== $this->options[ $id ] ) {
@@ -874,7 +882,7 @@ class WP_Fusion_Options {
 					<?php $isfirst = false; ?>
 				<?php } ?>
 			</div>
-			<p class="submit"><input name="Submit" type="submit" class="button-primary" value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
+			<p class="submit"><input name="Submit" type="submit" class="button-primary" <?php disabled( ! $this->options['connection_configured'] ) ?> value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
 		</form>
 
 		<?php

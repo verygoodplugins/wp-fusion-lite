@@ -3,13 +3,27 @@
 class WPF_HighLevel {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'highlevel';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'HighLevel';
+
+	/**
 	 * Contains API URL.
 	 *
 	 * @since 3.36.0
 	 * @var string $url The API URL.
 	 */
 
-	public $url;
+	public $url = 'https://services.leadconnectorhq.com/';
 
 	/**
 	 * Lets core plugin know which features are supported by the CRM.
@@ -71,12 +85,7 @@ class WPF_HighLevel {
 
 	public function __construct() {
 
-		$this->slug = 'highlevel';
-		$this->name = 'HighLevel';
-
-		if ( $this->is_v2() ) {
-			$this->url = 'https://services.leadconnectorhq.com/';
-		} else {
+		if ( ! $this->is_v2() ) {
 			$this->url = 'https://rest.gohighlevel.com/v1/';
 		}
 
@@ -154,7 +163,9 @@ class WPF_HighLevel {
 
 		} elseif ( 'date' === $field_type && empty( $value ) ) {
 
-			return ''; // GHL converts empty dates to 1/1/1970. This will prevent them from syncing at all.
+			// return ''; // GHL converts empty dates to 1/1/1970. This will prevent them from syncing at all.
+
+			return $value; // as of 3.41.33, GHL now seems to be able to handle empty dates.
 
 		} elseif ( isset( $field_types[ $field ] ) ) {
 
@@ -166,6 +177,12 @@ class WPF_HighLevel {
 				$value = ''; // returning an empty string will omit the field from the data.
 
 			}
+		} elseif ( is_array( $value ) && ! isset( $field_types[ $field ] ) ) {
+
+			// Text fields will throw an error receiving array data.
+
+			$value = implode( ', ', $value );
+
 		}
 
 		return $value;
@@ -207,7 +224,7 @@ class WPF_HighLevel {
 					$body_json->message = implode( ' ', $body_json->message );
 				}
 
-				if ( ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
+				if ( 401 === $response_code || ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
 
 					$access_token = $this->refresh_token();
 
@@ -243,6 +260,8 @@ class WPF_HighLevel {
 	/**
 	 * Checks the API version based on auth.
 	 *
+	 * We need to keep this so that https://wpfusion.com/documentation/crm-specific-docs/highlevel-white-labelled-accounts/#overview works.
+	 *
 	 * @since 3.41.11
 	 *
 	 * @return bool True if v2, false if v1.
@@ -268,6 +287,10 @@ class WPF_HighLevel {
 	public function refresh_token() {
 
 		$refresh_token = wpf_get_option( 'highlevel_refresh_token' );
+
+		if ( empty( $refresh_token ) ) {
+			return new WP_Error( 'error', 'Authorization failed and no refresh token found.' );
+		}
 
 		$params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
@@ -532,6 +555,10 @@ class WPF_HighLevel {
 
 		$available_tags = wpf_get_option( 'available_tags', array() );
 
+		if ( empty( $response->contact->tags ) ) {
+			return $user_tags;
+		}
+
 		foreach ( $response->contact->tags as $tag ) {
 
 			$user_tags[] = $tag;
@@ -649,16 +676,16 @@ class WPF_HighLevel {
 		return true;
 	}
 
-
 	/**
-	 * Adds a new contact.
+	 * Formats contact data for API updates..
 	 *
-	 * @since 3.36.0
+	 * @since 3.42.3
 	 *
-	 * @param array $contact_data    An associative array of contact fields and field values.
-	 * @return int|WP_Error Contact ID on success, or WP Error.
+	 * @param array $contact_data The unformatted contact data.
+	 * @return array The formatted contact data.
 	 */
-	public function add_contact( $contact_data ) {
+	public function format_contact_data( $contact_data ) {
+
 		if ( $this->is_v2() ) {
 			$custom_field_name = 'customFields';
 		} else {
@@ -686,6 +713,23 @@ class WPF_HighLevel {
 				}
 			}
 		}
+
+		return $contact_data;
+
+	}
+
+
+	/**
+	 * Adds a new contact.
+	 *
+	 * @since 3.36.0
+	 *
+	 * @param array $contact_data    An associative array of contact fields and field values.
+	 * @return int|WP_Error Contact ID on success, or WP Error.
+	 */
+	public function add_contact( $contact_data ) {
+
+		$contact_data = $this->format_contact_data( $contact_data );
 
 		$contact_data['locationId'] = $this->location_id;
 		$params                     = $this->get_params();
@@ -713,33 +757,8 @@ class WPF_HighLevel {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
-		if ( $this->is_v2() ) {
-			$custom_field_name = 'customFields';
-		} else {
-			$custom_field_name = 'customField';
-		}
-		// Separate the built in fields from custom ones.
-		$crm_fields = wpf_get_option( 'crm_fields' );
-
-		foreach ( $contact_data as $key => $value ) {
-
-			if ( ! isset( $crm_fields['Standard Fields'][ $key ] ) ) {
-
-				if ( ! isset( $contact_data[ $custom_field_name ] ) ) {
-					$contact_data[ $custom_field_name ] = array();
-				}
-
-				if ( $this->is_v2() ) {
-					$contact_data[ $custom_field_name ][] = array(
-						'id'          => $key,
-						'field_value' => $value,
-					);
-					unset( $contact_data[ $key ] );
-				} else {
-					$contact_data['customField'][ $key ] = $value;
-				}
-			}
-		}
+		
+		$contact_data = $this->format_contact_data( $contact_data );
 
 		$params           = $this->get_params();
 		$params['method'] = 'PUT';

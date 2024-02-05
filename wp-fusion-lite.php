@@ -4,15 +4,10 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.41.24
+ * Version: 3.42.10
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
- *
- * WC requires at least: 3.0
- * WC tested up to: 7.2.0
- * Elementor tested up to: 3.13.0
- * Elementor Pro tested up to: 3.13.0
  */
 
 /**
@@ -33,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.41.24' );
+define( 'WP_FUSION_VERSION', '3.42.10' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -220,7 +215,7 @@ final class WP_Fusion_Lite {
 				add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor.
 				add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
 
-				add_action( 'init', array( self::$instance, 'init' ), 0 );
+				add_action( 'init', array( self::$instance, 'init' ), 6 ); // 6 so it's after WPF_CRM_Base::init().
 
 			}
 
@@ -355,9 +350,7 @@ final class WP_Fusion_Lite {
 	 */
 
 	public function get_integrations() {
-
 		return apply_filters( 'wpf_integrations', array() );
-
 	}
 
 	/**
@@ -368,9 +361,7 @@ final class WP_Fusion_Lite {
 	 */
 
 	public function get_integrations_theme() {
-
 		return apply_filters( 'wpf_integrations_theme', array() );
-
 	}
 
 	/**
@@ -447,6 +438,8 @@ final class WP_Fusion_Lite {
 				'engage'           => 'WPF_Engage',
 				'ortto'            => 'WPF_Ortto',
 				'emailoctopus'     => 'WPF_EmailOctopus',
+				'customer-io'      => 'WPF_Customer_IO',
+				'omnisend'         => 'WPF_Omnisend',
 			)
 		);
 
@@ -479,10 +472,13 @@ final class WP_Fusion_Lite {
 			require_once WPF_DIR_PATH . 'includes/admin/class-upgrades.php';
 		}
 
-		// Plugin updater.
-
 		if ( $this->is_full_version() ) {
+
+			// Plugin updater.
 			include WPF_DIR_PATH . 'includes/admin/class-updater.php';
+
+			// Woo HPOS compatibility must be declared early.
+			require_once WPF_DIR_PATH . 'includes/integrations/class-woocommerce-hpos-compatibility.php';
 		} else {
 			require_once WPF_DIR_PATH . 'includes/admin/class-lite-helper.php';
 		}
@@ -516,7 +512,7 @@ final class WP_Fusion_Lite {
 			require_once WPF_DIR_PATH . 'includes/admin/class-admin-bar.php';
 		}
 
-		// Incoming webhooks handler.
+		// Incoming webhooks handler + WooCommerce HPOS compatibility.
 		if ( $this->is_full_version() ) {
 			require_once WPF_DIR_PATH . 'includes/integrations/class-forms-helper.php';
 			require_once WPF_DIR_PATH . 'includes/class-api.php';
@@ -603,6 +599,8 @@ final class WP_Fusion_Lite {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
 					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';
+				} elseif ( file_exists( WPF_DIR_PATH . 'includes/integrations/' . $filename . '/class-' . $filename . '.php' ) ){
+					require_once WPF_DIR_PATH . 'includes/integrations/' . $filename . '/class-' . $filename . '.php';
 				}
 			}
 		}
@@ -654,7 +652,6 @@ final class WP_Fusion_Lite {
 		}
 
 	}
-
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

@@ -64,6 +64,9 @@ class WPF_MailerLite {
 			$this->edit_url = 'https://app.mailerlite.com/subscribers/single/%d';
 		}
 
+		// This has to run before init to be ready for WPF_Auto_Login::start_auto_login().
+		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
+
 	}
 
 	/**
@@ -81,8 +84,6 @@ class WPF_MailerLite {
 
 		// Slow down the batch processses to get around API limits.
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
-
-		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
 
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
@@ -343,7 +344,7 @@ class WPF_MailerLite {
 
 	public function auto_login_contact_id( $contact_id ) {
 
-		if ( is_email( $contact_id ) ) {
+		if ( is_email( urldecode( $contact_id ) ) ) {
 			$contact_id = $this->get_contact_id( urldecode( $contact_id ) );
 		}
 

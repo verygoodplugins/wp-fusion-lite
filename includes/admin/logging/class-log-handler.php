@@ -104,6 +104,9 @@ class WPF_Log_Handler {
 		// Clear the error count.
 		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'clear_errors_count' ) );
 
+		// Hide admin notices
+		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'hide_notices' ) );
+
 		// Track user IDs.
 		add_action( 'wpf_get_contact_id_start', array( $this, 'set_log_source_user_id' ) );
 
@@ -313,6 +316,15 @@ class WPF_Log_Handler {
 
 	}
 
+	/**
+	 * Hides admin notices on the logs page.
+	 *
+	 * @since 3.42.6
+	 */
+	public function hide_notices() {
+
+		remove_all_actions( 'admin_notices' );
+	}
 
 	/**
 	 * Enqueues logger styles
@@ -546,6 +558,28 @@ class WPF_Log_Handler {
 				<?php $log_table_list->display(); ?>
 
 				<?php submit_button( esc_html__( 'Flush all logs', 'wp-fusion-lite' ), 'delete', 'wpf-flush-logs' ); ?>
+
+				<?php if ( ! function_exists( 'fatal_error_notify' ) ) : ?>
+
+					<div id="fen-pro">
+						<div id="fen-pro-top">
+							<img src="<?php echo esc_url( WPF_DIR_URL . 'assets/img/fen-pro-promo.png' ); ?>" />
+						</div>
+						<div class="fen-pro-center">
+
+							<p><?php printf( esc_html__( '%1$sFatal Error Notify%2$s can send you an email, SMS, or Slack message when WP Fusion encounters an API error.', 'wp-fusion-lite' ), '<a href="https://fatalerrornotify.com/?utm_campaign=wpfusion&utm_source=wp-fusion-logs" target="_blank">', '</a>' ); ?></p>
+
+							<p><?php esc_html_e( 'You can also set up notifications for other plugins, or WordPress itself.', 'wp-fusion-lite' ); ?></p>
+
+							<p><?php printf( esc_html__( 'Take 50%% off your first year using coupon code %1$sWP-FUSION%2$s.', 'wp-fusion-lite' ), '<code>', '</code>' ); ?></p>
+						
+						</div>
+
+						<a class="button-primary" href="https://fatalerrornotify.com/?utm_campaign=wpfusion&utm_source=wp-fusion-logs&discount=WP-FUSION" target="_blank">Learn More</a>
+
+					</div>
+
+				<?php endif; ?>
 
 			</form>
 		</div>

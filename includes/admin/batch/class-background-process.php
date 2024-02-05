@@ -614,6 +614,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return mixed
 		 */
 		public function schedule_cron_healthcheck( $schedules ) {
+
 			$interval = apply_filters( $this->identifier . '_cron_interval', wpf_get_option( 'cron_interval', 5 ) );
 
 			if ( property_exists( $this, 'cron_interval' ) ) {
@@ -638,25 +639,24 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		public function handle_cron_healthcheck() {
 
 			if ( ! wpf_get_option( 'connection_configured' ) ) {
-				exit; // the WPF settings have been reset.
+				return; // the WPF settings have been reset.
 			}
 
 			if ( $this->is_process_running() ) {
 
 				// Background process already running.
-				exit;
+				return;
 			}
 
 			if ( $this->is_queue_empty() ) {
 
 				// No data to process.
 				$this->clear_scheduled_event();
-				exit;
+				return;
 			}
 
 			$this->handle();
 
-			exit;
 		}
 
 		/**

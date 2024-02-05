@@ -37,7 +37,9 @@ class WPF_Staging_Sites {
 	 */
 	public function maybe_activate_staging_mode( $value ) {
 
-		if ( $this->is_duplicate_site() || ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) ) {
+		if ( defined( 'WPF_STAGING_MODE' ) && false === WPF_STAGING_MODE ) {
+			return false; // allow force-disabling the staging site detection.
+		} elseif ( $this->is_duplicate_site() || ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) ) {
 			return true;
 		}
 
@@ -169,7 +171,7 @@ class WPF_Staging_Sites {
 			return; // if the notice has been dismissed across the admin, we'll only show it on the WPF settings page.
 		}
 
-		if ( $this->is_duplicate_site() && current_user_can( 'manage_options' ) ) {
+		if ( $this->is_duplicate_site() && current_user_can( 'manage_options' ) && ! defined( 'WPF_STAGING_MODE' ) ) {
 
 			echo '<div id="wpf-staging-notice" data-notice="wpf-staging-notice" class="notice notice-warning wpf-notice is-dismissible"><p>';
 
@@ -218,19 +220,36 @@ class WPF_Staging_Sites {
 	 */
 	public function show_staging_notice_wpf() {
 
-		if ( wpf_get_option( 'staging_mode' ) && ! $this->is_duplicate_site() ) {
+		if ( ( wpf_get_option( 'staging_mode' ) && ! $this->is_duplicate_site() ) || ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) ) {
 
 			echo '<div class="notice notice-warning wpf-notice"><p>';
 
-			printf(
-				// translators: 1$-2$: opening and closing <strong> tags. $3-$4 opening and closing link to documentation on staging sites. $5 the CRM name.
-				esc_html__( '%1$sHeads up:%2$s WP Fusion is currently in %3$sstaging mode%4$s. No data will be sent to or loaded from %5$s.', 'wp-fusion-lite' ),
-				'<strong>',
-				'</strong>',
-				'<a href="https://wpfusion.com/documentation/faq/staging-sites/" target="_blank">',
-				'</a>',
-				esc_html( wp_fusion()->crm->name )
-			);
+			if ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) {
+
+				printf(
+					// translators: 1$-2$: opening and closing <strong> tags. $3-$4 opening and closing link to documentation on staging sites. $5 the CRM name.
+					esc_html__( '%1$sHeads up:%2$s WP Fusion is currently in %3$sstaging mode%4$s due to %5$sWPF_STAGING_MODE%6$s being defined in wp-config.php. No data will be sent to or loaded from %7$s.', 'wp-fusion-lite' ),
+					'<strong>',
+					'</strong>',
+					'<a href="https://wpfusion.com/documentation/faq/staging-sites/" target="_blank">',
+					'</a>',
+					'<code>',
+					'</code>',
+					esc_html( wp_fusion()->crm->name )
+				);
+			} else {
+
+				printf(
+					// translators: 1$-2$: opening and closing <strong> tags. $3-$4 opening and closing link to documentation on staging sites. $5 the CRM name.
+					esc_html__( '%1$sHeads up:%2$s WP Fusion is currently in %3$sstaging mode%4$s. No data will be sent to or loaded from %5$s.', 'wp-fusion-lite' ),
+					'<strong>',
+					'</strong>',
+					'<a href="https://wpfusion.com/documentation/faq/staging-sites/" target="_blank">',
+					'</a>',
+					esc_html( wp_fusion()->crm->name )
+				);
+
+			}
 
 			echo '</p></div>';
 

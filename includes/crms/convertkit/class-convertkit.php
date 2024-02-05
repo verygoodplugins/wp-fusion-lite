@@ -258,7 +258,8 @@ class WPF_ConvertKit {
 			'timeout'    => 15,
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'headers'    => array(
-				'Content-Type' => 'application/json',
+				'Content-Type'    => 'application/json',
+				'integration_key' => 'GkKOUTUIJ4saFnsVhLe9Kw',
 			),
 		);
 
@@ -536,17 +537,9 @@ class WPF_ConvertKit {
 			return $contact_tags;
 		}
 
-		$available_tags = wpf_get_option( 'available_tags', array() );
-
 		foreach ( $body->tags as $tag ) {
 			$contact_tags[] = $tag->id;
-
-			if ( ! isset( $available_tags[ $tag->id ] ) ) {
-				$available_tags[ $tag->id ] = $tag->name;
-			}
 		}
-
-		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		// Possibly remove update / import tags
 
@@ -692,7 +685,7 @@ class WPF_ConvertKit {
 		// If no tags configured, pick the first one in the account so the request doesn't fail
 		if ( empty( $assign_tags ) ) {
 
-			$available_tags = wpf_get_option( 'available_tags' );
+			$available_tags = wp_fusion()->settings->get_available_tags_flat();
 			reset( $available_tags );
 			$assign_tags = array( key( $available_tags ) );
 

@@ -1,0 +1,1 @@
+!function(){const{addFilter:e}=wp.hooks;e("suremembers_sidebar_metaboxes_after","SureMembers",(function(e){console.log("Sorin Here")}))}();

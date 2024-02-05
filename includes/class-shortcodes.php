@@ -56,7 +56,7 @@ class WPF_Shortcodes {
 			'wpf'
 		);
 
-		$atts = array_map( 'sanitize_text_field', $atts );
+		$atts = wpf_shortcode_atts( $atts );
 
 		if ( false !== strpos( $atts['tag'], '“' ) || false !== strpos( $atts['not'], '“' ) ) {
 			return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [wpf] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
@@ -246,7 +246,7 @@ class WPF_Shortcodes {
 			$atts
 		);
 
-		$atts = array_map( 'sanitize_text_field', $atts );
+		$atts = wpf_shortcode_atts( $atts );
 
 		if ( false !== strpos( $atts['field'], '“' ) || false !== strpos( $atts['format'], '“' ) ) {
 			return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [user_meta] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
@@ -439,7 +439,7 @@ class WPF_Shortcodes {
 			'user_meta_if'
 		);
 
-		$atts = array_map( 'sanitize_text_field', $atts );
+		$atts = wpf_shortcode_atts( $atts );
 
 		// Check for curly quotes.
 
@@ -468,8 +468,19 @@ class WPF_Shortcodes {
 			$meta_value = '';
 		}
 
-		$meta_value = $atts['field_format'] ? call_user_func( $atts['field_format'], $meta_value ) : $meta_value;
-		$value      = $atts['value_format'] ? call_user_func( $atts['value_format'], $atts['value'] ) : $atts['value'];
+		$allowed_functions = array(
+			'strtolower',
+			'strotoupper',
+			'strval',
+			'abs',
+			'ceil',
+			'floor',
+			'round',
+			'strtotime',
+		);
+
+		$meta_value = $atts['field_format'] && in_array( $atts['field_format'], $allowed_functions, true ) ? call_user_func( $atts['field_format'], $meta_value ) : $meta_value;
+		$value      = $atts['value_format'] && in_array( $atts['value_format'], $allowed_functions, true ) ? call_user_func( $atts['value_format'], $atts['value'] ) : $atts['value'];
 
 		if ( 'strtotime' === $atts['field_format'] && false === $meta_value ) {
 			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'userfield' );
@@ -482,12 +493,14 @@ class WPF_Shortcodes {
 		$show_content = false;
 		switch ( $atts['compare'] ) {
 			case '<':
+			case 'less':
 				$show_content = $meta_value < $value;
 				break;
 			case '<=':
 				$show_content = $meta_value <= $value;
 				break;
 			case '>':
+			case 'greater':
 				$show_content = $meta_value > $value;
 				break;
 			case '>=':
@@ -607,7 +620,7 @@ class WPF_Shortcodes {
 			'the_excerpt'
 		);
 
-		$atts = array_map( 'sanitize_text_field', $atts );
+		$atts = wpf_shortcode_atts( $atts );
 
 		if ( ! empty( $atts['length'] ) ) {
 

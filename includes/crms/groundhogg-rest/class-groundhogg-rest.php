@@ -3,13 +3,34 @@
 class WPF_Groundhogg_REST {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'groundhogg-rest';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Groundhogg';
+
+	/**
+	 * The CRM menu name.
+	 *
+	 * @var string
+	 */
+	public $menu_name = 'Groundhogg (REST API)';
+
+	/**
 	 * Declares how this CRM handles tags and fields.
 	 *
 	 * @var array
 	 * @since 3.38.10
 	 */
 
-	public $supports;
+	public $supports = array( 'events', 'add_tags_api', 'events' );
 
 	/**
 	 * API authentication parameters and headers.
@@ -69,11 +90,6 @@ class WPF_Groundhogg_REST {
 
 	public function __construct() {
 
-		$this->slug      = 'groundhogg-rest';
-		$this->name      = 'Groundhogg';
-		$this->menu_name = 'Groundhogg (REST API)';
-		$this->supports  = array( 'events', 'add_tags_api', 'events_multi_key' );
-
 		// Set up admin options.
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/class-groundhogg-rest-admin.php';
@@ -81,6 +97,13 @@ class WPF_Groundhogg_REST {
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+
+		$url = wpf_get_option( 'groundhogg_rest_url' );
+
+		if ( ! empty( $url ) ) {
+			$this->url      = trailingslashit( $url ) . 'wp-json/gh/v4';
+			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=gh_contacts&action=edit&contact=%d';
+		}
 
 	}
 
@@ -98,13 +121,6 @@ class WPF_Groundhogg_REST {
 
 		// Add tracking code to footer.
 		// add_action( 'wp_enqueue_scripts', array( $this, 'tracking_code' ) );
-
-		$url = wpf_get_option( 'groundhogg_rest_url' );
-
-		if ( ! empty( $url ) ) {
-			$this->url      = trailingslashit( $url ) . 'wp-json/gh/v4';
-			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=gh_contacts&action=edit&contact=%d';
-		}
 
 	}
 
@@ -222,7 +238,14 @@ class WPF_Groundhogg_REST {
 
 				} else {
 
-					$response = new WP_Error( 'error', wp_remote_retrieve_response_message( $response ) );
+					$body    = wp_remote_retrieve_body( $response );
+					$message = wp_remote_retrieve_response_message( $response );
+
+					if ( ! empty( $body ) && false !== strpos( $body, 'Enable JavaScript' ) ) {
+						$message .= '. ' . __( 'The API request is being blocked by a CloudFlare challenge page.', 'wp-fusion-lite' );
+					}
+
+					$response = new WP_Error( 'error', $message );
 
 				}
 			}
@@ -533,6 +556,12 @@ class WPF_Groundhogg_REST {
 			}
 		}
 
+		// Set to opted in by default unless otherwise specified.
+
+		if ( ! isset( $data['optin_status'] ) ) {
+			$data['optin_status'] = wpf_get_option( 'gh_default_status', 2 );
+		}
+
 		$update_data = array(
 			'data' => $data,
 			'meta' => $meta,
@@ -596,8 +625,6 @@ class WPF_Groundhogg_REST {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $data ) {
-
-		$fields = wpf_get_option( 'crm_fields' );
 
 		// Custom fields go in their own key.
 
@@ -750,11 +777,6 @@ class WPF_Groundhogg_REST {
 				'event_value' => $event_data,
 			),
 		);
-
-		if ( is_array( $event_data ) ) {
-			$body['meta']['event_value'] = reset( $event_data );
-			$body['meta']                = array_merge( $body['meta'], $event_data );
-		}
 
 		$request            = $this->url . '/activity/?force=1'; // force to always create a new entry, not update an existing one.
 		$params             = $this->get_params();

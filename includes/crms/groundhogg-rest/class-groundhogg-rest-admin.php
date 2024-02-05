@@ -65,7 +65,7 @@ class WPF_Groundhogg_REST_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		//add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 
 	}
 
@@ -318,9 +318,9 @@ class WPF_Groundhogg_REST_Admin {
 
 
 	/**
-	 * Adds GH site tracking options. Not currently in use.
+	 * Adds optin settings.
 	 *
-	 * @since  3.38.37
+	 * @since  3.42.5
 	 *
 	 * @param  array $settings The settings.
 	 * @param  array $options  The options.
@@ -328,22 +328,24 @@ class WPF_Groundhogg_REST_Admin {
 	 */
 	public function register_settings( $settings, $options ) {
 
-		$site_tracking = array();
-
-		$site_tracking['site_tracking_header'] = array(
-			'title'   => __( 'Groundhogg Settings', 'wp-fusion-lite' ),
-			'type'    => 'heading',
-			'section' => 'main',
+		$new_settings = array(
+			'gh_default_status' => array(
+				'title'       => __( 'Default Status', 'wp-fusion-lite' ),
+				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
+				'type'        => 'select',
+				'std'         => 2,
+				'section'     => 'main',
+				'choices'     => array(
+					2 => 'Confirmed',
+					1 => 'Unconfimed',
+					3 => 'Unsubscribed',
+					4 => 'Weekly',
+					5 => 'Monthly',
+				),
+			),
 		);
 
-		$site_tracking['site_tracking'] = array(
-			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enable Groundhogg site tracking.', 'wp-fusion-lite' ),
-			'type'    => 'checkbox',
-			'section' => 'main',
-		);
-
-		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
 

@@ -3,6 +3,28 @@
 class WPF_Infusionsoft_iSDK {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'infusionsoft';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Infusionsoft';
+
+	/**
+	 * The CRM menu name.
+	 *
+	 * @var string
+	 */
+	public $menu_name = 'Infusionsoft / Keap';
+
+
+	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
 	 */
 
@@ -38,16 +60,11 @@ class WPF_Infusionsoft_iSDK {
 
 	public function __construct() {
 
-		$this->slug      = 'infusionsoft';
-		$this->name      = 'Infusionsoft';
-		$this->menu_name = 'Infusionsoft / Keap';
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
 			new WPF_Infusionsoft_iSDK_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 
@@ -171,7 +188,7 @@ class WPF_Infusionsoft_iSDK {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( ! is_array( $value ) && strpos( $value, '&' ) !== false ) {
+		if ( is_string( $value ) && strpos( $value, '&' ) !== false ) {
 			$value = str_replace( '&', '&amp;', $value );
 		}
 
@@ -752,6 +769,11 @@ class WPF_Infusionsoft_iSDK {
 			return $this->error;
 		}
 
+		if ( isset( $data['OptinStatus'] ) ) {
+			// This isn't a real field and can't be synced.
+			unset( $data['OptinStatus'] );
+		}
+
 		// The social fields use their own API.
 		$social_data = $this->extract_social_fields( $data );
 
@@ -787,6 +809,11 @@ class WPF_Infusionsoft_iSDK {
 
 		if ( is_wp_error( $this->connect() ) ) {
 			return $this->error;
+		}
+
+		if ( isset( $data['OptinStatus'] ) ) {
+			// This isn't a real field and can't be synced.
+			unset( $data['OptinStatus'] );
 		}
 
 		// The social fields use their own API.
@@ -857,6 +884,7 @@ class WPF_Infusionsoft_iSDK {
 		$return_fields = array();
 		$field_map     = array();
 		$social_map    = array();
+		$load_optin    = false;
 
 		// Load social fields.
 
@@ -872,6 +900,11 @@ class WPF_Infusionsoft_iSDK {
 					continue;
 				}
 
+				if ( 'OptinStatus' === $field_data['crm_field'] ) {
+					$load_optin = $field_id;
+					continue;
+				}
+
 				$return_fields[]        = $field_data['crm_field'];
 				$field_map[ $field_id ] = $field_data['crm_field'];
 
@@ -879,7 +912,7 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		if ( empty( $return_fields ) ) {
-			return false;
+			return array();
 		}
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -934,6 +967,20 @@ class WPF_Infusionsoft_iSDK {
 					$user_meta[ $user_meta_key ] = $field_data;
 				}
 			}
+
+		}
+
+		// Optin status.
+
+		if ( $load_optin ) {
+
+			$optin_status = $this->app->optStatus( $result['Email'] );
+
+			if ( is_wp_error( $optin_status ) ) {
+				return $user_meta;
+			}
+
+			$user_meta[ $load_optin ] = $optin_status;
 		}
 
 		return $user_meta;

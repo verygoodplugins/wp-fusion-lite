@@ -3,6 +3,20 @@
 class WPF_Constant_Contact {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'constant-contact';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Constant Contact';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var string
@@ -74,9 +88,6 @@ class WPF_Constant_Contact {
 	 * @since 3.40.0
 	 */
 	public function __construct() {
-
-		$this->slug = 'constant-contact';
-		$this->name = 'Constant Contact';
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -325,8 +336,6 @@ class WPF_Constant_Contact {
 
 			if ( 401 === $response_code ) {
 
-				// Handle refreshing an OAuth token. Remove if not using OAuth.
-
 				if ( 'unauthorized' === $body_json->error_key ) {
 
 					$access_token = $this->refresh_token();
@@ -350,9 +359,14 @@ class WPF_Constant_Contact {
 
 				return new WP_Error( 'error', $errors );
 
+			} elseif ( 409 === $response_code ) {
+
+				// Conflict.
+				$response = new WP_Error( 'error', $body_json[0]->error_message );
+
 			} elseif ( 500 === $response_code ) {
 
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
+				$response = new WP_Error( 'error', __( 'An error has occurred in API server [error 500]: ' . $body_json[0]->error_message, 'wp-fusion-lite' ) );
 
 			}
 		}
@@ -383,7 +397,7 @@ class WPF_Constant_Contact {
 			$this->get_params( $access_token );
 		}
 
-		$request  = $this->url . '/contact_lists/';
+		$request  = $this->url . '/account/user/privileges/';
 		$response = wp_safe_remote_get( $request, $this->params );
 
 		// Validate the connection.
@@ -550,7 +564,8 @@ class WPF_Constant_Contact {
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->url . '/contacts/?email=' . rawurlencode( $email_address );
+		// status=all returns deleted contacts.
+		$request  = $this->url . '/contacts/?status=all&email=' . rawurlencode( $email_address );
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
@@ -639,7 +654,7 @@ class WPF_Constant_Contact {
 			'source'  => array(
 				'contact_ids' => array( $contact_id ),
 			),
-			'tag_ids' => $tags,
+			'tag_ids' => array_values( $tags ),
 		);
 
 		$params['body'] = wp_json_encode( $body );
@@ -670,7 +685,7 @@ class WPF_Constant_Contact {
 			'source'  => array(
 				'contact_ids' => array( $contact_id ),
 			),
-			'tag_ids' => $tags,
+			'tag_ids' => array_values( $tags ),
 		);
 		$params['body'] = wp_json_encode( $body );
 

@@ -221,8 +221,6 @@ class WPF_MailChimp_Admin {
 
 		}
 
-		die();
-
 	}
 
 }

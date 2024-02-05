@@ -44,11 +44,11 @@ class WPF_Batch {
 		add_action( 'wpf_batch_users_register_tags', array( $this, 'users_register_tags_step' ) );
 
 		// Push user meta.
-		add_filter( 'wpf_batch_users_meta_init', 'wpf_get_users_with_contact_ids' );
+		add_filter( 'wpf_batch_users_meta_init', array( 'WPF_User', 'get_users_with_contact_ids' ) );
 		add_action( 'wpf_batch_users_meta', array( $this, 'users_meta_step' ) );
 
 		// Pull user meta.
-		add_filter( 'wpf_batch_pull_users_meta_init', 'wpf_get_users_with_contact_ids' );
+		add_filter( 'wpf_batch_pull_users_meta_init', array( 'WPF_User', 'get_users_with_contact_ids' ) );
 		add_action( 'wpf_batch_pull_users_meta', array( $this, 'pull_users_meta_step' ) );
 
 		// Sync users (just CIDs).
@@ -56,7 +56,7 @@ class WPF_Batch {
 		add_action( 'wpf_batch_users_cid_sync', array( $this, 'users_cid_sync_step' ) );
 
 		// Sync users (just tags).
-		add_filter( 'wpf_batch_users_tags_sync_init', 'wpf_get_users_with_contact_ids' );
+		add_filter( 'wpf_batch_users_tags_sync_init', array( 'WPF_User', 'get_users_with_contact_ids' ) );
 		add_action( 'wpf_batch_users_tags_sync', array( $this, 'users_tags_sync_step' ) );
 
 		// Sync users.

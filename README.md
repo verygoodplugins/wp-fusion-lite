@@ -45,6 +45,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * ConvertKit
 * Copper
 * Customerly
+* Customer.io
 * Drift
 * Drip
 * EmailOctopus
@@ -76,6 +77,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Moosend
 * Mautic
 * NationBuilder
+* Omnisend
 * Ontraport
 * Ortto
 * Pipedrive

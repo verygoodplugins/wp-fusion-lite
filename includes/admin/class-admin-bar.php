@@ -226,7 +226,9 @@ class WPF_Admin_Bar {
 		if ( is_array( reset( $available_tags ) ) ) {
 
 			foreach ( (array) $available_tags as $value ) {
-				$tag_categories[] = $value['category'];
+				if ( is_array( $value ) ) {
+					$tag_categories[] = $value['category'];
+				}
 			}
 
 			$tag_categories = array_unique( $tag_categories );

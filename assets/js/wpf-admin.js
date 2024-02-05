@@ -656,6 +656,51 @@ jQuery(document).ready(function($){
 		}
 	});
 
+	
+
+	// Event tracking.
+	if($('.wpf-event-tracking').length > 0){
+		
+		//Reserved events keys.
+		if(wpf_admin.reserved_events_keys.length > 0){
+			$(document).on('input','.wpf-event-tracking .wpf-et-key', wpf_reserve_events_keys);
+		}
+	}
+
+	/**
+	 * Show tooltip warning for users if they are using reserved events keys.
+	 */
+	function wpf_reserve_events_keys () {
+		let input = $(this);
+		let input_value = $(this).val();
+		let found_reserved_key = false;
+
+		$.each(wpf_admin.reserved_events_keys, function (index, key) {
+			if (input_value.indexOf(key) != -1) {
+				found_reserved_key = true
+
+				let event_key_notice = wpf_admin.strings.reserved_keys_warning.replace('{key_name}',key);
+
+				input.addClass('wpf-tip wpf-tip-bottom').attr('data-tip', event_key_notice);
+
+				$('.wpf-tip.wpf-tip-bottom').tipTip({
+					attribute: 'data-tip',
+					delay: 0,
+					activation: 'focus',
+					defaultPosition: 'top'
+				})
+				input.focus();
+			}
+		})
+
+		if (found_reserved_key) {
+			input.css('color', '#cc0000')
+		} else {
+			input.css('color', '#000')
+			$('#tiptip_holder').remove()
+		}
+	}
+
  
 	//
 	// WooCommerce functions
@@ -1056,6 +1101,22 @@ jQuery(document).ready(function($){
 
 		initializeTagsSelect( 'div.acf-postbox' );
 
+	}
+
+
+	// GIve WP - Offline Donations
+	if ( $( 'input[name="_give_customize_offline_donations"]' ).length ) {
+		$('input[name="_give_customize_offline_donations"]').on('change',function(){
+			if($(this).val() == 'disabled'){
+				$('.give-field-wrap.apply_tags_offline_field').hide();
+			}else{
+				$('.give-field-wrap.apply_tags_offline_field').show();
+			}
+		});
+
+		if($('input[name="_give_customize_offline_donations"]:checked').val() == 'disabled'){
+			$('.give-field-wrap.apply_tags_offline_field').hide();
+		}
 	}
 
 	// Sync tags and custom fields

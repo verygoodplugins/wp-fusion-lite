@@ -458,6 +458,8 @@ class WPF_Drip {
 
 		$response = json_decode( $response['buffer'] );
 
+		$crm_fields = array();
+
 		if ( ! empty( $response->custom_field_identifiers ) ) {
 			foreach ( $response->custom_field_identifiers as $field_id ) {
 

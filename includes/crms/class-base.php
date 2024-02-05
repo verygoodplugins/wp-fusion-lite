@@ -15,8 +15,7 @@ class WPF_CRM_Base {
 	 *
 	 * @var crm
 	 */
-
-	public $crm;
+	public $crm = false;
 
 	/**
 	 * Contains the field mapping array between WordPress fields and their corresponding CRM fields
@@ -25,7 +24,7 @@ class WPF_CRM_Base {
 	 * @var contact_fields
 	 */
 
-	public $contact_fields;
+	public $contact_fields = array();
 
 	/**
 	 * When WPF has created an email via a guest form submission or checkout, this allows
@@ -34,7 +33,7 @@ class WPF_CRM_Base {
 	 * @since 3.41.0
 	 * @var guest_email
 	 */
-	public $guest_email;
+	public $guest_email = '';
 
 	/**
 	 * Buffer for queued API calls.
@@ -94,6 +93,8 @@ class WPF_CRM_Base {
 
 		if ( is_object( $this->crm ) && property_exists( $this->crm, $name ) ) {
 			return $this->crm->$name;
+		} elseif ( 'object_type' === $name ) {
+			return 'Contact'; // default in case it's not set.
 		} elseif ( 'supports' === $name ) {
 			return array();
 		} else {
@@ -151,6 +152,10 @@ class WPF_CRM_Base {
 			return $this->init();
 		}
 
+		if ( ! $this->crm ) {
+			return false; // not connected.
+		}
+
 		if ( wpf_is_staging_mode() ) {
 
 			wpf_log(
@@ -179,6 +184,7 @@ class WPF_CRM_Base {
 			$args[1] = false;
 
 			if ( empty( $args[0] ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Attempted to add contact with no fields enabled for sync.' );
 				return false; // no enabled fields.
 			}
 		} elseif ( 'update_contact' === $method && ( ! isset( $args[2] ) || true === $args[2] ) ) {
@@ -192,6 +198,16 @@ class WPF_CRM_Base {
 			}
 		}
 
+		/**
+		 * Allows filtering the API arguments before they are sent to the CRM.
+		 *
+		 * For example wpf_api_add_contact_args, wpf_api_update_contact_args,
+		 * wpf_api_get_contact_id_args, etc.
+		 *
+		 * @since unknown
+		 *
+		 * @param array $args   The API arguments
+		 */
 		$args = apply_filters( 'wpf_api_' . $method . '_args', $args );
 
 		/**
@@ -246,6 +262,11 @@ class WPF_CRM_Base {
 
 		}
 
+		// Make sure the CRM is set up and method exists before proceeding.
+		if ( $this->crm && ! method_exists( $this->crm, $method ) ) {
+			return new WP_Error( 'invalid_crm', 'Invalid CRM or method.' );
+		}
+
 		if ( $this->is_api_queue_enabled( $method, $args ) && ( 'apply_tags' === $method || 'remove_tags' === $method || 'update_contact' === $method ) ) {
 
 			// If the API queue is enabled and this data can be queued, add it to a buffer to be sent later.
@@ -259,6 +280,24 @@ class WPF_CRM_Base {
 
 			return $this->request( $method, $args );
 
+		}
+
+	}
+
+	/**
+	 * Check if the CRM supports a capability.
+	 *
+	 * @since  3.41.48
+	 *
+	 * @param  string $capability The capability.
+	 * @return bool Whether or not the CRM supports the capability.
+	 */
+	public function supports( $capability ) {
+
+		if ( false !== $this->crm && in_array( $capability, $this->crm->supports, true ) ) {
+			return true;
+		} else {
+			return false;
 		}
 
 	}
@@ -342,6 +381,22 @@ class WPF_CRM_Base {
 					return $this->request( $method, $args );
 
 				}
+			} elseif ( 'duplicate' === $result->get_error_code() && 'add' === $method ) {
+
+				$lookup_field = $this->get_lookup_field(); // get the email address field.
+
+				$result = $this->crm->get_contact_id( $args[0][ $lookup_field ] ); // get the email address field.
+
+				if ( empty( $result ) ) {
+					$result = new WP_Error( 'duplicate', 'A duplicate contact error was returned while trying to add a new contact, but searching by email for ' . $args[0] . ' returned no results. Please contact support.' );
+				}
+
+				// If there is a contact (and no error), update them.
+
+				if ( ! is_wp_error( $result ) ) {
+					$result = $this->crm->update_contact( array( $result, $args[0] ) );
+				}
+
 			}
 
 			if ( doing_action( 'shutdown' ) ) {
@@ -488,6 +543,8 @@ class WPF_CRM_Base {
 		if ( defined( 'WPF_DISABLE_QUEUE' ) && true === WPF_DISABLE_QUEUE ) {
 			$enabled = false;
 		} elseif ( ! wpf_get_option( 'enable_queue', true ) ) {
+			$enabled = false;
+		} elseif ( $this->supports( 'same_site' ) ) {
 			$enabled = false;
 		}
 
@@ -660,6 +717,12 @@ class WPF_CRM_Base {
 
 		$update_data = array();
 
+		// Lists pass straight through unless mapped.
+
+		if ( ! empty( $user_meta['lists'] ) ) {
+			$update_data['lists'] = $user_meta['lists'];
+		}
+
 		foreach ( $this->contact_fields as $field => $field_data ) {
 
 			if ( empty( $field_data['active'] ) || empty( $field_data['crm_field'] ) ) {
@@ -811,6 +874,65 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Get the remote field type, if applicable.
+	 *
+	 * @since  3.42.5
+	 *
+	 * @param string $remote_id The field ID to look up.
+	 * @param string $default   The default value to return if no type is found.
+	 * @return string The field type.
+	 */
+	public function get_remote_field_type( $remote_id, $default = 'text' ) {
+
+		foreach ( wpf_get_option( 'crm_fields' ) as $field_group => $fields ) {
+
+			if ( ! is_array( $fields ) ) {
+				return $default; // doesn't support types.
+			}
+
+			if ( isset( $fields[ $remote_id ] ) && isset( $fields[ $remote_id ]['remote_type'] ) ) {
+				// was used from 3.42.5 to 3.42.8. Decided to change to crm_label. @todo remove.
+				return $fields[ $remote_id ]['remote_type'];
+			}
+
+			if ( isset( $fields[ $remote_id ] ) && isset( $fields[ $remote_id ]['crm_type'] ) ) {
+				return $fields[ $remote_id ]['crm_type'];
+			}
+
+		}
+
+		return $default;
+
+	}
+
+	/**
+	 * Get the remote field type, if applicable.
+	 *
+	 * @since  3.42.5
+	 *
+	 * @param string $value    The value to search for.
+	 * @param string $field_id The CRM field ID.
+	 * @return string|bool The value or false if not found.
+	 */
+	public function get_remote_option_value( $value, $field_id ) {
+
+		foreach ( wpf_get_option( 'crm_fields' ) as $field_group => $fields ) {
+
+			if ( ! is_array( $fields ) ) {
+				return false;
+			}
+
+			if ( isset( $fields[ $field_id ] ) && isset( $fields[ $field_id ]['choices'] ) ) {
+
+				return array_search( $value, $fields[ $field_id ]['choices'], true );
+			}
+		}
+
+		return false;
+
+	}
+
+	/**
 	 * Is a WordPress meta key a pseudo field and should only be sent to the
 	 * CRM, not loaded
 	 *
@@ -884,6 +1006,7 @@ class WPF_CRM_Base {
 				date_default_timezone_set( 'UTC' ); // @codingStandardsIgnoreLine - We want all timestamp conversions to happen in UTC.
 				$value = strtotime( $value );
 				date_default_timezone_set( $original_zone ); // @codingStandardsIgnoreLine.
+
 			}
 
 			// intval() in case it's a string timestamp, this will make sure subsequent calls to date() don't throw a warning.

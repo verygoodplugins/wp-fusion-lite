@@ -94,7 +94,7 @@ class WPF_HubSpot_Admin {
 					'grant_type'    => 'authorization_code',
 					'client_id'     => $this->crm->client_id,
 					'client_secret' => $this->crm->client_secret,
-					'redirect_uri'  => 'https://wpfusion.com/oauth/?action=wpf_get_hubspot_token',
+					'redirect_uri'  => apply_filters( 'wpf_hubspot_redirect_uri', 'https://wpfusion.com/oauth/?action=wpf_get_hubspot_token' ),
 					'code'          => $code,
 				),
 			);
@@ -160,6 +160,30 @@ class WPF_HubSpot_Admin {
 			);
 
 		} else {
+
+			if ( ! empty( $options['connection_configured'] ) && 'hubspot' === wpf_get_option( 'crm' ) ) {
+				$new_settings['hubspot_tag_type'] = array(
+					'title'   => __( 'Segmentation Type', 'wp-fusion-lite' ),
+					'std'     => 'lists',
+					'type'    => 'radio',
+					'section' => 'setup',
+					'choices' => array(
+						'lists'       => 'Lists',
+						'multiselect' => 'Multi-Select',
+					),
+					'desc'    => __( 'For more information, see <a href="https://wpfusion.com/documentation/crm-specific-docs/how-lists-work-with-hubspot/#using-a-multiselect-for-segmentation" target="_blank">HubSpot - How to use lists</a>.', 'wp-fusion-lite' ),
+				);
+
+				$new_settings['hubspot_multiselect_field'] = array(
+					'title'       => __( 'Multi-select Field', 'wp-fusion-lite' ),
+					'disabled'    => isset( $options['hubspot_tag_type'] ) && 'multiselect' === $options['hubspot_tag_type'] ? false : true,
+					'type'        => 'select',
+					'choices'     => wpf_get_option( 'hubspot_multiselect_fields', array() ),
+					'placeholder' => __( 'Select a field', 'wp-fusion-lite' ),
+					'section'     => 'setup',
+				);
+
+			}
 
 			$new_settings['hubspot_token'] = array(
 				'title'          => __( 'Access Token', 'wp-fusion-lite' ),

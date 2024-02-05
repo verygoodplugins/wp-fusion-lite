@@ -49,7 +49,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 	$args = apply_filters( 'wpf_render_tag_multiselect_args', $args );
 
-	$available_tags = wpf_get_option( 'available_tags', array() );
+	$available_tags = (array) wpf_get_option( 'available_tags' );
 
 	// Let's make sure this is an array so we don't get "second parameter is not an array" warnings.
 	if ( ! is_array( $args['setting'] ) ) {
@@ -241,7 +241,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 		foreach ( $crm_fields as $group_header => $fields ) {
 
-			// For CRMs with separate custom and built in fields.
+			// For CRMs with separate custom and built in fields, or using the new data storage.
 			if ( is_array( $fields ) ) {
 
 				echo '<optgroup label="' . esc_attr( $group_header ) . '">';
@@ -249,13 +249,18 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 				foreach ( $crm_fields[ $group_header ] as $field => $label ) {
 
 					if ( is_array( $label ) ) {
-						$label = $label['label'];
+
+						if ( isset( $label['label'] ) ) {
+							$label = $label['label'];
+						} else {
+							$label = $label['crm_label']; // new 3.42.5 storage.
+						}
 					}
 
 					$label = str_replace( '(', '<small>', $label ); // (read only) and (compound field)
 					$label = str_replace( ')', '</small>', $label );
 
-					echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
+					echo '<option ' . selected( esc_attr( $setting ), $field, false ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
 				}
 
 				echo '</optgroup>';
@@ -268,7 +273,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 				$label = str_replace( '(', '<small>', $label ); // (read only) and (compound field)
 				$label = str_replace( ')', '</small>', $label );
 
-				echo '<option ' . selected( esc_attr( $setting ), $field ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
+				echo '<option ' . selected( esc_attr( $setting ), $field, false ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
 
 			}
 		}

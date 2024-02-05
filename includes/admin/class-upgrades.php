@@ -39,16 +39,6 @@ class WPF_Upgrades {
 
 		$version = wpf_get_option( 'wp_fusion_version' );
 
-		if ( empty( $version ) ) {
-
-			// Prior to 3.38.22 the version was stored in wp_options.
-			$version = get_option( 'wp_fusion_version' );
-
-			if ( ! empty( $version ) ) {
-				delete_option( 'wp_fusion_version' ); // we don't need it anymore.
-			}
-		}
-
 		if ( ! empty( $version ) && WP_FUSION_VERSION !== $version ) {
 
 			wpf_log( 'notice', get_current_user_id(), 'WP Fusion updated from <strong>v' . $version . '</strong> to <strong>v' . WP_FUSION_VERSION . '</strong>.', array( 'source' => 'plugin-updater' ) );
@@ -140,6 +130,63 @@ class WPF_Upgrades {
 	public static function v_3_40_16() {
 
 		wp_fusion()->settings->set( 'site_url', WPF_Staging_Sites::get_duplicate_site_lock_key() );
+
+	}
+
+	/**
+	 * Copies the AffiliateWP "Apply Tags - Approved" setting to the Active setting instead.
+	 *
+	 * @since 3.41.42
+	 */
+	public static function v_3_41_42() {
+
+		$setting = wpf_get_option( 'awp_apply_tags_approved' );
+
+		if ( ! empty( $setting ) ) {
+			wp_fusion()->settings->set( 'awp_apply_tags_active', $setting );
+		}
+
+	}
+
+	/**
+	 * Moves forum restrictions to the Forums page when BuddyPress / BuddyBoss is active.
+	 *
+	 * @since 3.42.3
+	 */
+	public static function v_3_42_3() {
+
+		if ( wpf_get_option( 'bbp_lock' ) && function_exists( 'bp_get_option' ) ) {
+
+			$forums_page_id = bp_get_option( '_bbp_root_slug_custom_slug', '' );
+
+			if ( ! empty( $forums_page_id ) ) {
+
+				$settings = array(
+					'lock_content' => true,
+					'allow_tags'   => wpf_get_option( 'bbp_allow_tags', array() ),
+					'redirect_url' => wpf_get_option( 'bbp_redirect', home_url() )
+				);
+
+				update_post_meta( $forums_page_id, 'wpf-settings', $settings );
+
+				wp_fusion()->settings->set( 'bbp_lock', false );
+
+			}
+
+		}
+
+	}
+
+	/**
+	 * Moves lists from ac_lists to assign_lists.
+	 *
+	 * @since 3.42.3
+	 */
+	public static function v_3_42_6() {
+
+		if ( wpf_get_option( 'ac_lists' ) ) {
+			wp_fusion()->settings->set( 'assign_lists', wpf_get_option( 'ac_lists' ) );
+		}
 
 	}
 

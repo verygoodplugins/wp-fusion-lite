@@ -3,6 +3,21 @@
 class WPF_MailChimp {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'mailchimp';
+
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Mailchimp';
+
+	/**
 	 * Contains API params
 	 */
 
@@ -36,7 +51,7 @@ class WPF_MailChimp {
 	 * @var string
 	 */
 
-	public $edit_url = false;
+	public $edit_url = '';
 
 	/**
 	 * Get things started
@@ -46,9 +61,6 @@ class WPF_MailChimp {
 	 */
 
 	public function __construct() {
-
-		$this->slug = 'mailchimp';
-		$this->name = 'Mailchimp';
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -63,6 +75,13 @@ class WPF_MailChimp {
 			$this->supports[] = 'add_tags';
 		}
 
+		$this->get_params(); // Set up the datacenter, etc.
+
+		$this->edit_url = 'https://' . $this->dc . '.admin.mailchimp.com/lists/members/view?id=%d';
+
+		// This has to run before init to be ready for WPF_Auto_Login::start_auto_login().
+		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
+
 	}
 
 	/**
@@ -74,14 +93,10 @@ class WPF_MailChimp {
 
 	public function init() {
 
-		$this->get_params(); // Set up the datacenter, etc.
-
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
 
-		$this->edit_url = 'https://' . $this->dc . '.admin.mailchimp.com/lists/members/view?id=%d';
 	}
 
 	/**
@@ -99,6 +114,13 @@ class WPF_MailChimp {
 
 		if ( isset( $post_data['data'] ) && isset( $post_data['data']['email'] ) ) {
 			$post_data['contact_id'] = md5( sanitize_email( $post_data['data']['email'] ) );
+		}
+
+		// Journey builder.
+		$payload = json_decode( file_get_contents( 'php://input' ) );
+
+		if ( $payload && isset( $payload->contact_id ) ) {
+			$post_data['contact_id'] = md5( sanitize_email( $payload->contact_id ) );
 		}
 
 		return $post_data;
@@ -218,9 +240,9 @@ class WPF_MailChimp {
 		}
 
 		// Get data server from key
-		if ( empty( $dc ) ) {
+		if ( empty( $dc ) && ! empty( $api_key ) ) {
 			$key_exploded = explode( '-', $api_key );
-			$dc           = $key_exploded[1];
+			$dc           = (isset($key_exploded[1]) ? $key_exploded[1] : '');
 		}
 
 		$this->params = array(
@@ -248,13 +270,11 @@ class WPF_MailChimp {
 
 	public function connect( $dc = null, $api_key = null, $test = false ) {
 
-		if ( $test == false ) {
+		if (! $test  ) {
 			return true;
 		}
 
-		if ( ! $this->params ) {
-			$this->get_params( $dc, $api_key );
-		}
+		$this->get_params( $dc, $api_key );
 
 		$response = $this->sync_lists(); // make sure the API credentials are valid and there's a list.
 
@@ -794,10 +814,9 @@ class WPF_MailChimp {
 	/**
 	 * Gets a list of contact IDs based on tag
 	 *
-	 * @access public
-	 * @return array Contact IDs returned
+	 * @param string $tag Tag name or ID.
+	 * @return array|WP_Error Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// We need the tag ID for this.
@@ -822,19 +841,29 @@ class WPF_MailChimp {
 		}
 
 		$contact_ids = array();
+		$offset      = 0;
 
-		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members?count=1000';
-		$response = wp_safe_remote_get( $url, $this->get_params() );
+		do {
+			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members?count=1000&offset=' . $offset;
+			$response = wp_safe_remote_get( $url, $this->get_params() );
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach ( $body->members as $contact ) {
-			$contact_ids[] = $contact->id;
-		}
+			foreach ( $body->members as $contact ) {
+				$contact_ids[] = $contact->id;
+			}
+
+			// Increase the offset by 1000 for the next batch.
+			$offset += 1000;
+
+			// See if we need to loop.
+			$count = count( $body->members );
+
+		} while ( 1000 === $count ); // Continue if we got a full batch, indicating more records may be available.
 
 		return $contact_ids;
 

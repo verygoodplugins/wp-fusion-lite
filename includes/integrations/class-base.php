@@ -8,8 +8,8 @@ abstract class WPF_Integrations_Base {
 	 * @since 1.0.0
 	 * @var string $slug
 	 */
-
 	public $slug;
+
 	/**
 	 * The plugin name for WP Fusion's module tracking.
 	 *
@@ -22,17 +22,19 @@ abstract class WPF_Integrations_Base {
 	 * The link to the documentation on the WP Fusion website.
 	 *
 	 * @since 3.38.14
-	 * @var string $docs_url
+	 * @var string|bool $docs_url The URL.
 	 */
 	public $docs_url = false;
 
 	public function __construct() {
 
-		$this->init();
+		if ( $this->is_integration_active() ) {
+			$this->init();
+		}
 
-		// Make the object globally available
+		// Make the object globally available.
 
-		if ( isset( $this->slug ) ) {
+		if ( $this->slug ) {
 			wp_fusion()->integrations->{$this->slug} = $this;
 		}
 
@@ -70,6 +72,29 @@ abstract class WPF_Integrations_Base {
 	}
 
 	/**
+	 * Checks if the integration is active.
+	 *
+	 * @since 3.42.6
+	 *
+	 * @return bool Is the integration active.
+	 */
+	public function is_integration_active() {
+
+		if ( false === $this->docs_url ) {
+			return true; // some integrations don't show up in the settings and can't be disabled.
+		}
+
+		$integrations = wpf_get_option( 'integrations', array() );
+
+		if ( isset( $integrations[ $this->slug ] ) && false === $integrations[ $this->slug ] ) {
+			return false;
+		} else {
+			return true;
+		}
+
+	}
+
+	/**
 	 * Gets dynamic tags to be applied from update data
 	 *
 	 * @access  public
@@ -81,7 +106,7 @@ abstract class WPF_Integrations_Base {
 
 		$apply_tags = array();
 
-		if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
+		if ( ! wp_fusion()->crm->supports( 'add_tags' ) ) {
 
 			foreach ( $update_data as $key => $value ) {
 
@@ -120,7 +145,13 @@ abstract class WPF_Integrations_Base {
 
 	public function guest_registration( $email_address, $update_data ) {
 
-		$contact_id  = wp_fusion()->crm->get_contact_id( $email_address );
+		$contact_id = wp_fusion()->crm->get_contact_id( $email_address );
+
+		if ( is_wp_error( $contact_id ) ) {
+			wpf_log( $contact_id->get_error_code(), 0, 'Error looking up contact ID for email address <strong>' . $email_address . '</strong>: ' . $contact_id->get_error_message() );
+			return false;
+		}
+
 		$update_data = apply_filters( "wpf_{$this->slug}_guest_registration_data", $update_data, $email_address, $contact_id );
 
 		// Log whether we're creating or updating a contact, with edit link.

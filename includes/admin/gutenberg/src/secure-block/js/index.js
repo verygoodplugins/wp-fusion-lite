@@ -9,7 +9,7 @@ import '../scss/admin.scss';
  */
 import icons from './icons';
 import classnames from 'classnames';
-import Select from 'react-select';
+import WpfSelect from '@verygoodplugins/wpfselect';
 
 /**
  * Internal Block Libraries
@@ -105,10 +105,10 @@ export default registerBlockType(
 			},
 		},
 		edit: withSelect( ( select ) => {
-				return {
-					userTags: select('wp-fusion/secure-block').receiveUserTags(),
-				};
-			} )( props => {
+			return {
+				userTags: select('wp-fusion/secure-block').receiveUserTags(),
+			};
+		} )( props => {
 			const { attributes: { tag }, userTags, className, setAttributes } = props;
 			const handleTagChange = ( tag ) => setAttributes( { tag: JSON.stringify( tag ) } );
 			let tagsToString = '';
@@ -134,14 +134,11 @@ export default registerBlockType(
 							</label>
 						</PanelRow>
 						<PanelRow>
-							<Select
-								className="secure-block-inspector__control"
-								name='secure-block-tags'
-								value={ selectedTags }
-								onChange={ handleTagChange }
-								options={ userTags }
-								isMulti='true'
-							 />
+							<WpfSelect
+								existingTags = { selectedTags }
+								onChange = { handleTagChange }
+								elementID = 'wpf-secure-block-select'
+							/>
 						</PanelRow>
 						<PanelRow>
 							<em className="muted">{ __( 'No selected tags mean that restricted content will be presented to all logged-in users.', 'secure-blocks-for-gutenberg' ) }</em>
@@ -158,13 +155,13 @@ export default registerBlockType(
 							<strong>{ __( 'logged-in', 'secure-blocks-for-gutenberg' ) }</strong>
 							{ selectedTags.length === 0  ?
 								<span>.</span>
-							:
+								:
 								<span>
 									{ 1 === selectedTags.length ?
 										<span>
 											{ __( ' and have the following tag: ', 'secure-blocks-for-gutenberg' ) }
 										</span>
-									:
+										:
 										<span>
 											{ __( ' and have any of the following tags: ', 'secure-blocks-for-gutenberg' ) }
 										</span>
@@ -192,7 +189,7 @@ export default registerBlockType(
 							[ 'wp-fusion/secure-block-inner-secure' ],
 							[ 'wp-fusion/secure-block-inner-unsecure' ],
 						] }
-						/>
+					/>
 					<footer className={ classnames( props.className ) + '__footer' }>
 						{ __( 'End: WP Fusion', 'wp-fusion-lite' ) }
 					</footer>

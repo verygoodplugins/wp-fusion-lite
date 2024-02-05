@@ -16,8 +16,7 @@ class WPF_Lead_Source_Tracking {
 
 		add_action( 'init', array( $this, 'set_lead_source' ) );
 
-		add_filter( 'wpf_user_register', array( $this, 'merge_lead_source' ) );
-		add_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
+		add_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source' ) );
 
 		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
 
@@ -26,6 +25,22 @@ class WPF_Lead_Source_Tracking {
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_scripts' ) );
 
+	}
+
+	/**
+	 * Checks if lead source parameters are set and enabled for sync.
+	 *
+	 * @since 3.42.0
+	 *
+	 * @return bool True if enabled, false otherwise.
+	 */
+	public function is_tracking_leadsource() {
+
+		if ( ! empty( $this->merge_lead_source() ) ) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/**
@@ -136,10 +151,9 @@ class WPF_Lead_Source_Tracking {
 	 * @return  array User Meta
 	 */
 
-	public function merge_lead_source( $user_meta = array() ) {
+	public function merge_lead_source( $args = array() ) {
 
-		// No need to run this when a user registers.
-		remove_filter( 'wpf_api_add_contact_args', array( $this, 'merge_lead_source_guest' ) );
+		$lead_source_data = array();
 
 		$leadsource_cookie_name = $this->get_leadsource_cookie_name();
 		$ref_cookie_name        = $this->get_referral_cookie_name();
@@ -154,8 +168,8 @@ class WPF_Lead_Source_Tracking {
 			}
 
 			if ( ! empty( $cookies[ $leadsource_cookie_name ] ) ) {
-				$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $leadsource_cookie_name ] ) );
-				$user_meta = array_merge( $user_meta, $data );
+				$data             = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $leadsource_cookie_name ] ) );
+				$lead_source_data = array_merge( $lead_source_data, $data );
 			}
 		}
 
@@ -167,59 +181,42 @@ class WPF_Lead_Source_Tracking {
 			}
 
 			if ( ! empty( $cookies[ $ref_cookie_name ] ) ) {
-				$data      = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $ref_cookie_name ] ) );
-				$user_meta = array_merge( $user_meta, $data );
+				$data             = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $ref_cookie_name ] ) );
+				$lead_source_data = array_merge( $lead_source_data, $data );
 			}
 
 		}
 
-		if ( isset( $_REQUEST['referrer'] ) ) {
-			$user_meta['current_page'] = esc_url_raw( wp_unslash( $_REQUEST['referrer'] ) );
-		} elseif ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-			$user_meta['current_page'] = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
-		} else {
-			$user_meta['current_page'] = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		if ( wpf_is_field_active( 'current_page' ) ) {
+			if ( isset( $_REQUEST['referrer'] ) ) {
+				$lead_source_data['current_page'] = esc_url_raw( wp_unslash( $_REQUEST['referrer'] ) );
+			} elseif ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+				$lead_source_data['current_page'] = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
+			} else {
+				$lead_source_data['current_page'] = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+			}
 		}
 
-		return $user_meta;
-
-	}
-
-	/**
-	 * Merges lead source variables on contact add, at the API layer for guest signups
-	 *
-	 * @access  public
-	 * @return  array Args
-	 */
-
-	public function merge_lead_source_guest( $args ) {
-
-		// Only do this on guests.
-		if ( doing_action( 'user_register' ) ) {
-			return $args;
-		}
-
-		$data = $this->merge_lead_source();
-
-		if ( ! empty( $data ) ) {
+		if ( ! empty( $lead_source_data ) ) {
 
 			wpf_log(
 				'info',
-				0,
-				'Syncing lead source data for guest:',
+				wpf_get_current_user_id(),
+				'Syncing lead source data:',
 				array(
-					'meta_array' => $data,
+					'meta_array' => $lead_source_data,
 					'source'     => 'lead-source-tracking',
 				)
 			);
 
-			$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $data ); // dont overwrite anything we might have gotten from the database.
+			$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $lead_source_data ); // dont overwrite anything we might have gotten from the database.
 
 		}
 
 		return $args;
 
 	}
+
 
 	/**
 	 * Allow the leadsource cookies in the async process
@@ -362,7 +359,7 @@ class WPF_Lead_Source_Tracking {
 	public function enqueue_tracking_scripts() {
 
 		if ( wpf_get_option( 'js_leadsource_tracking' ) ) {
-			wp_enqueue_script( 'wpf-leadsource-tracking', WPF_DIR_URL . 'assets/js/wpf-leadsource-tracking.js', array( 'jquery' ), WP_FUSION_VERSION, true );
+			wp_enqueue_script( 'wpf-leadsource-tracking', WPF_DIR_URL . 'assets/js/wpf-leadsource-tracking.js', array(), WP_FUSION_VERSION, true );
 		}
 
 	}

@@ -57,7 +57,7 @@ class WPF_ZeroBSCRM_Admin {
 		$new_settings = array();
 
 		$new_settings['zerobscrm_header'] = array(
-			'title'   => __( 'ZeroBSCRM Configuration', 'wp-fusion-lite' ),
+			'title'   => __( 'JetPack CRM Configuration', 'wp-fusion-lite' ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);

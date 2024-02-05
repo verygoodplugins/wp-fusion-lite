@@ -159,15 +159,16 @@ class WPF_Log_Table_List extends WP_List_Table {
 
 		if ( empty( $log['user'] ) || $log['user'] < 1 ) {
 			return __( 'system', 'wp-fusion-lite' );
-		} elseif ( intval( $log['user'] ) >= 100000000 ) {
-			/* translators: %d user ID */
-			return sprintf( __( 'auto-login-%d', 'wp-fusion-lite' ), absint( $log['user'] ) );
 		}
 
 		$userdata = get_userdata( $log['user'] );
 
-		// If user deleted.
-		if ( false === $userdata ) {
+		if ( false === $userdata && intval( $log['user'] ) >= 100000000 ) {
+			// Auto-login users.
+			/* translators: %d user ID */
+			return sprintf( __( 'auto-login-%d', 'wp-fusion-lite' ), absint( $log['user'] ) );
+		} elseif ( false === $userdata ) {
+			// Deleted users.
 			/* translators: %d user ID */
 			return sprintf( __( '(deleted user %d)', 'wp-fusion-lite' ), absint( $log['user'] ) );
 		}

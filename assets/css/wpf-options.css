@@ -68,14 +68,19 @@
 #wpf-integrations-overview a.wpf-integration {
 	display: inline-block;
 	margin: 5px 10px 5px 0;
-    background: #e55b10;
     color: #fff;
     padding: 5px 10px;
     font-size: 12px;
-    border: 2px solid #e55b10;
     position: relative;
     border-radius: 4px;
     font-weight: bold;
+	border: 1px solid #e55b10;
+	color: #e55b10;
+}
+
+#wpf-integrations-overview a.wpf-integration.active {
+	color: #fff;
+	background: #e55b10;
 }
 
 #wpf-integrations-overview a.wpf-integration:hover {
@@ -87,7 +92,17 @@
 	font-size: 14px;
 	width: auto;
     height: auto;
-    padding-right: 5px;
+    padding-left: 5px;
+}
+
+#wpf-integrations-overview a.wpf-integration input[type="checkbox"] {
+	margin-top: 0px;
+	vertical-align: bottom;
+	border: 1px solid #e55b10;
+}
+
+#wpf-integrations-overview a.wpf-integration input[type="checkbox"]:checked {
+	background: #fff;
 }
 
 span#wpf-header-upgrade-message {
@@ -186,7 +201,11 @@ form#wpf-settings #setup .form-table {
 }
 
 form#wpf-settings .form-table th {
-	padding: 20px 10px 20px 0;
+	padding: 20px 5px 20px 0;
+}
+
+form#wpf-settings .form-table tbody > tr > th {
+	width: 200px;
 }
 
 button.btn-verifying i.fa {
@@ -595,7 +614,7 @@ body.tools_page_wpf-settings-logs .alignleft span.select4-container.select4-cont
 	background: #eee;
     padding: 10px;
     overflow: scroll;
-	max-height: 400px;;
+	max-height: 400px;
 }
 
 .wp-list-table.wpf-logs .column-message code {

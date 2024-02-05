@@ -73,6 +73,11 @@ $infusionsoft_fields[] = array(
 	'crm_field' => 'ContactType',
 );
 
+$infusionsoft_fields[] = array(
+	'crm_label' => 'Optin Status',
+	'crm_field' => 'OptinStatus',
+);
+
 
 /* Woocommerce Fields */
 
