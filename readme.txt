@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp, hubspot, drip, crm, marketing automation, wpfusion, zapier, learndash
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 6.4.0
-Stable tag: 3.42.10 / 3.41.24
+Tested up to: 6.5.0
+Stable tag: 3.42.10
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -179,6 +179,10 @@ When something is updated in WordPress, it is synced to Zapier’s website, and 
 
 In addition to syncing data with your CRM, WP Fusion also includes many options for [protecting your WordPress content based on CRM tags](https://wpfusion.com/documentation/getting-started/access-control/?utm_campaign=free-plugin&utm_source=wp-org), and triggering changes in membership level or course enrollments based on CRM automations. This generally isn’t possible with Zapier because Zapier is configured via zapier.com, not inside your WordPress dashboard.
 
+= Why are your version numbers so funny? =
+
+WP Fusion Lite is a copy of the Pro WP Fusion plugin, with support for third-party plugins removed. Each time we release a Lite update, it brings it up to date with the latest version of the Pro plugin. For the full details [see the changelog on our site](https://wpfusion.com/documentation/faq/changelog/?utm_campaign=free-plugin&utm_source=wp-org).
+
 = Can I disable the upgrade nags? =
 
 WP Fusion Lite has a few banners on the settings pages with additional info about the features available in the Pro version.
@@ -197,12 +201,12 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 ##### Tech Stuff
 
-* Tested for WordPress 6.4.0
+* Tested for WordPress 6.5.0
 
 
 ##### New CRMS
 
-* Added a CRM integration with Customer.io
+* Added a CRM integration with [Customer.io](https://wpfusion.com/documentation/installation-guides/how-to-connect-customer-io-to-wordpress/)
 * Added a CRM integation with [Omnisend](https://wpfusion.com/documentation/installation-guides/how-to-connect-omnisend-to-wordpress/)
 
 
@@ -306,6 +310,7 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 ##### New CRMs
 
 * Added [EmailOctopus CRM integration](https://wpfusion.com/documentation/installation-guides/how-to-connect-emailoctopus-to-wordpress/)
+
 
 ##### New Features
 
