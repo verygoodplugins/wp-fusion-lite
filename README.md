@@ -110,5 +110,9 @@ See readme.txt.
 ## Bugs ##
 If you find an issue, let us know [here](https://github.com/verygoodplugins/wp-fusion-lite/issues?state=open)!
 
+## How can I report security bugs? ##
+
+You can report security bugs through the Patchstack Vulnerability Disclosure Program. The Patchstack team help validate, triage and handle any security vulnerabilities. [Report a security vulnerability.](https://patchstack.com/database/vdp/wp-fusion-lite)
+
 ## Support ##
 This is a developer's portal for WP Fusion Lite and should _not_ be used for support. Please visit the [support page](https://wpfusion.com/support/contact) if you need to submit a support request.

@@ -191,6 +191,10 @@ If you'd prefer not to see these you can disable them with the filter:
 
 `add_filter( 'wp_fusion_hide_upgrade_nags', '__return_true' );`
 
+= How can I report security bugs? =
+
+You can report security bugs through the Patchstack Vulnerability Disclosure Program. The Patchstack team help validate, triage and handle any security vulnerabilities. [Report a security vulnerability.](https://patchstack.com/database/vdp/wp-fusion-lite)
+
 = Do you have more FAQs? = 
 
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
