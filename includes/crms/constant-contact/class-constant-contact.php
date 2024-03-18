@@ -111,6 +111,9 @@ class WPF_Constant_Contact {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		// Slow down the batch processses to get around the 4 requests per second limit
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
 	}
 
 
@@ -149,6 +152,16 @@ class WPF_Constant_Contact {
 
 		}
 
+	}
+
+	/**
+	 * Slow down batch processses to get around the 4 requests per second limit.
+	 *
+	 * @return int Sleep time.
+	 */
+	public function set_sleep_time() {
+
+		return 1;
 	}
 
 	/**
@@ -362,11 +375,11 @@ class WPF_Constant_Contact {
 			} elseif ( 409 === $response_code ) {
 
 				// Conflict.
-				$response = new WP_Error( 'error', $body_json[0]->error_message );
+				$response = new WP_Error( 'error', implode( '. ', wp_list_pluck( $body_json, 'error_message' ) ) );
 
 			} elseif ( 500 === $response_code ) {
 
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server [error 500]: ' . $body_json[0]->error_message, 'wp-fusion-lite' ) );
+				$response = new WP_Error( 'error', __( 'An error has occurred in API server [error 500]:', 'wp-fusion-lite' ), implode( '. ', wp_list_pluck( $body_json, 'error_message' ) ) );
 
 			}
 		}

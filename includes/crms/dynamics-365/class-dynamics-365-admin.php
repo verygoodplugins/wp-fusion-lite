@@ -130,7 +130,9 @@ class WPF_Dynamics_365_Admin {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $response->error ) ) {
-				return new WP_Error( 'error', $response->error_description );
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->error_description );
+				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->error_description );
+				return false;
 			}
 
 			// Generate long term token.

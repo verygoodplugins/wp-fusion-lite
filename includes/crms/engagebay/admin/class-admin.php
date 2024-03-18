@@ -66,7 +66,6 @@ class WPF_EngageBay_Admin {
 		$new_settings['engagebay_domain'] = array(
 			'title'   => __( 'Subdomain', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter your EngageBay CRM account subdomain (not the full URL) needed for tracking.', 'wp-fusion-lite' ),
-			'std'     => '',
 			'type'    => 'text',
 			'section' => 'setup',
 		);

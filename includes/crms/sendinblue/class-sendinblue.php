@@ -718,7 +718,7 @@ class WPF_SendinBlue {
 			$post_data['attributes'] = $data;
 		}
 
-		if ( wpf_get_option( 'double_optin_template' ) ) {
+		if ( wpf_get_option( 'double_optin_template' ) && wpf_get_option( 'double_optin_lists' ) ) {
 
 			// Add via double optin.
 
@@ -728,6 +728,12 @@ class WPF_SendinBlue {
 
 			$url = 'https://api.brevo.com/v3/contacts/doubleOptinConfirmation';
 		} else {
+
+			if ( wpf_get_option( 'double_optin_template' ) && ! wpf_get_option( 'double_optin_lists' ) ) {
+				// Log an error if double opt-in template is selected but no lists are specified.
+				wpf_log( 'error', wpf_get_current_user_id(), 'A double opt-in template was selected, but no lists were specified in the WP Fusion settings. Contact will not not be added via double opt-in.' );
+			}
+
 			$url = 'https://api.brevo.com/v3/contacts';
 		}
 		$params         = $this->get_params();

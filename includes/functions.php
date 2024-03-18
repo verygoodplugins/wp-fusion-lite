@@ -407,6 +407,22 @@ function wpf_sort_remote_fields( $a, $b ) {
 }
 
 /**
+ * Helper for sorting an array of arrays based on their label.
+ *
+ * @since  3.43.0
+ *
+ * @param  array $a The first field.
+ * @param  array $b The second field.
+ * @return int   The comparison result.
+ */
+function wpf_sort_by_label( $a, $b ) {
+
+	return strcmp( $a['label'], $b['label'] );
+
+}
+
+
+/**
  * Is WP Fusion currently in staging mode?
  *
  * @since  3.39.5
@@ -466,6 +482,64 @@ function wpf_get_datetime_format() {
 
 	return apply_filters( 'wpf_datetime_format', $format );
 
+}
+
+/**
+ * Converts an input number to an E.164 phone number format.
+ *
+ * @since 3.42.14
+ *
+ * @param string $phone_number The input number.
+ * @return string The E.164 formatted number.
+ */
+function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
+
+	$country_codes =  array(
+		'CN' => '86', // China
+		'IN' => '91', // India
+		'US' => '1',  // United States
+		'GB' => '44', // United Kingdom
+		'AU' => '61', // Australia
+		'CA' => '1',  // Canada
+		'ID' => '62', // Indonesia
+		'PK' => '92', // Pakistan
+		'BR' => '55', // Brazil
+		'NG' => '234', // Nigeria
+		'BD' => '880', // Bangladesh
+		'RU' => '7',  // Russia
+		'MX' => '52', // Mexico
+		'JP' => '81', // Japan
+		'ET' => '251', // Ethiopia
+		'PH' => '63', // Philippines
+		'EG' => '20', // Egypt
+		'VN' => '84', // Vietnam
+		'CD' => '243', // Democratic Republic of the Congo
+		'TR' => '90', // Turkey
+		'IR' => '98', // Iran
+		'DE' => '49', // Germany
+		'TH' => '66', // Thailand
+	);
+
+	// Remove any non-numeric characters from the phone number
+	$clean_number = preg_replace( '/\D/', '', $phone_number );
+
+	// Check if a country code is already present
+	$has_country_code = strlen( $clean_number ) > 10 || ( strlen( $clean_number ) === 10 && ! isset( $country_codes[ strtoupper( $country ) ] ) );
+
+	if ( ! $has_country_code ) {
+		// Prepend the country code based on the provided country
+		$country_code = isset( $country_codes[ strtoupper( $country ) ] ) ? $country_codes[ strtoupper( $country ) ] : '';
+		if ( ! empty( $country_code ) ) {
+			$clean_number = $country_code . $clean_number;
+		}
+	}
+
+	// Ensure the number starts with a '+'
+	if ( ! empty( $clean_number ) && '+' !== $clean_number[0] ) {
+		$clean_number = '+' . $clean_number;
+	}
+
+	return $clean_number;
 }
 
 /**

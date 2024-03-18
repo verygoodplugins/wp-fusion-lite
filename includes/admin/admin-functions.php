@@ -168,6 +168,12 @@ function wpf_render_tag_multiselect( $args = array() ) {
 				continue;
 			}
 
+			if ( false !== strpos( $tag, 'opt-in to marketing' ) ) {
+				// Klaviyo.
+				$tag = str_replace( '(', '<small>(', $tag );
+				$tag = str_replace( ')', ')</small>', $tag );
+			}
+
 			// Added the following is_numeric() check for 3.29.1 to fix "5DD - Customer" tag causing "5" tag to be selected.
 			// Tag less than 10 so that tag IDs still show up and can be replaced after switching to a CRM with dynamic tagging
 			// if ( in_array( 'add_tags', wp_fusion()->crm->supports ) && is_numeric( $tag ) && $tag < 10 ) {

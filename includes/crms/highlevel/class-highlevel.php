@@ -208,7 +208,7 @@ class WPF_HighLevel {
 
 			$response_code = wp_remote_retrieve_response_code( $response );
 
-			if ( 200 == $response_code || 201 == $response_code ) {
+			if ( 200 === $response_code || 201 === $response_code ) {
 
 				return $response; // Success. Nothing more to do
 
@@ -224,7 +224,7 @@ class WPF_HighLevel {
 					$body_json->message = implode( ' ', $body_json->message );
 				}
 
-				if ( 401 === $response_code || ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
+				if ( 401 === $response_code || 403 === $response_code || ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
 
 					$access_token = $this->refresh_token();
 
@@ -301,7 +301,7 @@ class WPF_HighLevel {
 				'grant_type'    => 'refresh_token',
 				'client_id'     => $this->client_id,
 				'client_secret' => $this->client_secret,
-				'redirect_uri'  => get_admin_url() . '/options-general.php?page=wpf-settings&crm=highlevel',
+				'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=highlevel' ),
 				'refresh_token' => $refresh_token,
 			),
 		);

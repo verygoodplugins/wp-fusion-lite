@@ -3,6 +3,20 @@
 class WPF_Dynamics_365 {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'dynamics-365';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Dynamics 365';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var  string
@@ -56,7 +70,7 @@ class WPF_Dynamics_365 {
 	 *
 	 * @since 3.38.43
 	 */
-	public $client_id;
+	public $client_id = '6d2e39f8-e92c-4afa-944c-708d658a9fa0';
 
 	/**
 	 * The client secret.
@@ -65,7 +79,7 @@ class WPF_Dynamics_365 {
 	 *
 	 * @since 3.38.43
 	 */
-	public $client_secret;
+	public $client_secret = 'glH8Q~zL2OBS1Nc3zuwUwzLF3rc3CXetEP1aKb9~';
 
 	/**
 	 * The OAuth callback URL.
@@ -74,7 +88,7 @@ class WPF_Dynamics_365 {
 	 *
 	 * @since 3.38.43
 	 */
-	public $callback_url;
+	public $callback_url = 'https://wpfusion.com/oauth/';
 
 
 	/**
@@ -114,12 +128,7 @@ class WPF_Dynamics_365 {
 	 */
 	public function __construct() {
 
-		$this->slug          = 'dynamics-365';
-		$this->name          = 'Dynamics 365';
-		$this->client_id     = '6d2e39f8-e92c-4afa-944c-708d658a9fa0';
-		$this->client_secret = 'Lor7Q~YHxgmI1GdpBPbvIik0.wM3RnUwXatLR';
-		$this->callback_url  = 'https://wpfusion.com/oauth/';
-		$this->url           = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/api/data/v9.0';
+		$this->url = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/api/data/v9.0';
 
 		// Set up admin options.
 		if ( is_admin() ) {

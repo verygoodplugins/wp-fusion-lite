@@ -918,6 +918,12 @@ ul.wc-tabs li.wp-fusion-settings-tab a svg {
 	opacity: 0.9;
 }
 
+/* Elementor / WPBakery */
+.wpf-visibility-hidden {
+    outline: 1px dashed #E55B10 !important;
+    outline-offset: -1px;
+}
+
 /* Fix for X theme messing up woo descriptions */
 .options_group.wpf-product span.description {
 	padding: 0;
@@ -1161,7 +1167,7 @@ body.tools_page_wpf-settings-logs .tablenav.bottom {
 	float: right; /* tightens it up a bit */
 }
 
-#fen-pro {
+body.tools_page_wpf-settings-logs #fen-pro {
     background: #fff;
     box-shadow: 0px 1px 5px rgba(0,0,0,0.25);
     z-index: 999;
@@ -1171,30 +1177,30 @@ body.tools_page_wpf-settings-logs .tablenav.bottom {
 	max-width: 100%;
 }
 
-#fen-pro #fen-pro-top {
+body.tools_page_wpf-settings-logs #fen-pro #fen-pro-top {
 	display: inline-block;
     background-color: #F15D58;
     vertical-align: middle;
 	padding: 40px 28px;
 }
 
-#fen-pro .fen-pro-center {
+body.tools_page_wpf-settings-logs #fen-pro .fen-pro-center {
 	max-width: 480px;
     display: inline-block;
     vertical-align: middle;
     padding: 0px 20px;
 }
 
-#fen-pro img {
+body.tools_page_wpf-settings-logs #fen-pro img {
 	width: 200px;
 }
 
-#fen-pro ul {
+body.tools_page_wpf-settings-logs #fen-pro ul {
 	list-style: initial;
 	padding-left: 30px;
 }
 
-#fen-pro a.button-primary {
+body.tools_page_wpf-settings-logs #fen-pro a.button-primary {
 	background-color: #e2665e;
 	border-color: #cc4d3e;
 	box-shadow: 0 1px 0 #cc4d3e;

@@ -3,6 +3,20 @@
 class WPF_Klaviyo {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'klaviyo';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Klaviyo';
+
+	/**
 	 * Contains API key (needed for some requests)
 	 */
 
@@ -23,9 +37,8 @@ class WPF_Klaviyo {
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
 	 *
-	 * @var tag_type
+	 * @var string
 	 */
-
 	public $tag_type = 'List';
 
 
@@ -46,9 +59,6 @@ class WPF_Klaviyo {
 
 	public function __construct() {
 
-		$this->slug = 'klaviyo';
-		$this->name = 'Klaviyo';
-
 		// Set up admin options
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
@@ -66,7 +76,12 @@ class WPF_Klaviyo {
 	 * @return void
 	 */
 
-	public function init() {}
+	public function init() {
+
+		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_phone_numbers' ) );
+		add_filter( 'wpf_user_update', array( $this, 'format_phone_numbers' ), 5 ); // 5 so it's before WPF_WooCommerce::user_update().
+
+	}
 
 	/**
 	 * Check HTTP Response for errors and return WP_Error if found
@@ -144,7 +159,7 @@ class WPF_Klaviyo {
 			'headers'    => array(
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
-				'Revision'      => '2022-10-17',
+				'Revision'      => '2023-12-15',
 				'Authorization' => 'Klaviyo-API-Key ' . $access_key,
 			),
 		);
@@ -205,6 +220,59 @@ class WPF_Klaviyo {
 
 	}
 
+	/**
+	 * Gets the date in the correct format for the Klaviyo API.
+	 *
+	 * @since 3.42.12
+	 * 
+	 * @return string The formatted date.
+	 */
+	public function get_current_date_with_timezone_offset() {
+
+		$timestamp       = current_time('timestamp'); // Get current time according to WordPress timezone settings.
+		$timezone_string = get_option( 'timezone_string' );
+
+		if ( ! empty( $timezone_string ) ) {
+			$timezone = new DateTimeZone( $timezone_string );
+		} else {
+			// If no timezone string exists, fall back to an offset
+			$current_offset = get_option( 'gmt_offset' );
+			// Prepend a plus if offset is positive or zero, minus is already included for negative offsets.
+			$formatted_offset = ( $current_offset >= 0 ? '+' : '' ) . str_pad( $current_offset, 2, '0', STR_PAD_LEFT ) . ':00';
+			$timezone         = new DateTimeZone( $formatted_offset );
+		}
+
+		$date_time = new DateTime();
+		$date_time->setTimestamp( $timestamp );
+		$date_time->setTimezone( $timezone );
+
+		// Format the date. Note: 'P' gives the offset as +HH:MM, need to remove ':'
+		$formatted_date = $date_time->format( 'Y-m-d\TH:i:s' ) . substr( $date_time->format( 'P' ), 0, 3 ) . substr( $date_time->format( 'P' ), 4, 2 );
+
+		return $formatted_date;
+	}
+
+	/**
+	 * Formats phone numbers from WooCommerce for the Klaviyo API.
+	 *
+	 * @since 3.42.12
+	 *
+	 * @param array $customer_data The customer data.
+	 * @return array The customer data.
+	 */
+	public function format_phone_numbers( $customer_data ) {
+
+		if ( ! empty( $customer_data['billing_phone'] ) ) {
+			$customer_data['billing_phone'] = wpf_phone_number_to_e164( $customer_data['billing_phone'], $customer_data['billing_country'] );
+		}
+
+		if ( ! empty( $customer_data['shipping_phone'] ) ) {
+			$customer_data['shipping_phone'] = wpf_phone_number_to_e164( $customer_data['shipping_phone'], $customer_data['shipping_country'] );
+		}
+
+		return $customer_data;
+	}
+
 
 	/**
 	 * Sync Tags.
@@ -233,7 +301,8 @@ class WPF_Klaviyo {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			foreach ( $response->data as $list ) {
-				$available_tags[ $list->id ] = $list->attributes->name;
+				$available_tags[ $list->id ]            = $list->attributes->name;
+				$available_tags[ $list->id . '_optin' ] = $list->attributes->name . ' ' . __( '(opt-in to marketing)', 'wp-fusion-lite' );
 			}
 
 			$response->links->next ? $request = $response->links->next : $continue = false;
@@ -384,33 +453,76 @@ class WPF_Klaviyo {
 	/**
 	 * Applies tags to a contact
 	 *
-	 * @access public
-	 * @return bool
+	 * @return bool|WP_Error True on success, error on failure.
 	 */
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$params = $this->params;
+		$params = $this->get_params();
 
 		$data = array(
 			'data' => array(
-				array(
-					'type' => 'profile',
-					'id'   => $contact_id,
+				'type'          => 'profile-subscription-bulk-create-job',
+				'attributes'    => array(
+					'custom_source' => __( 'WP Fusion', 'wp-fusion-lite' ),
+					'profiles'      => array(
+						'data' => array(
+							array(
+								'type'       => 'profile',
+								'id'         => $contact_id,
+								'attributes' => array(
+									'email'         => wp_fusion()->crm->get_email_from_cid( $contact_id ),
+									'subscriptions' => array(
+										'email' => array(
+											'marketing' => array(
+												'consent'      => 'SUBSCRIBED',
+												'consented_at' => $this->get_current_date_with_timezone_offset(),
+											),
+										),
+									),
+								),
+							),
+						),
+					),
+				),
+				'relationships' => array(
+					'list' => array(
+						'data' => array(
+							'type' => 'list',
+						),
+					),
 				),
 			),
 		);
 
-		$params['body'] = wp_json_encode( $data );
-
 		foreach ( $tags as $tag_id ) {
 
-			$request  = 'https://a.klaviyo.com/api/lists/' . $tag_id . '/relationships/profiles/';
-			$response = wp_safe_remote_post( $request, $params );
+			if ( false === strpos( $tag_id, '_optin' ) ) {
+
+				// Non explicit consent, adds them to the list NEVER SUBSCRIBED.
+
+				$data = array(
+					'data' => array(
+						array(
+							'type' => 'profile',
+							'id'   => $contact_id,
+						),
+					),
+				);
+
+				$request = 'https://a.klaviyo.com/api/lists/' . $tag_id . '/relationships/profiles/';
+
+			} else {
+
+				// Explicit consent. Adds them to the list SUBSCRIBED.
+
+				$data['data']['relationships']['list']['data']['id'] = $tag_id;
+
+				$request = 'https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/';
+			}
+
+			$params['body'] = wp_json_encode( $data );
+			$response       = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -665,7 +777,7 @@ class WPF_Klaviyo {
 	 * @param  bool|string $email_address The user email address.
 	 * @return bool|WP_Error True if success, WP_Error if failed.
 	 */
-	public function track_event( $event, $event_data = false, $email_address = false ) {
+	public function track_event( $event, $event_data = array(), $email_address = false ) {
 
 		if ( empty( $email_address ) && ! wpf_is_user_logged_in() ) {
 			// Tracking only works if WP Fusion knows who the contact is.

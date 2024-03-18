@@ -546,6 +546,8 @@ class WPF_CRM_Base {
 			$enabled = false;
 		} elseif ( $this->supports( 'same_site' ) ) {
 			$enabled = false;
+		} elseif ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+			$enabled = false;
 		}
 
 		return apply_filters( 'wpf_use_api_queue', $enabled, $method, $args );

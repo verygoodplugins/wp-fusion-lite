@@ -4,7 +4,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.42.10
+ * Version: 3.43.0
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -28,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.42.10' );
+define( 'WP_FUSION_VERSION', '3.43.0' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -38,7 +38,7 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 /**
- * Main WP_Fusion_Lite class.
+ * Main WP_Fusion class.
  *
  * @since 1.0.0
  */
@@ -125,6 +125,14 @@ final class WP_Fusion_Lite {
 	 */
 	public $admin_interfaces;
 
+	/**
+	 * Handles admin notices.
+	 *
+	 * @var WPF_Admin_Notices
+	 * @since 3.42.12
+	 */
+	public $admin_notices;
+
 
 	/**
 	 * Handles restricted content and redirects
@@ -189,6 +197,10 @@ final class WP_Fusion_Lite {
 			self::$instance->logger   = new WPF_Log_Handler();
 			self::$instance->batch    = new WPF_Batch();
 
+			if ( is_admin() ) {
+				self::$instance->admin_notices = new WPF_Admin_Notices();
+			}
+
 			// Integration modules are stored here for easy access, for
 			// example wp_fusion()->integrations->{'woocommerce'}->process_order( $order_id );.
 
@@ -196,6 +208,7 @@ final class WP_Fusion_Lite {
 
 			// Load the CRM modules.
 			add_action( 'plugins_loaded', array( self::$instance, 'init_crm' ) );
+
 
 			// Only useful if a CRM is selected.
 			if ( self::$instance->settings->get( 'connection_configured' ) ) {
