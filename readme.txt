@@ -201,7 +201,7 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 == Changelog ==
 
-= 3.42.10 - 2/5/2024 =
+= 3.43.0 - 3/18/2024 =
 
 ##### New Features
 
