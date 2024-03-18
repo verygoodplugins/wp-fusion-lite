@@ -393,7 +393,8 @@ jQuery(document).ready(function($){
     			data: function( params ) {
     				var query = {
 						search: params.term,
-						action: 'wpf_get_log_users'
+						action: 'wpf_get_log_users',
+						_ajax_nonce: wpf_admin.nonce
 					}
 
 					return query;
@@ -884,6 +885,40 @@ jQuery(document).ready(function($){
 
 		}
 	}
+
+	// If So
+	function wpf_ifso_init_select(new_item=false){
+		if($('.wpf_ifso_select').length > 0){
+			jQuery('.wpf_ifso_select').each(function(){
+				var select4_attr = jQuery(this).attr('data-select4-id');
+				if (typeof select4_attr === 'undefined' || select4_attr === false) {
+					var hide_container = false;
+					if(jQuery(this).is(':hidden')){
+						hide_container = true;
+					}
+					jQuery(this).select4();
+					jQuery(this).next().attr('data-field','wpf-tags');
+					if(hide_container === true){
+						jQuery(this).next().hide();
+					}
+
+				}
+				if(new_item === true){
+					jQuery('.ifso-versions-sortable li:last-child .select4-container').remove();
+					jQuery(this).select4();
+					jQuery(this).next().attr('data-field','wpf-tags').hide();
+				}
+
+			});
+		}
+	}
+
+	wpf_ifso_init_select();
+	jQuery(document).on( 'versionAdded', function(e){
+		wpf_ifso_init_select(true);
+	});
+
+
 
 	// LifterLMS
 

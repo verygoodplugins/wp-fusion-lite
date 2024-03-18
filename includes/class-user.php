@@ -1182,11 +1182,7 @@ class WPF_User {
 		wpf_log( 'info', $user_id, __( 'Loaded tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
 
 		// Compare new tags to current tags to see what's changed.
-		$user_tags = get_user_meta( $user_id, WPF_TAGS_META_KEY, true );
-
-		if ( empty( $user_tags ) ) {
-			$user_tags = array();
-		}
+		$user_tags = (array) get_user_meta( $user_id, WPF_TAGS_META_KEY, true );
 
 		if ( ! empty( $tags ) && $tags == $user_tags ) {
 
@@ -1234,7 +1230,11 @@ class WPF_User {
 
 		// Save it to the DB.
 
-		update_user_meta( $user_id, WPF_TAGS_META_KEY, $tags );
+		if ( ! empty( $tags ) ) {
+			update_user_meta( $user_id, WPF_TAGS_META_KEY, $tags );
+		} else {
+			delete_user_meta( $user_id, WPF_TAGS_META_KEY );
+		}
 
 		// Check if tags were added.
 
@@ -1807,7 +1807,7 @@ class WPF_User {
 
 		$user_id = $wpdb->get_var( $query );
 
-		if ( $user_id > 100000000 ) {
+		if ( $user_id > 100000000 || is_null( $user_id ) ) {
 			// If the user ID is greater than 100 million, it's an auto-login user ID.
 			$user_id = false;
 		}

@@ -100,7 +100,7 @@ class WPF_Batch {
 			'users_register'      => array(
 				'label'   => __( 'Export users', 'wp-fusion-lite' ),
 				'title'   => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip' => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+				'tooltip' => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts, and any registration tags will be applied.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 			'users_register_tags' => array(
 				'label'   => __( 'Apply registration tags', 'wp-fusion-lite' ),

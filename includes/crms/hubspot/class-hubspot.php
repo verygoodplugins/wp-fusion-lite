@@ -129,7 +129,13 @@ class WPF_HubSpot {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'date' === $field_type ) {
+		if ( in_array( $field, wpf_get_option( 'read_only_fields', array() ) ) ) {
+
+			// Don't sync read only fields, they'll just throw an error anyway.
+
+			return '';
+
+		} elseif ( 'date' === $field_type ) {
 
 			// Dates are in milliseconds since the epoch so if the timestamp
 			// isn't already in ms we'll multiply x 1000 here. Can't use
@@ -147,7 +153,9 @@ class WPF_HubSpot {
 			// "Property values were not valid 2024-01-30T01:07:09 was not a valid long".
 
 			// We have to do the timezone conversion here because *most* dates coming into
-			// this function will be UTC (like from Woo subs).
+			// this function will be UTC (except Woo subs is currently local).
+
+			// Update 3.43.0. Dates coming into this should now always be in UTC.
 
 			if ( ! empty( $value ) && is_numeric( $value ) && $value < 1000000000000 ) {
 
@@ -544,26 +552,28 @@ class WPF_HubSpot {
 			return $response;
 		}
 
-		$built_in_fields      = array();
-		$custom_fields        = array();
+		$built_in_fields    = array();
+		$custom_fields      = array();
 		$multiselect_fields = array();
+		$read_only_fields   = array();
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $body_json as $field ) {
 
-			if ( $field->readOnlyValue == true ) {
-				continue;
+			if ( $field->{'readOnlyValue'} ) {
+				$field->label      .= ' (' . __( 'read only', 'wp-fusion-lite' ) . ')';
+				$read_only_fields[] = $field->name;
 			}
 
-			if ( empty( $field->createdUserId ) ) {
+			if ( empty( $field->{'createdUserId'} ) ) {
 				$built_in_fields[ $field->name ] = $field->label;
 			} else {
 				$custom_fields[ $field->name ] = $field->label;
 			}
 
 			// Store the multiselect for the tag type dropdown.
-			if ( 'checkbox' === $field->fieldType ) {
+			if ( 'checkbox' === $field->{'fieldType'} ) {
 				$multiselect_fields[ $field->name ] = $field->label;
 			}
 		}
@@ -580,6 +590,9 @@ class WPF_HubSpot {
 
 		// Store the multiselect for the tag type dropdown.
 		wp_fusion()->settings->set( 'hubspot_multiselect_fields', $multiselect_fields );
+
+		// Store the read only fields.
+		wp_fusion()->settings->set( 'read_only_fields', $read_only_fields );
 
 		return $crm_fields;
 

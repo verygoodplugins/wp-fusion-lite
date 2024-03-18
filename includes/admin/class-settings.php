@@ -2064,6 +2064,7 @@ class WPF_Settings {
 			'desc'    => __( 'Only log errors (not all activity).', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'advanced',
+			'lock'    => array( 'logging_http_api' ),
 		);
 
 		if ( isset( wp_fusion()->crm->params ) ) {
@@ -2915,7 +2916,7 @@ class WPF_Settings {
 
 		foreach ( wp_fusion()->integrations as $id => $integration ) {
 
-			if ( $integration->name && $integration->docs_url && ! isset( $input[ $id ] ) ) {
+			if ( $integration->name && isset( $integration->docs_url ) && ! isset( $input[ $id ] ) ) {
 				$input[ $id ] = false;
 			}
 		}
@@ -3002,7 +3003,12 @@ class WPF_Settings {
 	 */
 
 	public function show_field_export_options( $id, $field ) {
-		foreach ( wp_fusion()->batch->get_export_options() as $key => $data ) {
+
+		$options = wp_fusion()->batch->get_export_options();
+
+		uasort( $options, 'wpf_sort_by_label' );
+
+		foreach ( $options as $key => $data ) {
 
 			echo '<div class="wpf-export-option wpf-export-option-' . esc_attr( $key ) . '">';
 

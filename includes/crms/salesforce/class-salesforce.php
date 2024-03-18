@@ -280,7 +280,12 @@ class WPF_Salesforce {
 
 			return '';
 
-		} elseif (  'date' === $field_type && is_numeric( $value ) ) {
+		} elseif ( 'date' === $field_type && empty( $value ) ) {
+
+			// Erases empty dates, since 3.42.12.
+			return null;
+
+		} elseif ( 'date' === $field_type && is_numeric( $value ) ) {
 
 			// Adjust formatting for date fields.
 			$date = gmdate( 'Y-m-d', $value );
@@ -1150,6 +1155,10 @@ class WPF_Salesforce {
 			$data['accountId'] = $default_account;
 		}
 
+		// format_field_value() can pass empty values for updates, but we can't create
+		// a contact with empty values, so we'll remove them here.
+		$data = array_filter( $data );
+
 		$params['body'] = wp_json_encode( $data );
 		$response       = wp_safe_remote_post( $this->instance_url . '/services/data/v42.0/sobjects/' . $this->object_type . '/', $params );
 
@@ -1173,6 +1182,13 @@ class WPF_Salesforce {
 	public function update_contact( $contact_id, $data ) {
 
 		$params = $this->get_params();
+
+		foreach ( $data as $key => $value ) {
+			// Allows erasing fields during updates.
+			if ( '' === $value ) {
+				$data[ $key ] = null;
+			}
+		}
 
 		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PATCH';

@@ -12,6 +12,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPF_Admin_Notices {
 
 	/**
+	 * Array of notices to be displayed.
+	 *
+	 * @since 3.42.12
+	 * @var array
+	 */
+	public $settings_notices = array();
+
+	/**
 	 * Constructs a new instance.
 	 *
 	 * @since 2.0.0
@@ -21,6 +29,7 @@ class WPF_Admin_Notices {
 		add_action( 'admin_notices', array( $this, 'plugin_activation' ) );
 
 		add_action( 'wpf_settings_notices', array( $this, 'show_compatibility_notices' ) );
+		add_action( 'wpf_settings_notices', array( $this, 'show_session_notices' ) );
 		add_action( 'wp_ajax_dismiss_wpf_notice', array( $this, 'dismiss_notice' ) );
 
 	}
@@ -68,6 +77,32 @@ class WPF_Admin_Notices {
 	}
 
 	/**
+	 * Shows notices that were queued up on init (connection issues, etc).
+	 *
+	 * @since 3.42.12
+	 * @return mixed HTML output
+	 */
+	public function show_session_notices() {
+
+		foreach ( $this->settings_notices as $message ) {
+
+			echo '<div class="notice notice-error"><p>' . wp_kses_post( $message ) . '</p></div>';
+
+		}
+	}
+
+	/**
+	 * Adds a notice to be displayed
+	 *
+	 * @since 3.42.2
+	 * @param string $message The message.
+	 */
+	public function add_notice( $message ) {
+
+		$this->settings_notices[] = $message;
+	}
+
+	/**
 	 * Saves option that notice has been dismissed
 	 *
 	 * @access public
@@ -89,5 +124,3 @@ class WPF_Admin_Notices {
 	}
 
 }
-
-new WPF_Admin_Notices();

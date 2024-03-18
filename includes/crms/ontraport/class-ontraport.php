@@ -120,9 +120,6 @@ class WPF_Ontraport {
 
 		if ( 'date' === $field_type && is_numeric( $value ) ) {
 
-			$offset = get_option( 'gmt_offset' );
-			$value -= ( $offset * 60 * 60 );
-
 			// Dates in Ontraport are definitely stored in UTC. And loaded in
 			// UTC. This function assumes the date coming in is local time, and
 			// converts it.
@@ -135,6 +132,13 @@ class WPF_Ontraport {
 			// into local time, this does mean a datetime field will drift by a
 			// few hours every time a user is edited and the date is synced back
 			// to OP. So basically, we're screwed either way 🤷‍♂️.
+
+			// Update 3.43.0. March 2nd 2024. We're now going to use UTC dates in
+			// the WooCommerce Subscriptions integration and others as much as possible,
+			// so we're removing the time zone conversion here.
+
+			// $offset = get_option( 'gmt_offset' );
+			// $value -= ( $offset * 60 * 60 );
 
 			return $value;
 

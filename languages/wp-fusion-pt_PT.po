@@ -1,0 +1,2934 @@
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Project-Id-Version: WP Fusion\n"
+"POT-Creation-Date: 2019-07-30 11:56+0200\n"
+"PO-Revision-Date: 2019-08-11 19:04+0100\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-Flags-xgettext: --add-comments=translators:\n"
+"X-Poedit-WPHeader: wp-fusion.php\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;"
+"esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;"
+"_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
+"Last-Translator: \n"
+"Language: pt_PT\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: *.js\n"
+
+#: includes/admin/admin-functions.php:22 includes/admin/class-settings.php:1523
+#: includes/integrations/class-lifterlms.php:291
+#: includes/integrations/class-popup-maker.php:88
+msgid "Select tags"
+msgstr "Selecionar etiquetas"
+
+#: includes/admin/batch/class-background-process.php:501
+#, php-format
+msgid "Every %d Minutes"
+msgstr "Cada %d Minutos"
+
+#: includes/admin/class-admin-interfaces.php:118
+msgid "Filter by tag"
+msgstr "Filtrar por etiqueta"
+
+#: includes/admin/class-admin-interfaces.php:134
+#: includes/admin/logging/class-log-table-list.php:243
+msgid "Filter"
+msgstr "Filtrar"
+
+#: includes/admin/class-admin-interfaces.php:271
+msgid "Restrict access to archives"
+msgstr "Restringir acesso a arquivos"
+
+#: includes/admin/class-admin-interfaces.php:278
+msgid "Restrict access to all posts"
+msgstr "Restringir acesso a todos os posts"
+
+#: includes/admin/class-admin-interfaces.php:287
+msgid "Hide term"
+msgstr "Esconder expressão"
+
+#: includes/admin/class-admin-interfaces.php:295
+#: includes/admin/class-admin-interfaces.php:670
+#: includes/integrations/class-bbpress.php:73
+#: includes/integrations/class-wpforo.php:209
+msgid "Required tags (any)"
+msgstr "Etiquetas necessárias (quaisquer)"
+
+#: includes/admin/class-admin-interfaces.php:318
+#: includes/integrations/class-wpforo.php:211
+msgid "Redirect if access is denied"
+msgstr "Redirecionar se acesso negado"
+
+#: includes/admin/class-admin-interfaces.php:327
+msgid "Or enter a URL"
+msgstr "Ou inserir URL"
+
+#: includes/admin/class-admin-interfaces.php:414
+msgid "Tags"
+msgstr "Etiquetas"
+
+#: includes/admin/class-admin-interfaces.php:689
+msgid "Required tags (all)"
+msgstr "Etiquetas necessárias (todas)"
+
+#: includes/admin/class-admin-interfaces.php:797
+#, php-format
+msgid "Apply tags when a user views this %s"
+msgstr "Aplicar etiquetas quando utilizador visualizar este %s"
+
+#: includes/admin/class-admin-interfaces.php:809
+#, php-format
+msgid "Remove tags when a user views this %s"
+msgstr "Remover etiquetas quando utilizador visualizar este %s"
+
+#: includes/admin/class-admin-interfaces.php:825
+msgid "Delay (in ms) before applying / removing tags"
+msgstr "Atrasar (em ms) antes de aplicar / remover etiquetas"
+
+#: includes/admin/class-admin-interfaces.php:1010
+msgid "Users must be logged in to see this widget"
+msgstr "Utilizadores devem ter sessão iniciada para ver este widget"
+
+#: includes/admin/class-admin-interfaces.php:1014
+#: includes/admin/class-admin-interfaces.php:1036
+msgid "Allowable Tags"
+msgstr "Etiquetas permitidas"
+
+#: includes/admin/class-settings.php:730
+msgid "General Settings"
+msgstr "Definições gerais"
+
+#: includes/admin/class-settings.php:731 includes/admin/class-settings.php:1082
+msgid "Contact Fields"
+msgstr "Campos de contacto"
+
+#: includes/admin/class-settings.php:733 includes/admin/class-settings.php:1100
+msgid "Import Users"
+msgstr "Utilização de Importar"
+
+#: includes/admin/class-settings.php:734
+msgid "Setup"
+msgstr "Setup"
+
+#: includes/admin/class-settings.php:735
+msgid "Advanced"
+msgstr "Avançado"
+
+#: includes/admin/class-settings.php:847
+msgid "Automatically Create Contact Records for New Users"
+msgstr "Criar automaticamente registos de contactos para novos utilizadores"
+
+#: includes/admin/class-settings.php:854
+#: includes/integrations/class-give.php:109
+msgid "Create Contacts"
+msgstr "Criar contactos"
+
+#: includes/admin/class-settings.php:855
+#, php-format
+msgid "Create new contacts in %s when users are added in WordPress."
+msgstr ""
+"Criar novos contactos em %s quando utilizadores são adicionados no WordPress."
+
+#: includes/admin/class-settings.php:863
+msgid "Assign Tags"
+msgstr "Atribuir etiquetas"
+
+#: includes/admin/class-settings.php:864
+msgid "The selected tags will be applied to new contacts."
+msgstr "As etiquetas selecionadas podem ser aplicadas a novos contactos."
+
+#: includes/admin/class-settings.php:876
+msgid "Synchronize Contact Data"
+msgstr "Sincronizar dados do contacto"
+
+#: includes/admin/class-settings.php:883
+msgid "Push"
+msgstr "Empurrar"
+
+#: includes/admin/class-settings.php:884
+#, php-format
+msgid ""
+"When a user profile is modified, update their contact record in %s to match."
+msgstr ""
+"Quando perfil de utilizador for alterado, atualizar o registo do contacto em "
+"%s para corresponder."
+
+#: includes/admin/class-settings.php:891
+msgid "Push All"
+msgstr "Empurrar todos"
+
+#: includes/admin/class-settings.php:892
+msgid ""
+"Push meta data whenever a single \"user_meta\" entry is added or modified."
+msgstr ""
+"Empurrar dados meta cada vez que uma entrada \"user_meta\" for adicionada ou "
+"alterada."
+
+#: includes/admin/class-settings.php:900
+msgid "Login Tags Sync"
+msgstr "Sincronização de etiquetas de início de sessão"
+
+#: includes/admin/class-settings.php:901
+#, php-format
+msgid "Load the user's latest tags from %s on login."
+msgstr "Carregar as últimas etiquetas do utilizador do %s ao iniciar sessão."
+
+#: includes/admin/class-settings.php:905
+#, php-format
+msgid ""
+"Note: this is only necessary if you are applying tags via automations in %s "
+"and haven't set up webhooks to send the data back. Any tags applied via WP "
+"Fusion are available in WordPress immediately."
+msgstr ""
+"Nota: isto apenas é necessário se estiveres a aplicar etiquetas via "
+"automações em %s e não definiste webhooks para enviar os dados de volta. "
+"Quaisquer etiquetas aplicadas via WP Fusion estão disponíveis imediatamente "
+"no WordPress."
+
+#: includes/admin/class-settings.php:909
+msgid "Login Meta Sync"
+msgstr "Sincronização de meta de início de sessão"
+
+#: includes/admin/class-settings.php:910
+#, php-format
+msgid "Load the user's latest meta data from %s on login."
+msgstr ""
+"Carregar os últimos dados de meta do utilizador do %s ao iniciar sessão."
+
+#: includes/admin/class-settings.php:914
+#, php-format
+msgid ""
+"Note: this is only necessary if you are manually updating contact data in %s "
+"and haven't set up webhooks to send the data back."
+msgstr ""
+"Nota: isto apenas é necessário se estiveres a atualizar manualmente os dados "
+"do contacto em %s e não definiste webhooks para enviar os dados de volta."
+
+#: includes/admin/class-settings.php:918
+msgid "Update Tag"
+msgstr "Atualizar etiqueta"
+
+#: includes/admin/class-settings.php:919
+msgid ""
+"Apply this tag when a contact record has been updated (useful for triggering "
+"data to be sent to other WP Fusion installs)."
+msgstr ""
+"Aplicar esta etiqueta quando um registo de contacto é atualizado (útil para "
+"disparar dados a enviar para outras instalações do WP Fusion)"
+
+#: includes/admin/class-settings.php:930
+msgid "Restrict Content Access"
+msgstr "Restringir acesso ao conteúdo"
+
+#: includes/admin/class-settings.php:937
+msgid "Hide From Menus"
+msgstr "Esconder de menus"
+
+#: includes/admin/class-settings.php:938
+msgid "Content that the user cannot access will be removed from menus."
+msgstr "Conteúdo que o utilizador não pode aceder será removido dos menus."
+
+#: includes/admin/class-settings.php:945
+msgid "Filter Queries"
+msgstr "Filtrar queries"
+
+#: includes/admin/class-settings.php:946
+msgid ""
+"Content that the user cannot access will be completely hidden from all post "
+"listings, grids, and archives."
+msgstr ""
+"Conteúdo que o utilizador não pode aceder será completamente escondido de "
+"todas as listagens de posts, grelhas e arquivos."
+
+#: includes/admin/class-settings.php:958
+msgid "Exclude Administrators"
+msgstr "Excluir Administradores"
+
+#: includes/admin/class-settings.php:959
+msgid ""
+"Users with Administrator accounts will be able to view all content, "
+"regardless of restrictions."
+msgstr ""
+"Utilizadores com contas de Administrador podem ver todo o conteúdo, "
+"independente das restrições."
+
+#: includes/admin/class-settings.php:966
+msgid "Default Redirect"
+msgstr "Redirecionamento por defeito"
+
+#: includes/admin/class-settings.php:967
+msgid ""
+"Default redirect URL for when access is denied. This can be overridden on a "
+"per-page basis. Leave blank to display error message below."
+msgstr ""
+"Redirecionar URL por defeito quando o acesso é negado. Isto pode ser "
+"sobreposto em cada página. Deixar em branco para exibir mensagem de erro "
+"abaixo."
+
+#: includes/admin/class-settings.php:974
+msgid "Return After Login"
+msgstr "Retornar após início de sessão"
+
+#: includes/admin/class-settings.php:975
+msgid ""
+"If a user has been redirected away from a restricted page, take them back to "
+"that page after logging in."
+msgstr ""
+"Se utilizador é redirecionado para fora duma página restrita, retorne-o a "
+"essa página após iniciar sessão."
+
+#: includes/admin/class-settings.php:982
+msgid "Restricted Content Message"
+msgstr "Restringir conteúdo da mensagem"
+
+#: includes/admin/class-settings.php:983
+msgid "Restricted content message for when a redirect hasn't been specified."
+msgstr ""
+"Restringir conteúdo da mensagem quando o redirecionamento não é especificado."
+
+#: includes/admin/class-settings.php:991
+msgid "Per Post Messages"
+msgstr "Mensagens por post"
+
+#: includes/admin/class-settings.php:992
+msgid ""
+"Enable this setting to allow confuguring a different restricted content "
+"message for each page or post."
+msgstr ""
+"Ativar esta opção para permitir configuração conteúdo de mensagem diferente "
+"para cada página ou post."
+
+#: includes/admin/class-settings.php:1003
+msgid "SEO"
+msgstr "SEO"
+
+#: includes/admin/class-settings.php:1010
+msgid "Show Excerpts"
+msgstr "Exibir exertos"
+
+#: includes/admin/class-settings.php:1011
+msgid "Show an excerpt of your restricted content to search engine spiders."
+msgstr ""
+"Exibir exerto do teu conteúdo restrito às spiders dos motores de busca."
+
+#: includes/admin/class-settings.php:1019
+msgid "Excerpt Length"
+msgstr "Comprimento da extensão"
+
+#: includes/admin/class-settings.php:1020
+msgid ""
+"Show the first X words of your content to search engines. Leave blank for "
+"default, which is usually 55 words."
+msgstr ""
+"Mostrar as primeiras X palavras do teu conteúdo aos motores de busca. Deixar "
+"em branco para defeito, que é normalmente 55 palavras."
+
+#: includes/admin/class-settings.php:1030
+msgid "Webhooks"
+msgstr "Webhooks"
+
+#: includes/admin/class-settings.php:1042
+#, php-format
+msgid ""
+"Webhooks allow you to send data from %s back to your website. See <a href="
+"\"http://wpfusion.com/documentation/#webhooks\" target=\"_blank\">our "
+"documentation</a> for more information on creating webhooks."
+msgstr ""
+"Webhooks permitem enviar dados de %s de volta para o teu website. Ver <a "
+"href=\"http://wpfusion.com/documentation/#webhooks\" target=\"_blank\">a "
+"nossa documentação</a> para mais informação para criar webhooks."
+
+#: includes/admin/class-settings.php:1046
+#: includes/crms/vtiger/admin/class-admin.php:84
+msgid "Access Key"
+msgstr "Chave de acesso"
+
+#: includes/admin/class-settings.php:1047
+msgid ""
+"Use this key when sending data back to WP Fusion via a webhook or ThriveCart."
+msgstr ""
+"Usa esta chave ao enviar dados de volta para o WP Fusion via um webhook ou "
+"ThriveCart."
+
+#: includes/admin/class-settings.php:1053
+msgid "Test Webhooks"
+msgstr "Testar webhooks"
+
+#: includes/admin/class-settings.php:1054
+msgid ""
+"Click this button to test your site's ability to receive incoming webhooks."
+msgstr ""
+"Clica neste botão para testar a capacidade do teu site de receber webhooks."
+
+#: includes/admin/class-settings.php:1062
+msgid "Return Password"
+msgstr "Retornar palavra-passe"
+
+#: includes/admin/class-settings.php:1063
+#, php-format
+msgid "Send new users' generated passwords back to %s after import."
+msgstr ""
+"Enviar palavra-passe de novos utilizadores de volta para %s após importação."
+
+#: includes/admin/class-settings.php:1070
+msgid "Return Password Field"
+msgstr "Retornar campo de palavra-passe"
+
+#: includes/admin/class-settings.php:1071
+#, php-format
+msgid ""
+"Select a field in %s where generated passwords will be stored for imported "
+"users."
+msgstr ""
+"Selecionar campo em %s em que palavras-passe geradas serão armazenadas para "
+"utilizadores importados."
+
+#: includes/admin/class-settings.php:1094
+#, php-format
+msgid ""
+"This feature allows you to import %s contacts as new WordPress users. Any "
+"fields configured on the <strong>Contact Fields</strong> tab will be "
+"imported."
+msgstr ""
+"Esta opção permite importar contactos %s como novos utilizadores WordPress. "
+"Quaisquer campos configurados no separador dos <strong>Campos de contacto</"
+"strong> serão importados."
+
+#: includes/admin/class-settings.php:1101
+msgid "Contacts with the selected tags will be imported as new users."
+msgstr ""
+"Contactos com etiquetas selecionadas serão importados como novos "
+"utilizadores."
+
+#: includes/admin/class-settings.php:1108
+msgid "Enable Notifications"
+msgstr "Habilitar notificações"
+
+#: includes/admin/class-settings.php:1109
+msgid ""
+"Send a <a href=\"https://wpfusion.com/documentation/tutorials/import-users/"
+"\" target=\"_blank\">welcome email</a> to new users containing their "
+"username, password, and login link."
+msgstr ""
+"Enviar <a href=\"https://wpfusion.com/documentation/tutorials/import-users/"
+"\" target=\"_blank\">email de boas vindas</a> a novos utilizadores, contendo "
+"username, palavra-passe e link de início de sessão."
+
+#: includes/admin/class-settings.php:1116
+msgid "Import Groups"
+msgstr "Importar grupos"
+
+#: includes/admin/class-settings.php:1127
+msgid "API Configuration"
+msgstr "Configuração API"
+
+#: includes/admin/class-settings.php:1133
+msgid "Select CRM"
+msgstr "Selecionar CRM"
+
+#: includes/admin/class-settings.php:1156
+msgid "License Key"
+msgstr "Chave de licença"
+
+#: includes/admin/class-settings.php:1176
+msgid "Advanced Features"
+msgstr "Opções avançadas"
+
+#: includes/admin/class-settings.php:1183
+msgid "Limit  User Roles"
+msgstr "Limitar cargos de utilizador"
+
+#: includes/admin/class-settings.php:1184
+msgid ""
+"You can choose to create new contacts <strong>only when users are added to a "
+"certain role</strong>. Leave blank for all roles."
+msgstr ""
+"Podes escolher criar novos contactos <strong>apenas quando utilizadores são "
+"adicionados a um certo cargo</strong>. Deixa em branco para todos os cargos."
+
+#: includes/admin/class-settings.php:1192
+msgid "Allow URL Login"
+msgstr "Permitir URL de início de sessão"
+
+#: includes/admin/class-settings.php:1193
+msgid ""
+"Track user activity and unlock content by passing a Contact ID in a URL. See "
+"<a href=\"https://wpfusion.com/documentation/tutorials/auto-login-links/\" "
+"target=\"_blank\">this tutorial</a> for more info."
+msgstr ""
+"Acompanhar atividade do utilizador e desbloquear conteúdo ao passar o "
+"Contact ID numa URL. Ver <a href=\"https://wpfusion.com/documentation/"
+"tutorials/auto-login-links/\" target=\"_blank\">este tutorial</a> para mais "
+"informação."
+
+#: includes/admin/class-settings.php:1206
+msgid "Form Auto Login"
+msgstr "Auto início de sessão de formulário"
+
+#: includes/admin/class-settings.php:1207
+msgid ""
+"Start an auto-login session whenever a visitor submits a form configured "
+"with WP Fusion."
+msgstr ""
+"Iniciar uma sessão de auto-login cada vez que um visitante envia um "
+"formulário configurado com WP Fusion."
+
+#: includes/admin/class-settings.php:1214
+msgid "ThriveCart Auto Login"
+msgstr "ThriveCart início de sessão automático"
+
+#: includes/admin/class-settings.php:1215
+msgid ""
+"Automatically log in new users with a ThriveCart success URL. See <a href="
+"\"https://wpfusion.com/documentation/tutorials/thrivecart/\" target=\"_blank"
+"\">this tutorial</a> for more info."
+msgstr ""
+"Iniciar sessão automaticamente a novos utilizadores com URL de sucesso do "
+"ThriveCart. Ver <a href=\"https://wpfusion.com/documentation/tutorials/"
+"thrivecart/\" target=\"_blank\">este tutorial</a> para mais informação."
+
+#: includes/admin/class-settings.php:1222
+msgid "Link Tracking"
+msgstr "Rastreamento de link"
+
+#: includes/admin/class-settings.php:1223
+msgid ""
+"Enqueue the scripts to handle link click tracking. See <a href=\"https://"
+"wpfusion.com/documentation/tutorials/link-click-tracking/\" target=\"_blank"
+"\">this tutorial</a> for more info."
+msgstr ""
+"Colocar scripts em fila de espera para lidar com rastreamento de cliques. "
+"Ver <a href=\"https://wpfusion.com/documentation/tutorials/link-click-"
+"tracking/\" target=\"_blank\">este tutorial</a> para mais informações."
+
+#: includes/admin/class-settings.php:1230
+msgid "Deletion Tags"
+msgstr "Tags de eliminação"
+
+#: includes/admin/class-settings.php:1231
+#, php-format
+msgid ""
+"These tags will be applied in %s when a user is deleted from the site, or "
+"when a user deletes their own account."
+msgstr ""
+"Estas tags são aplicadas em %s quando um utilizador é eliminado do site, ou "
+"quando o utilizador elimina a sua própria conta."
+
+#: includes/admin/class-settings.php:1238
+msgid "System Settings"
+msgstr "Definições do sistema"
+
+#: includes/admin/class-settings.php:1245
+msgid "Staging Mode"
+msgstr "Modo de teste"
+
+#: includes/admin/class-settings.php:1246
+#, php-format
+msgid ""
+"When staging mode is active, all normal WP Fusion features will be "
+"available, but no API calls will be sent to %s."
+msgstr ""
+"Quando o modo de teste está ativo, todas as funções normais do WP Fusion "
+"estarão disponíveis, mas as chamadas de API não serão enviadas para %s."
+
+#: includes/admin/class-settings.php:1253
+msgid "Enable Logging"
+msgstr "Permitir início de sessão"
+
+#: includes/admin/class-settings.php:1254
+msgid "Access detailed activity logs for WP Fusion."
+msgstr "Acesso detalhado a logs de atividade para o WP Fusion."
+
+#: includes/admin/class-settings.php:1262
+msgid "Only Errors"
+msgstr "Apenas erros"
+
+#: includes/admin/class-settings.php:1263
+msgid "Only log errors (not all activity)."
+msgstr "Apenas erros de log (e não toda a atividade)."
+
+#: includes/admin/class-settings.php:1270
+msgid "Hide Additional Fields"
+msgstr "Esconder campos adicionais"
+
+#: includes/admin/class-settings.php:1271
+msgid "Hide the Additional Fields section from the Contact Fields tab."
+msgstr ""
+"Esconder secção de campos adicionais do separador de Campos de Contato."
+
+#: includes/admin/class-settings.php:1272
+msgid ""
+"If you're not using any of the fields this can speed up performance and make "
+"the settings page load faster."
+msgstr ""
+"Se não está a usar nenhum dos campos, isto pode agilizar o desempenho e que "
+"as definições carreguem mais depressa."
+
+#: includes/admin/class-settings.php:1279
+msgid "Admin Bar"
+msgstr "Barra de administração"
+
+#: includes/admin/class-settings.php:1280
+msgid "Enable the \"Preview With Tag\" functionality on the admin bar."
+msgstr "Permitir \"Pré-visualizar com tag\"\" na barra de administração."
+
+#: includes/admin/class-settings.php:1287
+msgid "Enable API Queue"
+msgstr "Permitir API Queue"
+
+#: includes/admin/class-settings.php:1288
+msgid "Combine redundant API calls to improve performance."
+msgstr "Combinar chamadas de API redundantes para melhorar desempenho."
+
+#: includes/admin/class-settings.php:1297
+msgid "Batch Operations"
+msgstr "Operações em massa"
+
+#: includes/admin/class-settings.php:1304
+msgid "Operation"
+msgstr "Operação"
+
+#: includes/admin/class-settings.php:1311
+#: includes/admin/class-settings.php:1318
+msgid "Reset"
+msgstr "Repor"
+
+#: includes/admin/class-settings.php:1319
+msgid ""
+"Check this box and click \"Save Changes\" below to reset all options to "
+"their defaults."
+msgstr ""
+"Assinale esta caixa e clique em \"Salvar mudanças\" abaixo para repor todas "
+"as opções para pré-defeito."
+
+#: includes/admin/class-settings.php:1409
+msgid "Reload all custom fields and available tags from your CRM"
+msgstr "Repor todos os campos personalizados e tags disponíveis da sua CRM"
+
+#: includes/admin/class-settings.php:1409
+msgid "Resynchronize Tags &amp; Fields"
+msgstr "Ressincronizar Tags &amp; Campos"
+
+#: includes/admin/class-settings.php:1469
+#: includes/integrations/class-convert-pro.php:77
+msgid "Select Tag"
+msgstr "Selecionar tag"
+
+#: includes/admin/class-settings.php:1835
+msgid "Resync contact IDs and tags"
+msgstr "Ressincronizar IDs de contacto e tags"
+
+#: includes/admin/class-settings.php:1836
+msgid "Users (contact IDs and tags)"
+msgstr "Utilizadores (IDs de contacto e tags)"
+
+#: includes/admin/class-settings.php:1837
+#, php-format
+msgid ""
+"All WordPress users will have their contact IDs checked / updated based on "
+"email address and tags will be updated based on their %s contact record"
+msgstr ""
+"Todos os utilizadores WordPress terão os IDs de contacto verificados / "
+"atualizados de acordo com o endereço de email e tags serão atualizadas no %s "
+"registo de contato deles"
+
+#: includes/admin/class-settings.php:1840
+msgid "Resync tags"
+msgstr "Ressincronizar tags"
+
+#: includes/admin/class-settings.php:1841
+msgid "Users (tags)"
+msgstr "Utilizadores (tags)"
+
+#: includes/admin/class-settings.php:1842
+msgid ""
+"Updates tags for all WordPress users who already have a saved contact ID"
+msgstr ""
+"Atualizar tags para todos os utilizadores WordPress que já tinham um ID de "
+"contacto guardado"
+
+#: includes/admin/class-settings.php:1845
+msgid "Export users"
+msgstr "Exportar utilizadores"
+
+#: includes/admin/class-settings.php:1846
+#: includes/admin/class-settings.php:1851
+#: includes/admin/class-settings.php:1856
+msgid "Users"
+msgstr "Utilizadores"
+
+#: includes/admin/class-settings.php:1847
+#, php-format
+msgid ""
+"All WordPress users without a matching %s contact record will be exported as "
+"new contacts"
+msgstr ""
+"Todos os utilizadores WordPress sem um registo de contato %s correspondente, "
+"serão exportados como novos contatos"
+
+#: includes/admin/class-settings.php:1850
+msgid "Push user meta"
+msgstr "Enviar user meta"
+
+#: includes/admin/class-settings.php:1852
+#, php-format
+msgid ""
+"All WordPress users with a contact record will have their meta data pushed "
+"to %s, overriding any data on the contact record with the values from "
+"WordPress"
+msgstr ""
+"Todos os utilizadores WordPress com um registo de contato terão os dados "
+"meta enviados para %s, sobrepondo dados no registo de contato com os valores "
+"do WordPress"
+
+#: includes/admin/class-settings.php:1855
+msgid "Pull user meta"
+msgstr "Puxar user meta"
+
+#: includes/admin/class-settings.php:1857
+#, php-format
+msgid ""
+"All WordPress users with a contact record will have their meta data loaded "
+"from %s, overriding any data in their user meta with the values from their "
+"contact record"
+msgstr ""
+"Todos os utilizadores WordPress com registo de contato terão os dados meta "
+"carregados de %s, sobrepondo dados no user meta deles com os valores do "
+"registo de contato deles"
+
+#: includes/admin/class-updater.php:202
+#, php-format
+msgid ""
+"There is a new version of %1$s available. %2$sView version %3$s details%4$s."
+msgstr ""
+"Está disponível uma nova versão de %1$s. %2$sVer detalhes%3$s da versão%4$s."
+
+#: includes/admin/class-updater.php:210
+#, php-format
+msgid ""
+"There is a new version of %1$s available. %2$sView version %3$s details%4$s "
+"or %5$supdate now%6$s."
+msgstr ""
+"Está disponível uma nova versão de %1$s. %2$sVer detalhes%3$s da versão%4$s "
+"ou %5$satualizar agora%6$s."
+
+#: includes/admin/class-updater.php:404
+msgid "You do not have permission to install plugin updates"
+msgstr "Não tem permissão para instalar atualizações de plugin"
+
+#: includes/admin/class-updater.php:404
+#: includes/admin/logging/class-log-table-list.php:41
+#: includes/admin/logging/class-log-table-list.php:111
+msgid "Error"
+msgstr "Erro"
+
+#: includes/admin/class-user-profile.php:243
+#, php-format
+msgid "%s Tags"
+msgstr "%s Tags"
+
+#: includes/admin/class-user-profile.php:259
+msgid "These tags are currently applied to the user in"
+msgstr "Estas tags estão atualmente aplicadas ao utilizador em"
+
+#: includes/admin/class-user-profile.php:259
+msgid "Edit Tags"
+msgstr "Editar tags"
+
+#: includes/admin/class-user-profile.php:265
+#: includes/admin/class-user-profile.php:268
+msgid "Resync Tags"
+msgstr "Ressincronizar tags"
+
+#: includes/admin/class-user-profile.php:269
+#, php-format
+msgid ""
+"If the contact ID or tags aren't in sync, click here to reset the local data "
+"and load from the %s contact record."
+msgstr ""
+"Se o ID de contato ou as tags não estiverem sincronizadas, clique aqui para "
+"repor os dados locais e carregar a partir do registo de contato de %s."
+
+#: includes/admin/logging/class-log-handler.php:132
+msgid "Logs"
+msgstr "Logs"
+
+#: includes/admin/logging/class-log-handler.php:213
+msgid "WP Fusion Activity Log"
+msgstr "Log de atividade do WP Fusion"
+
+#: includes/admin/logging/class-log-handler.php:221
+msgid "Flush all logs"
+msgstr "Descartar todos os logs"
+
+#: includes/admin/logging/class-log-handler.php:402
+msgid "Action failed. Please refresh the page and retry."
+msgstr "Ação falhou. Por favor refresque a página e tente de novo."
+
+#: includes/admin/logging/class-log-table-list.php:42
+#: includes/admin/logging/class-log-table-list.php:112
+msgid "Warning"
+msgstr "Aviso"
+
+#: includes/admin/logging/class-log-table-list.php:43
+#: includes/admin/logging/class-log-table-list.php:113
+msgid "Notice"
+msgstr "Notificação"
+
+#: includes/admin/logging/class-log-table-list.php:44
+#: includes/admin/logging/class-log-table-list.php:114
+msgid "Info"
+msgstr "Informação"
+
+#: includes/admin/logging/class-log-table-list.php:49
+msgid "Filter by level"
+msgstr "Filtrar por nível"
+
+#: includes/admin/logging/class-log-table-list.php:51
+msgid "All levels"
+msgstr "Todos os níveis"
+
+#: includes/admin/logging/class-log-table-list.php:71
+msgid "Timestamp"
+msgstr "Tempo registado"
+
+#: includes/admin/logging/class-log-table-list.php:72
+#: includes/integrations/class-s2member.php:110
+msgid "Level"
+msgstr "Nível"
+
+#: includes/admin/logging/class-log-table-list.php:73
+msgid "User"
+msgstr "Utilizador"
+
+#: includes/admin/logging/class-log-table-list.php:74
+msgid "Message"
+msgstr "Mensagem"
+
+#: includes/admin/logging/class-log-table-list.php:75
+msgid "Source"
+msgstr "Fonte"
+
+#: includes/admin/logging/class-log-table-list.php:228
+msgid "Delete"
+msgstr "Apagar"
+
+#: includes/admin/logging/class-log-table-list.php:280
+msgid "Filter by source"
+msgstr "Filtrar por fonte"
+
+#: includes/admin/logging/class-log-table-list.php:282
+msgid "All sources"
+msgstr "Todas as fontes"
+
+#: includes/admin/logging/class-log-table-list.php:325
+msgid "Filter by user"
+msgstr "Filtrar por utilizador"
+
+#: includes/admin/logging/class-log-table-list.php:328
+msgid "All users"
+msgstr "Todos os utilizadores"
+
+#: includes/admin/options/class-options.php:1208
+msgid "Invalid phone number."
+msgstr "Número de telefone inválido."
+
+#: includes/admin/options/class-options.php:1217
+msgid "Invalid ZIP code."
+msgstr "Código postal ou CEP inválido."
+
+#: includes/admin/options/class-options.php:1556
+msgid "Number must be greater than or equal to "
+msgstr "Número tem de ser maior ou igual que "
+
+#: includes/admin/options/class-options.php:1559
+msgid "Number must be less than or equal to "
+msgstr "Número tem de ser menor ou igual que "
+
+#: includes/admin/options/class-options.php:1859
+msgid "Invalid color code."
+msgstr "Código de cor inválido."
+
+#: includes/admin/options/class-options.php:2088
+msgid "You do not have sufficient permissions to edit templates for this site."
+msgstr "Não tem permissões suficientes para editar templates neste site."
+
+#: includes/admin/options/class-options.php:2091
+msgid "Error Downloading file."
+msgstr "Erro ao descarregar ficheiro."
+
+#: includes/admin/options/class-options.php:2141
+msgid "Error importing settings. Check your import file and try again."
+msgstr ""
+"Erro ao importar definições. Verifique o seu ficheiro de importação e tente "
+"de novo."
+
+#: includes/crms/activecampaign/admin/class-admin.php:67
+msgid "ActiveCampaign Configuration"
+msgstr "Configuração de ActiveCampaign"
+
+#: includes/crms/activecampaign/admin/class-admin.php:74
+msgid "API URL"
+msgstr "URL da API"
+
+#: includes/crms/activecampaign/admin/class-admin.php:75
+msgid ""
+"Enter the API URL for your ActiveCampaign account (find it under Settings >> "
+"Developer in your account)."
+msgstr ""
+"Escreva a URL da API da sua conta ActiveCampaign (está em Settings >> "
+"Developer na sua conta)."
+
+#: includes/crms/activecampaign/admin/class-admin.php:82
+#: includes/crms/agilecrm/admin/class-admin.php:85
+#: includes/crms/autopilot/admin/class-admin.php:72
+#: includes/crms/capsule/admin/class-admin.php:69
+#: includes/crms/copper/admin/class-admin.php:80
+#: includes/crms/flexie/admin/class-admin.php:77
+#: includes/crms/getresponse/admin/class-admin.php:88
+#: includes/crms/infusionsoft/admin/class-admin.php:77
+#: includes/crms/kartra/admin/class-admin.php:70
+#: includes/crms/mailchimp/admin/class-admin.php:94
+#: includes/crms/mailerlite/admin/class-admin.php:70
+#: includes/crms/mailjet/admin/class-admin.php:69
+#: includes/crms/maropost/admin/class-admin.php:79
+#: includes/crms/ontraport/admin/class-admin.php:78
+#: includes/crms/platformly/admin/class-admin.php:68
+#: includes/crms/salesflare/admin/class-admin.php:68
+#: includes/crms/sendinblue/admin/class-admin.php:68
+#: includes/crms/sendlane/admin/class-admin.php:69
+#: includes/crms/tubular/admin/class-admin.php:69
+#: includes/crms/userengage/admin/class-admin.php:68
+msgid "API Key"
+msgstr "Chave API"
+
+#: includes/crms/activecampaign/admin/class-admin.php:83
+msgid ""
+"The API key will appear beneath the API URL on the Developer settings page."
+msgstr ""
+"A chave da API irá aparecer por baixo da URL da API na página de definições "
+"do Developer."
+
+#: includes/crms/activecampaign/admin/class-admin.php:110
+#: includes/crms/kartra/admin/class-admin.php:106
+msgid "Lists"
+msgstr "Listas"
+
+#: includes/crms/activecampaign/admin/class-admin.php:111
+msgid "New contacts will be automatically added to the selected lists."
+msgstr ""
+"Novos contatos serão automaticamente adicionados às listas selecionadas."
+
+#: includes/crms/activecampaign/admin/class-admin.php:131
+msgid "ActiveCampaign Site Tracking"
+msgstr "Rastreamento de Site do ActiveCampaign"
+
+#: includes/crms/activecampaign/admin/class-admin.php:139
+#: includes/crms/agilecrm/admin/class-admin.php:121
+#: includes/crms/drip/admin/class-admin.php:139
+#: includes/crms/hubspot/admin/class-admin.php:173
+#: includes/crms/infusionsoft/admin/class-admin.php:134
+#: includes/crms/mautic/admin/class-admin.php:147
+#: includes/crms/ontraport/admin/class-admin.php:142
+msgid "Site Tracking"
+msgstr "Rastreamento de Site"
+
+#: includes/crms/activecampaign/admin/class-admin.php:140
+msgid ""
+"Enable <a target=\"_blank\" href=\"https://help.activecampaign.com/hc/en-us/"
+"articles/221493708-How-to-set-up-Site-Tracking\">ActiveCampaign site "
+"tracking</a>."
+msgstr ""
+"Ativar <a target=\"_blank\" href=\"https://help.activecampaign.com/hc/en-us/"
+"articles/221493708-How-to-set-up-Site-Tracking\">rastreamento de site do "
+"ActiveCampaign</a>."
+
+#: includes/crms/activecampaign/class-activecampaign.php:203
+msgid "Access denied: Invalid credentials (URL and/or API key)."
+msgstr "Acesso negado: credenciais inválidas (URL e/ou chave API)."
+
+#: includes/crms/agilecrm/admin/class-admin.php:62
+msgid "Agile CRM Configuration"
+msgstr "Configuração Agile CRM"
+
+#: includes/crms/agilecrm/admin/class-admin.php:69
+#: includes/crms/sendlane/admin/class-admin.php:82
+msgid "Subdomain"
+msgstr "Subdomínio"
+
+#: includes/crms/agilecrm/admin/class-admin.php:70
+msgid "Enter your Agile CRM account subdomain (not the full URL)."
+msgstr "Escreva o subdomínio da sua conta de Agile CRM (não a URL toda)."
+
+#: includes/crms/agilecrm/admin/class-admin.php:77
+#: includes/crms/copper/admin/class-admin.php:72
+msgid "User Email"
+msgstr "Email do utilizador"
+
+#: includes/crms/agilecrm/admin/class-admin.php:78
+msgid "Enter the email address for your AgileCRM account."
+msgstr "Escreva o endereço de email da sua conta AgileCRM."
+
+#: includes/crms/agilecrm/admin/class-admin.php:86
+msgid ""
+"The API key will appear under Admin Settings &raquo; API &raquo; REST API."
+msgstr ""
+"A chave API irá aparecer por baixo das definições de Admin &raquo; API "
+"&raquo; REST API."
+
+#: includes/crms/agilecrm/admin/class-admin.php:113
+msgid "AgileCRM Site Tracking"
+msgstr "Rastreamento de site de AgileCRM"
+
+#: includes/crms/agilecrm/admin/class-admin.php:122
+msgid ""
+"Enable <a target=\"_blank\" href=\"https://www.agilecrm.com/marketing-"
+"automation/web-rules\">AgileCRM analytics and web rules</a> scripts."
+msgstr ""
+"Permitir <a target=\"_blank\" href=\"https://www.agilecrm.com/marketing-"
+"automation/web-rules\">analítica e regras web de scripts do AgileCRM</a>."
+
+#: includes/crms/agilecrm/admin/class-admin.php:129
+#: includes/crms/drip/admin/class-admin.php:69
+#: includes/crms/maropost/admin/class-admin.php:70
+msgid "Account ID"
+msgstr "ID de conta"
+
+#: includes/crms/agilecrm/admin/class-admin.php:130
+msgid ""
+"Your account ID can be found in the Tracking Code in your AgileCRM account, "
+"under Admin Settings &raquo; Analytics. For example: "
+"<code>8g8fejferfqbi4g4mradq09373</code>"
+msgstr ""
+"A sua ID de conta está no Tracking Code da sua conta AgileCRM, em Admin "
+"Settings &raquo; Analytics. Por exemplo: <code>8g8fejferfqbi4g4mradq09373</"
+"code>"
+
+#: includes/crms/autopilot/admin/class-admin.php:65
+msgid "Autopilot Configuration"
+msgstr "Configuração Autopilot"
+
+#: includes/crms/autopilot/admin/class-admin.php:73
+msgid ""
+"You can find your API key in the <a href=\"https://app.autopilothq.com/"
+"#settings/api\">Developer API</a> settings of your Autopilot account."
+msgstr ""
+"A sua chave API está nas definições de <a href=\"https://app.autopilothq.com/"
+"#settings/api\">Developer API</a> da sua conta Autopilot."
+
+#: includes/crms/autopilot/admin/class-admin.php:96
+msgid "Autopilot Settings"
+msgstr "Definições Autopilot"
+
+#: includes/crms/autopilot/admin/class-admin.php:109
+msgid ""
+"Configuring the fields below allows you to add new users to your site and "
+"update existing users based on changes in Autopilot. Read our <a href="
+"\"https://wpfusion.com/documentation/webhooks/autopilot-webhooks/\" target="
+"\"_blank\">documentation</a> for more information."
+msgstr ""
+"Configurar os campos abaixo permite adicionar novos utilizadores ao seu site "
+"e atualizar utilizadores existentes de acordo com alterações no Autopilot. "
+"Leia a nossa <a href=\"https://wpfusion.com/documentation/webhooks/autopilot-"
+"webhooks/\" target=\"_blank\">documentação</a> para mais informações."
+
+#: includes/crms/autopilot/admin/class-admin.php:115
+#: includes/crms/convertkit/admin/class-admin.php:106
+#: includes/crms/copper/admin/class-admin.php:123
+#: includes/crms/mailerlite/admin/class-admin.php:125
+msgid "Update Trigger"
+msgstr "Atualizar acionador"
+
+#: includes/crms/autopilot/admin/class-admin.php:116
+msgid ""
+"When a subscriber is updated in Autopilot, send their data back to WordPress."
+msgstr ""
+"Quando um subscritor é atualizado no Autopilot, enviar dados para WordPress."
+
+#: includes/crms/autopilot/admin/class-admin.php:129
+#: includes/crms/mailerlite/admin/class-admin.php:151
+msgid "Import Group"
+msgstr "Importar grupo"
+
+#: includes/crms/autopilot/admin/class-admin.php:130
+msgid ""
+"When a contact is added to this list in Autopilot, they will be imported as "
+"a new WordPres user."
+msgstr ""
+"Quando um contato é adicionado a esta lista no Autopilot, serão importados "
+"como novo utilizador WordPress."
+
+#: includes/crms/aweber/admin/class-admin.php:102
+msgid "AWeber Configuration"
+msgstr "Configuração AWeber"
+
+#: includes/crms/aweber/admin/class-admin.php:137
+#: includes/crms/convertfox/admin/class-admin.php:68
+#: includes/crms/customerly/admin/class-admin.php:69
+#: includes/crms/drift/admin/class-admin.php:128
+#: includes/crms/hubspot/admin/class-admin.php:130
+#: includes/crms/intercom/admin/class-admin.php:68
+#: includes/crms/nationbuilder/admin/class-admin.php:143
+#: includes/crms/zoho/admin/class-admin.php:126
+msgid "Access Token"
+msgstr "Token de acesso"
+
+#: includes/crms/aweber/admin/class-admin.php:144
+msgid "Access Secret"
+msgstr "Secret de acesso"
+
+#: includes/crms/aweber/admin/class-admin.php:171
+#: includes/crms/getresponse/admin/class-admin.php:64
+msgid "List"
+msgstr "Lista"
+
+#: includes/crms/aweber/admin/class-admin.php:172
+msgid "Select an AWeber list to use with WP Fusion."
+msgstr "Selecione lista AWeber para usar com WP Fusion."
+
+#: includes/crms/capsule/admin/class-admin.php:62
+msgid "Capsule Configuration"
+msgstr "Configuração de Capsule"
+
+#: includes/crms/capsule/admin/class-admin.php:70
+msgid ""
+"You can find your API key by going to My Preferences >> API Authentication "
+"Tokens in your Capsule account.<br />Click on Personal Access Tokens, and "
+"generate a new token for WP Fusion."
+msgstr ""
+"A sua chave API está em My Preferences >> API Authentication Tokens na sua "
+"conta Capsule.<br />Clique em Personal Access Tokens para gerar um novo "
+"token para o WP Fusion."
+
+#: includes/crms/convertfox/admin/class-admin.php:61
+msgid "ConvertFox Configuration"
+msgstr "Configuração Gist (ConvertFox)"
+
+#: includes/crms/convertfox/admin/class-admin.php:69
+msgid ""
+"You can find your Access Token by going to Settings and clicking the menu "
+"option for Access Token in your ConvertFox account."
+msgstr ""
+"Pode encontrar o seu Access Token em Settings, e depois clicar na opção do "
+"menu para o Access Token da sua conta Gist."
+
+#: includes/crms/convertkit/admin/class-admin.php:65
+msgid "ConvertKit Configuration"
+msgstr "Configuração ConvertKit"
+
+#: includes/crms/convertkit/admin/class-admin.php:72
+msgid "API Secret"
+msgstr "API Secret"
+
+#: includes/crms/convertkit/admin/class-admin.php:73
+msgid ""
+"Enter the API Secret for your ConvertKit account (you can find your API "
+"Secret in the ConvertKit Account page)."
+msgstr ""
+"Escreva o seu API Secret da sua conta ConvertKit (localizado na página de "
+"ConverKit Account)."
+
+#: includes/crms/convertkit/admin/class-admin.php:100
+msgid ""
+"Configuring the fields below allows ConvertKit to add new users to your site "
+"and update existing users when specific tags are applied from within "
+"ConvertKit. Read our <a href=\"https://wpfusion.com/documentation/webhooks/"
+"convertkit-webhooks/\" target=\"_blank\">documentation</a> for more "
+"information."
+msgstr ""
+"Configurar os campos abaixo permite ao ConvertKit adicionar novos "
+"utilizadores ao seu site e atualizar utilizadores existentes quando certas "
+"tags são aplicadas a partir do ConvertKit. Leia a nossa <a href=\"https://"
+"wpfusion.com/documentation/webhooks/convertkit-webhooks/\" target=\"_blank"
+"\">documentação</a> para mais informação."
+
+#: includes/crms/convertkit/admin/class-admin.php:107
+msgid ""
+"When this tag is applied to a contact in ConvertKit, their tags and meta "
+"data will be updated in WordPress."
+msgstr ""
+"Quando esta tag é aplicada a um contato no ConvertKit, as tags deles e os "
+"dados meta serão atualizados no WordPress."
+
+#: includes/crms/convertkit/admin/class-admin.php:122
+msgid "Import Trigger"
+msgstr "Importar acionador"
+
+#: includes/crms/convertkit/admin/class-admin.php:123
+msgid ""
+"When this tag is applied to a contact in ConvertKit, they will be imported "
+"as a new WordPres user."
+msgstr ""
+"Quando esta tag é aplicada a um contato no ConvertKit, eles serão importados "
+"como novo utilizador WordPress."
+
+#: includes/crms/convertkit/admin/class-admin.php:142
+msgid "ConvertKit Settings"
+msgstr "Definições ConvertKit"
+
+#: includes/crms/convertkit/admin/class-admin.php:148
+msgid "Notify on Unsubscribe"
+msgstr "Notificar ao descadrastar"
+
+#: includes/crms/convertkit/admin/class-admin.php:149
+msgid ""
+"Send a notification email when a subscriber with a WordPress user account "
+"unsubscribes. See <a href=\"https://wpfusion.com/documentation/crm-specific-"
+"docs/convertkit-unsubscribe-notifications/\">the documentation</a> for more "
+"info."
+msgstr ""
+"Enviar email de notificação quando um subscritor com uma conta de utilizador "
+"de WordPress se descadastra. Ver <a href=\"https://wpfusion.com/"
+"documentation/crm-specific-docs/convertkit-unsubscribe-notifications/\">a "
+"documentação</a> para mais informação."
+
+#: includes/crms/convertkit/admin/class-admin.php:164
+msgid "Notification Email"
+msgstr "Email de notificação"
+
+#: includes/crms/convertkit/admin/class-admin.php:165
+msgid "The notification will be sent to this email."
+msgstr "A notificação será enviada para este email."
+
+#: includes/crms/copper/admin/class-admin.php:65
+msgid "Copper Configuration"
+msgstr "Configuração do Copper"
+
+#: includes/crms/copper/admin/class-admin.php:73
+msgid "Enter the email address for your Copper account."
+msgstr "Escreva o endereço de email da sua conta Copper."
+
+#: includes/crms/copper/admin/class-admin.php:81
+msgid ""
+"You can generate an API key in your Copper account, under Settings &raquo; "
+"API Keys."
+msgstr ""
+"Pode gerar uma chave API na sua conta Copper, em Settings &raquo; API Keys."
+
+#: includes/crms/copper/admin/class-admin.php:106
+msgid "Copper Settings"
+msgstr "Definições Copper"
+
+#: includes/crms/copper/admin/class-admin.php:117
+msgid ""
+"Configuring the fields below allows you to add new users to your site and "
+"update existing users based on changes in Copper. Read our <a href=\"https://"
+"wpfusion.com/documentation/webhooks/copper-webhooks/\" target=\"_blank"
+"\">documentation</a> for more information."
+msgstr ""
+"Configurar os campos abaixo permite adicionar novos utilizadores ao seu site "
+"e atualizar utilizadores existentes com base em alterações feitas no Copper. "
+"Leia a nossa <a href=\"https://wpfusion.com/documentation/webhooks/copper-"
+"webhooks/\" target=\"_blank\">documentação</a> para mais informação."
+
+#: includes/crms/copper/admin/class-admin.php:124
+msgid ""
+"When a subscriber is updated in Copper, send their data back to WordPress."
+msgstr ""
+"Quando um subscritor é atualizado no Copper, enviar os dados dele para o "
+"WordPress."
+
+#: includes/crms/copper/admin/class-admin.php:137
+msgid "Import Tag"
+msgstr "Importar tag"
+
+#: includes/crms/copper/admin/class-admin.php:138
+msgid ""
+"When a person is added to this tag in Copper, they will be imported as a new "
+"WordPres user."
+msgstr ""
+"Quando uma pessoa é adicionada a esta tag no Copper, serão importados como "
+"novo utilizador WordPress."
+
+#: includes/crms/customerly/admin/class-admin.php:62
+msgid "Customerly Configuration"
+msgstr "Configuração Customerly"
+
+#: includes/crms/customerly/admin/class-admin.php:70
+msgid ""
+"You can create an access token by going to App Settings &raquo; Integrations "
+"&raquo; API in your Customerly account."
+msgstr ""
+"Pode criar um token de acesso em App Settings &raquo; Integrations &raquo; "
+"API na sua conta Customerly."
+
+#: includes/crms/drift/admin/class-admin.php:112
+msgid "Drift Configuration"
+msgstr "Configuração Drift"
+
+#: includes/crms/drift/admin/class-admin.php:135
+#: includes/crms/hubspot/admin/class-admin.php:137
+#: includes/crms/zoho/admin/class-admin.php:133
+msgid "Refresh token"
+msgstr "Atualizar token"
+
+#: includes/crms/drip/admin/class-admin.php:62
+msgid "Drip Configuration"
+msgstr "Configuração Drip"
+
+#: includes/crms/drip/admin/class-admin.php:70
+msgid ""
+"Enter the Account ID for your Drip account (find it under Settings >> Site "
+"Setup >> 3rd Party Integrations)."
+msgstr ""
+"Escreva o seu Account ID da sua conta Drip (em Settings >> Site Setup >> 3rd "
+"Party Integrations)."
+
+#: includes/crms/drip/admin/class-admin.php:77
+msgid "API Token"
+msgstr "Token de API"
+
+#: includes/crms/drip/admin/class-admin.php:78
+msgid ""
+"Enter your Drip API token. You can find it in your Drip account <a href="
+"\"https://www.getdrip.com/user/edit\" target=\"_blank\">here</a>."
+msgstr ""
+"Escreva o seu token de API do Drip. Está na sua conta Drip <a href=\"https://"
+"www.getdrip.com/user/edit\" target=\"_blank\">aqui</a>."
+
+#: includes/crms/drip/admin/class-admin.php:131
+msgid "Drip Settings"
+msgstr "Definições Drip"
+
+#: includes/crms/drip/admin/class-admin.php:140
+msgid ""
+"Enable <a target=\"_blank\" href=\"http://kb.getdrip.com/general/installing-"
+"your-javascript-snippet/\">Drip site tracking</a>."
+msgstr ""
+"Permitir <a target=\"_blank\" href=\"http://kb.getdrip.com/general/"
+"installing-your-javascript-snippet/\">rastreamento de site com Drip</a>."
+
+#: includes/crms/drip/admin/class-admin.php:147
+msgid "Email Change Event"
+msgstr "Evento de alteração de email"
+
+#: includes/crms/drip/admin/class-admin.php:148
+msgid ""
+"Send an <code>Email Changed</code> event when a user changes their email "
+"address."
+msgstr ""
+"Enviar um evento <code>Email Changed</code> quando o utilizador altera o seu "
+"endereço de email."
+
+#: includes/crms/drip/class-drip.php:302
+msgid "Access denied: Your API token doesn't have access to this account."
+msgstr "Acesso negado: o seu token de API não tem acesso a esta conta."
+
+#: includes/crms/flexie/admin/class-admin.php:61
+msgid "Flexie Configuration"
+msgstr "Configuração Flexie"
+
+#: includes/crms/flexie/admin/class-admin.php:65
+msgid ""
+"Before attempting to connect to Flexie, you'll first need to enable API "
+"access. You can do this by going to the configuration screen, and selecting "
+"API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable "
+"Basic HTTP Auth</strong> to On."
+msgstr ""
+"Antes de iniciar ligação ao Flexie, é necessário ativar o acesso à API. Vá "
+"ao ecrã de configuração, e selecione API Settings. Ative ambas as opções de "
+"<strong>API Enabled</strong> e <strong>Enable Basic HTTP Auth</strong> para "
+"On."
+
+#: includes/crms/flexie/admin/class-admin.php:69
+#: includes/crms/mautic/admin/class-admin.php:70
+msgid "URL"
+msgstr "URL"
+
+#: includes/crms/flexie/admin/class-admin.php:70
+msgid "Enter the URL for your Flexie account (like http://website.flexie.io/)."
+msgstr "Escreva a URL da sua conta Flexie (ex.: http://website.flexie.io/)."
+
+#: includes/crms/flexie/admin/class-admin.php:78
+msgid ""
+"You can find your API key in the account settings sidebar under API settings "
+"in your Flexie account."
+msgstr ""
+"A chave de API encontra-se na barra lateral das definições da conta, por "
+"baixo das definições de API na sua conta Flexie."
+
+#: includes/crms/getresponse/admin/class-admin.php:65
+msgid "New users will be automatically added to the selected list."
+msgstr ""
+"Novos utilizadores serão automaticamente adicionados à lista selecionada."
+
+#: includes/crms/getresponse/admin/class-admin.php:81
+msgid "GetResponse Configuration"
+msgstr "Configuração GetResponse"
+
+#: includes/crms/getresponse/admin/class-admin.php:89
+msgid ""
+"You can find your API key in the <a href=\"https://app.getresponse.com/api/"
+"\" target=\"_blank\">API settings</a> of your GetResponse account."
+msgstr ""
+"Pode encontrar a chave API em <a href=\"https://app.getresponse.com/api/\" "
+"target=\"_blank\">API settings</a> da sua conta Get Response."
+
+#: includes/crms/groundhogg/admin/class-admin.php:60
+msgid "Groundhogg Configuration"
+msgstr "Configuração Groundhogg"
+
+#: includes/crms/groundhogg/admin/class-admin.php:67
+#: includes/crms/mailpoet/admin/class-admin.php:67
+msgid "Connect"
+msgstr "Conectar"
+
+#: includes/crms/hubspot/admin/class-admin.php:112
+msgid "HubSpot Configuration"
+msgstr "Configuração HubSpot"
+
+#: includes/crms/hubspot/admin/class-admin.php:165
+msgid "HubSpot Site Tracking"
+msgstr "HubSpot rastreamento de site"
+
+#: includes/crms/hubspot/admin/class-admin.php:174
+msgid ""
+"Enable <a target=\"_blank\" href=\"https://knowledge.hubspot.com/articles/"
+"kcs_article/account/how-does-hubspot-track-visitors\">HubSpot site tracking</"
+"a>."
+msgstr ""
+"Ativar <a target=\"_blank\" href=\"https://knowledge.hubspot.com/articles/"
+"kcs_article/account/how-does-hubspot-track-visitors\">HubSpot rastreamento "
+"de site</a>."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:62
+msgid "Infusionsoft Configuration"
+msgstr "Configuração Infusionsoft"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:69
+msgid "Application Name"
+msgstr "Nome da aplicação"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:70
+msgid "Enter the name of your Infusionsoft application (i.e. \"ab123\")."
+msgstr "Escreva o nome da sua aplicação Infusionsoft (ex.: \"ab123\")."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:78
+msgid ""
+"For help generating an API key, please read <a target=\"_blank\" href="
+"\"http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key"
+"\">this knowledgebase article</a>."
+msgstr ""
+"Para ajuda ao gerar a chave API, por favor ler <a target=\"_blank\" href="
+"\"http://help.infusionsoft.com/userguides/get-started/tips-and-tricks/api-key"
+"\">este artigo de ajuda</a>."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:101
+msgid "API Call"
+msgstr "Chamada da API"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:102
+msgid ""
+"Check this box to make an API call when a profile is updated. See <a target="
+"\"_blank\" href=\"https://wpfusion.com/documentation/tutorials/infusionsoft-"
+"api-goals/\">the documentation</a> for more info."
+msgstr ""
+"Assinale esta opção para fazer uma chamada API quando um perfil é "
+"atualizado. Ver See <a target=\"_blank\" href=\"https://wpfusion.com/"
+"documentation/tutorials/infusionsoft-api-goals/\">a documentação</a> para "
+"mais informação."
+
+#: includes/crms/infusionsoft/admin/class-admin.php:110
+msgid "Integration"
+msgstr "Integração"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:118
+msgid "Call Name"
+msgstr "Nome da chamada"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:126
+msgid "Infusionsoft Site Tracking"
+msgstr "Infusionsoft rastreamento de site"
+
+#: includes/crms/infusionsoft/admin/class-admin.php:135
+msgid ""
+"Enable <a target=\"_blank\" href=\"https://help.infusionsoft.com/userguides/"
+"campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-"
+"infusionsoft-tracking-code-into-your-website\">Infusionsoft site tracking</"
+"a>."
+msgstr ""
+"Permitir <a target=\"_blank\" href=\"https://help.infusionsoft.com/"
+"userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-"
+"the-infusionsoft-tracking-code-into-your-website\">Infusionsoft rastreamento "
+"de site</a>."
+
+#: includes/crms/infusionsoft/class-infusionsoft.php:234
+msgid ". Please verify your connection details are correct."
+msgstr ". Por favor verifique que os dados da conexão estão corretos."
+
+#: includes/crms/intercom/admin/class-admin.php:61
+msgid "Intercom Configuration"
+msgstr "Configuração Intercom"
+
+#: includes/crms/intercom/admin/class-admin.php:69
+msgid ""
+"Enter your Intercom access token. You can find it in your Intercom account "
+"<a href=\"https://app.intercom.com/developers/_\" target=\"_blank\">here</a>."
+msgstr ""
+"Escreva o seu token de accesso do Intercom. Encontra-se na sua conta "
+"Intercom <a href=\"https://app.intercom.com/developers/_\" target=\"_blank"
+"\">aqui</a>."
+
+#: includes/crms/kartra/admin/class-admin.php:63
+msgid "Kartra Configuration"
+msgstr "Configuração Kartra"
+
+#: includes/crms/kartra/admin/class-admin.php:71
+msgid ""
+"Enter the API Key for your Kartra account. You can find your key under <a "
+"href=\"https://app.kartra.com/integrations/api/key\" target=\"_blank\">the "
+"My Integrations menu</a>."
+msgstr ""
+"Escreva a chave API da sua conta Kartra. Encontra-se no <a href=\"https://"
+"app.kartra.com/integrations/api/key\" target=\"_blank\">menu My "
+"Integrations</a>."
+
+#: includes/crms/kartra/admin/class-admin.php:78
+msgid "API Password"
+msgstr "Password da API"
+
+#: includes/crms/kartra/admin/class-admin.php:79
+msgid "The API password will be displayed next to your API Key."
+msgstr "A password da API é exibida próxima da sua chave de API."
+
+#: includes/crms/kartra/admin/class-admin.php:107
+msgid "New users will be automatically added to the selected lists."
+msgstr ""
+"Novos utilizadores serão automaticamente adicionados às listas selecionadas."
+
+#: includes/crms/mailchimp/admin/class-admin.php:80
+msgid "MailChimp Configuration"
+msgstr "Configuração MailChimp"
+
+#: includes/crms/mailchimp/admin/class-admin.php:87
+msgid "Data Server"
+msgstr "Servidor de dados"
+
+#: includes/crms/mailchimp/admin/class-admin.php:88
+msgid ""
+"Your data server is the first part of your MailChimp account URL (like "
+"\"us1\")."
+msgstr ""
+"O seu servidor de dados é a primeira parta da URL da sua conta MailChimp "
+"(ex.: \"us1\")."
+
+#: includes/crms/mailchimp/admin/class-admin.php:95
+msgid ""
+"You can create an API key by navigating to Account &raquo; Extras &raquo; "
+"API Keys."
+msgstr ""
+"Pode criar uma chave API ao navegar para Account &raquo; Extras &raquo; API "
+"Keys."
+
+#: includes/crms/mailchimp/admin/class-admin.php:123
+msgid "MailChimp List"
+msgstr "Lista MailChimp"
+
+#: includes/crms/mailchimp/admin/class-admin.php:124
+msgid ""
+"Select a list to use for WP Fusion. If you change the list, you may need to "
+"Resynchronize from the Setup tab to update your fields and tags."
+msgstr ""
+"Selecione uma lista para usar para o WP Fusion. Se mudar a lista, será "
+"necessário Ressincronizar a partir da tab do Setup para atualizar os campos "
+"e etiquetas."
+
+#: includes/crms/mailerlite/admin/class-admin.php:63
+msgid "MailerLite Configuration"
+msgstr "Configuração MailerLite"
+
+#: includes/crms/mailerlite/admin/class-admin.php:71
+msgid ""
+"You can find your API key in the <a href=\"https://app.mailerlite.com/"
+"integrations/api/\" target=\"_blank\">Developer API</a> settings of your "
+"MailerLite account."
+msgstr ""
+"Pode encontrar a sua chave API nas definições de <a href=\"https://app."
+"mailerlite.com/integrations/api/\" target=\"_blank\">Developer API</a>da sua "
+"conta MailerLite."
+
+#: includes/crms/mailerlite/admin/class-admin.php:94
+msgid "MailerLite Settings"
+msgstr "Definições MailerLite"
+
+#: includes/crms/mailerlite/admin/class-admin.php:100
+msgid "Email Address Changes"
+msgstr "Alterações de endereço de email"
+
+#: includes/crms/mailerlite/admin/class-admin.php:108
+msgid ""
+"MailerLite doesn't allow for changing the email address of an existing "
+"subscriber. Choose <strong>Ignore</strong> and WP Fusion will continue "
+"updating a single subscriber, ignoring email address changes. Choose "
+"<strong>Duplicate and Delete</strong> and WP Fusion will attempt to create a "
+"new subscriber with the same details when an email address has been changed, "
+"and remove the original subscriber."
+msgstr ""
+"MailerLite não permite mudar o endereço de email dum subscritor existente. "
+"Selecione <strong>Ignore</strong> e o WP Fusion continuará a atualizar um "
+"subscritor individualmente, ignorando as alterações do endereço de email. "
+"Selecione <strong>Duplicate and Delete</strong> e o WP Fusion tentará criar "
+"um novo subscritor com os mesmos dados quando um endereço de email é "
+"alterado, e remove o subscritor original."
+
+#: includes/crms/mailerlite/admin/class-admin.php:119
+msgid ""
+"Configuring the fields below allows you to add new users to your site and "
+"update existing users based on changes in MailerLite. Read our <a href="
+"\"https://wpfusion.com/documentation/webhooks/mailerlite-webhooks/\" target="
+"\"_blank\">documentation</a> for more information."
+msgstr ""
+"Configurar os campos abaixo permite adicionar novos utilizadores ao seu site "
+"e atualizar utilizadores existentes com base em alterações no MailerLite. "
+"Leia a nossa <a href=\"https://wpfusion.com/documentation/webhooks/"
+"mailerlite-webhooks/\" target=\"_blank\">documentação</a> para mais "
+"informação."
+
+#: includes/crms/mailerlite/admin/class-admin.php:126
+msgid ""
+"When a subscriber is updated in MailerLite, send their data back to "
+"WordPress."
+msgstr ""
+"Quando um subscritor é atualizado no MailerLite, enviar dados de volta para "
+"o WordPress."
+
+#: includes/crms/mailerlite/admin/class-admin.php:152
+msgid ""
+"When a contact is added to this group in MailerLite, they will be imported "
+"as a new WordPres user."
+msgstr ""
+"Quando um contato é adicionado a este grupo no MailerLite, serão importados "
+"como novo utilizador WordPress."
+
+#: includes/crms/mailjet/admin/class-admin.php:61
+msgid "Mailjet Configuration"
+msgstr "Configuração Mailjet"
+
+#: includes/crms/mailjet/admin/class-admin.php:64
+msgid ""
+"You can find your API Key and Secret Key in the <a href=\"https://app."
+"mailjet.com/account/api_keys\" target=\"_blank\">API key management</a> "
+"section of your Mailjet account."
+msgstr ""
+"Pode encontrar a chave de API e a chave Secreta na secção <a href=\"https://"
+"app.mailjet.com/account/api_keys\" target=\"_blank\">API key management</a> "
+"da sua conta Mailjet."
+
+#: includes/crms/mailjet/admin/class-admin.php:70
+msgid "Enter the API Key for your Mailjet account."
+msgstr "Escreva a chave API da sua conta Mailjet."
+
+#: includes/crms/mailjet/admin/class-admin.php:76
+msgid "Secret Key"
+msgstr "Chave Secreta"
+
+#: includes/crms/mailjet/admin/class-admin.php:80
+msgid "Enter the Secret Key for your Mailjet account."
+msgstr "Escreva a chave Secreta da sua conta Mailjet."
+
+#: includes/crms/mailpoet/admin/class-admin.php:60
+msgid "MailPoet Configuration"
+msgstr "Configuração MailPoet"
+
+#: includes/crms/maropost/admin/class-admin.php:63
+msgid "Maropost Configuration"
+msgstr "Configuração Maropost"
+
+#: includes/crms/maropost/admin/class-admin.php:71
+msgid "Enter the name of your Infusionsoft application (i.e. \"1234\")."
+msgstr "Escreva o nome da sua aplicação Infusionsoft (ex.: \"1234\")."
+
+#: includes/crms/maropost/admin/class-admin.php:80
+msgid ""
+"Find your API key under connections in your account settings on Maropost."
+msgstr ""
+"A sua chave API está por baixo das Connections das definições da sua conta "
+"Maropost."
+
+#: includes/crms/maropost/admin/class-admin.php:91
+msgid "Maropost Default List"
+msgstr "Lista Maropost pré-definida"
+
+#: includes/crms/mautic/admin/class-admin.php:62
+msgid "Mautic Configuration"
+msgstr "Configuração Mautic"
+
+#: includes/crms/mautic/admin/class-admin.php:66
+msgid ""
+"Before attempting to connect to Mautic, you'll first need to enable API "
+"access. You can do this by going to the configuration screen, and selecting "
+"API Settings. Turn both <strong>API Enabled</strong> and <strong>Enable "
+"Basic HTTP Auth</strong> to On."
+msgstr ""
+"Antes de ligar ao Mautic, é necessário ativar o acesso API. Vá ao ecrã de "
+"configutação, e selecione API Settings. Ative ambas as opções de <strong>API "
+"Enabled</strong> e <strong>Enable Basic HTTP Auth</strong> para On."
+
+#: includes/crms/mautic/admin/class-admin.php:71
+msgid "Enter the URL for your Mautic account (like http://app.mautic.net/)."
+msgstr "Escreva a URL da sua conta Mautic (ex.: http://app.mautic.net/)."
+
+#: includes/crms/mautic/admin/class-admin.php:78
+#: includes/crms/salesforce/admin/class-admin.php:68
+#: includes/crms/vtiger/admin/class-admin.php:76
+msgid "Username"
+msgstr "Nome de utilizador"
+
+#: includes/crms/mautic/admin/class-admin.php:79
+msgid "Enter the Username for your Mautic account."
+msgstr "Escreva o nome de utilizador da sua conta Mautic."
+
+#: includes/crms/mautic/admin/class-admin.php:86
+#: includes/crms/salesforce/admin/class-admin.php:76
+msgid "Password"
+msgstr "Palavra-passe"
+
+#: includes/crms/mautic/admin/class-admin.php:139
+msgid "Mautic Site Tracking"
+msgstr "Rastreamento de site do Mautic"
+
+#: includes/crms/mautic/admin/class-admin.php:148
+msgid ""
+"Enable <a target=\"_blank\" href=\"https://www.mautic.org/docs/en/contacts/"
+"contact_monitoring.html\">Mautic site tracking</a>."
+msgstr ""
+"Ativar <a target=\"_blank\" href=\"https://www.mautic.org/docs/en/contacts/"
+"contact_monitoring.html\">rastreamento de site do Mautic</a>."
+
+#: includes/crms/nationbuilder/admin/class-admin.php:113
+msgid "NationBuilder Configuration"
+msgstr "Configuração NationBuilder"
+
+#: includes/crms/nationbuilder/admin/class-admin.php:120
+msgid "Nation Slug"
+msgstr "Nation Slug"
+
+#: includes/crms/ontraport/admin/class-admin.php:63
+msgid "Ontraport Configuration"
+msgstr "Configuração Ontraport"
+
+#: includes/crms/ontraport/admin/class-admin.php:70
+msgid "App ID"
+msgstr "App ID"
+
+#: includes/crms/ontraport/admin/class-admin.php:71
+msgid ""
+"Enter the App ID for your Ontraport account (find it under Settings >> "
+"Administration >> Ontraport API in your account)."
+msgstr ""
+"Escreva a App ID da sua conta Ontraport (está em Settings >> Administration "
+">> Ontraport API da sua conta)."
+
+#: includes/crms/ontraport/admin/class-admin.php:79
+msgid "The API key will appear next to the App ID on the API Keys page."
+msgstr "A chave API aparece próximo da App ID na página de API Keys."
+
+#: includes/crms/ontraport/admin/class-admin.php:134
+msgid "Ontraport Site Tracking"
+msgstr "Rastreamento de site Ontraport"
+
+#: includes/crms/ontraport/admin/class-admin.php:143
+msgid ""
+"Enable <a target=\"_blank\" href=\"https://support.ontraport.com/hc/en-us/"
+"articles/217882408-Web-Page-Tracking\">Ontraport site tracking</a>."
+msgstr ""
+"Permitir <a target=\"_blank\" href=\"https://support.ontraport.com/hc/en-us/"
+"articles/217882408-Web-Page-Tracking\">rastreamento de site Ontraport</a>."
+
+#: includes/crms/platformly/admin/class-admin.php:61
+msgid "Platformly Configuration"
+msgstr "Configuração Platformly"
+
+#: includes/crms/platformly/admin/class-admin.php:69
+msgid ""
+"You can create an API key from the API Docs &amp; Keys section of your "
+"Platform.ly account."
+msgstr ""
+"Pode criar uma chave API na secção de API Docs &amp; Keys da sua conta "
+"Platform.ly."
+
+#: includes/crms/platformly/admin/class-admin.php:79
+msgid "Project"
+msgstr "Projeto"
+
+#: includes/crms/salesflare/admin/class-admin.php:61
+msgid "Salesflare Configuration"
+msgstr "Configuração Salesflare"
+
+#: includes/crms/salesflare/admin/class-admin.php:69
+msgid ""
+"You can find your API key in the <a href=\"https://app.salesflare.com/#/"
+"settings/apikeys\" target=\"_blank\">API Key</a> settings of your Salesflare "
+"account."
+msgstr ""
+"Pode encontrar a chave API nas definições <a href=\"https://app.salesflare."
+"com/#/settings/apikeys\" target=\"_blank\">API Key</a> da sua conta "
+"Salesflare."
+
+#: includes/crms/salesforce/admin/class-admin.php:61
+msgid "Salesforce Configuration"
+msgstr "Configuração Salesforce"
+
+#: includes/crms/salesforce/admin/class-admin.php:69
+msgid ""
+"Enter the username for the administrator of your Salesforce account (usually "
+"an email address)."
+msgstr ""
+"Escreva o nome de utilizador do administrador da sua conta Salesforce "
+"(normalmente é um endereço de email)."
+
+#: includes/crms/salesforce/admin/class-admin.php:83
+msgid "Security Token"
+msgstr "Token de segurança"
+
+#: includes/crms/salesforce/admin/class-admin.php:84
+msgid ""
+"You can generate a security token by visiting the My Settings page and "
+"navigating to Personal >> Reset My Security Token."
+msgstr ""
+"Pode gerar um token de segurança ao visitar a página My Settings e navegar "
+"para Personal >> Reset My Security Token."
+
+#: includes/crms/salesforce/admin/class-admin.php:94
+msgid "Salesforce Tag Type"
+msgstr "Tipo de etiqueta Salesforce"
+
+#: includes/crms/salesforce/admin/class-admin.php:103
+msgid ""
+"After changing the tag type, save the settings page and click Resynchronize "
+"above."
+msgstr ""
+"Após mudar o tipo de etiqueta, guarde a página das definições e clica em "
+"Ressincronizar acima."
+
+#: includes/crms/sendinblue/admin/class-admin.php:61
+msgid "SendinBlue Configuration"
+msgstr "Configuração SendinBlue"
+
+#: includes/crms/sendinblue/admin/class-admin.php:69
+msgid ""
+"You can find your API v3 key in the <a href=\"https://account.sendinblue.com/"
+"advanced/api/\" target=\"_blank\">API settings</a> of your SendinBlue "
+"account."
+msgstr ""
+"A sua chave de API v3 está  <a href=\"https://account.sendinblue.com/"
+"advanced/api/\" target=\"_blank\">definições de API</a> da sua conta "
+"SendinBlue."
+
+#: includes/crms/sendlane/admin/class-admin.php:62
+msgid "Sendlane Configuration"
+msgstr "Configuração Sendlane"
+
+#: includes/crms/sendlane/admin/class-admin.php:70
+msgid ""
+"You can find your API key in the <a href=\"https://app.sendlane.com/developer"
+"\" target=\"_blank\">developer settings</a> of your Sendlane account."
+msgstr ""
+"A sua chave API está nas <a href=\"https://app.sendlane.com/developer\" "
+"target=\"_blank\">definições de developer</a> da sua conta Sendlane."
+
+#: includes/crms/sendlane/admin/class-admin.php:76
+msgid "API Hash Key"
+msgstr "API Hash Key"
+
+#: includes/crms/sendlane/admin/class-admin.php:84
+msgid "For example domain.sendlane.com"
+msgstr "Por exemplo domain.sendlane.com"
+
+#: includes/crms/sendlane/admin/class-admin.php:111
+msgid "Sendlane List"
+msgstr "Lista Sendlane"
+
+#: includes/crms/sendlane/admin/class-admin.php:112
+msgid "Select a default list to use for WP Fusion."
+msgstr "Seleciona uma lista pré-definida para usar para o WP Fusion."
+
+#: includes/crms/staging/admin/class-admin.php:42
+msgid "Staging"
+msgstr "Staging"
+
+#: includes/crms/tubular/admin/class-admin.php:62
+msgid "Tubular Configuration"
+msgstr "Configuração Tubular"
+
+#: includes/crms/tubular/admin/class-admin.php:70
+msgid ""
+"You can find your API key in Tubular's <a href=\"https://app.tubular.io/#/"
+"settings\" target=\"_blank\">Settings page</a>, at the bottom of the "
+"Integrations section."
+msgstr ""
+"A chave API está nas <a href=\"https://app.tubular.io/#/settings\" target="
+"\"_blank\">página de definições</a>, no fundo da secção de Integrations."
+
+#: includes/crms/userengage/admin/class-admin.php:61
+msgid "UserEngage Configuration"
+msgstr "Configuração UserEngage"
+
+#: includes/crms/userengage/admin/class-admin.php:69
+msgid ""
+"You can find your Public API key in your UserEngage account under Settings "
+"&raquo; App Settings &raquo; Public API keys."
+msgstr ""
+"A chave Public API está na sua conta UserEngage em Settings &raquo; App "
+"Settings &raquo; Public API keys."
+
+#: includes/crms/vtiger/admin/class-admin.php:61
+msgid "Vtiger Configuration"
+msgstr "Configutação Vtiger"
+
+#: includes/crms/vtiger/admin/class-admin.php:68
+msgid "Domain"
+msgstr "Domínio"
+
+#: includes/crms/vtiger/admin/class-admin.php:69
+msgid "Enter the URL to your Vtiger instance."
+msgstr "Escreva a URL da sua instância Vtiger."
+
+#: includes/crms/vtiger/admin/class-admin.php:77
+msgid "Enter your Vtiger username."
+msgstr "Escreva o seu nome de utilizador Vtiger."
+
+#: includes/crms/vtiger/admin/class-admin.php:85
+msgid "The API key will appear at the bottom of the My Preferences screem."
+msgstr "A chave API está no fundo de My Preferences."
+
+#: includes/crms/zoho/admin/class-admin.php:110
+msgid "Zoho Configuration"
+msgstr "Configuração Zoho"
+
+#: includes/crms/zoho/admin/class-admin.php:164
+msgid "Contact Layout"
+msgstr "Layout de contato"
+
+#: includes/crms/zoho/admin/class-admin.php:165
+msgid "Select a layout to be used for new contacts."
+msgstr "Selecione um layout para ser usado para novos contatos."
+
+#: includes/crms/zoho/admin/class-admin.php:176
+msgid ""
+"<strong>Note:</strong> Imports with Zoho use a loose word match on the "
+"contact record. That means if your import tag is \"gmail\", it will also "
+"import any contacts with an <em>@gmail.com</em> email address. Please use a "
+"unique tag name for imports."
+msgstr ""
+"<strong>Note:</strong> importações do Zoho usam uma correspondência de "
+"palavra solta no registo do contato. Isto significa que se a sua etiqueta de "
+"importação é \"gmail\", também importará quaisquer contatos com <em>@gmail."
+"com</em> no endereço de email. Por favor use um nome de etiqueta único para "
+"importações."
+
+#: includes/integrations/class-advanced-ads.php:37
+#, php-format
+msgid "Show and hide ads based on a logged in user’s %s tags."
+msgstr ""
+"Mostre e esconda anúncios com base nas %s etiquetas de utilizador com sessão "
+"iniciada."
+
+#: includes/integrations/class-advanced-ads.php:74
+#, php-format
+msgid "User is logged in and has at least one of the %s tags"
+msgstr "Utilizador tem sessão iniciada e tem pelo menos uma das %s etiquetas"
+
+#: includes/integrations/class-advanced-ads.php:75
+#, php-format
+msgid "User is logged in and has none of the %s tags"
+msgstr "Utilizador tem sessão iniciada e não tem nenhuma das %s etiquetas"
+
+#: includes/integrations/class-affiliate-wp.php:51
+#: includes/integrations/class-bbpress.php:132
+#: includes/integrations/class-cartflows.php:85
+#: includes/integrations/class-edd.php:74
+#: includes/integrations/class-s2member.php:77
+#: includes/integrations/class-ultimate-member-1x.php:100
+#: includes/integrations/class-ultimate-member.php:113
+#: includes/integrations/class-userpro.php:73
+#: includes/integrations/class-woocommerce.php:157
+#: includes/integrations/class-wp-affiliate-manager.php:131
+msgid "Integrations"
+msgstr "Integrações"
+
+#: includes/integrations/class-affiliate-wp.php:68
+msgid "AffiliateWP Integration"
+msgstr "Integração AffiliateWP"
+
+#: includes/integrations/class-affiliate-wp.php:75
+msgid "Apply Tags - Affiliate Registration"
+msgstr "Aplicar etiquetas - registo de afiliado"
+
+#: includes/integrations/class-affiliate-wp.php:76
+msgid "Apply these tags to new affiliates registered through AffiliateWP."
+msgstr ""
+"Aplicar estas etiquetas a novo afiliados registados através do AffiliateWP."
+
+#: includes/integrations/class-affiliate-wp.php:83
+msgid "Apply Tags - Affilate Approval"
+msgstr "Aplicar etiquetas - aprovação de afiliado"
+
+#: includes/integrations/class-affiliate-wp.php:84
+msgid "Apply these tags when affiliates are approved."
+msgstr "Aplicar estas etiquetas quando afiliados são aprovados."
+
+#: includes/integrations/class-affiliate-wp.php:91
+msgid "Apply Tags - First Referral"
+msgstr "Aplicar etiquetas - primeira referência"
+
+#: includes/integrations/class-affiliate-wp.php:92
+msgid "Apply these tags when affiliates get their first referral."
+msgstr ""
+"Aplicar estas etiquetas quando os afiliados obtêm a sua primeira referência."
+
+#: includes/integrations/class-affiliate-wp.php:101
+msgid "Apply Tags - Customers"
+msgstr "Aplicar etiquetas - clientes"
+
+#: includes/integrations/class-affiliate-wp.php:102
+msgid ""
+"Apply these tags to new WooCommerce customers who signed up via an affiliate "
+"link."
+msgstr ""
+"Aplicar estas etiquetas a novos clientes WooCommerce que se inscreveram "
+"através dum link de afiliado."
+
+#: includes/integrations/class-affiliate-wp.php:132
+#: includes/integrations/class-caldera-forms.php:67
+#: includes/integrations/class-edd.php:543
+#: includes/integrations/class-elementor-forms.php:166
+#: includes/integrations/class-formidable-forms.php:122
+#: includes/integrations/class-formidable-forms.php:319
+#: includes/integrations/class-give.php:120
+#: includes/integrations/class-give.php:142
+#: includes/integrations/class-gravity-forms.php:471
+#: includes/integrations/class-lifterlms.php:139
+#: includes/integrations/class-memberpress.php:802
+#: includes/integrations/class-ninja-forms.php:73
+#: includes/integrations/class-pmpro.php:98
+#: includes/integrations/class-pmpro.php:194
+#: includes/integrations/class-wp-job-manager.php:47
+#: includes/integrations/class-wp-job-manager.php:169
+msgid "Apply Tags"
+msgstr "Aplicar etiquetas"
+
+#: includes/integrations/class-affiliate-wp.php:155
+msgid ""
+"These tags will be applied to any WooCommerce customers who purchase using "
+"this affiliate's referral URL."
+msgstr ""
+"Estas etiquetas serão aplicadas a todos os clientes WooCommerce que "
+"compraram usando esta URL de referência de afiliado."
+
+#: includes/integrations/class-bbpress.php:45
+msgid "bbPress Integration"
+msgstr "bbPress integração"
+
+#: includes/integrations/class-bbpress.php:52
+msgid "Restrict Access"
+msgstr "Restringir acesso"
+
+#: includes/integrations/class-bbpress.php:53
+msgid "Restrict access to forums archive ("
+msgstr "Restringir acesso aos arquivos dos fóruns ("
+
+#: includes/integrations/class-bbpress.php:61
+msgid "Restrict Forums"
+msgstr "Restringir fóruns"
+
+#: includes/integrations/class-bbpress.php:62
+msgid "Restrict access to all forums in addition to the archive"
+msgstr "Restringir acesso a todos os fóruns além do arquivo"
+
+#: includes/integrations/class-bbpress.php:74
+msgid ""
+"If the user doesn't have any of the tags specified, they will be redirected "
+"to the URL below. You must specify a redirect for forum restriction to work."
+msgstr ""
+"Se o utilizador não tem nenhuma das etiquetas especificadas, serão "
+"redirecionados para a URL abaixo. Tem de especificar um redireccionamento "
+"para que a restrição do fórum funcione."
+
+#: includes/integrations/class-bbpress.php:81
+msgid "Redirect URL"
+msgstr "Redirecionar URL"
+
+#: includes/integrations/class-beaver-builder.php:175
+msgid "User Tags (any)"
+msgstr "Etiqueta de utilizador (qualquer)"
+
+#: includes/integrations/class-beaver-builder.php:176
+msgid "User Tags (not)"
+msgstr "Etiqueta de utilizador (não)"
+
+#: includes/integrations/class-beaver-builder.php:193
+msgid ""
+"This module will be hidden from users without any of the specified tags."
+msgstr ""
+"Este módulo sera escondido de utilizadores sem quaisquer das etiquetas "
+"especificadas."
+
+#: includes/integrations/class-beaver-builder.php:202
+msgid ""
+"This module will be hidden from users who <i>have</i> any of the specified "
+"tags."
+msgstr ""
+"Este módulo sera escondido de utilizadores que <i>têm<i> quaisquer das "
+"etiquetas especificadas."
+
+#: includes/integrations/class-beaver-builder.php:210
+msgid ""
+"By default content will only be shown to registered users. Set this setting "
+"to \"Display\" to show content to guests as well."
+msgstr ""
+"Por defeito, o conteúdo será mostrado apenas a utilizadores registados. "
+"Defina esta opção para \"Display\" para mostrar também o conteúdo aos "
+"convidados."
+
+#: includes/integrations/class-beaver-builder.php:213
+#: includes/integrations/class-elementor.php:99
+msgid "Default (hidden)"
+msgstr "Pré-definido (escondido)"
+
+#: includes/integrations/class-beaver-builder.php:214
+#: includes/integrations/class-elementor.php:100
+msgid "Display"
+msgstr "Display"
+
+#: includes/integrations/class-caldera-forms.php:40
+#, php-format
+msgid "Send form entries to %s"
+msgstr "Enviar formulários de entrada para %s"
+
+#: includes/integrations/class-caldera-forms.php:72
+msgid ""
+"Enter a comma-separated list of tag names or tag IDs to be applied when this "
+"form is submitted."
+msgstr ""
+"Escreva uma lista separada com vírgulas de etiquetas de nome ou etiquetas de "
+"IDs a serem aplicadas quando este formulário é submetido."
+
+#: includes/integrations/class-cartflows.php:103
+msgid "CartFlows Integration"
+msgstr "Integração CartFlows"
+
+#: includes/integrations/class-cartflows.php:109
+msgid "Run on Main Order Accepted"
+msgstr "Correr quando Main Order for aceite"
+
+#: includes/integrations/class-cartflows.php:110
+msgid ""
+"Runs WP Fusion post-checkout actions when the order status is Main Order "
+"Accepted instead of waiting for Completed."
+msgstr ""
+"Correr WP Fusion nas ações pós-checkout quando o estado da encomenda é Main "
+"Order Accepted em vez de esperar por estado de Completed."
+
+#: includes/integrations/class-convert-pro.php:61
+msgid "ON"
+msgstr "ON"
+
+#: includes/integrations/class-convert-pro.php:62
+msgid "OFF"
+msgstr "OFF"
+
+#: includes/integrations/class-convert-pro.php:63
+msgid ""
+"Do you wish to display this only to registered users who have a specific tag?"
+msgstr ""
+"Quer exibir isto apenas a utilizadores registados que têm uma etiqueta "
+"específica?"
+
+#: includes/integrations/class-convert-pro.php:68
+#: includes/integrations/class-convert-pro.php:84
+#: includes/integrations/class-convert-pro.php:105
+#, php-format
+msgid "When User Has %s Tag"
+msgstr "Quando utilizador tem etiqueta %s"
+
+#: includes/integrations/class-convert-pro.php:98
+msgid "Logic"
+msgstr "Lógica"
+
+#: includes/integrations/class-courseware.php:217
+msgid "WP Courseware - WP-Fusion"
+msgstr "WP Courseware - WP-Fusion"
+
+#. Plugin Name of the plugin/theme
+#: includes/integrations/class-courseware.php:218
+#: includes/integrations/class-elementor.php:64
+#: includes/integrations/class-ultimate-member.php:207
+#: includes/integrations/class-woo-memberships.php:248
+msgid "WP Fusion"
+msgstr "WP Fusion"
+
+#: includes/integrations/class-edd-software-licensing.php:148
+#, php-format
+msgid "Apply these tags in %s when the license expires"
+msgstr "Aplicar estas etiquetas em %s quando a licença expirar"
+
+#: includes/integrations/class-edd-software-licensing.php:219
+#, php-format
+msgid ""
+"Syncs license statuses and expiration dates to %s, and tags any customers "
+"with expired licenses"
+msgstr ""
+"Sincroniza estado da licença e datas de expiração para %s, e atribui "
+"etiqueta a quaisquer clientes com licenças expiradas"
+
+#: includes/integrations/class-edd.php:92
+msgid "Easy Digital Downloads Integration"
+msgstr "Integração Digital Downloads"
+
+#: includes/integrations/class-edd.php:99
+#: includes/integrations/class-woocommerce.php:295
+#: includes/integrations/class-woocommerce.php:303
+msgid "Asynchronous Checkout"
+msgstr "Checkout assíncrono"
+
+#: includes/integrations/class-edd.php:100
+#: includes/integrations/class-woocommerce.php:296
+#: includes/integrations/class-woocommerce.php:304
+msgid ""
+"Runs WP Fusion post-checkout actions asynchronously to speed up load times."
+msgstr ""
+"Corre ações do WP Fusion pós-checkout assincronizadas para melhorar tempos "
+"de carregamento."
+
+#: includes/integrations/class-edd.php:521
+msgid "Required Tags"
+msgstr "Etiquetas necessárias"
+
+#: includes/integrations/class-edd.php:537
+msgid ""
+"If specified a user must be logged in and have the selected tags to use the "
+"discount."
+msgstr ""
+"Se especificado, um utilizador tem de ter sessão iniciada e as etiquetas "
+"selecionadas para usar o desconto."
+
+#: includes/integrations/class-edd.php:559
+#, php-format
+msgid "The selected tags will be applied in %s when the discount is used."
+msgstr ""
+"As etiquetas selecionadas devem ser aplicadas em %s quando o desconto é "
+"usado."
+
+#: includes/integrations/class-edd.php:623
+msgid "You must be logged in to use this discount code."
+msgstr "Tem de ter sessão iniciada para usar este código de desconto."
+
+#: includes/integrations/class-edd.php:637
+msgid "You do not have access to use this discount code."
+msgstr "Você não tem acesso para usar este código de desconto."
+
+#: includes/integrations/class-edd.php:823
+msgid ""
+"If the user doesn't have <em>any</em> of these tags, the price ID will not "
+"show as an option for purchase."
+msgstr ""
+"Se o utilizador não tem <em>quaisquer</em> destas etiquetas, o ID do preço "
+"não é mostrado como opção de compra."
+
+#: includes/integrations/class-elementor-forms.php:167
+#, php-format
+msgid "The selected tags will be applied in %s when the form is submitted."
+msgstr ""
+"As etiquetas selecionadas serão aplicadas em %s quando o formulário é "
+"submetido."
+
+#: includes/integrations/class-elementor-forms.php:179
+msgid "Add Only"
+msgstr "Acrescentar apenas"
+
+#: includes/integrations/class-elementor-forms.php:180
+msgid "Only add new contacts, don't update existing ones."
+msgstr "Acrescentar apenas novos contatos, não atualizar existentes."
+
+#: includes/integrations/class-elementor-forms.php:190
+#, php-format
+msgid "%s Field Mapping"
+msgstr "%s Mapeamento de campos"
+
+#: includes/integrations/class-elementor-popups.php:76
+#, php-format
+msgid "When user has any of the %s tags"
+msgstr "Quando utilizador tem quaisquer das %s etiquetas"
+
+#: includes/integrations/class-elementor-popups.php:86
+msgid "Show"
+msgstr "Mostrar"
+
+#: includes/integrations/class-elementor-popups.php:87
+msgid "Hide"
+msgstr "Esconder"
+
+#: includes/integrations/class-elementor.php:72
+#, php-format
+msgid "Required %s Tags (Any)"
+msgstr "Etiquetas %s necessárias (qualquer)"
+
+#: includes/integrations/class-elementor.php:84
+#, php-format
+msgid "Required %s Tags (Not)"
+msgstr "Etiquetas %s necessárias (não)"
+
+#: includes/integrations/class-event-espresso.php:245
+#, php-format
+msgid ""
+"Select the tags to be applied in %s when someone registers using this ticket "
+"and is pending payment."
+msgstr ""
+"Selecionar as etiquetas a serem aplicadas em %s quando alguém se regista "
+"usando este ticket e que esteja com pagamento pendente."
+
+#: includes/integrations/class-event-espresso.php:261
+#, php-format
+msgid ""
+"Select the tags to be applied in %s when someone registers using this ticket "
+"and is approved."
+msgstr ""
+"Selecionar as etiquetas a serem aplicadas em %s quando alguém se regista "
+"usando este ticket e é aprovado."
+
+#: includes/integrations/class-formidable-forms.php:33
+#, php-format
+msgid "Add to %s"
+msgstr "Adicionar a %s"
+
+#: includes/integrations/class-formidable-forms.php:89
+#: includes/integrations/class-formidable-forms.php:288
+msgid "Field Mapping"
+msgstr "Mapeamento de campos"
+
+#: includes/integrations/class-gamipress.php:267
+#: includes/integrations/class-restrict-content-pro.php:193
+#: includes/integrations/class-tutor-lms.php:82
+msgid "Apply tags"
+msgstr "Aplicar etiquetas"
+
+#: includes/integrations/class-gamipress.php:273
+#: includes/integrations/class-restrict-content-pro.php:235
+msgid "Link with tag"
+msgstr "Link com etiquetas"
+
+#: includes/integrations/class-give.php:110
+#, php-format
+msgid "Create contacts in %s when donations are given?"
+msgstr "Criar contatos em %s quando forem dados os donativos?"
+
+#: includes/integrations/class-give.php:115
+msgid "Enabled"
+msgstr "Ativado"
+
+#: includes/integrations/class-give.php:116
+msgid "Disabled"
+msgstr "Desativado"
+
+#: includes/integrations/class-give.php:121
+#, php-format
+msgid "Apply these tags in %s when a donation is given."
+msgstr "Aplicar estas etiquetas em %s quando um donativo é dado."
+
+#: includes/integrations/class-give.php:143
+#, php-format
+msgid "Apply these tags in %s when a donation is given at this level."
+msgstr "Aplicar estas etiquetas em %s quando um donativo é dado a este nível."
+
+#: includes/integrations/class-gravity-forms.php:473
+msgid "Select tags to be applied when a user submits this form."
+msgstr ""
+"Selecionar etiquetas a serem aplicadas quando um utilizador submete este "
+"formulário."
+
+#: includes/integrations/class-gravity-forms.php:507
+msgid "Process this feed regardless of payment status"
+msgstr "Processar esta feed independentemente do estado de pagamento"
+
+#: includes/integrations/class-gravity-forms.php:511
+msgid "Process this feed only if the payment is successful"
+msgstr "Processar esta feed apenas se o pagamento for bem sucedido"
+
+#: includes/integrations/class-gravity-forms.php:515
+msgid "Process this feed only if the payment fails"
+msgstr "Processar esta feed apenas se o pagamento falhar"
+
+#: includes/integrations/class-gravity-forms.php:549
+msgid "Name"
+msgstr "Nome"
+
+#: includes/integrations/class-gravity-forms.php:550
+msgid "Applies Tags"
+msgstr "Aplica etiquetas"
+
+#: includes/integrations/class-learndash.php:232
+#: includes/integrations/class-tutor-lms.php:93
+msgid "Apply these tags when marked complete"
+msgstr "Aplicar estas etiquetas quando marcado como completo"
+
+#: includes/integrations/class-lifterlms.php:137
+msgid ""
+"These tags will be applied when a member purchases or registers for this "
+"membership level."
+msgstr ""
+"Estas etiquetas serão aplicadas quando um membro compra ou se regista para "
+"este nível de membro."
+
+#: includes/integrations/class-lifterlms.php:152
+#, php-format
+msgid ""
+"This tag will be applied in %1$s when a member is enrolled, and will be "
+"removed when a member is unenrolled. Likewise, if this tag is applied to a "
+"user from within %2$s, they will be automatically enrolled in this "
+"membership. If this tag is removed, the user will be removed from the "
+"membership."
+msgstr ""
+"Esta etiqueta será aplicada em %1$s quando um membro se inscreve, e será "
+"removido quando o utilizador se desinscreve. Da mesma forma, se esta "
+"etiqueta é aplicada ao utilizador a partir de %2$s, serão automaticamente "
+"inscritos como membros. Se esta etiqueta for removida, o utilizador será "
+"removido da afiliação."
+
+#: includes/integrations/class-lifterlms.php:154
+#: includes/integrations/class-lifterlms.php:279
+msgid "Link With Tag / Auto-Enrollment Tag"
+msgstr "Link com etiqueta / etiqueta de auto-inscrição"
+
+#: includes/integrations/class-lifterlms.php:162
+#: includes/integrations/class-pmpro.php:106
+msgid "Remove Tags"
+msgstr "Remover etiquetas"
+
+#: includes/integrations/class-lifterlms.php:163
+msgid "Remove tags specified in \"Apply Tags\" if membership is cancelled."
+msgstr ""
+"Remover etiquetas especificadas em \"Apply Tags\" se a afiliação for "
+"cancelada."
+
+#: includes/integrations/class-lifterlms.php:261
+msgid "Apply these tags when user enrolled in course."
+msgstr "Aplicar estas etiquetas quando o utilizador se inscreveu no curso."
+
+#: includes/integrations/class-lifterlms.php:263
+msgid "Apply tags when enrolled"
+msgstr "Aplicar etiquetas quando inscrito"
+
+#: includes/integrations/class-lifterlms.php:277
+#, php-format
+msgid ""
+"This tag will be applied in %1$s when a member is enrolled, and will be "
+"removed when a member is unenrolled. Likewise, if this tag is applied to a "
+"user from within %2$s, they will be automatically enrolled in this course. "
+"If this tag is removed, the user will be removed from the course."
+msgstr ""
+"Esta etiqueta será aplicada em %1$s quando um membro se afilia, e será "
+"removido quando um membro se desinscreve. Da mesma forma, se esta etiqueta é "
+"aplicada a um utilizador a partir de %2$s, eles serão automaticamente "
+"inscritos neste curso. Se esta etiqueta é removido, o utilizador será "
+"removido do curso."
+
+#: includes/integrations/class-lifterlms.php:294
+#, php-format
+msgid "Apply these tags when %s marked complete."
+msgstr "Aplicar estas etiquetas quando %s é marcado como concluído."
+
+#: includes/integrations/class-lifterlms.php:296
+msgid "Apply tags - Completed"
+msgstr "Aplicar etiquetas - concluído"
+
+#: includes/integrations/class-lifterlms.php:339
+msgid "Apply Tags - Quiz Attempted"
+msgstr "Aplicar etiquetas - tentou questionário"
+
+#: includes/integrations/class-lifterlms.php:347
+msgid "Apply Tags - Quiz Passed"
+msgstr "Aplicar etiquetas - passou questionário"
+
+#: includes/integrations/class-memberpress.php:155
+#: includes/integrations/class-restrict-content-pro.php:335
+msgid "Free"
+msgstr "Grátis"
+
+#: includes/integrations/class-memberpress.php:813
+#, php-format
+msgid ""
+"These tags will be applied to the customer in %s upon registering for this "
+"membership."
+msgstr ""
+"Estas etiquetas serão aplicadas ao cliente em %s ao inscrever-se como membro."
+
+#: includes/integrations/class-memberpress.php:815
+#: includes/integrations/class-pmpro.php:114
+msgid "Link With Tag"
+msgstr "Link com etiqueta"
+
+#: includes/integrations/class-memberpress.php:828
+#, php-format
+msgid ""
+"This tag will be applied in %s when a member is registered. Likewise, if "
+"this tag is applied to a user from within %s, they will be automatically "
+"enrolled in this membership."
+msgstr ""
+"Esta etiqueta será aplicada em %s quando um membro fica inscrito. Da mesma "
+"forma, se esta etiqueta é aplicada a um utilizador a partir de %s, serão "
+"automaticamente inscritos como membros."
+
+#: includes/integrations/class-memberpress.php:831
+#: includes/integrations/class-pmpro.php:135
+msgid "Apply Tags - Cancelled"
+msgstr "Aplicar etiquetas - cancelado"
+
+#: includes/integrations/class-memberpress.php:842
+msgid ""
+"Apply these tags when a subscription is cancelled. Happens when an admin or "
+"user cancels a subscription, or if the payment gateway has canceled the "
+"subscription due to too many failed payments"
+msgstr ""
+"Aplicar estas etiquetas quando uma subscrição é cancelada. Acontece quando "
+"um admin ou utilizador cancela uma subscrição, ou se o gateway de pagamento "
+"cancelou a subscrição devido a várias tentativas falhadas de pagamento"
+
+#: includes/integrations/class-memberpress.php:845
+#: includes/integrations/class-pmpro.php:145
+msgid "Apply Tags - Expired"
+msgstr "Aplicar etiquetas - expirado"
+
+#: includes/integrations/class-memberpress.php:855
+msgid ""
+"Apply these tags when a membership is expired. This is for single (non-"
+"recurring) memberships which have a set expiration date."
+msgstr ""
+"Aplicar estas etiquetas quando a afiliação expira. Isto é para afiliações "
+"individuais (não-recorrentes) que têm uma data de expiração."
+
+#: includes/integrations/class-memberpress.php:858
+msgid "Apply Tags - Payment Failed"
+msgstr "Aplicar etiquetas - pagamento falhado"
+
+#: includes/integrations/class-memberpress.php:868
+msgid "Apply these tags when an automatic payment fails."
+msgstr "Aplicar estas etiquetas quando um pagamento automático falha."
+
+#: includes/integrations/class-memberpress.php:874
+msgid "Apply Tags - Corporate Accounts"
+msgstr "Aplicar etiquetas - contas corporativas"
+
+#: includes/integrations/class-memberpress.php:884
+msgid "Apply these tags to members added as sub-accounts to this account."
+msgstr ""
+"Aplicar estas etiquetas a membros adicionados como subcontas desta conta."
+
+#: includes/integrations/class-ninja-forms.php:75
+msgid "Comma-separated list of tag names or IDs"
+msgstr "Lista separada por vírgulas de etiquetas de nomes ou IDs"
+
+#: includes/integrations/class-ninja-forms.php:82
+#, php-format
+msgid ""
+"Use Ninja Forms merge fields below to configure what data is sent to %s."
+msgstr ""
+"Usar os campos combinados do Ninja Forms abaixo para configurar que dados "
+"são enviados para %s."
+
+#: includes/integrations/class-pmpro.php:94
+msgid "Settings"
+msgstr "Definições"
+
+#: includes/integrations/class-popup-maker.php:84
+msgid "User Tags"
+msgstr "Etiquetas de utilizador"
+
+#: includes/integrations/class-restrict-content-pro.php:230
+msgid ""
+"These tag will be applied to the user when they register or are added to the "
+"subscription level."
+msgstr ""
+"Estas etiquetas serão aplicadas ao utilizador quando se inscrevem ou são "
+"adicionados ao nível de subscrição."
+
+#: includes/integrations/class-restrict-content-pro.php:252
+msgid ""
+"This tag will be applied to the user when they register or are added to the "
+"subscription level. You can also grant any user this subscription level by "
+"manually applying the tag. If the tag is removed the level will be removed."
+msgstr ""
+"Esta etiqueta será aplicada ao utilizador quando se registam ou são "
+"adicionados ao nível de subscrição. É possível também atribuir a qualquer "
+"utilizador este nível de subscrição ao aplicar manualmente a etiqueta. Se a "
+"etiqueta é removida, o nível será removido."
+
+#: includes/integrations/class-restrict-content-pro.php:262
+msgid ""
+"For each membership status you can select additional tags to be applied. "
+"These are in addition to the more general \"Apply tags\" setting above."
+msgstr ""
+"Para cada estatuto de afiliação pode selecionar etiquetas adicionais a serem "
+"aplicadas. Estas são em adição àquelas mais genéricas de \"Apply tags\" na "
+"opção de cima."
+
+#: includes/integrations/class-restrict-content-pro.php:269
+msgid "Active"
+msgstr "Ativo"
+
+#: includes/integrations/class-restrict-content-pro.php:284
+msgid ""
+"These tags will be applied when a user's membership status is set to active."
+msgstr ""
+"Estas etiquetas serão aplicadas quando o nível de membro do utilizador é "
+"definido como ativo."
+
+#: includes/integrations/class-restrict-content-pro.php:291
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#: includes/integrations/class-restrict-content-pro.php:306
+msgid "These tags will be applied when a user's membership is cancelled."
+msgstr ""
+"Estas etiquetas serão aplicadas quando o nível de membro do utilizador é "
+"cancelado."
+
+#: includes/integrations/class-restrict-content-pro.php:313
+msgid "Expired"
+msgstr "Expirado"
+
+#: includes/integrations/class-restrict-content-pro.php:328
+msgid "These tags will be applied when a user's membership expires."
+msgstr ""
+"Estas etiquetas serão aplicadas quando o nível de membro do utilizador "
+"expira."
+
+#: includes/integrations/class-restrict-content-pro.php:350
+msgid "These tags will be applied when a user registers for a free membership."
+msgstr ""
+"Estas etiquetas serão aplicadas quando o utilizador se regista para uma "
+"adesão gratuita."
+
+#: includes/integrations/class-restrict-content-pro.php:357
+msgid "Trial"
+msgstr "Experimental"
+
+#: includes/integrations/class-restrict-content-pro.php:372
+msgid "These tags will be applied when a member signs up for a trial."
+msgstr ""
+"Estas etiquetas serão aplicadas quando um membro se inscreve para um período "
+"à experiência."
+
+#: includes/integrations/class-restrict-content-pro.php:379
+msgid "Renewal Payment Failed"
+msgstr "Pagamento de renovação falhou"
+
+#: includes/integrations/class-restrict-content-pro.php:394
+msgid "These tags will be applied when a renewal payment fails."
+msgstr ""
+"Estas etiquetas serão aplicadas quando um pagamento de renovação falhou."
+
+#: includes/integrations/class-s2member.php:94
+msgid "s2Member Integration"
+msgstr "s2Member integração"
+
+#: includes/integrations/class-s2member.php:104
+msgid ""
+"For each membership level you can configure tags to be applied to the user "
+"at registration."
+msgstr ""
+"Para cada nível de adesão, pode configurar as etiquetas a serem aplicadas ao "
+"utilizador na inscrição."
+
+#: includes/integrations/class-ultimate-member-1x.php:64
+#: includes/integrations/class-ultimate-member.php:67
+msgid "Ultimate Member Integration"
+msgstr "Integração Ultimate Member"
+
+#: includes/integrations/class-ultimate-member-1x.php:71
+#: includes/integrations/class-ultimate-member.php:74
+#: includes/integrations/class-userpro.php:52
+msgid "Pull"
+msgstr "Puxar"
+
+#: includes/integrations/class-ultimate-member-1x.php:72
+#: includes/integrations/class-ultimate-member.php:75
+msgid "Update the local profile data for a given user from "
+msgstr "Atualizar os dados do perfil local para um utilizador de "
+
+#: includes/integrations/class-ultimate-member-1x.php:79
+#: includes/integrations/class-ultimate-member.php:82
+msgid "Defer Until Activation"
+msgstr "Deferir até ativação"
+
+#: includes/integrations/class-ultimate-member-1x.php:80
+#: includes/integrations/class-ultimate-member.php:83
+msgid "Don't send any data to "
+msgstr "Não enviar dados para "
+
+#: includes/integrations/class-ultimate-member.php:90
+msgid "Deactivation Tag"
+msgstr "Etiqueta de desativação"
+
+#: includes/integrations/class-ultimate-member.php:91
+msgid ""
+"You can specify a tag here to be used as an account deactivation trigger."
+"<br />When the tag is applied the account will be set to deactivated. When "
+"the tag is removed the account will be reactivated."
+msgstr ""
+"Pode especificar uma etiqueta aqui para ser usada como acionador de "
+"desativação de conta.<br />Quando a etiqueta é aplicada, a conta será "
+"definida como desativa. Quando a etiqueta é removida, a conta será reativada."
+
+#: includes/integrations/class-ultimate-member.php:96
+msgid "Select tag"
+msgstr "Selecionar etiqueta"
+
+#: includes/integrations/class-userpro.php:45
+msgid "UserPro Integration"
+msgstr "Integração UserPro"
+
+#: includes/integrations/class-userpro.php:53
+msgid ""
+"Update the local profile data for a given user from the CRM before "
+"displaying. May slow down profile load times."
+msgstr ""
+"Atualizar os dados do perfil local para um utilizador a partir da CRM antes "
+"de exibir. Pode atrasar o tempo de carregamento de perfis."
+
+#: includes/integrations/class-woo-subscriptions.php:75
+msgid "Remove tags"
+msgstr "Remover etiquetas"
+
+#: includes/integrations/class-woo-subscriptions.php:77
+msgid ""
+"Remove original tags (above) when the subscription is cancelled, put on "
+"hold, expires, or is switched"
+msgstr ""
+"Remover etiquetas originais (acima) quando a subscrição é cancelada, "
+"colocada em espera, expira, ou é trocada"
+
+#: includes/integrations/class-woo-subscriptions.php:83
+msgid "Apply these tags when a renewal payment fails"
+msgstr "Aplicar estas etiquetas quando um pagamento de renovação falha"
+
+#: includes/integrations/class-woo-subscriptions.php:89
+msgid "Apply these tags when a subscription is cancelled"
+msgstr "Aplicar estas etiquetas quando uma subscrição é cancelada"
+
+#: includes/integrations/class-woo-subscriptions.php:95
+msgid "Apply these tags when a subscription is put on hold"
+msgstr "Aplicar estas etiquetas quando uma subscrição é colocada em espera"
+
+#: includes/integrations/class-woo-subscriptions.php:101
+msgid ""
+"Apply these tags when a subscription has been cancelled by the user but "
+"there is still time remaining in the subscription"
+msgstr ""
+"Aplicar estas etiquetas quando uma subscrição foi cancelada pelo utilizador, "
+"mas ainda há tempo restante na subscrição"
+
+#: includes/integrations/class-woo-subscriptions.php:107
+msgid "Apply these tags when a subscription expires"
+msgstr "Aplicar estas etiquetas quando uma subscrição expira"
+
+#: includes/integrations/class-woo-subscriptions.php:112
+msgid "Apply these tags when free trial ends"
+msgstr "Aplicar estas etiquetas quando o período à experiência termina"
+
+#: includes/integrations/class-woocommerce.php:235
+msgid "WooCommerce Integration"
+msgstr "Integração WooCommerce"
+
+#: includes/integrations/class-woocommerce.php:242
+msgid "Apply Tags to Customers"
+msgstr "Aplicar etiquetas a clientes"
+
+#: includes/integrations/class-woocommerce.php:243
+msgid "These tags will be applied to all WooCommerce customers."
+msgstr "Estas etiquetas serão aplicadas a todos os clientes WooCommerce."
+
+#: includes/integrations/class-woocommerce.php:252
+msgid "Product Category Tagging"
+msgstr "Etiquetagem de categoria de produto"
+
+#: includes/integrations/class-woocommerce.php:253
+msgid ""
+"Generate and apply tags based on the category of every product purchased."
+msgstr ""
+"Gerar e aplicar etiquetas com base na categoria de cada produto comprado."
+
+#: includes/integrations/class-woocommerce.php:260
+msgid "Product Name Tagging"
+msgstr "Etiquetagem do nome do produto"
+
+#: includes/integrations/class-woocommerce.php:261
+msgid "Generate and apply tags based on the name of every product purchased."
+msgstr ""
+"Gerar e aplicar etiquetas com base no nome de todos os produtos comprados."
+
+#: includes/integrations/class-woocommerce.php:268
+msgid "Product SKU Tagging"
+msgstr "Etiquetagem da SKU do produto"
+
+#: includes/integrations/class-woocommerce.php:269
+msgid "Generate and apply tags based on the SKU of every product purchased."
+msgstr ""
+"Gerar e aplicar etiquetas com base na SKU de todos os produtos comprados."
+
+#: includes/integrations/class-woocommerce.php:278
+msgid "Hide Restricted Products"
+msgstr "Esconder produtos restritos"
+
+#: includes/integrations/class-woocommerce.php:279
+msgid "If a user can't access a product, hide it from the Shop page."
+msgstr ""
+"Se o utilizador não consegue aceder ao produto, esconde-lo da página da Loja."
+
+#: includes/integrations/class-woocommerce.php:286
+msgid "Restricted Product Error Message"
+msgstr "Mensagem de erro de produto restrito"
+
+#: includes/integrations/class-woocommerce.php:287
+msgid ""
+"This message will be displayed if a customer attempts to add a restricted "
+"product to their cart."
+msgstr ""
+"Esta mensagem será exibida se um cliente tentar adicionar um produto "
+"restrito ao carrinho."
+
+#: includes/integrations/class-woocommerce.php:311
+msgid "Hide Coupon Field"
+msgstr "Esconder campo do cupão"
+
+#: includes/integrations/class-woocommerce.php:312
+msgid ""
+"Hide the coupon input field on the checkout / cart screen (used with auto-"
+"applied coupons)."
+msgstr ""
+"Esconder o campo do cupão no checkout / página do carrinho (usado com cupões "
+"aplicados automaticamente)."
+
+#: includes/integrations/class-woocommerce.php:1299
+msgid "Apply tags when purchased"
+msgstr "Aplicar etiquetas quando comprado"
+
+#: includes/integrations/class-woocommerce.php:1312
+msgid "Apply tags when<br />refunded"
+msgstr "Aplicar etiquetas quando<br /> foi reembolsado"
+
+#: includes/integrations/class-woocommerce.php:1324
+msgid "Apply tags when transaction failed"
+msgstr "Aplicar etiquetas quando a transação falhou"
+
+#: includes/integrations/class-woocommerce.php:1528
+msgid "Process WP Fusion actions again"
+msgstr "Processar de novo ações do WP Fusion"
+
+#: includes/integrations/class-woocommerce.php:1604
+msgid "Apply tags when used"
+msgstr "Aplicar etiquetas quando usado"
+
+#: includes/integrations/class-woocommerce.php:1621
+msgid "Auto-apply tags"
+msgstr "Automaticamente aplicar etiquetas"
+
+#: includes/integrations/class-woocommerce.php:1631
+msgid ""
+"If the user has any of the tags specified here, the coupon will "
+"automatically be applied to their cart."
+msgstr ""
+"Se o utilizador tem qualquer uma das tags especificadas acima, o cupão é "
+"automática aplicado ao carrinho."
+
+#: includes/integrations/class-woocommerce.php:1635
+msgid "Discount label"
+msgstr "Label de desconto"
+
+#: includes/integrations/class-woocommerce.php:1639
+msgid ""
+"Use this setting to override the coupon label at checkout when a coupon has "
+"been auto-applied.<br />For example \"Discount\" or \"Promo\". (Leave blank "
+"for default)"
+msgstr ""
+"Usar esta opção para sobrepor a label do cupão no checkout, quando um cupão "
+"é automaticamente aplicado.<br />Por exemplo \"Desconto\" ou \"Promo\". "
+"(Deixar em branco para predefinição)."
+
+#: includes/integrations/class-woocommerce.php:1643
+msgid "Discount message"
+msgstr "Mensagem de desconto"
+
+#: includes/integrations/class-woocommerce.php:1647
+msgid ""
+"Use this setting to override the message at checkout when a coupon has been "
+"auto-applied.<br />For example \"You received a discount!\". (Leave blank "
+"for default)"
+msgstr ""
+"Usar esta opção para sobrepor a label do cupão no checkout, quando um cupão "
+"é automaticamente aplicado.<br />Por exemplo \"Recebeu um desconto!\". "
+"(Deixar em branco para predefinição)."
+
+#: includes/integrations/class-woocommerce.php:1953
+msgid "Apply tags when a product with this term is purchased"
+msgstr "Aplicar etiquetas quando um produto com este termo é comprado"
+
+#: includes/integrations/class-wp-affiliate-manager.php:148
+msgid "WP Affiliate Manager Integration"
+msgstr "Integração WP Affiliate Manager"
+
+#: includes/integrations/class-wp-affiliate-manager.php:155
+msgid "Apply Tags - Pending"
+msgstr "Aplicar etiquetas - pendente"
+
+#: includes/integrations/class-wp-affiliate-manager.php:156
+msgid "These tags will be applied when affiliates apply."
+msgstr "Estas etiquetas serão aplicadas quando os afiliados se candidatam."
+
+#: includes/integrations/class-wp-affiliate-manager.php:163
+msgid "Apply Tags - Accepted"
+msgstr "Aplicar etiquetas - aprovado"
+
+#: includes/integrations/class-wp-affiliate-manager.php:164
+msgid "These tags will be applied when affiliates are accepted."
+msgstr "Estas etiquetas serão aplicadas quando os afiliados são aprovados."
+
+#: includes/integrations/class-wp-job-manager.php:48
+msgid "These tags will be applied in "
+msgstr "Estas etiquetas serão aplicadas em "
+
+#: includes/integrations/class-wpforms.php:56
+msgid "WP Fusion feed stopped by conditional logic"
+msgstr "A feed do WP Fusion parou por lógica condicional"
+
+#: includes/integrations/class-wpforms.php:220
+msgid "Available Form Fields"
+msgstr "Campos de formulário disponíveis"
+
+#: includes/integrations/class-wpforms.php:220
+msgid "CRM Field"
+msgstr "Campo da CRM"
+
+#: includes/integrations/class-wpforo.php:207
+msgid "Forum / Category"
+msgstr "Fórum / Categoria"
+
+#: wp-fusion.php:224 wp-fusion.php:236
+msgid "Cheatin&#8217; huh?"
+msgstr "A fazer batota hein?"
+
+#. Plugin URI of the plugin/theme
+msgid "https://wpfusion.com/"
+msgstr "https://wpfusion.com/"
+
+#. Description of the plugin/theme
+msgid ""
+"WP Fusion connects your website to your CRM, with support for several CRMs "
+"and dozens of plugins."
+msgstr ""
+"WP Fusion liga o seu website à sua CRM, com suporte para várias CRMs e "
+"dezenas de plugins."
+
+#. Author of the plugin/theme
+msgid "Very Good Plugins"
+msgstr "Very Good Plugins"
+
+#. Author URI of the plugin/theme
+msgid "https://verygoodplugins.com/"
+msgstr "https://verygoodplugins.com/"

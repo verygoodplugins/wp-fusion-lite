@@ -8,6 +8,20 @@ class WPF_Drip {
 	// apply_tags() does work.
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'drip';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Drip';
+
+	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
 	 */
 
@@ -29,7 +43,7 @@ class WPF_Drip {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags', 'add_fields', 'events', 'events_multi_key' );
 
 
 	/**
@@ -49,10 +63,6 @@ class WPF_Drip {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'drip';
-		$this->name     = 'Drip';
-		$this->supports = array( 'add_tags', 'add_fields', 'events', 'events_multi_key' );
 
 		// Set up admin options
 		if ( is_admin() ) {

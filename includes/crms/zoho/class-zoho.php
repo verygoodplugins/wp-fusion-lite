@@ -38,6 +38,7 @@ class WPF_Zoho {
 	public $client_secret_eu = 'cddd03e43d2864dcfbee5b3178668cfc7b8f3457b5';
 	public $client_secret_in = 'bd920ac806f5fe45c63e52fa6ab9416c14d479d20e';
 	public $client_secret_au = '08dcc7d1734284158f1819af1e06490777a4682323';
+	public $client_secret_ca = '816330848a4aecba19edd950f4f5740f641732c217';
 
 	public $api_domain;
 
@@ -84,7 +85,7 @@ class WPF_Zoho {
 
 	public function init() {
 
-		remove_all_filters( 'wpf_format_field_value' ); // removes the base filtering in WPF_CRM_Base.
+		remove_filter( 'wpf_format_field_value', array( wp_fusion()->crm_base, 'format_field_value' ), 5 ); // removes the base filtering in WPF_CRM_Base.
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
@@ -94,15 +95,17 @@ class WPF_Zoho {
 
 			$location = wpf_get_option( 'zoho_location' );
 
-			if ( 'us' == $location ) {
-				$domain = 'com';
-			} elseif ( 'au' == $location ) {
-				$domain = 'com.au';
+			if ( 'us' === $location ) {
+				$domain = 'zoho.com';
+			} elseif ( 'au' === $location ) {
+				$domain = 'zoho.com.au';
+			} elseif ( 'ca' === $location ) {
+				$domain = 'zohocloud.ca';
 			} else {
-				$domain = $location;
+				$domain = 'zoho.' . $location;
 			}
 
-			$this->edit_url = 'https://crm.zoho.' . $domain . '/crm/' . $org_id . '/tab/Contacts/%d';
+			$this->edit_url = 'https://crm.' . $domain . '/crm/' . $org_id . '/tab/Contacts/%d';
 		}
 
 		// Set up params.
@@ -120,7 +123,7 @@ class WPF_Zoho {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
+		if ( 'date' === $field_type ) {
 
 			if ( ! is_numeric( $value ) ) {
 				$value = strtotime( $value );
@@ -142,7 +145,11 @@ class WPF_Zoho {
 
 			return $date;
 
-		} elseif ( 'checkbox' == $field_type || 'checkbox-full' == $field_type ) {
+		} elseif ( 'tel' === $field_type ) {
+
+			return preg_replace( '/[^0-9+]/', '', $value );
+
+		} elseif ( 'checkbox' === $field_type ) {
 
 			if ( ! empty( $value ) ) {
 
@@ -150,7 +157,7 @@ class WPF_Zoho {
 				return true;
 
 			}
-		} elseif ( 'text' == $field_type || 'textarea' == $field_type ) {
+		} elseif ( 'text' === $field_type ) {
 
 			if ( is_array( $value ) ) {
 				$value = implode( ', ', $value );
@@ -222,6 +229,9 @@ class WPF_Zoho {
 		} elseif ( $location == 'au' ) {
 			$client_secret   = $this->client_secret_au;
 			$accounts_server = 'https://accounts.zoho.com.au';
+		} elseif ( $location == 'ca' ) {
+			$client_secret   = $this->client_secret_ca;
+			$accounts_server = 'https://accounts.zohocloud.ca';
 		} else {
 			$client_secret   = $this->client_secret_us;
 			$accounts_server = 'https://accounts.zoho.com';

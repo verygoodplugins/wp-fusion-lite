@@ -228,7 +228,7 @@ class WPF_Groundhogg {
 		} elseif ( 'datepicker' == $field_type || 'date' == $field_type ) {
 
 			// Adjust formatting for date fields
-			$value = date( 'Y-m-d', $value );
+			$value = date( 'Y-m-d', intval( $value ) );
 
 		}
 

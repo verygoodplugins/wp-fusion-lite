@@ -127,7 +127,7 @@ class Charset {
 					'&lt;',
 					'&gt;'
 				), $data );
-				$escapedData = utf8_encode( $escapedData );
+				$escapedData = mb_convert_encoding( $escapedData, 'UTF-8', 'ISO-8859-1' );
 				break;
 			case 'ISO-8859-1_ISO-8859-1':
 			case 'US-ASCII_US-ASCII':

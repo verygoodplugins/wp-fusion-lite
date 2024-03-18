@@ -3,10 +3,24 @@
 class WPF_EngageBay {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'engagebay';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'EngageBay';
+
+	/**
 	 * Contains API params
 	 */
 
-	public $params;
+	public $params = array();
 
 	/**
 	 *  string for API for TAGS
@@ -30,14 +44,14 @@ class WPF_EngageBay {
 	 * API url for the account
 	 */
 
-	public $api_url;
+	public $api_url = 'https://api.engagebay.com/dev/api/';
 
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags' );
 
 
 	/**
@@ -57,12 +71,6 @@ class WPF_EngageBay {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'engagebay';
-		$this->name     = 'EngageBay';
-		$this->supports = array( 'add_tags' );
-
-		$this->api_url = 'https://api.engagebay.com/dev/api/';
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -94,7 +102,8 @@ class WPF_EngageBay {
 		$domain = wpf_get_option( 'engagebay_domain' );
 
 		if ( ! empty( $domain ) ) {
-			$this->edit_url = 'https://' . $domain . '.engagebay.com/home#list/0/subscriber/%d';
+			$this->edit_url = "https://{$domain}.engagebay.com/home#list/0/subscriber/%d";
+			$this->api_url  = "https://{$domain}.engagebay.com/dev/api/";
 		}
 	}
 
@@ -179,11 +188,11 @@ class WPF_EngageBay {
 
 				$response = new WP_Error( 'error', $body->message );
 
-			} elseif ( 403 == wp_remote_retrieve_response_code( $response ) ) {
+			} elseif ( 403 === wp_remote_retrieve_response_code( $response ) || 401 === wp_remote_retrieve_response_code( $response ) ) {
 
 				$response = new WP_Error( 'error', 'Invalid API key.' );
 
-			} elseif ( 500 == wp_remote_retrieve_response_code( $response ) ) {
+			} elseif ( 500 === wp_remote_retrieve_response_code( $response ) ) {
 
 				$response = new WP_Error( 'error', '500 error, EngageBay API is currently unavailable.' );
 
@@ -276,7 +285,6 @@ class WPF_EngageBay {
 				'Authorization' => $api_key,
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
-				'Host'          => 'api.engagebay.com',
 			),
 		);
 
@@ -443,12 +451,8 @@ class WPF_EngageBay {
 
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = $this->api_url . $this->contact_by_email_str . $email_address;
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

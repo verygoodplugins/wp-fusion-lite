@@ -66,21 +66,20 @@ class WPF_Zoho_Admin {
 
 			if ( $location == 'eu' ) {
 				$client_secret = $this->crm->client_secret_eu;
-				$api_domain    = 'https://www.zohoapis.eu';
 			} elseif ( $location == 'in' ) {
 				$client_secret = $this->crm->client_secret_in;
-				$api_domain    = 'https://www.zohoapis.in';
 			} elseif ( $location == 'au' ) {
 				$client_secret = $this->crm->client_secret_au;
-				$api_domain    = 'https://www.zohoapis.com.au';
+			} elseif ( $location == 'ca' ) {
+				$client_secret = $this->crm->client_secret_ca;
 			} else {
 				$client_secret = $this->crm->client_secret_us;
-				$api_domain    = 'https://www.zohoapis.com';
 			}
 
 			$response = wp_safe_remote_post( $accounts_server . '/oauth/v2/token?code=' . $code . '&client_id=' . $this->crm->client_id . '&grant_type=authorization_code&client_secret=' . $client_secret . '&redirect_uri=https%3A%2F%2Fwpfusionplugin.com%2Fparse-zoho-oauth.php' );
 
 			if ( is_wp_error( $response ) ) {
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
 				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
 				return false;
 			}
@@ -88,6 +87,7 @@ class WPF_Zoho_Admin {
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $body->error ) ) {
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $body->error );
 				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $body->error );
 				return false;
 			}

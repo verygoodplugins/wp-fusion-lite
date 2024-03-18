@@ -209,6 +209,10 @@ class WPF_Lead_Source_Tracking {
 				)
 			);
 
+			if ( empty( $args[0] ) ) {
+				$args[0] = array(); // in case it came in empty.
+			}
+
 			$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $lead_source_data ); // dont overwrite anything we might have gotten from the database.
 
 		}

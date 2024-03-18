@@ -114,6 +114,7 @@ class WPF_MailChimp {
 
 		if ( isset( $post_data['data'] ) && isset( $post_data['data']['email'] ) ) {
 			$post_data['contact_id'] = md5( sanitize_email( $post_data['data']['email'] ) );
+			$post_data['email']      = sanitize_email( $post_data['data']['email'] );
 		}
 
 		// Journey builder.
@@ -121,6 +122,7 @@ class WPF_MailChimp {
 
 		if ( $payload && isset( $payload->contact_id ) ) {
 			$post_data['contact_id'] = md5( sanitize_email( $payload->contact_id ) );
+			$post_data['email']      = sanitize_email( $post_data['data']['email'] );
 		}
 
 		return $post_data;

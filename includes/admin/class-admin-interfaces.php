@@ -1459,6 +1459,8 @@ class WPF_Admin_Interfaces {
 	 */
 	public function get_log_users() {
 
+		check_ajax_referer( 'wpf_admin_nonce' );
+
 		if ( empty( $_POST['search'] ) ) {
 			wp_die();
 		}

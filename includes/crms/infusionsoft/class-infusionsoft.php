@@ -350,14 +350,13 @@ class WPF_Infusionsoft_iSDK {
 
 		$fields = array( 'CategoryName', 'Id' );
 		$query  = array( 'Id' => '%' );
-
-		$tags = array();
+		$tags   = array();
 
 		$categories = $this->app->dsQuery( 'ContactGroupCategory', 1000, 0, $query, $fields );
 
 		if ( is_wp_error( $categories ) ) {
 			wpf_log( 'error', 0, $categories->get_error_message() . '.<br /><br />The categories have not been loaded.', array( 'source' => 'infusionsoft' ) );
-			return false;
+			return $tags;
 		}
 
 		$fields = array( 'Id', 'GroupName', 'GroupCategoryId' );

@@ -4,7 +4,7 @@ Tags: infusionsoft, activecampaign, ontraport, convertkit, salesforce, mailchimp
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 6.5.0
-Stable tag: 3.42.10
+Stable tag: 3.43.0
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -200,6 +200,43 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.42.10 - 2/5/2024 =
+
+##### New Features
+
+* The Great Date Update
+* Added an option with Klaviyo to subscribe contacts to lists with marketing consent
+* Added support for the Canadian data center with Zoho
+* Added support for loading and displaying read-only fields with HubSpot
+
+
+##### Improvements
+
+* Improved Zoho integration
+* Errors during the initial OAuth connection with Dynamics 365 will now be displayed as a banner on the setup screen
+* Updated expired Microsoft Dynamics 365 app secret
+* With Klaviyo, the country code will now be prepended to phone numbers if it's missing during a WooCommerce checkout or profile update
+* Improved WP Fusion's admin settings and performance
+
+
+##### Bug Fixes
+
+* Fixed deprecated utf8_encode() warnings in the Infusionsoft/Keap XMLRPC library
+* Fixed fatal error Unsupported operand types: null + array with syncing lead source data without any other contact data present since 3.42.10
+* Fixed for HighLevel API update of Feb 8th (now sending 403 status codes when access tokens expire, was previously 401)
+* Fixed filters added on wpf_format_field_value before init being un-hooked with Zoho
+* Fixed error Timestamp must be of type int when syncing string timestamps with Groundhogg (same site)
+* Fixed notice not being logged when an update webhook was received but no matching user was found
+* Fixed missing nonce check on search log users AJAX handler
+
+
+##### Developer
+
+* updated the Klaviyo API version to 2023-12-15
+* added function wpf_phone_number_to_e164() to convert phone numbers to E.164 format
+* If a user has a contact ID and no tags, the tags meta will now be deleted from the usermeta table for that user (reduces database size for users with no tags)
+
 
 = 3.42.10 - 2/5/2024 =
 
