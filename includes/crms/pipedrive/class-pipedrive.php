@@ -710,6 +710,8 @@ class WPF_Pipedrive {
 
 		$params['body'] = $this->format_contact_data( $contact_data );
 
+		$params['body']['marketing_status'] = 'subscribed';
+
 		$response = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {

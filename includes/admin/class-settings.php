@@ -42,6 +42,8 @@ class WPF_Settings {
 		add_filter( 'wpf_get_setting_multisite_prefix_keys', array( $this, 'get_multisite_prefix_keys' ) );
 		add_filter( 'wpf_get_setting_contact_fields', array( $this, 'get_contact_fields' ) );
 
+		// Check the license status once per week.ch
+		add_action( 'admin_init', array( $this, 'edd_check_license' ) );
 	}
 
 	/**
@@ -73,7 +75,6 @@ class WPF_Settings {
 				'href'   => '#',
 			)
 		);
-
 	}
 
 
@@ -161,11 +162,12 @@ class WPF_Settings {
 
 			add_action( 'admin_init', array( $this, 'maybe_activate_site' ) );
 
+			add_action( 'in_plugin_update_message-wp-fusion/wp-fusion.php', array( $this, 'update_available_notice' ), 10, 2 );
+
 		}
 
 		// Fire up the options framework.
 		new WP_Fusion_Options( $this->get_setup(), $this->get_sections() );
-
 	}
 
 
@@ -179,7 +181,6 @@ class WPF_Settings {
 	private function includes() {
 
 		require_once WPF_DIR_PATH . 'includes/admin/options/class-options.php';
-
 	}
 
 	/**
@@ -376,7 +377,6 @@ class WPF_Settings {
 		_deprecated_function( 'set_all', '3.38.0', 'set_multiple' );
 
 		$this->set_multiple( $options );
-
 	}
 
 	/**
@@ -407,7 +407,6 @@ class WPF_Settings {
 		}
 
 		return $fields;
-
 	}
 
 	/**
@@ -445,7 +444,6 @@ class WPF_Settings {
 		natcasesort( $data );
 
 		return $data;
-
 	}
 
 	/**
@@ -494,7 +492,6 @@ class WPF_Settings {
 			return $fields_flat;
 
 		}
-
 	}
 
 	/**
@@ -596,7 +593,6 @@ class WPF_Settings {
 		}
 
 		return $links;
-
 	}
 
 	/**
@@ -660,7 +656,6 @@ class WPF_Settings {
 
 		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip' ), WP_FUSION_VERSION, true );
 		wp_localize_script( 'wpf-admin', 'wpf', array( 'crm_supports' => wp_fusion()->crm->supports ) );
-
 	}
 
 	/**
@@ -685,7 +680,6 @@ class WPF_Settings {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->postmeta WHERE meta_key LIKE %s", $wpdb->esc_like( 'wpf-' ) . '%' ) );
 
 		}
-
 	}
 
 	/**
@@ -700,7 +694,6 @@ class WPF_Settings {
 		if ( isset( wp_fusion()->crm->tag_type ) ) {
 			$this->set( 'crm_tag_type', wp_fusion()->crm->tag_type );
 		}
-
 	}
 
 	/**
@@ -712,7 +705,7 @@ class WPF_Settings {
 
 	public function set_tag_labels( $translation, $text, $domain ) {
 
-		if ( 0 === strpos( $domain, 'wp-fusion-lite' ) ) {
+		if ( $domain && 0 === strpos( $domain, 'wp-fusion-lite' ) ) {
 
 			$tag_type = $this->get( 'crm_tag_type' );
 
@@ -736,7 +729,6 @@ class WPF_Settings {
 		}
 
 		return $translation;
-
 	}
 
 	/**
@@ -749,7 +741,7 @@ class WPF_Settings {
 	public function prepare_meta_fields( $meta_fields ) {
 
 		// Load the reference of standard WP field names and types.
-		include dirname( __FILE__ ) . '/wordpress-fields.php';
+		include __DIR__ . '/wordpress-fields.php';
 
 		// Sets field types and labels for all built in fields.
 		foreach ( $wp_fields as $key => $data ) {
@@ -840,7 +832,6 @@ class WPF_Settings {
 		}
 
 		return $meta_fields;
-
 	}
 
 	/**
@@ -905,7 +896,7 @@ class WPF_Settings {
 	public function sync_tags() {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
-		
+
 		$available_tags = wpf_get_option( 'available_tags' );
 		$new_tags       = wp_fusion()->crm->sync_tags();
 
@@ -997,7 +988,6 @@ class WPF_Settings {
 		wp_send_json_success();
 
 		die();
-
 	}
 
 	/**
@@ -1043,7 +1033,6 @@ class WPF_Settings {
 		}
 
 		return $integrations;
-
 	}
 
 
@@ -1064,7 +1053,6 @@ class WPF_Settings {
 		}
 
 		return $license_key;
-
 	}
 
 	/**
@@ -1082,7 +1070,6 @@ class WPF_Settings {
 		}
 
 		return $setting;
-
 	}
 
 	/**
@@ -1091,7 +1078,7 @@ class WPF_Settings {
 	 * @access public
 	 * @return string License Status
 	 */
-	public function edd_check_license( $license_key ) {
+	public function edd_check_license() {
 
 		$status = get_option( 'wpf_license_check', 0 ) + ( DAY_IN_SECONDS * 10 );
 
@@ -1104,7 +1091,7 @@ class WPF_Settings {
 			// data to send in our API request.
 			$api_params = array(
 				'edd_action'   => 'check_license',
-				'license'      => $license_key,
+				'license'      => $this->get( 'license_key' ),
 				'item_name'    => rawurlencode( 'WP Fusion' ),
 				'author'       => 'Very Good Plugins',
 				'url'          => home_url(),
@@ -1141,7 +1128,6 @@ class WPF_Settings {
 			return $this->get( 'license_status' );
 
 		}
-
 	}
 
 
@@ -1163,11 +1149,12 @@ class WPF_Settings {
 
 		// data to send in our API request.
 		$api_params = array(
-			'edd_action' => 'activate_license',
-			'license'    => $license_key,
-			'item_name'  => rawurlencode( 'WP Fusion' ), // the name of our product in EDD.
-			'url'        => home_url(),
-			'version'    => WP_FUSION_VERSION,
+			'edd_action'  => 'activate_license',
+			'license'     => $license_key,
+			'item_name'   => rawurlencode( 'WP Fusion' ), // the name of our product in EDD.
+			'url'         => home_url(),
+			'version'     => WP_FUSION_VERSION,
+			'edd_item_id' => WPF_EDD_ITEM_ID,
 		);
 
 		if ( wpf_get_option( 'connection_configured' ) ) {
@@ -1191,7 +1178,8 @@ class WPF_Settings {
 
 			// If we're doing this in an AJAX request (via the Activate button).
 			if ( 403 === wp_remote_retrieve_response_code( $response ) ) {
-				wp_send_json_error( '403 response. Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a>. IP address: ' . isset( $_SERVER['SERVER_ADDR'] ) ? esc_html( wp_unslash( $_SERVER['SERVER_ADDR'] ) ) : 'unknown' );
+				$address = isset( $_SERVER['SERVER_ADDR'] ) ? esc_html( wp_unslash( $_SERVER['SERVER_ADDR'] ) ) : 'unknown';
+				wp_send_json_error( '403 response. Please <a href="https://wpfusion.com/support/contact/" target="_blank">contact support</a>. IP address: ' . $address );
 			}
 
 			// Make sure the response came back okay.
@@ -1276,7 +1264,6 @@ class WPF_Settings {
 				}
 			}
 		}
-
 	}
 
 
@@ -1327,7 +1314,6 @@ class WPF_Settings {
 		delete_option( 'wpf_license_check' );
 
 		wp_send_json_success( 'deactivated' );
-
 	}
 
 	/**
@@ -1340,10 +1326,38 @@ class WPF_Settings {
 		if ( ( empty( $this->get( 'license_status' ) ) || 'site_inactive' === $this->get( 'license_status' ) ) && defined( 'WPF_LICENSE_KEY' ) ) {
 			$this->edd_activate( WPF_LICENSE_KEY );
 		}
-
 	}
 
+	/**
+	 * Update message.
+	 *
+	 * @since 3.43.0
+	 *
+	 * @param array  $plugin_data The plugin data.
+	 * @param object $response    The API response.
+	 */
+	public function update_available_notice( $plugin_data, $response ) {
 
+		// Add note about license key if no automatic update available (i.e. no update package).
+		if ( empty( $response->package ) ) {
+			$license_page        = admin_url( 'options-general.php?page=wpf-settings#setup' );
+			$settings_link_open  = $license_page ? '<a href="' . esc_url( $license_page ) . '">' : '';
+			$settings_link_close = $license_page ? '</a>' : '';
+
+			// phpcs:disable WordPress.Security.EscapeOutput
+			printf(
+				' <em>%s</em>',
+				sprintf(
+				/* translators: 1: licence key link start, 2: license key link end */
+					__( 'Activate %1$syour license key%2$s to enable updates.', 'wp-fusion-lite' ),
+					$settings_link_open,
+					$settings_link_close
+				)
+			);
+			// phpcs:enable WordPress.Security.EscapeOutput
+		}
+
+	}
 
 
 	/**
@@ -1366,7 +1380,6 @@ class WPF_Settings {
 		);
 
 		return $args;
-
 	}
 
 
@@ -1392,7 +1405,6 @@ class WPF_Settings {
 		$sections['wpf-settings']['advanced'] = __( 'Advanced', 'wp-fusion-lite' );
 
 		return $sections;
-
 	}
 
 
@@ -1428,7 +1440,6 @@ class WPF_Settings {
 		}
 
 		return $options;
-
 	}
 
 
@@ -1978,9 +1989,14 @@ class WPF_Settings {
 			'section' => 'advanced',
 		);
 
+		if ( defined( 'WPF_STAGING_MODE' ) && true === WPF_STAGING_MODE ) {
+			$settings['staging_mode']['disabled'] = true;
+			$settings['staging_mode']['desc']     = __( 'Staging mode is enabled in wp-config.php, via the WPF_STAGING_MODE constant.', 'wp-fusion-lite' );
+		}
+
 		if ( WPF_Staging_Sites::is_duplicate_site() ) {
 			$settings['staging_mode']['disabled'] = true;
-			$settings['staging_mode']['desc'] = __( 'To disable staging mode, please click Disable Staging Mode at the top of this page.', 'wp-fusion-lite' );
+			$settings['staging_mode']['desc']     = __( 'To disable staging mode, please click Disable Staging Mode at the top of this page.', 'wp-fusion-lite' );
 		}
 
 		if ( is_multisite() ) {
@@ -2177,7 +2193,6 @@ class WPF_Settings {
 		);
 
 		return $settings;
-
 	}
 
 
@@ -2238,7 +2253,6 @@ class WPF_Settings {
 		}
 
 		return $settings;
-
 	}
 
 
@@ -2264,7 +2278,6 @@ class WPF_Settings {
 		$setting['choices'] = $post_types;
 
 		return $setting;
-
 	}
 
 	/**
@@ -2301,7 +2314,6 @@ class WPF_Settings {
 			echo '</a>';
 
 		}
-
 	}
 
 	/**
@@ -2321,7 +2333,6 @@ class WPF_Settings {
 		echo '</table><div id="connection-output"></div>';
 		echo '</div>'; // close CRM div.
 		// echo '<table class="form-table">';
-
 	}
 
 	/**
@@ -2341,7 +2352,6 @@ class WPF_Settings {
 		if ( ! is_ssl() ) {
 			echo '<p class="wpf-notice notice notice-error">' . sprintf( esc_html__( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the %s API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ), $field['name'] ) . '</p>';
 		}
-
 	}
 
 	/**
@@ -2355,7 +2365,6 @@ class WPF_Settings {
 	public function show_field_webhook_url( $id, $field ) {
 
 		echo '<input type="text" id="webhook-base-url" class="form-control" disabled value="' . esc_url( home_url( '/?access_key=' . $this->get( 'access_key' ) . '&wpf_action=' ) ) . '" />';
-
 	}
 
 	/**
@@ -2411,14 +2420,17 @@ class WPF_Settings {
 			$this->options[ $id ] = array();
 		}
 
-		$args = array(
-			'meta_name' => 'wpf_options',
-			'field_id'  => $id,
-			'limit'     => 1,
-			'read_only' => true,
-		);
+		$available_tags = wp_fusion()->settings->get_available_tags_flat( true, false );
 
-		wpf_render_tag_multiselect( $args );
+		echo '<select class="select4 select4-search" id="wpf_options-import_users" name="wpf_options[import_users]" data-placeholder="' . esc_attr__( 'Select a tag', 'wp-fusion-lite' ) . '">';
+
+		echo '<option></option>'; // placeholder.
+
+		echo '<option value="false">' . esc_html__( '(All contacts)', 'wp-fusion-lite' ) . '</option>';
+		foreach ( $available_tags as $key => $value ) {
+			echo '<option value="' . esc_attr( $key ) . '">' . esc_html( $value ) . '</option>';
+		}
+		echo '</select>';
 
 		global $wp_roles;
 
@@ -2436,7 +2448,6 @@ class WPF_Settings {
 		echo '</select>';
 
 		echo '<a id="import-users-btn" class="button">' . esc_html__( 'Import', 'wp-fusion-lite' ) . '</a>';
-
 	}
 
 	/**
@@ -2450,7 +2461,6 @@ class WPF_Settings {
 		echo '</td></tr></table>';
 		echo '<div id="import-output"></div>';
 		echo '<table class="form-table">';
-
 	}
 
 	/**
@@ -2480,7 +2490,6 @@ class WPF_Settings {
 		);
 
 		wpf_render_tag_multiselect( $args );
-
 	}
 
 	/**
@@ -2497,7 +2506,6 @@ class WPF_Settings {
 		}
 
 		return $input;
-
 	}
 
 
@@ -2525,7 +2533,6 @@ class WPF_Settings {
 		}
 
 		wpf_render_crm_field_select( $setting, 'wpf_options', $id );
-
 	}
 
 	/**
@@ -2677,7 +2684,7 @@ class WPF_Settings {
 		echo '<thead>';
 		echo '<tr>';
 		echo '<th class="sync">' . esc_html__( 'Sync', 'wp-fusion-lite' ) . '</th>';
-		//echo '<th class="sync">' . esc_html__( 'Pull', 'wp-fusion-lite' ) . '</th>'; @TODO.
+		// echo '<th class="sync">' . esc_html__( 'Pull', 'wp-fusion-lite' ) . '</th>'; @TODO.
 		echo '<th>' . esc_html__( 'Name', 'wp-fusion-lite' ) . '</th>';
 		echo '<th>' . esc_html__( 'Meta Field', 'wp-fusion-lite' ) . '</th>';
 		echo '<th>' . esc_html__( 'Type', 'wp-fusion-lite' ) . '</th>';
@@ -2838,7 +2845,6 @@ class WPF_Settings {
 		echo '</tbody>';
 
 		echo '</table>';
-
 	}
 
 	/**
@@ -2899,7 +2905,6 @@ class WPF_Settings {
 		}
 
 		echo '</div>';
-
 	}
 
 	/**
@@ -2907,9 +2912,9 @@ class WPF_Settings {
 	 *
 	 * @since 3.42.6
 	 *
-	 * @param array  $input    The posted setting.
-	 * @param array  $setting  The setting parameters.
-	 * @param array  $options  The options in the DB.
+	 * @param array $input    The posted setting.
+	 * @param array $setting  The setting parameters.
+	 * @param array $options  The options in the DB.
 	 * @return array The setting parameters.
 	 */
 	public function validate_field_integrations( $input, $setting, $options ) {
@@ -2922,7 +2927,6 @@ class WPF_Settings {
 		}
 
 		return $input;
-
 	}
 
 	/**
@@ -2940,7 +2944,7 @@ class WPF_Settings {
 
 		$import_groups = get_option( 'wpf_import_groups' );
 
-		if ( $import_groups == false ) {
+		if ( ! $import_groups ) {
 			return;
 		}
 
@@ -2978,6 +2982,9 @@ class WPF_Settings {
 			}
 
 			global $wp_roles;
+
+			// Prior to 3.43.1, some user IDs were being saved twice, and WP_Errors were being saved to the array.
+			$data['user_ids'] = array_unique( array_filter( $data['user_ids'], 'is_numeric' ) );
 
 			echo '<tr class="import-group-row">';
 			echo '<td class="import-date">' . date( 'n/j/Y g:ia', absint( $date ) ) . '</td>';
@@ -3033,7 +3040,6 @@ class WPF_Settings {
 		echo '</div>';
 
 		echo '<br /><a id="export-btn" class="button">' . esc_html__( 'Create Background Task', 'wp-fusion-lite' ) . '</a><br />';
-
 	}
 
 	/**
@@ -3122,7 +3128,6 @@ class WPF_Settings {
 			esc_html_e( 'No custom code detected.', 'wp-fusion-lite' );
 
 		}
-
 	}
 
 	/**
@@ -3134,7 +3139,6 @@ class WPF_Settings {
 	public function show_field_test_webhooks( $id, $field ) {
 
 		echo '<a class="button" data-url="' . esc_url( home_url() ) . '" id="test-webhooks-btn" href="#">' . esc_html__( 'Test Webhooks', 'wp-fusion-lite' ) . '</a>';
-
 	}
 
 	/**
@@ -3155,7 +3159,6 @@ class WPF_Settings {
 			echo '</a>';
 
 		}
-
 	}
 
 	/**
@@ -3179,9 +3182,12 @@ class WPF_Settings {
 			echo 'Taxonomy Rules:<br />';
 			print_r( get_option( 'wpf_taxonomy_rules' ) );
 			echo '</pre>';
+			echo '<pre>';
+			echo 'Import Groups:<br />';
+			print_r( get_option( 'wpf_import_groups' ) );
+			echo '</pre>';
 			echo '</div>';
 		}
-
 	}
 
 	/**
@@ -3229,7 +3235,5 @@ class WPF_Settings {
 		$input = apply_filters( 'wpf_contact_fields_save', $input );
 
 		return wpf_clean( $input );
-
 	}
-
 }

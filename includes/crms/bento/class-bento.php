@@ -3,6 +3,20 @@
 class WPF_Bento {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'bento';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Bento';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var  string
@@ -56,9 +70,6 @@ class WPF_Bento {
 	 */
 	public function __construct() {
 
-		$this->slug = 'bento';
-		$this->name = 'Bento';
-
 		// Set up admin options.
 		if ( is_admin() ) {
 			require_once dirname( __FILE__ ) . '/class-bento-admin.php';
@@ -110,6 +121,24 @@ class WPF_Bento {
 
 		if ( ! empty( $body ) && isset( $body->id ) ) {
 			$post_data['contact_id'] = $body->id;
+		}
+
+		if ( ! empty( $body ) && isset( $body->email ) ) {
+
+			$post_data['email'] = $body->email;
+
+			$user = get_user_by( 'email', $body->email );
+
+			if ( $user ) {
+				// In some cases Bento sends a more recent UUID than the one in the database.
+
+				// "Just to be transparent behind the scenes: in Bento we have a Visitor,
+				// a Visitor can have many other Visitor's merged in to it (best to
+				// think of them as devices). The UUID referenced is generally the oldest
+				// Visitor." - Jesse.
+				$post_data['contact_id'] = wpf_get_contact_id( $user->ID );
+			}
+
 		}
 
 		return $post_data;

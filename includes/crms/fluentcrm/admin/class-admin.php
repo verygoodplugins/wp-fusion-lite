@@ -113,7 +113,7 @@ class WPF_FluentCRM_Admin {
 			),
 		);
 
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
+		$settings = wp_fusion()->settings->insert_setting_after( 'assign_lists', $settings, $new_settings );
 
 		if ( ! isset( $settings['create_users']['unlock']['fluentcrm_lists'] ) ) {
 			$settings['create_users']['unlock'][] = 'available_lists';

@@ -45,6 +45,14 @@ class WPF_CRM_Base {
 	private $buffer = array( 'update_contact' => array(), 'remove_tags' => array(), 'apply_tags' => array() );
 
 	/**
+	 * Last error.
+	 *
+	 * @since 3.43.1
+	 * @var   error_last
+	 */
+	public $error_last = false;
+
+	/**
 	 * Constructs a new instance.
 	 *
 	 * @since 1.0.0
@@ -71,6 +79,9 @@ class WPF_CRM_Base {
 
 		// AJAX CRM connection and sync.
 		add_action( 'wp_ajax_wpf_sync', array( $this, 'ajax_sync' ) );
+
+		// Error handling.
+		add_action( 'http_api_debug', array( $this, 'http_api_debug' ), 10, 5 );
 
 		// Process queued actions at PHP shutdown.
 		add_action( 'shutdown', array( $this, 'shutdown' ), -1 );
@@ -156,7 +167,10 @@ class WPF_CRM_Base {
 			return false; // not connected.
 		}
 
-		if ( wpf_is_staging_mode() ) {
+		// Methods we can still call while in staging mode.
+		$allowed_methods = array( 'connect', 'sync_tags', 'sync', 'sync_lists', 'sync_crm_fields' );
+
+		if ( wpf_is_staging_mode() && ! in_array( $method, $allowed_methods, true ) ) {
 
 			wpf_log(
 				'notice',
@@ -167,11 +181,11 @@ class WPF_CRM_Base {
 				)
 			);
 
-			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
-
-			$staging = new WPF_Staging();
-
-			return call_user_func_array( array( $staging, $method ), $args );
+			if ( method_exists( 'WPF_Staging', $method ) ) {
+				return call_user_func_array( array( 'WPF_Staging', $method ), $args );
+			} else {
+				return false;
+			}
 
 		}
 
@@ -341,6 +355,59 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Handles errors from the API.
+	 *
+	 * @since 3.43.1
+	 *
+	 * @param  WP_Error|array $response The response or error.
+	 * @param  array          $context  The context.
+	 * @param  string         $class    The class.
+	 * @param  array          $parsed_args The parsed args.
+	 * @param  string         $url      The URL.
+	 */
+	public function http_api_debug( $response, $context, $class, $parsed_args, $url ) {
+
+		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] ) {
+			return;
+		}
+
+		if ( is_wp_error( $response ) ) {
+			$response_message = $response->get_error_message();
+		} elseif ( is_array( $response ) ) {
+			unset( $response['http_response'] ); // redundant.
+			$response_message = wpf_print_r( array_filter( $response ), true );
+		} else {
+			$response_message = wpf_print_r( $response, true );
+		}
+
+		$message  = '<ul>';
+		$message .= '<li><strong>URL:</strong> <pre>' . esc_html( $url ) . '</pre></li>';
+
+		if ( ! is_array( $parsed_args['body'] ) && ! empty( $parsed_args['body'] ) ) {
+			$maybe_json = json_decode( $parsed_args['body'] );
+
+			if ( ! is_null( $maybe_json ) ) {
+				$message .= '<li><strong>Request (JSON Decoded):</strong><br /><pre>' . esc_html( wpf_print_r( $maybe_json, true ) ) . '</pre></li>';
+			}
+		}
+
+		if ( is_array( $response ) && ! empty( $response['body'] ) ) {
+			$maybe_json = json_decode( $response['body'] );
+
+			if ( ! is_null( $maybe_json ) ) {
+				$message .= '<li><strong>Response (JSON Decoded):</strong><br /><pre>' . esc_html( wpf_print_r( $maybe_json, true ) ) . '</pre></li>';
+			}
+		}
+
+		$message .= '<li><strong>Request:</strong> <pre>' . esc_html( wpf_print_r( array_filter( $parsed_args ), true ) ) . '</pre></li>';
+		$message .= '<li><strong>Response:</strong><br /><pre>' . esc_html( $response_message ) . '</pre></li>';
+		$message .= '</ul>';
+
+		$this->error_last = $message;
+
+	}
+
+	/**
 	 * Make the request via the CRM class and handle the result.
 	 *
 	 * @since  3.40.2
@@ -350,6 +417,8 @@ class WPF_CRM_Base {
 	 * @return mixed|WP_Error The API response or a WP_Error.
 	 */
 	private function request( $method, $args ) {
+
+		$this->error_last = false; // reset it so it can be used again.
 
 		$result = call_user_func_array( array( $this->crm, $method ), $args );
 
@@ -381,20 +450,20 @@ class WPF_CRM_Base {
 					return $this->request( $method, $args );
 
 				}
-			} elseif ( 'duplicate' === $result->get_error_code() && 'add' === $method ) {
+			} elseif ( 'duplicate' === $result->get_error_code() && 'add_contact' === $method ) {
 
 				$lookup_field = $this->get_lookup_field(); // get the email address field.
 
 				$result = $this->crm->get_contact_id( $args[0][ $lookup_field ] ); // get the email address field.
 
 				if ( empty( $result ) ) {
-					$result = new WP_Error( 'duplicate', 'A duplicate contact error was returned while trying to add a new contact, but searching by email for ' . $args[0] . ' returned no results. Please contact support.' );
+					$result = new WP_Error( 'duplicate', 'A duplicate contact error was returned while trying to add a new contact, but searching by email for ' . $args[0][ $lookup_field ] . ' returned no results. Please contact support.' );
 				}
 
 				// If there is a contact (and no error), update them.
 
 				if ( ! is_wp_error( $result ) ) {
-					$result = $this->crm->update_contact( array( $result, $args[0] ) );
+					$result = $this->crm->update_contact( $result, $args[0] );
 				}
 
 			}
@@ -413,7 +482,7 @@ class WPF_CRM_Base {
 					'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(),
 					array(
 						'source' => $this->crm->slug,
-						'args'   => $args,
+						'args'   => $this->error_last ? $this->error_last : $args,
 					)
 				);
 

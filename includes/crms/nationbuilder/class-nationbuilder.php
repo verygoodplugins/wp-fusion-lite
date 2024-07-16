@@ -187,9 +187,15 @@ class WPF_NationBuilder {
 						// This one is okay
 						return $response;
 
-					}
+					} elseif ( 'validation_failed' === $body->code && 'email has already been taken' === $body->validation_errors[0] ) {
 
-					$response = new WP_Error( 'error', $body->message );
+						$response = new WP_Error( 'duplicate', $body->message );
+
+					} else {
+
+						$response = new WP_Error( 'error', $body->message );
+
+					}
 
 				} else {
 

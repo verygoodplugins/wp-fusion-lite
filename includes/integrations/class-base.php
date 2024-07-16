@@ -107,26 +107,27 @@ abstract class WPF_Integrations_Base {
 		$apply_tags = array();
 
 		if ( ! wp_fusion()->crm->supports( 'add_tags' ) ) {
+			return $apply_tags;
+		}
 
-			foreach ( $update_data as $key => $value ) {
+		foreach ( $update_data as $key => $value ) {
 
-				$crm_field = wp_fusion()->crm->get_crm_field( $key );
+			$crm_field = wp_fusion()->crm->get_crm_field( $key );
 
-				if ( false === $crm_field ) {
-					continue;
-				}
+			if ( false === $crm_field ) {
+				continue;
+			}
 
-				if ( false !== strpos( $crm_field, 'add_tag_' ) ) {
+			if ( false !== strpos( $crm_field, 'add_tag_' ) ) {
 
-					if ( is_array( $value ) ) {
+				if ( is_array( $value ) ) {
 
-						$apply_tags = array_merge( $apply_tags, $value );
+					$apply_tags = array_merge( $apply_tags, $value );
 
-					} elseif ( ! empty( $value ) ) {
+				} elseif ( ! empty( $value ) ) {
 
-						$apply_tags[] = $value;
+					$apply_tags[] = $value;
 
-					}
 				}
 			}
 		}

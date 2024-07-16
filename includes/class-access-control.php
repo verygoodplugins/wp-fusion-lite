@@ -10,7 +10,7 @@ class WPF_Access_Control {
 	 * Cache of post IDs the user can or can't access
 	 *
 	 * @since 3.37.4
-	 * @var can_access_posts
+	 * @var array
 	 */
 
 	public $can_access_posts = array();
@@ -20,7 +20,7 @@ class WPF_Access_Control {
 	 * the_content.
 	 *
 	 * @since 3.37.30
-	 * @var  can_filter_content
+	 * @var  bool
 	 */
 	public $can_filter_content = false;
 
@@ -32,6 +32,21 @@ class WPF_Access_Control {
 	 */
 	public $taxonomy_rules = false;
 
+	/**
+	 * Keep track of whether we've refreshed the tags for the current user.
+	 *
+	 * @since 3.43.7
+	 * @var  bool
+	 */
+	public $refreshed_tags = false;
+
+	/**
+	 * The priority for the filter queries hook.
+	 *
+	 * @since 3.43.15
+	 * @var  int
+	 */
+	public $filter_queries_priority = 10;
 
 	/**
 	 * Get things started
@@ -59,7 +74,7 @@ class WPF_Access_Control {
 		}
 
 		// Query / archive filtering
-		add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
+		add_action( 'pre_get_posts', array( $this, 'filter_queries' ), $this->filter_queries_priority );
 		add_filter( 'posts_where', array( $this, 'posts_where_restricted_terms' ), 10, 2 );
 		add_filter( 'the_posts', array( $this, 'exclude_restricted_posts' ), 10, 2 );
 
@@ -255,11 +270,13 @@ class WPF_Access_Control {
 
 			}
 
-			// Possibly refresh the tags.
+			// Possibly refresh the tags, but only once per page load.
 
-			if ( false === $can_access && wpf_is_user_logged_in() && doing_action( 'template_redirect' ) && ! did_action( 'wpf_tags_modified' ) && ! empty( $settings['check_tags'] ) ) {
+			if ( false === $can_access && $user_id && doing_action( 'template_redirect' ) && ! empty( $settings['check_tags'] ) && ! $this->refreshed_tags ) {
 
 				wpf_get_tags( $user_id, true );
+				$this->refreshed_tags = true;
+
 				$can_access = $this->user_can_access( $post_id, $user_id );
 
 			}
@@ -283,7 +300,7 @@ class WPF_Access_Control {
 		// Cache the result for cases where we need to check the same post ID in
 		// a single page load, this will save a few database hits.
 
-		$this->cache_can_access( $post_id, $can_access );
+		$this->cache_can_access( $can_access, $user_id, $post_id );
 
 		return $can_access;
 
@@ -1379,13 +1396,13 @@ class WPF_Access_Control {
 
 			// Don't loop back on this or it will be bad.
 
-			remove_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
+			remove_action( 'pre_get_posts', array( $this, 'filter_queries' ), $this->filter_queries_priority );
 
 			// Get the posts.
 
 			$post_ids = get_posts( $args );
 
-			add_action( 'pre_get_posts', array( $this, 'filter_queries' ) );
+			add_action( 'pre_get_posts', array( $this, 'filter_queries' ), $this->filter_queries_priority );
 
 			if ( count( $post_ids ) === $args['posts_per_page'] ) {
 				wpf_log( 'notice', wpf_get_current_user_id(), 'Filter Queries is running on the <strong>' . implode( ', ', $post_types ) . '</strong> post type(s), but more than ' . $args['posts_per_page'] . ' posts were found with WP Fusion access rules. To protect the stability of your site, additional posts beyond the first ' . $args['posts_per_page'] . ' will not be filtered. This can be modified with the <a href="https://wpfusion.com/documentation/filters/wpf_query_filter_get_posts_args/" target="_blank"><code>wpf_query_filter_get_posts_args</code> filter</a>.' );
@@ -1522,11 +1539,11 @@ class WPF_Access_Control {
 
 			$setting = apply_filters( 'wpf_query_filtering_mode', $setting, $query );
 
-			if ( 'standard' == $setting ) {
+			if ( 'standard' === $setting ) {
 
 				$query->set( 'suppress_filters', false );
 
-			} elseif ( 'advanced' == $setting ) {
+			} elseif ( 'advanced' === $setting ) {
 
 				$post_types = $query->get( 'post_type', 'post' );
 

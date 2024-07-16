@@ -27,6 +27,13 @@ class WPF_Customer_IO {
 
 	public $url;
 
+	/**
+	 * Contains API params
+	 *
+	 * @var array
+	 * @since 3.43.15
+	 */
+	public $params = array();
 
 	/**
 	 * Contains Tracking API url
@@ -182,7 +189,7 @@ class WPF_Customer_IO {
 			$api_key = wpf_get_option( "{$this->slug}_api_key" );
 		}
 
-		$params = array(
+		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 15,
 			'headers'    => array(
@@ -191,7 +198,7 @@ class WPF_Customer_IO {
 			),
 		);
 
-		return $params;
+		return $this->params;
 	}
 
 

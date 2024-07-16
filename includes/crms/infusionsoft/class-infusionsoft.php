@@ -62,7 +62,7 @@ class WPF_Infusionsoft_iSDK {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Infusionsoft_iSDK_Admin( $this->slug, $this->name, $this );
 		}
 	}
@@ -93,7 +93,6 @@ class WPF_Infusionsoft_iSDK {
 		if ( ! empty( $app_name ) ) {
 			$this->edit_url = 'https://' . $app_name . '.infusionsoft.com/Contact/manageContact.jsp?view=edit&ID=%s';
 		}
-
 	}
 
 	/**
@@ -110,7 +109,6 @@ class WPF_Infusionsoft_iSDK {
 		$cookies[] = 'affiliate';
 
 		return $cookies;
-
 	}
 
 	/**
@@ -127,7 +125,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $password;
-
 	}
 
 
@@ -145,7 +142,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		echo '<script type="text/javascript" src="' . esc_url( 'https://' . wpf_get_option( 'app_name' ) . '.infusionsoft.com/app/webTracking/getTrackingCode' ) . '"></script>';
-
 	}
 
 	/**
@@ -162,7 +158,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -175,7 +170,6 @@ class WPF_Infusionsoft_iSDK {
 	public function auto_login_query_var( $var ) {
 
 		return 'contactId';
-
 	}
 
 
@@ -205,7 +199,7 @@ class WPF_Infusionsoft_iSDK {
 
 		} elseif ( 'country' === $field_type ) {
 
-			$countries = include dirname( __FILE__ ) . '/includes/countries.php';
+			$countries = include __DIR__ . '/includes/countries.php';
 
 			if ( isset( $countries[ $value ] ) ) {
 
@@ -221,7 +215,6 @@ class WPF_Infusionsoft_iSDK {
 			return sanitize_text_field( $value ); // fixes "Error adding: java.lang.Integer cannot be cast to java.lang.String".
 
 		}
-
 	}
 
 
@@ -266,7 +259,6 @@ class WPF_Infusionsoft_iSDK {
 				// In case no matching datatype is found, fall back to plain text
 				return 'Text';
 		}
-
 	}
 
 
@@ -286,7 +278,7 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		if ( ! class_exists( 'iSDK' ) ) {
-			require_once dirname( __FILE__ ) . '/includes/isdk.php';
+			require_once __DIR__ . '/includes/isdk.php';
 		}
 
 		$app = new iSDK();
@@ -307,7 +299,6 @@ class WPF_Infusionsoft_iSDK {
 		$this->app = $app;
 
 		return true;
-
 	}
 
 	/**
@@ -329,7 +320,6 @@ class WPF_Infusionsoft_iSDK {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -386,7 +376,7 @@ class WPF_Infusionsoft_iSDK {
 				if ( count( $result ) < 1000 ) {
 					$proceed = false;
 				} else {
-					$page++;
+					++$page;
 				}
 			}
 		}
@@ -416,14 +406,13 @@ class WPF_Infusionsoft_iSDK {
 			if ( count( $result ) < 1000 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $tags );
 
 		return $tags;
-
 	}
 
 
@@ -441,7 +430,7 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/infusionsoft-fields.php';
+		require __DIR__ . '/admin/infusionsoft-fields.php';
 
 		$built_in_fields = array();
 
@@ -489,7 +478,6 @@ class WPF_Infusionsoft_iSDK {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -552,7 +540,6 @@ class WPF_Infusionsoft_iSDK {
 			return false;
 
 		}
-
 	}
 
 
@@ -589,7 +576,6 @@ class WPF_Infusionsoft_iSDK {
 			return array();
 
 		}
-
 	}
 
 
@@ -632,7 +618,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return true;
-
 	}
 
 
@@ -675,7 +660,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -751,7 +735,6 @@ class WPF_Infusionsoft_iSDK {
 			);
 
 		}
-
 	}
 
 
@@ -786,14 +769,13 @@ class WPF_Infusionsoft_iSDK {
 			return $contact_id;
 		}
 
-		$this->app->optIn( $data['Email'] );
+		$this->app->optIn( $data['Email'], __( 'Contact was opted in through the WP Fusion integration.', 'wp-fusion-lite' ) );
 
 		if ( ! empty( $social_data ) ) {
 			$this->add_social_accounts( $social_data, $contact_id );
 		}
 
 		return $contact_id;
-
 	}
 
 
@@ -856,7 +838,7 @@ class WPF_Infusionsoft_iSDK {
 			// "You can opt them from a new state, but once they opt out you can't change it via API. They have to go through an IS web form."
 			// i.e. if they've opted out this won't opt them back in again.
 
-			$this->app->optIn( $data['Email'] );
+			$this->app->optIn( $data['Email'], __( 'Contact was opted in through the WP Fusion integration.', 'wp-fusion-lite' ) );
 
 		}
 
@@ -867,7 +849,6 @@ class WPF_Infusionsoft_iSDK {
 		do_action( 'wpf_contact_updated', $contact_id );
 
 		return true;
-
 	}
 
 
@@ -887,7 +868,7 @@ class WPF_Infusionsoft_iSDK {
 
 		// Load social fields.
 
-		require dirname( __FILE__ ) . '/admin/infusionsoft-fields.php';
+		require __DIR__ . '/admin/infusionsoft-fields.php';
 		$social_crm_fields = array_column( $infusionsoft_social_fields, 'crm_field' );
 
 		foreach ( wpf_get_option( 'contact_fields', array() ) as $field_id => $field_data ) {
@@ -966,7 +947,6 @@ class WPF_Infusionsoft_iSDK {
 					$user_meta[ $user_meta_key ] = $field_data;
 				}
 			}
-
 		}
 
 		// Optin status.
@@ -983,7 +963,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -994,31 +973,39 @@ class WPF_Infusionsoft_iSDK {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag = false ) {
 
 		if ( is_wp_error( $this->connect() ) ) {
 			return $this->error;
 		}
 
-		$contact_ids   = array();
-		$return_fields = array( 'Contact.Id' );
+		$contact_ids = array();
+		if ( $tag ) {
+			$field = 'Contact.Id';
+		} else {
+			$field = 'Id';
+		}
+
+		$return_fields = array( $field );
 
 		$proceed = true;
 		$page    = 0;
-
 		while ( $proceed == true ) {
-
-			$results = $this->app->dsQuery( 'ContactGroupAssign', 1000, $page, array( 'GroupId' => $tag ), $return_fields );
+			if ( $tag ) {
+				$results = $this->app->dsQuery( 'ContactGroupAssign', 1000, $page, array( 'GroupId' => $tag ), $return_fields );
+			} else {
+				$results = $this->app->dsQuery( 'Contact', 1000, $page, array( 'LastUpdated' => '~>~ 1970-01-01 00:00:00' ), $return_fields );
+			}
 
 			if ( is_wp_error( $results ) ) {
 				return $results;
 			}
 
 			foreach ( $results as $id => $result ) {
-				$contact_ids[] = $result['Contact.Id'];
+				$contact_ids[] = $result[ $field ];
 			}
 
-			$page++;
+			++$page;
 
 			if ( count( $results ) < 1000 ) {
 				$proceed = false;
@@ -1026,7 +1013,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -1056,7 +1042,5 @@ class WPF_Infusionsoft_iSDK {
 			return true;
 
 		}
-
 	}
-
 }

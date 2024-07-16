@@ -514,7 +514,11 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @return bool
 		 */
 		protected function memory_exceeded() {
-			$memory_limit   = $this->get_memory_limit() * 0.80; // 80% of max memory
+
+			// wpf_background_process_memory_utilization_percentage
+			$memory_utilization_percentage = apply_filters( $this->identifier . '_memory_utilization_percentage', 0.80 ); // 80% of max memory
+
+			$memory_limit   = $this->get_memory_limit() * $memory_utilization_percentage;
 			$current_memory = memory_get_usage( true );
 			$return         = false;
 

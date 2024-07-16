@@ -157,12 +157,13 @@ class WPF_Auto_Login {
 
 		if ( empty( $this->auto_login_user ) && isset( $contact_id ) ) {
 
-			// Do first time autologin
+			// Do first time autologin.
 
 			$user_id = $this->create_temp_user( $contact_id );
 
 			if ( is_wp_error( $user_id ) ) {
-				return false;
+				wpf_log( 'error', 0, 'Unable to create temporary user for auto-login contact #' . $contact_id . ': ' . $user_id->get_error_message(), array( 'source' => 'auto-login' ) );
+				return;
 			}
 
 			$this->auto_login_user = array(
@@ -181,7 +182,7 @@ class WPF_Auto_Login {
 				$user_id = $this->create_temp_user( $this->auto_login_user['contact_id'] );
 
 				if ( is_wp_error( $user_id ) ) {
-					return false;
+					return;
 				}
 
 				$this->auto_login_user['user_id'] = $user_id;
@@ -301,12 +302,11 @@ class WPF_Auto_Login {
 	}
 
 	/**
-	 * Creates a temporary user for auto login sessions
+	 * Creates a temporary user for auto login sessions.
 	 *
-	 * @access public
-	 * @return int Temporary user ID
+	 * @param string $contact_id The contact ID.
+	 * @return int|WP_Error Temporary user ID or error.
 	 */
-
 	public function create_temp_user( $contact_id ) {
 
 		$user_tags = wp_fusion()->crm->get_tags( $contact_id );

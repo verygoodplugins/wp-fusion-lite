@@ -603,7 +603,6 @@ class WPF_MailEngine {
 					$user_meta[ $field_id ] = $value;
 				}
 			}
-			var_dump( $user_meta );
 
 			return $user_meta;
 		} else {

@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly
+}
+
 class WPF_HighLevel {
 
 	/**
@@ -91,13 +95,12 @@ class WPF_HighLevel {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_HighLevel_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -113,7 +116,6 @@ class WPF_HighLevel {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-
 	}
 
 	/**
@@ -138,7 +140,6 @@ class WPF_HighLevel {
 		$post_data['contact_id'] = absint( $payload->contact_id );
 
 		return $post_data;
-
 	}
 
 
@@ -173,7 +174,7 @@ class WPF_HighLevel {
 
 			if ( 'PHONE' === $field_types[ $field ] && ! wpf_validate_phone_number( $value ) ) {
 
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Invalid phone number: <code>' . $value  . '</code> for field <code>' . $field . '</code>. Value will not be synced.' );
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Invalid phone number: <code>' . $value . '</code> for field <code>' . $field . '</code>. Value will not be synced.' );
 				$value = ''; // returning an empty string will omit the field from the data.
 
 			}
@@ -186,7 +187,6 @@ class WPF_HighLevel {
 		}
 
 		return $value;
-
 	}
 
 	/**
@@ -224,7 +224,12 @@ class WPF_HighLevel {
 					$body_json->message = implode( ' ', $body_json->message );
 				}
 
-				if ( 401 === $response_code || 403 === $response_code || ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
+				if ( 403 === $response_code && isset( $body_json->message ) && 'The token does not have access to this location.' === $body_json->message ) {
+
+					// We don't know what causes this error, but we don't want it to trigger a refresh.
+					$response = new WP_Error( 'error', __( 'The token does not have access to this location.', 'wp-fusion-lite' ) );
+
+				} elseif ( 401 === $response_code || 403 === $response_code || ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
 
 					$access_token = $this->refresh_token();
 
@@ -237,6 +242,7 @@ class WPF_HighLevel {
 					$response = wp_safe_remote_request( $url, $args );
 
 				} elseif ( isset( $body_json->error_description ) ) {
+
 					$response = new WP_Error( 'error', $body_json->error_description );
 
 				} elseif ( isset( $body_json->message ) ) {
@@ -248,13 +254,18 @@ class WPF_HighLevel {
 					}
 
 					$response = new WP_Error( 'error', $body_json->message );
+
+				} elseif ( isset( $body_json->error ) ) {
+
+					// Just error, no message.
+					$response = new WP_Error( 'error', $body_json->error );
+
 				}
 
 			}
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -273,7 +284,6 @@ class WPF_HighLevel {
 		} else {
 			return false;
 		}
-
 	}
 
 
@@ -320,7 +330,6 @@ class WPF_HighLevel {
 		wp_fusion()->settings->set( 'highlevel_refresh_token', $body_json->refresh_token );
 
 		return $body_json->access_token;
-
 	}
 
 
@@ -380,7 +389,6 @@ class WPF_HighLevel {
 		}
 
 		return true;
-
 	}
 
 
@@ -451,7 +459,7 @@ class WPF_HighLevel {
 
 	public function sync_crm_fields() {
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/highlevel-fields.php';
+		require __DIR__ . '/admin/highlevel-fields.php';
 
 		$built_in_fields = array();
 
@@ -528,7 +536,6 @@ class WPF_HighLevel {
 		}
 
 		return $response->contacts[0]->id;
-
 	}
 
 
@@ -636,6 +643,8 @@ class WPF_HighLevel {
 
 		$params = $this->get_params();
 
+		$tags = array_map( 'strtolower', $tags ); // GHL tags are lowercase.
+
 		if ( $this->is_v2() ) {
 
 			$user_tags = $this->get_tags( $contact_id );
@@ -715,7 +724,6 @@ class WPF_HighLevel {
 		}
 
 		return $contact_data;
-
 	}
 
 
@@ -757,7 +765,7 @@ class WPF_HighLevel {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
-		
+
 		$contact_data = $this->format_contact_data( $contact_data );
 
 		$params           = $this->get_params();
@@ -772,7 +780,6 @@ class WPF_HighLevel {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -836,7 +843,7 @@ class WPF_HighLevel {
 	 * @return array Contact IDs returned.
 	 */
 
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag = false ) {
 
 		$page        = 1;
 		$proceed     = true;
@@ -846,11 +853,17 @@ class WPF_HighLevel {
 		} else {
 			$main_request = "{$this->url}contacts/";
 		}
+
+		$url = add_query_arg( 'limit', '100', $main_request );
+
+		if ( $tag ) {
+			$url = add_query_arg( 'query', $tag, $url );
+		}
+
 		while ( $proceed ) {
+			$url = add_query_arg( 'page', $page, $url );
 
-			$request  = $main_request . "&page={$page}&limit=100&query={$tag}";
-			$response = wp_safe_remote_get( $request, $this->get_params() );
-
+			$response = wp_safe_remote_get( $url, $this->get_params() );
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
@@ -864,12 +877,10 @@ class WPF_HighLevel {
 			if ( count( $response->contacts ) < 100 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
-
 }

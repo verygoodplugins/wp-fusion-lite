@@ -26,7 +26,7 @@ class WPF_FluentCRM {
 	/**
 	 * The features supported by the CRM.
 	 */
-	public $supports = array( 'add_tags_api', 'events', 'events_multi_key', 'same_site' );
+	public $supports = array( 'add_tags_api', 'events', 'events_multi_key', 'same_site', 'lists' );
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -47,7 +47,7 @@ class WPF_FluentCRM {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_FluentCRM_Admin( $this->slug, $this->name, $this );
 		}
 	}
@@ -99,7 +99,6 @@ class WPF_FluentCRM {
 		add_action( 'fluentcrm_contact_added_to_lists', array($this,'contact_lists_added_removed' ), 10, 2);
 		add_action( 'fluentcrm_contact_removed_from_lists', array($this,'contact_lists_added_removed' ), 10, 2);
 		 */
-
 	}
 
 	/**
@@ -119,7 +118,6 @@ class WPF_FluentCRM {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -147,7 +145,6 @@ class WPF_FluentCRM {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -171,7 +168,6 @@ class WPF_FluentCRM {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -188,7 +184,6 @@ class WPF_FluentCRM {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -205,7 +200,6 @@ class WPF_FluentCRM {
 		$this->sync_crm_fields();
 		do_action( 'wpf_sync' );
 		return true;
-
 	}
 
 
@@ -250,7 +244,6 @@ class WPF_FluentCRM {
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
 		return $available_lists;
-
 	}
 
 
@@ -279,7 +272,6 @@ class WPF_FluentCRM {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -392,7 +384,12 @@ class WPF_FluentCRM {
 			$data['custom_values'] = $custom_data;
 		}
 
-		$lists = wpf_get_option( 'fluentcrm_lists' );
+		$lists = wpf_get_option( 'fluentcrm_lists', array() );
+
+		if ( get_user_by( 'email', $data['email'] ) ) {
+			// Default lists for new users.
+			$lists = array_merge( $lists, wpf_get_option( 'assign_lists', array() ) );
+		}
 
 		if ( ! empty( $lists ) ) {
 			$data['lists'] = $lists;
@@ -439,10 +436,11 @@ class WPF_FluentCRM {
 	 * @return int    $tag_id the tag id returned from API.
 	 */
 	public function add_tag( $tag_name ) {
-		$data  = array(
+		$data = array(
 			'title' => $tag_name,
-			'slug'  => $tag_name,
+			'slug'  => sanitize_title( $tag_name ),
 		);
+
 		$model = FluentCrmApi( 'tags' )->getInstance();
 		$tag   = $model->updateOrCreate( $data );
 
@@ -501,6 +499,10 @@ class WPF_FluentCRM {
 			$model->syncCustomFieldValues( $custom_data, true );
 		}
 
+		if ( ! empty( $data['lists'] ) ) {
+			$model->attachLists( $data['lists'] );
+		}
+
 		add_action( 'fluentcrm_contact_updated', array( $this, 'contact_updated' ) );
 		add_action( 'fluentcrm_contact_custom_data_updated', array( $this, 'contact_custom_data_updated' ), 10, 2 );
 
@@ -541,7 +543,6 @@ class WPF_FluentCRM {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -551,11 +552,15 @@ class WPF_FluentCRM {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag_id ) {
+	public function load_contacts( $tag_id = false ) {
 
 		$model = FluentCrmApi( 'contacts' )->getInstance();
 
-		$contact_ids = $model->filterByTags( array( $tag_id ) )->get()->pluck( 'id' );
+		if ( $tag_id ) {
+			$contact_ids = $model->filterByTags( array( $tag_id ) )->get()->pluck( 'id' );
+		} else {
+			$contact_ids = $model->get()->pluck( 'id' );
+		}
 
 		return $contact_ids->all();
 	}
@@ -594,15 +599,19 @@ class WPF_FluentCRM {
 				// If we're currently in the process of applying tags, then we need to wait
 				// until WPF_User::apply_tags() has updated the usermeta before we can load them.
 
-				add_filter( 'update_user_metadata', function( $update, $user_id, $meta_key, $meta_value ) use ( &$tags ) {
+				add_filter(
+					'update_user_metadata',
+					function ( $update, $user_id, $meta_key, $meta_value ) use ( &$tags ) {
 
-					if ( WPF_TAGS_META_KEY === $meta_key && count( $meta_value ) !== count( $tags ) ) {
-						return true;
-					}
+						if ( WPF_TAGS_META_KEY === $meta_key && count( $meta_value ) !== count( $tags ) ) {
+							return true;
+						}
 
-					return $update;
-
-				}, 10, 4 );
+						return $update;
+					},
+					10,
+					4
+				);
 
 			}
 
@@ -610,7 +619,6 @@ class WPF_FluentCRM {
 			wp_fusion()->user->set_tags( $tags, $user_id );
 
 		}
-
 	}
 
 	/**
@@ -654,8 +662,6 @@ class WPF_FluentCRM {
 
 			wp_fusion()->user->pull_user_meta( $user_id );
 		}
-
-
 	}
 
 	/**
@@ -674,7 +680,6 @@ class WPF_FluentCRM {
 		}
 
 		$this->contact_updated( $subscriber );
-
 	}
 
 	/**
@@ -722,7 +727,7 @@ class WPF_FluentCRM {
 			fcrm_events_add_event( $email_address, 'wp_fusion', $event, $event_data );
 		} else {
 
-			if ( 1 === count( $event_data ) ) {
+			if ( ! empty( $event_data ) && 1 === count( $event_data ) ) {
 				$event_text = reset( $event_data );
 			} else {
 				$event_text = wp_json_encode( $event_data, JSON_NUMERIC_CHECK );

@@ -293,7 +293,7 @@ class WPF_Zoho {
 
 				} else {
 
-					$response = new WP_Error( 'error', '<strong>' . $body_json->code . '</strong>: ' . $body_json->message . '.' );
+					$response = new WP_Error( 'error', '<strong>' . $body_json->code . '</strong>: ' . $body_json->message );
 
 				}
 			} elseif ( ! empty( $body_json->data ) && isset( $body_json->data[0]->code ) && ( $body_json->data[0]->code == 'INVALID_DATA' || $body_json->data[0]->code == 'MANDATORY_NOT_FOUND' ) ) {
@@ -323,10 +323,6 @@ class WPF_Zoho {
 				}
 
 				$response = new WP_Error( $code, $message );
-
-			} elseif ( wp_remote_retrieve_response_code( $response ) == 429 ) {
-
-				$response = new WP_Error( 'error', 'Number of API requests per minute/day has exceeded the limit.' );
 
 			} elseif ( wp_remote_retrieve_response_code( $response ) == 401 ) {
 

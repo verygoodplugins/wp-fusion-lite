@@ -333,8 +333,8 @@ class WPF_User {
 		 * @see   WPF_User_Profile::filter_form_fields()
 		 * @link  https://wpfusion.com/documentation/filters/wpf_user_register/
 		 *
-		 * @param array $post_data The registration data.
-		 * @param int   $user_id   The user ID.
+		 * @param array|null $post_data The registration data.
+		 * @param int        $user_id   The user ID.
 		 */
 
 		$post_data = apply_filters( 'wpf_user_register', $post_data, $user_id );
@@ -380,7 +380,7 @@ class WPF_User {
 		$assign_lists = wpf_get_option( 'assign_lists' );
 
 		if ( ! empty( $assign_lists ) ) {
-			$post_data['assign_lists'] = $assign_lists;
+			$post_data['lists'] = $assign_lists;
 		}
 
 		if ( empty( $contact_id ) ) {
@@ -671,16 +671,16 @@ class WPF_User {
 			return false;
 		}
 
-		$contact_id = wp_fusion()->crm->get_contact_id( $email_address );
+		$loaded_contact_id = wp_fusion()->crm->get_contact_id( $email_address );
 
-		if ( is_wp_error( $contact_id ) ) {
+		if ( is_wp_error( $loaded_contact_id ) ) {
 
-			wpf_log( $contact_id->get_error_code(), $user_id, 'Error getting contact ID for <strong>' . $email_address . '</strong>: ' . $contact_id->get_error_message() );
-			return false;
+			wpf_log( $loaded_contact_id->get_error_code(), $user_id, 'Error getting contact ID for <strong>' . $email_address . '</strong>: ' . $loaded_contact_id->get_error_message() );
+			return $contact_id; // in case there was a contact ID already cached.
 
 		}
 
-		$contact_id = apply_filters( 'wpf_contact_id', $contact_id, $email_address );
+		$contact_id = apply_filters( 'wpf_contact_id', $loaded_contact_id, $email_address );
 
 		if ( empty( $contact_id ) ) {
 
@@ -1800,15 +1800,17 @@ class WPF_User {
 				FROM {$wpdb->usermeta}
 				WHERE meta_key = %s
 				AND meta_value = %s
+				AND user_id < 100000000
 				ORDER BY user_id ASC",
 			WPF_CONTACT_ID_META_KEY,
 			$contact_id
 		);
 
+		// ^ If the user ID is greater than 100 million, it's an auto-login user ID, not a real user.
+
 		$user_id = $wpdb->get_var( $query );
 
-		if ( $user_id > 100000000 || is_null( $user_id ) ) {
-			// If the user ID is greater than 100 million, it's an auto-login user ID.
+		if ( is_null( $user_id ) ) {
 			$user_id = false;
 		}
 
@@ -1906,6 +1908,8 @@ class WPF_User {
 			$tags = array( $tags );
 		}
 
+		$tags = apply_filters( 'wpf_user_has_tag', $tags, $user_id );
+
 		// Make sure we're only checking against valid tags.
 		$tags = array_filter( array_map( array( $this, 'get_tag_id' ), $tags ) );
 
@@ -1921,7 +1925,7 @@ class WPF_User {
 	 * Gets tag ID from tag name
 	 *
 	 * @access public
-	 * @return int ID
+	 * @return string|bool The tag ID or false if not found.
 	 */
 
 	public function get_tag_id( $tag_name ) {
@@ -2161,7 +2165,7 @@ class WPF_User {
 		if ( is_wp_error( $user ) ) {
 
 			wpf_log( 'error', 0, 'Error importing contact #' . $contact_id . ' with error: ' . $user->get_error_message() );
-			return false;
+			return $user;
 
 		} elseif ( is_object( $user ) ) {
 
@@ -2291,7 +2295,7 @@ class WPF_User {
 		// Allows for cancelling via filter
 		if ( null === $user_meta ) {
 			wpf_log( 'notice', 0, 'Import of contact #' . $contact_id . ' aborted: no metadata found for user.' );
-			return false;
+			return 0;
 		}
 
 		// Prevent the default registration hook from running.
@@ -2325,7 +2329,7 @@ class WPF_User {
 		if ( is_wp_error( $user_id ) ) {
 
 			wpf_log( 'error', 0, 'Error importing contact #' . $contact_id . ' with error: ' . $user_id->get_error_message() );
-			return false;
+			return $user_id;
 
 		}
 

@@ -77,27 +77,9 @@ class WPF_Mailjet {
 
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
+		if ( 'date' === $field_type ) {
 
-			$offset = get_option( 'gmt_offset' );
-			$value -= $offset * 60 * 60;
-
-			try {
-				$value = new DateTime( date( 'c', $value ) );
-			} catch ( Exception $e ) {
-
-				// do it the simple way
-				return date( 'c', $value );
-			}
-
-			// DateTimeZone throws an error with 0 as the timezone
-			if ( $offset >= 0 ) {
-				$offset = '+' . $offset;
-			}
-
-			$value->setTimezone( new DateTimeZone( $offset ) );
-
-			return $value->format( 'c' );
+			return wpf_get_iso8601_date( $value );
 
 		} else {
 

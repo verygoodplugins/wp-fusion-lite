@@ -16,7 +16,15 @@ class WPF_Autonami {
 	 * @since 3.37.14
 	 * @var string $name The name.
 	 */
-	public $name = 'FunnelKit Automations';
+	public $name = 'FunnelKit';
+
+	/**
+	 * The integration menu name.
+	 *
+	 * @since 3.43.2
+	 * @var string $menu_name The menu name.
+	 */
+	public $menu_name = 'FunnelKit Automations';
 
 	/**
 	 * Declares how this CRM handles tags and fields.
@@ -37,12 +45,18 @@ class WPF_Autonami {
 	public $params;
 
 	/**
+	 * Check if using rest API same site or external.
+	 *
+	 * @var bool
+	 */
+	public $same_site;
+
+	/**
 	 * API URL.
 	 *
-	 * @var array
+	 * @var string
 	 * @since 3.37.14
 	 */
-
 	public $url;
 
 	/**
@@ -65,19 +79,26 @@ class WPF_Autonami {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-autonami-admin.php';
+			require_once __DIR__ . '/class-autonami-admin.php';
 			new WPF_Autonami_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-		$url = wpf_get_option( 'autonami_url' );
+		// Check if same site or not.
+		$url          = wpf_get_option( 'autonami_url' );
+		$trimmed_url  = trailingslashit( str_replace( array( 'http://', 'https://', 'www.' ), '', $url ) );
+		$current_site = trailingslashit( str_replace( array( 'http://', 'https://', 'www.' ), '', get_site_url() ) );
 
-		if ( ! empty( $url ) ) {
-			$this->url      = trailingslashit( $url ) . 'wp-json/' . wpf_get_option( 'autonami_namespace', 'autonami-app' );
-			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=autonami&path=/contact/%d#/';
+		if ( $trimmed_url === $current_site && class_exists( 'BWFAN_Core' ) ) {
+			$this->same_site  = true;
+			$this->supports[] = 'same_site';
 		}
 
+		if ( ! empty( $url ) ) {
+			$this->url      = trailingslashit( $url ) . 'wp-json/autonami-app/';
+			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=autonami&path=/contact/%d#/';
+		}
 	}
 
 	/**
@@ -92,25 +113,23 @@ class WPF_Autonami {
 
 		// Hooks for when Autonami is installed on the same site.
 
-		if ( class_exists( 'BWFAN_Core' ) ) {
+		if ( $this->same_site ) {
 
 			add_action( 'bwfan_tags_added_to_contact', array( $this, 'tags_modified' ), 10, 2 );
 			add_action( 'bwfan_tags_removed_from_contact', array( $this, 'tags_modified' ), 10, 2 );
 
 		}
-
 	}
 
 	/**
 	 * Check HTTP Response for errors and return WP_Error if found.
 	 *
 	 * @param WP_HTTP_Response $response The HTTP response.
-	 * @param array $args The HTTP request arguments.
-	 * @param string $url The HTTP request URL.
+	 * @param array            $args The HTTP request arguments.
+	 * @param string           $url The HTTP request URL.
 	 *
 	 * @return WP_HTTP_Response $response The response.
 	 * @since  3.37.14
-	 *
 	 */
 
 	public function handle_http_response( $response, $args, $url ) {
@@ -128,37 +147,6 @@ class WPF_Autonami {
 				if ( ! empty( $body->code ) ) {
 
 					if ( 'rest_no_route' == $body->code ) {
-
-						// Try the old namespace.
-
-						if ( 'autonami-app' === wpf_get_option( 'autonami_namespace', 'autonami-app' ) ) {
-
-							$url = str_replace( 'autonami-app', 'autonami-admin', $url );
-
-							$response = wp_safe_remote_get( $url, $args );
-
-							if ( ! is_wp_error( $response ) ) {
-
-								wp_fusion()->settings->set( 'autonami_namespace', 'autonami-admin' );
-								return $response;
-
-							}
-						} elseif ( 'autonami-admin' === wpf_get_option( 'autonami_namespace' ) ) {
-
-							// Upgrade to new API.
-
-							$url = str_replace( 'autonami-admin', 'autonami-app', $url );
-
-							$response = wp_safe_remote_get( $url, $args );
-
-							if ( ! is_wp_error( $response ) ) {
-
-								wp_fusion()->settings->set( 'autonami_namespace', 'autonami-app' );
-								return $response;
-
-							}
-
-						}
 
 						$body->message .= ' <strong>' . __( 'This could mean the FunnelKit Automations Pro plugin isn\'t active.', 'wp-fusion-lite' ) . '</strong>';
 						$body->message .= ' ' . __( 'Try again or <a href="http://wpfusion.com/contact">contact support</a>.', 'wp-fusion-lite' ) . ' (URL: ' . $url . ')';
@@ -183,7 +171,6 @@ class WPF_Autonami {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -197,9 +184,9 @@ class WPF_Autonami {
 	public function tags_modified( $tags, $contact ) {
 
 		if ( ! empty( $contact->contact->get_wpid() ) ) {
+			wp_fusion()->logger->add_source( 'funnelkit' );
 			wp_fusion()->user->set_tags( $contact->get_tags(), $contact->contact->get_wpid() );
 		}
-
 	}
 
 	/**
@@ -221,7 +208,6 @@ class WPF_Autonami {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -233,11 +219,10 @@ class WPF_Autonami {
 	 * @param string $url The api url.
 	 * @param string $username The application username.
 	 * @param string $password The application password.
-	 * @param bool $test Whether to validate the credentials.
+	 * @param bool   $test Whether to validate the credentials.
 	 *
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 * @since  3.37.14
-	 *
 	 */
 
 	public function connect( $url = null, $username = null, $password = null, $test = false ) {
@@ -248,15 +233,18 @@ class WPF_Autonami {
 			return true;
 		}
 
-		$request  = $this->url . '/contacts';
-		$response = wp_safe_remote_get( $request, $this->params );
+		if ( $this->same_site ) {
+			$response = BWFCRM_Contact::get_contacts( false, false, false );
+		} else {
+			$request  = $this->url . 'contacts';
+			$response = wp_safe_remote_get( $request, $this->params );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -283,7 +271,7 @@ class WPF_Autonami {
 			$password = wpf_get_option( 'autonami_password' );
 		}
 
-		$this->url = trailingslashit( $url ) . 'wp-json/' . wpf_get_option( 'autonami_namespace', 'autonami-app' );
+		$this->url = trailingslashit( $url ) . 'wp-json/autonami-app/';
 
 		$this->params = array(
 			'timeout'    => 15,
@@ -304,7 +292,6 @@ class WPF_Autonami {
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 * @since  3.37.14
-	 *
 	 */
 	public function sync_tags() {
 
@@ -315,29 +302,33 @@ class WPF_Autonami {
 		$page           = 1;
 
 		while ( $continue ) {
+			if ( $this->same_site ) {
+				$results = BWFCRM_Tag::get_tags( array(), false, $offset, $limit );
+			} else {
+				$request  = $this->url . 'tags?limit=' . $limit . '&offset=' . $offset;
+				$response = wp_safe_remote_get( $request, $this->get_params() );
 
-			$request  = $this->url . '/tags?limit=' . $limit . '&offset=' . $offset;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
+				$response = json_decode( wp_remote_retrieve_body( $response ), true );
+				$results  = $response['result'];
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( ! empty( $results ) ) {
 
-			if ( ! empty( $response->result ) ) {
+				foreach ( $results as $tag ) {
 
-				foreach ( $response->result as $tag ) {
-
-					$available_tags[ $tag->ID ] = $tag->name;
+					$available_tags[ $tag['ID'] ] = $tag['name'];
 				}
 			}
 
-			if ( empty( $response->result ) || count( $response->result ) < 100 ) {
+			if ( empty( $results ) || count( $results ) < 100 ) {
 				$continue = false;
 			} else {
 				$offset = ( $page > 1 ) ? ( $limit * ( $page - 1 ) ) : 0;
-				$page ++;
+				++$page;
 			}
 		}
 
@@ -346,7 +337,6 @@ class WPF_Autonami {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
@@ -354,7 +344,6 @@ class WPF_Autonami {
 	 *
 	 * @return array|WP_Error Either the available lists in the CRM, or a WP_Error.
 	 * @since  3.37.14
-	 *
 	 */
 	public function sync_lists() {
 
@@ -365,29 +354,33 @@ class WPF_Autonami {
 		$page            = 1;
 
 		while ( $continue ) {
+			if ( $this->same_site ) {
+				$results = BWFCRM_Lists::get_lists( array(), false, $offset, $limit );
+			} else {
+				$request  = $this->url . 'lists?limit=' . $limit . '&offset=' . $offset;
+				$response = wp_safe_remote_get( $request, $this->get_params() );
 
-			$request  = $this->url . '/lists?limit=' . $limit . '&offset=' . $offset;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
+				$response = json_decode( wp_remote_retrieve_body( $response ), true );
+				$results  = $response['result'];
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( ! empty( $results ) ) {
 
-			if ( ! empty( $response->result ) ) {
+				foreach ( $results as $list ) {
 
-				foreach ( $response->result as $list ) {
-
-					$available_lists[ $list->ID ] = $list->name;
+					$available_lists[ $list['ID'] ] = $list['name'];
 				}
 			}
 
-			if ( empty( $response->result ) || count( $response->result ) < 100 ) {
+			if ( empty( $results ) || count( $results ) < 100 ) {
 				$continue = false;
 			} else {
 				$offset = ( $page > 1 ) ? ( $limit * ( $page - 1 ) ) : 0;
-				$page ++;
+				++$page;
 			}
 		}
 
@@ -396,7 +389,6 @@ class WPF_Autonami {
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
 		return $available_lists;
-
 	}
 
 
@@ -405,7 +397,6 @@ class WPF_Autonami {
 	 *
 	 * @return array|WP_Error Either the available fields in the CRM, or a WP_Error.
 	 * @since  3.37.14
-	 *
 	 */
 	public function sync_crm_fields() {
 
@@ -418,35 +409,40 @@ class WPF_Autonami {
 		}
 
 		// Custom fields
-
 		$custom_fields = array();
+		if ( $this->same_site ) {
+			$results['fields']       = BWFCRM_Fields::get_groups_with_fields( false, true, true );
+			$results['extra_fields'] = BWFCRM_Fields::get_address_fields_from_db();
+		} else {
+			$request  = $this->url . 'groupfields';
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
-		$request  = $this->url . '/groupfields';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+			$results  = $response['result'];
 		}
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		$extra_fields = $response->result->extra_fields;
-		$groupfields  = $response->result->fields;
+		$extra_fields = $results['extra_fields'];
+		$groupfields  = $results['fields'];
 		foreach ( $extra_fields as $field ) {
-			$custom_fields[ $field->ID ] = $field->name;
+			$custom_fields[ $field['ID'] ] = $field['name'];
 		}
 
 		foreach ( $groupfields as $group ) {
-			if ( empty( $group->fields ) ) {
+			if ( empty( $group['fields'] ) ) {
 				continue;
 			}
-			foreach ( $group->fields as $field ) {
+			foreach ( $group['fields'] as $field ) {
 
-				if ( ! isset( $standard_fields[ $field->id ] ) ) {
-					$custom_fields[ $field->id ] = $field->name;
+				if ( ! isset( $standard_fields[ $field['id'] ] ) ) {
+					$custom_fields[ $field['id'] ] = $field['name'];
 				}
 			}
 		}
+
 		if ( isset( $custom_fields['address'] ) ) {
 			unset( $custom_fields['address'] );
 		}
@@ -470,25 +466,41 @@ class WPF_Autonami {
 	 *
 	 * @param string $email_address The email address to look up.
 	 *
-	 * @return int|WP_Error The contact ID in the CRM.
+	 * @return int|false|WP_Error The contact ID in the CRM, or false if not found.
 	 * @since  3.37.14
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->url . '/contacts?search=' . urlencode( $email_address );
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		if ( $this->same_site ) {
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			$contact = BWFCRM_Common::get_contact_by_email_or_phone( $email_address );
+
+			if ( ! $contact ) {
+				return false;
+			}
+			$results = $contact->get_array( false, true, true, true, true );
+		} else {
+			$request  = $this->url . 'contacts?search=' . urlencode( $email_address );
+			$response = wp_safe_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( empty( $response['result'] ) ) {
+				return false;
+			}
+
+			$results = $response['result'][0];
 		}
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( empty( $response->result ) ) {
+		if ( empty( $results ) ) {
 			return false;
 		}
-		return $response->result[0]->id;
 
+		return $results['id'];
 	}
 
 
@@ -501,24 +513,32 @@ class WPF_Autonami {
 	 * @since  3.37.14
 	 */
 	public function get_tags( $contact_id ) {
+		if ( $this->same_site ) {
+			$contact = new BWFCRM_Contact( $contact_id );
+			if ( ! $contact->is_contact_exists() ) {
+				return false;
+			}
 
-		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+			$results = $contact->get_array( false, true, true, true, true );
+		} else {
+			$request  = $this->url . 'contacts/' . $contact_id;
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+			$results  = $response['result'];
 		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		$tags = array();
 
-		foreach ( $response->result->tags as $tag ) {
-			$tags[] = $tag->ID;
+		foreach ( $results['tags'] as $tag ) {
+			$tags[] = (int) $tag['ID'];
 		}
 
 		return $tags;
-
 	}
 
 
@@ -527,38 +547,50 @@ class WPF_Autonami {
 	 *
 	 * @param array $tags A numeric array of tags to apply to the
 	 *                                   contact.
-	 * @param int $contact_id The contact ID to apply the tags to.
+	 * @param int   $contact_id The contact ID to apply the tags to.
 	 *
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 * @since  3.37.14
 	 */
 	public function apply_tags( $tags, $contact_id ) {
+		// Prevent looping.
+		remove_action( 'bwfan_tags_added_to_contact', array( $this, 'tags_modified' ) );
 
-		$prepared_data = [];
+		$prepared_data = array();
 
 		foreach ( $tags as $tag_id ) {
-			$prepared_data[] = [ 'id' => $tag_id ];
+			$prepared_data[] = array( 'id' => $tag_id );
 		}
 
-		$body = array(
-			'tags' => $prepared_data,
-		);
+		if ( $this->same_site ) {
+			$contact = new BWFCRM_Contact( $contact_id );
 
-		// Prevent looping.
-		remove_action( 'bwfan_tags_added_to_contact', array( $this, 'tags_modified' ), 10, 2 );
+			if ( ! $contact->is_contact_exists() ) {
+				return false;
+			}
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $body );
+			$added_tags = $contact->add_tags( $prepared_data );
+			if ( empty( $added_tags ) ) {
+				return false;
+			}
+		} else {
 
-		$request  = $this->url . '/contacts/' . $contact_id . '/tags';
-		$response = wp_safe_remote_post( $request, $params );
+			$body = array(
+				'tags' => $prepared_data,
+			);
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $body );
+
+			$request  = $this->url . 'contacts/' . $contact_id . '/tags';
+			$response = wp_safe_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -566,33 +598,47 @@ class WPF_Autonami {
 	 *
 	 * @param array $tags A numeric array of tags to remove from
 	 *                                   the contact.
-	 * @param int $contact_id The contact ID to remove the tags from.
+	 * @param int   $contact_id The contact ID to remove the tags from.
 	 *
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 * @since  3.37.14
 	 */
 	public function remove_tags( $tags, $contact_id ) {
-
-		$body = array(
-			'tags' => $tags,
-		);
-
-		$params           = $this->get_params();
-		$params['method'] = 'DELETE';
-		$params['body']   = wp_json_encode( $body );
-
 		// Prevent looping.
-		remove_action( 'bwfan_tags_removed_from_contact', array( $this, 'tags_modified' ), 10, 2 );
+		remove_action( 'bwfan_tags_removed_from_contact', array( $this, 'tags_modified' ) );
 
-		$request = $this->url . '/contacts/' . $contact_id . '/tags';
-		$response = wp_safe_remote_request( $request, $params );
+		$tags = array_map( 'absint', $tags );
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+		if ( $this->same_site ) {
+			$contact = new BWFCRM_Contact( $contact_id );
+
+			if ( ! $contact->is_contact_exists() ) {
+				return false;
+			}
+
+			$removed_tags = $contact->remove_tags( $tags );
+			$contact->save();
+			if ( empty( $removed_tags ) ) {
+				return false;
+			}
+		} else {
+			$body = array(
+				'tags' => $tags,
+			);
+
+			$params           = $this->get_params();
+			$params['method'] = 'DELETE';
+			$params['body']   = wp_json_encode( $body );
+
+			$request  = $this->url . 'contacts/' . $contact_id . '/tags';
+			$response = wp_safe_remote_request( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 		}
 
 		return true;
-
 	}
 
 
@@ -601,8 +647,8 @@ class WPF_Autonami {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  array        $data   An associative array of contact fields and
-	 *                              field values.
+	 * @param  array $data   An associative array of contact fields and
+	 *                       field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
 	public function add_contact( $data ) {
@@ -615,28 +661,46 @@ class WPF_Autonami {
 			'status'     => true,
 		);
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $contact_data );
+		if ( $this->same_site ) {
+			$contact = new BWFCRM_Contact( $data['email'], true, $contact_data );
+			if ( isset( $data['tags'] ) ) {
+				$contact->set_tags( $data['tags'], true, false );
+			}
 
-		$request  = $this->url . '/contacts';
-		$response = wp_safe_remote_post( $request, $params );
+			if ( isset( $data['lists'] ) ) {
+				$contact->set_lists( $data['lists'], true, false );
+			}
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			$contact->save();
+
+			if ( ! $contact->is_contact_exists() ) {
+				return false;
+			}
+
+			$results = $contact->get_array( false, true, true, true, true );
+		} else {
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $contact_data );
+
+			$request  = $this->url . 'contacts';
+			$response = wp_safe_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+			$results  = $response['result'];
 		}
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
 		// Remove internal fields and then update the contact if there's anything left
-
 		$data = array_diff( $data, $contact_data );
 
 		if ( ! empty( $data ) ) {
-			$this->update_contact( $response->result->id, $data, false );
+			$this->update_contact( $results['id'], $data, false );
 		}
 
-		return $response->result->id;
-
+		return $results['id'];
 	}
 
 	/**
@@ -644,9 +708,9 @@ class WPF_Autonami {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  int           $contact_id The ID of the contact to update.
-	 * @param  array         $data       An associative array of contact fields
-	 *                                   and field values.
+	 * @param  int   $contact_id The ID of the contact to update.
+	 * @param  array $data       An associative array of contact fields
+	 *                           and field values.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $data ) {
@@ -656,18 +720,26 @@ class WPF_Autonami {
 			'status' => true,
 		);
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $contact_data );
+		if ( $this->same_site ) {
+			$contact  = new BWFCRM_Contact( $contact_id );
+			$response = $contact->update_custom_fields( $data );
 
-		$request  = $this->url . '/contacts/' . $contact_id . '/fields';
-		$response = wp_safe_remote_post( $request, $params );
+			if ( empty( $response ) ) {
+				return false;
+			}
+		} else {
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $contact_data );
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			$request  = $this->url . 'contacts/' . $contact_id . '/fields';
+			$response = wp_safe_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 		}
 
 		return true;
-
 	}
 
 
@@ -679,33 +751,41 @@ class WPF_Autonami {
 	 *
 	 * @return array|WP_Error User meta data that was returned.
 	 * @since  3.37.14
-	 *
 	 */
 	public function load_contact( $contact_id ) {
+		if ( $this->same_site ) {
+			$contact = new BWFCRM_Contact( $contact_id );
+			if ( ! $contact->is_contact_exists() ) {
+				return false;
+			}
 
-		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+			$results = $contact->get_array( false, true, true, true, true );
+		} else {
+			$request  = $this->url . 'contacts/' . $contact_id;
+			$response = wp_safe_remote_get( $request, $this->get_params() );
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+			$results  = $response['result'];
 		}
 
 		$user_meta      = array();
 		$contact_fields = wpf_get_option( 'contact_fields' );
-		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
 			if ( ! empty( $field_data['active'] ) ) {
 
-				if ( isset( $response['result'][ $field_data['crm_field'] ] ) ) {
+				if ( isset( $results[ $field_data['crm_field'] ] ) ) {
 
 					// Core fields.
-					$user_meta[ $field_id ] = $response['result'][ $field_data['crm_field'] ];
+					$user_meta[ $field_id ] = $results[ $field_data['crm_field'] ];
 
-				} elseif ( isset( $response['result']['fields'][ $field_data['crm_field'] ] ) ) {
+				} elseif ( isset( $results['fields'][ $field_data['crm_field'] ] ) ) {
 
-					$user_meta[ $field_id ] = $response['result']['fields'][ $field_data['crm_field'] ];
+					$user_meta[ $field_id ] = $results['fields'][ $field_data['crm_field'] ];
 
 				}
 
@@ -714,12 +794,10 @@ class WPF_Autonami {
 				if ( isset( $user_meta[ $field_id ] ) && null !== json_decode( $user_meta[ $field_id ] ) ) {
 					$user_meta[ $field_id ] = json_decode( $user_meta[ $field_id ] );
 				}
-
 			}
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -735,23 +813,31 @@ class WPF_Autonami {
 
 		// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
 		if ( ! is_numeric( $tag ) ) {
-			$request  = $this->url . '/tags?search=' . $tag . '&limit=1';
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			if ( $this->same_site ) {
+				$results = BWFCRM_Tag::get_tags( array(), $tag, 0, 1 );
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
+			} else {
+				$request  = $this->url . 'tags?search=' . $tag . '&limit=1';
+				$response = wp_safe_remote_get( $request, $this->get_params() );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$response = json_decode( wp_remote_retrieve_body( $response ), true );
+				$results  = $response['result'];
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( empty( $response->result ) ) {
+			if ( empty( $results ) ) {
 				return new WP_Error( 'error', 'Unable to determine tag ID from tag ' . $tag );
 			}
 
-			$tag_id = $response->result[0]->ID;
+			$tag_id = (int) $results[0]['ID'];
 		}
 
-		$tag_id = absint( $tag );
+		if ( ! $tag_id ) {
+			$tag_id = absint( $tag );
+		}
 
 		$contact_ids = array();
 		$proceed     = true;
@@ -760,31 +846,36 @@ class WPF_Autonami {
 		$offset      = 0;
 
 		while ( $proceed ) {
+			if ( $this->same_site ) {
+				$filter  = array( 'tags_any' => array( $tag_id ) );
+				$results = BWFCRM_Contact::get_contacts( false, $offset, $limit, $filter );
+				if ( ! empty( $results ) ) {
+					$results = $results['contacts'];
+				}
+			} else {
+				$request  = $this->url . 'contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset;
+				$response = wp_safe_remote_get( $request, $this->get_params() );
 
-			$request  = $this->url . '/contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
+				$response = json_decode( wp_remote_retrieve_body( $response ), true );
+				$results  = $response['result'];
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-			foreach ( $response->result as $contact ) {
-				$contact_ids[] = $contact->id;
+			foreach ( $results as $contact ) {
+				$contact_ids[] = $contact['id'];
 			}
 
-			if ( count( $response->result ) < 100 ) {
+			if ( count( $results ) < 100 ) {
 				$proceed = false;
 			} else {
 				$offset = ( $page > 1 ) ? ( $limit * ( $page - 1 ) ) : 0;
-				$page ++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
-
-
 }

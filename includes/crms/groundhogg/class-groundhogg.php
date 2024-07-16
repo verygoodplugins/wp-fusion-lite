@@ -225,10 +225,11 @@ class WPF_Groundhogg {
 			} else {
 				$value = false;
 			}
-		} elseif ( 'datepicker' == $field_type || 'date' == $field_type ) {
+		} elseif ( 'date' === $field_type && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
-			$value = date( 'Y-m-d', intval( $value ) );
+			// Convert GMT back to local.
+			$value = intval( $value ) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+			$value = date( 'Y-m-d', $value ); // @codingStandardsIgnoreLine - Groundhogg uses dates in local time.
 
 		}
 

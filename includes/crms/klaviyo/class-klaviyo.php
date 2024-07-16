@@ -80,6 +80,8 @@ class WPF_Klaviyo {
 
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_phone_numbers' ) );
 		add_filter( 'wpf_user_update', array( $this, 'format_phone_numbers' ), 5 ); // 5 so it's before WPF_WooCommerce::user_update().
+		add_filter( 'wpf_user_tags', array( $this, 'format_tags' ) );
+		add_filter( 'wpf_remove_tags', array( $this, 'format_tags' ) );
 
 	}
 
@@ -159,7 +161,7 @@ class WPF_Klaviyo {
 			'headers'    => array(
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
-				'Revision'      => '2023-12-15',
+				'Revision'      => '2024-02-15',
 				'Authorization' => 'Klaviyo-API-Key ' . $access_key,
 			),
 		);
@@ -221,38 +223,6 @@ class WPF_Klaviyo {
 	}
 
 	/**
-	 * Gets the date in the correct format for the Klaviyo API.
-	 *
-	 * @since 3.42.12
-	 * 
-	 * @return string The formatted date.
-	 */
-	public function get_current_date_with_timezone_offset() {
-
-		$timestamp       = current_time('timestamp'); // Get current time according to WordPress timezone settings.
-		$timezone_string = get_option( 'timezone_string' );
-
-		if ( ! empty( $timezone_string ) ) {
-			$timezone = new DateTimeZone( $timezone_string );
-		} else {
-			// If no timezone string exists, fall back to an offset
-			$current_offset = get_option( 'gmt_offset' );
-			// Prepend a plus if offset is positive or zero, minus is already included for negative offsets.
-			$formatted_offset = ( $current_offset >= 0 ? '+' : '' ) . str_pad( $current_offset, 2, '0', STR_PAD_LEFT ) . ':00';
-			$timezone         = new DateTimeZone( $formatted_offset );
-		}
-
-		$date_time = new DateTime();
-		$date_time->setTimestamp( $timestamp );
-		$date_time->setTimezone( $timezone );
-
-		// Format the date. Note: 'P' gives the offset as +HH:MM, need to remove ':'
-		$formatted_date = $date_time->format( 'Y-m-d\TH:i:s' ) . substr( $date_time->format( 'P' ), 0, 3 ) . substr( $date_time->format( 'P' ), 4, 2 );
-
-		return $formatted_date;
-	}
-
-	/**
 	 * Formats phone numbers from WooCommerce for the Klaviyo API.
 	 *
 	 * @since 3.42.12
@@ -273,6 +243,27 @@ class WPF_Klaviyo {
 		return $customer_data;
 	}
 
+	/**
+	 * Allows lists applied with optin consent to be used for access control, and removed
+	 * by the remove_tags() function.
+	 *
+	 * @since 3.43.8
+	 *
+	 * @param array $tags The tags.
+	 * @return array The tags.
+	 */
+	public function format_tags( $tags ) {
+
+		foreach ( $tags as $tag ) {
+
+			if ( false !== strpos( $tag, '_optin' ) ) {
+
+				$tags[] = str_replace( '_optin', '', $tag );
+			}
+		}
+
+		return $tags;
+	}
 
 	/**
 	 * Sync Tags.
@@ -324,12 +315,17 @@ class WPF_Klaviyo {
 
 	public function sync_crm_fields() {
 
-		$default = array(
+		$crm_fields = array(
 			'Standard Fields' => array(),
 			'Custom Fields'   => array(),
 		);
 
-		$crm_fields = wp_parse_args( wpf_get_option( 'crm_fields' ), $default );
+		$custom_fields = wpf_get_option( 'crm_fields' );
+
+		if ( ! empty( $custom_fields ) && ! empty( $custom_fields['Custom Fields'] ) ) {
+			// Make sure we don't lose any user-created custom fields.
+			$crm_fields['Custom Fields'] = $custom_fields['Custom Fields'];
+		}
 
 		// Load built in fields first.
 		require dirname( __FILE__ ) . '/admin/klaviyo-fields.php';
@@ -355,7 +351,7 @@ class WPF_Klaviyo {
 
 				if ( ! empty( $person->attributes->properties ) ) {
 					foreach ( $person->attributes->properties as $key => $value ) {
-						if ( ! isset( $custom_fields[ $key ] ) ) {
+						if ( ! isset( $crm_fields['Standard Fields'][ $key ] ) ) {
 							$crm_fields['Custom Fields'][ $key ] = $key;
 						}
 					}
@@ -445,8 +441,6 @@ class WPF_Klaviyo {
 			}
 		}
 
-
-
 		return $user_tags;
 	}
 
@@ -460,7 +454,14 @@ class WPF_Klaviyo {
 
 		$params = $this->get_params();
 
-		$data = array(
+		$consented_at = wpf_get_iso8601_date();
+
+		if ( false === strpos( $consented_at, 'Z' ) ) {
+			// For non UTC, remove final colon and change (i.e.) 04:00 to 0400.
+			$consented_at = substr_replace( $consented_at, '', -3, 1 );
+		}
+
+		$optin_data = array(
 			'data' => array(
 				'type'          => 'profile-subscription-bulk-create-job',
 				'attributes'    => array(
@@ -476,7 +477,7 @@ class WPF_Klaviyo {
 										'email' => array(
 											'marketing' => array(
 												'consent'      => 'SUBSCRIBED',
-												'consented_at' => $this->get_current_date_with_timezone_offset(),
+												'consented_at' => $consented_at,
 											),
 										),
 									),
@@ -499,6 +500,10 @@ class WPF_Klaviyo {
 
 			if ( false === strpos( $tag_id, '_optin' ) ) {
 
+				if ( in_array( $tag_id . '_optin', $tags ) ) {
+					continue; // if we're set to opt them in as well, don't do a normal add.
+				}
+
 				// Non explicit consent, adds them to the list NEVER SUBSCRIBED.
 
 				$data = array(
@@ -510,19 +515,20 @@ class WPF_Klaviyo {
 					),
 				);
 
-				$request = 'https://a.klaviyo.com/api/lists/' . $tag_id . '/relationships/profiles/';
+				$request        = 'https://a.klaviyo.com/api/lists/' . $tag_id . '/relationships/profiles/';
+				$params['body'] = wp_json_encode( $data );
 
 			} else {
 
 				// Explicit consent. Adds them to the list SUBSCRIBED.
-
-				$data['data']['relationships']['list']['data']['id'] = $tag_id;
-
+				$optin_data['data']['relationships']['list']['data']['id'] = str_replace( '_optin', '', $tag_id );
 				$request = 'https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/';
+
+				$params['body'] = wp_json_encode( $optin_data );
+
 			}
 
-			$params['body'] = wp_json_encode( $data );
-			$response       = wp_safe_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -536,16 +542,12 @@ class WPF_Klaviyo {
 	 * Removes tags from a contact
 	 *
 	 * @access public
-	 * @return bool
+	 * @return bool|WP_Error
 	 */
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$params = $this->params;
+		$params = $this->get_params();
 
 		$data = array(
 			'data' => array(
@@ -558,6 +560,10 @@ class WPF_Klaviyo {
 
 		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'DELETE';
+
+		// Remove any optin flags.
+
+		$tags = array_unique( $this->format_tags( $tags ) );
 
 		foreach ( $tags as $tag_id ) {
 
@@ -596,11 +602,10 @@ class WPF_Klaviyo {
 				$data['properties'][ $key ] = $value;
 				unset( $data[ $key ] );
 
-			}
+			} elseif ( false !== strpos( $key, '$' ) ) {
 
-			// Klavio doesn't allow the $ sign when updating a contact.
+				// Klavio doesn't allow the $ sign when updating a contact.
 
-			if ( false !== strpos( $key, '$' ) ) {
 				$newkey = str_replace( '$', '', $key );
 				unset( $data[ $key ] );
 				$data[ $newkey ] = $value;
@@ -693,19 +698,13 @@ class WPF_Klaviyo {
 	 * Loads a contact and updates local user meta
 	 *
 	 * @access public
-	 * @return array User meta data that was returned
+	 * @return array|WP_Error User meta data that was returned or WP_Error.
 	 */
 
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$params = $this->params;
-
 		$request  = 'https://a.klaviyo.com/api/profiles/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -737,14 +736,10 @@ class WPF_Klaviyo {
 
 	public function load_contacts( $tag ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$contact_ids = array();
 
 		$request  = 'https://a.klaviyo.com/api/lists/' . $tag . '/profiles';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -772,16 +767,16 @@ class WPF_Klaviyo {
 	 *
 	 * @since  3.40.40
 	 *
-	 * @param  string      $event      The event title.
-	 * @param  bool|string $event_data The event description.
+	 * @param  string       $event      The event title.
+	 * @param  string|array $event_data The event description.
 	 * @param  bool|string $email_address The user email address.
 	 * @return bool|WP_Error True if success, WP_Error if failed.
 	 */
-	public function track_event( $event, $event_data = array(), $email_address = false ) {
+	public function track_event( $event, $event_data = '', $email_address = false ) {
 
 		if ( empty( $email_address ) && ! wpf_is_user_logged_in() ) {
 			// Tracking only works if WP Fusion knows who the contact is.
-			return;
+			return false;
 		}
 
 		// Get the email address to track.
@@ -794,11 +789,20 @@ class WPF_Klaviyo {
 			'type'       => 'event',
 			'attributes' => array(
 				'profile'    => array(
-					'email' => $email_address,
+					'data' => array(
+						'type'  => 'profile',
+						'attributes' => array(
+							'email' => $email_address,
+						),
+					),
 				),
 				'metric'     => array(
-					'name'    => $event,
-					'service' => 'event',
+					'data' => array(
+						'type'  => 'metric',
+						'attributes' => array(
+							'name' => $event,
+						),
+					),
 				),
 				'properties' => array(
 					'event_title' => $event,

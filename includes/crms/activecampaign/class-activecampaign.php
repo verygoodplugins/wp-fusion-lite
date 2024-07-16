@@ -61,12 +61,11 @@ class WPF_ActiveCampaign {
 		$this->api_url = trailingslashit( wpf_get_option( 'ac_url' ) );
 
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_ActiveCampaign_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -92,7 +91,6 @@ class WPF_ActiveCampaign {
 		if ( ! empty( $this->api_url ) ) {
 			$this->edit_url = trailingslashit( preg_replace( '/\.api\-.+?(?=\.)/', '.activehosted', $this->api_url ) ) . 'app/contacts/%d/';
 		}
-
 	}
 
 
@@ -114,7 +112,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return $post_data;
-
 	}
 
 
@@ -151,7 +148,6 @@ class WPF_ActiveCampaign {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -175,7 +171,6 @@ class WPF_ActiveCampaign {
 		$this->params = $params;
 
 		return $params;
-
 	}
 
 	/**
@@ -194,6 +189,7 @@ class WPF_ActiveCampaign {
 
 			if ( isset( $body->errors ) ) {
 
+				// A 'duplicate' code here will trigger looking up the contact by email address in WPF_CRM_Base::request().
 				$response = new WP_Error( $body->errors[0]->code, $body->errors[0]->title );
 
 			} elseif ( isset( $body->error ) ) {
@@ -244,7 +240,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -269,7 +264,6 @@ class WPF_ActiveCampaign {
 		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $email . '.' );
 
 		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 	/**
@@ -306,7 +300,6 @@ class WPF_ActiveCampaign {
 		echo 'vgo("process");';
 		echo '</script>';
 		echo '<!-- End ActiveCampaign site tracking -->';
-
 	}
 
 	/**
@@ -331,7 +324,6 @@ class WPF_ActiveCampaign {
 		wp_fusion()->settings->set( 'site_tracking_id', $me->trackid );
 
 		return $me->trackid;
-
 	}
 
 	/**
@@ -354,7 +346,7 @@ class WPF_ActiveCampaign {
 		}
 
 		if ( ! class_exists( 'ActiveCampaign' ) ) {
-			require_once dirname( __FILE__ ) . '/includes/ActiveCampaign.class.php';
+			require_once __DIR__ . '/includes/ActiveCampaign.class.php';
 		}
 
 		// This is for backwards compatibility with folks who might be using the old SDK.
@@ -372,7 +364,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return true;
-
 	}
 
 
@@ -394,7 +385,6 @@ class WPF_ActiveCampaign {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -440,7 +430,6 @@ class WPF_ActiveCampaign {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
@@ -466,8 +455,13 @@ class WPF_ActiveCampaign {
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
+			if ( empty( $response->lists ) ) {
+				$proceed = false;
+			}
+
 			foreach ( $response->lists as $list ) {
-				$available_lists[ $list->id ] = $list->name;
+				$available_lists[ $list->id ]                  = $list->name;
+				$available_lists[ $list->id . '_resubscribe' ] = $list->name . ' ' . __( '(resubscribe)', 'wp-fusion-lite' );
 			}
 
 			if ( count( $response->lists ) < 100 ) {
@@ -478,12 +472,11 @@ class WPF_ActiveCampaign {
 
 		}
 
-		asort( $available_lists );
+		natcasesort( $available_lists );
 
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
 		return $available_lists;
-
 	}
 
 
@@ -497,7 +490,7 @@ class WPF_ActiveCampaign {
 	public function sync_crm_fields() {
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/activecampaign-fields.php';
+		require __DIR__ . '/admin/activecampaign-fields.php';
 
 		$built_in_fields = array();
 
@@ -544,7 +537,6 @@ class WPF_ActiveCampaign {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -570,7 +562,6 @@ class WPF_ActiveCampaign {
 		} else {
 			return $response->contacts[0]->id;
 		}
-
 	}
 
 
@@ -610,7 +601,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return (array) $response->tags;
-
 	}
 
 	/**
@@ -662,7 +652,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return true;
-
 	}
 
 
@@ -701,7 +690,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return true;
-
 	}
 
 	private function format_contact_data( $data ) {
@@ -751,58 +739,16 @@ class WPF_ActiveCampaign {
 		}
 
 		return $update_data;
-
 	}
 
-
-	/**
-	 * Adds a new contact (using v1 API since v3 doesn't support adding custom fields in the same API call)
-	 *
-	 * @access public
-	 * @return int Contact ID
-	 */
-
-	public function add_contact( $data ) {
-
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $this->format_contact_data( $data ) );
-
-		$response = wp_remote_post( $this->api_url . 'api/3/contacts', $params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		$contact_id = $response->contact->id;
-
-		// Get lists.
-
-		if ( empty( $data['lists'] ) ) {
-			$data['lists'] = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'assign_lists', array() ) );
-		}
-
-		if ( ! empty( $data['lists'] ) ) {
-			foreach ( $data['lists'] as $list_id ) {
-
-				// Add contact to list.
-				$this->add_contact_to_list( $contact_id, $list_id );
-
-			}
-		}
-
-		return $contact_id;
-
-	}
 
 	/**
 	 * Adds a contact to a list.
 	 *
 	 * @since 3.41.36
 	 *
-	 * @param int $contact ID The contact ID.
-	 * @param int $list_id The list ID.
+	 * @param int $contact_id The contact ID.
+	 * @param int $list_id    The list ID.
 	 * @return WP_Error|bool True on success, WP_Error on failure.
 	 */
 	public function add_contact_to_list( $contact_id, $list_id ) {
@@ -827,6 +773,76 @@ class WPF_ActiveCampaign {
 		return true;
 	}
 
+	/**
+	 * Adds a new contact (using v1 API since v3 doesn't support adding custom fields in the same API call)
+	 *
+	 * @access public
+	 * @return int|WP_Error Contact ID or WP_Error.
+	 */
+	public function add_contact( $data ) {
+
+		// Get lists. (really this setting should *only* apply to user registrations, not all
+		// new contacts but it's too late to change it now since folks are used to it working this way.)
+
+		$lists = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'assign_lists', array() ) );
+
+		if ( ! empty( $data['lists'] ) ) {
+			$lists = array_merge( $lists, $data['lists'] );
+			unset( $data['lists'] );
+		}
+
+		if ( ! isset( $data['orgname'] ) ) {
+
+			$params         = $this->get_params();
+			$params['body'] = wp_json_encode( $this->format_contact_data( $data ) );
+
+			$response = wp_remote_post( $this->api_url . 'api/3/contacts', $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$contact_id = $response->contact->id;
+
+		} else {
+
+			$request = add_query_arg(
+				array(
+					'api_key'    => wpf_get_option( 'ac_key' ),
+					'api_action' => 'contact_sync',
+					'api_output' => 'json',
+				),
+				$this->api_url . 'admin/api.php'
+			);
+
+			$params                            = $this->get_params();
+			$params['body']                    = $data;
+			$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
+
+			$response = wp_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$contact_id = $response->subscriber_id;
+		}
+
+		foreach ( $lists as $list_id ) {
+
+			// We'll ignore the _resubscribe flag here for new contacts.
+			$list_id = intval( str_replace( '_resubscribe', '', strval( $list_id ) ) );
+
+			// Add contact to list.
+			$this->add_contact_to_list( $contact_id, $list_id );
+
+		}
+
+		return $contact_id;
+	}
+
 
 	/**
 	 * Update contact
@@ -837,18 +853,65 @@ class WPF_ActiveCampaign {
 
 	public function update_contact( $contact_id, $data ) {
 
-		$params           = $this->get_params();
-		$params['method'] = 'PUT';
-		$params['body']   = wp_json_encode( $this->format_contact_data( $data ) );
+		if ( ! empty( $data['lists'] ) ) {
+			$lists = $data['lists'];
+			unset( $data['lists'] );
+		}
 
-		$response = wp_remote_request( $this->api_url . 'api/3/contacts/' . $contact_id, $params );
+		if ( ! isset( $data['orgname'] ) ) {
+
+			// v3 API.
+
+			$params           = $this->get_params();
+			$params['method'] = 'PUT';
+			$params['body']   = wp_json_encode( $this->format_contact_data( $data ) );
+
+			$response = wp_remote_request( $this->api_url . 'api/3/contacts/' . $contact_id, $params );
+
+		} else {
+
+			// v1 API supports linking a contact to an account without a separate API call,
+			// though it's slower.
+
+			$data['id']        = $contact_id;
+			$data['overwrite'] = 0;
+
+			$request = add_query_arg(
+				array(
+					'api_key'    => wpf_get_option( 'ac_key' ),
+					'api_action' => 'contact_edit',
+					'api_output' => 'json',
+				),
+				$this->api_url . 'admin/api.php'
+			);
+
+			$params                            = $this->get_params();
+			$params['body']                    = $data;
+			$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
+
+			$response = wp_remote_post( $request, $params );
+
+		}
+
+		// Add to lists.
+		if ( ! empty( $lists ) ) {
+
+			foreach ( $lists as $list_id ) {
+
+				if ( false !== strpos( strval( $list_id ), '_resubscribe' ) ) {
+
+					$list_id = intval( str_replace( '_resubscribe', '', $list_id ) );
+
+					$this->add_contact_to_list( $contact_id, $list_id );
+				}
+			}
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -918,7 +981,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -928,32 +990,39 @@ class WPF_ActiveCampaign {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag_name ) {
+	public function load_contacts( $tag_name = false ) {
 
-		// For this to work we need the tag ID
+		$url = $this->api_url . 'api/3/contacts?limit=100';
 
-		$response = wp_safe_remote_get( $this->api_url . 'api/3/tags?search=' . rawurlencode( $tag_name ), $this->params );
+		if ( $tag_name ) {
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
+			// For this to work we need the tag ID
+			$response = wp_safe_remote_get( $this->api_url . 'api/3/tags?search=' . rawurlencode( $tag_name ), $this->get_params() );
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
-		if ( empty( $response->tags ) ) {
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			wpf_log( 'error', 0, 'Unable to get tag ID for ' . $tag_name . ', cancelling import.' );
-			return false;
+			if ( empty( $response->tags ) ) {
 
-		}
+				wpf_log( 'error', 0, 'Unable to get tag ID for ' . $tag_name . ', cancelling import.' );
+				return false;
 
-		$tag_id = false;
+			}
 
-		foreach ( $response->tags as $tag ) {
+			$tag_id = false;
 
-			if ( $tag_name === $tag->tag ) {
-				$tag_id = $tag->id;
-				break;
+			foreach ( $response->tags as $tag ) {
+
+				if ( $tag_name === $tag->tag ) {
+					$tag_id = $tag->id;
+					break;
+				}
+			}
+			if ( $tag_id ) {
+				$url = add_query_arg( 'tagid', $tag_id, $url );
 			}
 		}
 
@@ -966,7 +1035,9 @@ class WPF_ActiveCampaign {
 		while ( $proceed ) {
 
 			// Limit is actually 100, this has been tested.
-			$response = wp_safe_remote_get( $this->api_url . 'api/3/contacts?limit=100&offset=' . $offset . '&tagid=' . $tag_id, $this->params );
+			$url = add_query_arg( 'offset', $offset, $url );
+
+			$response = wp_safe_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -994,7 +1065,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return $contact_ids;
-
 	}
 
 	//
@@ -1087,7 +1157,6 @@ class WPF_ActiveCampaign {
 		update_option( 'wpf_ac_connection_id', $body->connection->id );
 
 		return $body->connection->id;
-
 	}
 
 	/**
@@ -1108,7 +1177,6 @@ class WPF_ActiveCampaign {
 		wp_safe_remote_request( $this->api_url . 'api/3/connections/' . $connection_id, $params );
 
 		delete_option( 'wpf_ac_connection_id' );
-
 	}
 
 	/**
@@ -1193,7 +1261,10 @@ class WPF_ActiveCampaign {
 		);
 
 		wpf_log(
-			'info', $user_id, 'Registering new ecomCustomer:', array(
+			'info',
+			$user_id,
+			'Registering new ecomCustomer:',
+			array(
 				'source'              => 'wpf-ecommerce',
 				'meta_array_nofilter' => $body,
 			)
@@ -1240,7 +1311,6 @@ class WPF_ActiveCampaign {
 		}
 
 		return $customer_id;
-
 	}
 
 	/**
@@ -1325,6 +1395,4 @@ class WPF_ActiveCampaign {
 
 		return true;
 	}
-
-
 }

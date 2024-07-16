@@ -15,6 +15,8 @@ class Response {
 	public $_cookies = array();
 	public $content_type = 'text/xml';
 	public $raw_data = '';
+	public $valtyp = false;
+	
 
 	/**
 	 * @param mixed $val either an xmlrpc value obj, a php value or the xml serialization of an xmlrpc value (a string)

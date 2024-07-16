@@ -3,6 +3,20 @@
 class WPF_MailerLite {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'mailerlite';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'MailerLite';
+
+	/**
 	 * Contains API params
 	 */
 
@@ -30,11 +44,10 @@ class WPF_MailerLite {
 	 */
 	public $edit_url = '';
 
-
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
 	 *
-	 * @var tag_type
+	 * @var string
 	 */
 	public $tag_type = 'Group';
 
@@ -45,9 +58,6 @@ class WPF_MailerLite {
 	 * @since   2.0
 	 */
 	public function __construct() {
-
-		$this->slug = 'mailerlite';
-		$this->name = 'MailerLite';
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -860,10 +870,14 @@ class WPF_MailerLite {
 	}
 
 	/**
-	 * Update contact
+	 * Update contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since 3.10.0
+	 *
+	 * @param string $contact_id The contact ID.
+	 * @param array $data The data to update.
+	 *
+	 * @return string|WP_Error The contact ID or an error.
 	 */
 
 	public function update_contact( $contact_id, $data ) {
@@ -880,16 +894,16 @@ class WPF_MailerLite {
 		}
 
 		// Check for changes in email address if enabled
-		if ( ! empty( $send_data['email'] ) && wpf_get_option( 'email_changes' ) == 'duplicate' ) {
+		if ( ! empty( $data['email'] ) && 'duplicate' === wpf_get_option( 'email_changes' ) ) {
 
 			$contact_data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			if ( strtolower( $contact_data['email'] ) != strtolower( $data['email'] ) ) {
+			if ( strtolower( $contact_data['email'] ) !== strtolower( $data['email'] ) ) {
+
+				$user_id        = wpf_get_user_id( $contact_id );
+				$original_email = $contact_data['email'];
 
 				wpf_log( 'notice', $user_id, 'Email address change detected (from <strong>' . $original_email . '</strong> to <strong>' . $data['email'] . '</strong>). Proceeding to delete subscriber. To disable this, set <strong>Email Address Changes</strong> to <strong>Ignore</strong> in the Advanced settings of WP Fusion.', array( 'source' => 'mailerlite' ) );
-
-				// Add new contact with updated email
-				$original_email = $contact_data['email'];
 
 				$contact_data['email'] = $data['email'];
 				unset( $contact_data['id'] );
@@ -907,8 +921,9 @@ class WPF_MailerLite {
 				$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 				// Save the new contact ID
-				$user_id = wp_fusion()->user->get_user_id( $contact_id );
-				update_user_meta( $user_id, 'mailerlite_contact_id', $body->id );
+				if ( $user_id ) {
+					update_user_meta( $user_id, 'mailerlite_contact_id', $body->id );
+				}
 
 				// Get the contact's previous tags
 				$tags = $this->get_tags( $contact_id );

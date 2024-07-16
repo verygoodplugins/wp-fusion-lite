@@ -70,7 +70,7 @@ class WPF_FluentCRM_REST {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-fluentcrm-rest-admin.php';
+			require_once __DIR__ . '/class-fluentcrm-rest-admin.php';
 			new WPF_FluentCRM_REST_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -82,7 +82,6 @@ class WPF_FluentCRM_REST {
 			$this->url      = trailingslashit( $url ) . 'wp-json/fluent-crm/v2';
 			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=fluentcrm-admin#/subscribers/%d/';
 		}
-
 	}
 
 	/**
@@ -97,7 +96,6 @@ class WPF_FluentCRM_REST {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-
 	}
 
 
@@ -121,7 +119,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -148,7 +145,6 @@ class WPF_FluentCRM_REST {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -245,7 +241,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return $response;
-
 	}
 
 
@@ -283,7 +278,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return true;
-
 	}
 
 
@@ -306,7 +300,6 @@ class WPF_FluentCRM_REST {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -346,7 +339,7 @@ class WPF_FluentCRM_REST {
 			if ( empty( $response->tags ) || count( $response->tags->data ) < 100 ) {
 				$continue = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
@@ -355,7 +348,6 @@ class WPF_FluentCRM_REST {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
@@ -403,7 +395,6 @@ class WPF_FluentCRM_REST {
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
 		return $available_lists;
-
 	}
 
 
@@ -457,7 +448,6 @@ class WPF_FluentCRM_REST {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -485,7 +475,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return absint( $response->subscribers->data[0]->id );
-
 	}
 
 
@@ -545,7 +534,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return $tags;
-
 	}
 
 
@@ -560,6 +548,10 @@ class WPF_FluentCRM_REST {
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
 	public function apply_tags( $tags, $contact_id ) {
+
+		if ( empty( array_filter( $tags ) ) ) {
+			return true; // if you send an empty tag, the contact will get all the tags in the account.
+		}
 
 		$body = array(
 			'type'        => 'tags',
@@ -578,7 +570,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -610,7 +601,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return true;
-
 	}
 
 
@@ -680,7 +670,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -726,7 +715,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return true;
-
 	}
 
 
@@ -764,7 +752,6 @@ class WPF_FluentCRM_REST {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -773,36 +760,44 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since  3.37.14
 	 *
-	 * @param  string $tag    The tag ID or name to search for.
+	 * @param  string|bool $tag The tag ID or name to search for.
 	 * @return array  Contact IDs returned.
 	 */
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag = false ) {
+		$url = $this->url . '/subscribers?per_page=100';
 
-		// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
+		if ( $tag ) {
 
-		$request  = $this->url . '/tags?sort_by=id&per_page=1&search=' . $tag;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+			// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			$request  = $this->url . '/tags?sort_by=id&per_page=1&search=' . $tag;
+			$response = wp_safe_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( empty( $response->tags->data ) ) {
+				return new WP_Error( 'error', 'Unable to determine tag ID from tag ' . $tag );
+			}
+
+			$tag_id = $response->tags->data[0]->id;
+
+			if ( $tag_id ) {
+				$url = add_query_arg( 'tags%5B%5D', $tag_id, $url );
+			}
 		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( empty( $response->tags->data ) ) {
-			return new WP_Error( 'error', 'Unable to determine tag ID from tag ' . $tag );
-		}
-
-		$tag_id = $response->tags->data[0]->id;
 
 		$contact_ids = array();
 		$proceed     = true;
 		$page        = 1;
 
 		while ( $proceed ) {
+			$url = add_query_arg( 'page', $page, $url );
 
-			$request  = $this->url . '/subscribers?per_page=100&tags%5B%5D=' . $tag_id . '&page=' . $page;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_safe_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -817,12 +812,11 @@ class WPF_FluentCRM_REST {
 			if ( count( $response->subscribers->data ) < 100 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -847,7 +841,7 @@ class WPF_FluentCRM_REST {
 			return false; // can't track without an email.
 		}
 
-		if ( 1 === count( $event_data ) ) {
+		if ( ! empty( $event_data ) && 1 === count( $event_data ) ) {
 			$event_text = reset( $event_data );
 		} else {
 			$event_text = wp_json_encode( $event_data, JSON_NUMERIC_CHECK );
@@ -876,6 +870,4 @@ class WPF_FluentCRM_REST {
 
 		return true;
 	}
-
-
 }

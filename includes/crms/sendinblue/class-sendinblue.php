@@ -614,7 +614,7 @@ class WPF_SendinBlue {
 	 * @since 3.16.0
 	 *
 	 * @param string|int $contact_id Contact ID or email.
-	 * @return array List IDs.
+	 * @return array|WP_Error List IDs or error.
 	 */
 	public function get_tags( $contact_id ) {
 

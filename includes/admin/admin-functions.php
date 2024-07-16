@@ -56,12 +56,20 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		$args['setting'] = (array) $args['setting'];
 	}
 
+	$args['setting'] = array_filter( $args['setting'] ); // sometimes empty values end up in here.
+
+	$unknown_tags = array();
+
 	// Maybe convert setting from tag names to IDs if CRM has been switched.
 	if ( ! empty( $args['setting'] ) && ! in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 
 		foreach ( $args['setting'] as $i => $value ) {
 
-			if ( ! is_numeric( $value ) && ! empty( $value ) && ! is_array( $value ) ) {
+			if ( array_key_exists( $value, $available_tags ) ) {
+				continue;
+			}
+
+			if ( ! is_numeric( $value ) && ! is_array( $value ) ) {
 
 				// If the tag is stored as a name, and we're able to find a numeric ID, update it
 
@@ -69,11 +77,25 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 				if ( false !== $search ) {
 
+					$unknown_tags[]        = $value;
 					$args['setting'][ $i ] = $search;
 
 				}
 			}
 		}
+	}
+
+	// Check to see if there are unknown tags in the list.
+
+	foreach ( $args['setting'] as $tag ) {
+
+		if ( false !== strpos( wpf_get_tag_label( $tag ), 'Unknown' ) || ( is_numeric( $tag ) && ! array_key_exists( $tag, $available_tags ) ) ) {
+			$unknown_tags[] = $tag;
+		}
+	}
+
+	if ( ! empty( $unknown_tags ) ) {
+		$args['class'] .= ' wpf-has-unknown-tags';
 	}
 
 	// If there are more than 1000 total tags, we'll lazy-load them.
@@ -202,6 +224,10 @@ function wpf_render_tag_multiselect( $args = array() ) {
 
 	echo '</select>';
 
+	if ( ! empty( $unknown_tags ) ) {
+		echo '<span class="wpf-unknown-tags">' . esc_html__( 'Unknown tag(s): ', 'wp-fusion-lite' ) . esc_html( implode( ', ', $unknown_tags ) ) . '</span>';
+	}
+
 	// ....done!
 	if ( $args['return'] ) {
 		return ob_get_clean();
@@ -295,8 +321,11 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 			foreach ( $crm_fields as $field_group ) {
 
-				foreach ( $field_group as $field => $label ) {
-					$field_check[ $field ] = $label;
+				if ( ! empty( $field_group ) ) {
+
+					foreach ( $field_group as $field => $label ) {
+						$field_check[ $field ] = $label;
+					}
 				}
 			}
 		} else {

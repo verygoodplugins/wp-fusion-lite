@@ -255,7 +255,7 @@ class WPF_Mautic {
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( 'Y-m-d', $value );
+			$date = gmdate( 'Y-m-d', intval( $value ) );
 
 			return $date;
 

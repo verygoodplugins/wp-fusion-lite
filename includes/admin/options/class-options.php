@@ -443,40 +443,43 @@ class WP_Fusion_Options {
 
 			// We need to keep track of some types here
 
-			if ( 'checkbox' == $setting['type'] ) {
-				$this->checkboxes[] = $id;
-			} elseif ( 'multi_select' == $setting['type'] || 'checkboxes' == $setting['type'] || 'assign_tags' == $setting['type'] ) {
-				$this->multi_selects[] = $id;
-			}
+			if ( isset( $setting['type'] ) ) {
 
-			// If a custom setting template has been specified, load those values as well
+				if ( 'checkbox' == $setting['type'] ) {
+					$this->checkboxes[] = $id;
+				} elseif ( 'multi_select' == $setting['type'] || 'checkboxes' == $setting['type'] || 'assign_tags' == $setting['type'] ) {
+					$this->multi_selects[] = $id;
+				}
 
-			if ( has_filter( 'default_field_' . $setting['type'] ) ) {
+				// If a custom setting template has been specified, load those values as well
 
-				$default         = apply_filters( 'default_field_' . $setting['type'], $setting );
-				$settings[ $id ] = wp_parse_args( $settings[ $id ], $default );
+				if ( has_filter( 'default_field_' . $setting['type'] ) ) {
 
-			} elseif ( method_exists( $this, 'default_field_' . $setting['type'] ) ) {
+					$default         = apply_filters( 'default_field_' . $setting['type'], $setting );
+					$settings[ $id ] = wp_parse_args( $settings[ $id ], $default );
 
-				$default         = call_user_func( array( $this, 'default_field_' . $setting['type'] ) );
-				$settings[ $id ] = wp_parse_args( $settings[ $id ], $default );
+				} elseif ( method_exists( $this, 'default_field_' . $setting['type'] ) ) {
 
-			}
+					$default         = call_user_func( array( $this, 'default_field_' . $setting['type'] ) );
+					$settings[ $id ] = wp_parse_args( $settings[ $id ], $default );
 
-			// Load the array of settings currently in use
-			if ( ! isset( $this->fields[ $setting['type'] ] ) ) {
-				$this->fields[ $setting['type'] ] = true;
-			}
+				}
 
-			if ( ! isset( $this->options[ $id ] ) && ! empty( $settings[ $id ]['std'] ) ) {
+				// Load the array of settings currently in use
+				if ( ! isset( $this->fields[ $setting['type'] ] ) ) {
+					$this->fields[ $setting['type'] ] = true;
+				}
 
-				// Set the default value if no option exists
-				$this->options[ $id ] = $settings[ $id ]['std'];
+				if ( ! isset( $this->options[ $id ] ) && ! empty( $settings[ $id ]['std'] ) ) {
 
-			} elseif ( ! isset( $this->options[ $id ] ) ) {
+					// Set the default value if no option exists
+					$this->options[ $id ] = $settings[ $id ]['std'];
 
-				// If there's no std, set it to false
-				$this->options[ $id ] = false;
+				} elseif ( ! isset( $this->options[ $id ] ) ) {
+
+					// If there's no std, set it to false
+					$this->options[ $id ] = false;
+				}
 			}
 		}
 

@@ -31,7 +31,6 @@ class WPF_Log_Table_List extends WP_List_Table {
 				'ajax'     => false,
 			)
 		);
-
 	}
 
 
@@ -84,6 +83,30 @@ class WPF_Log_Table_List extends WP_List_Table {
 		<?php
 	}
 
+
+	/**
+	 * Generates content for a single row of the table.
+	 *
+	 * @param object|array $item The current item
+	 */
+	public function single_row( $item ) {
+		echo '<tr';
+
+		if ( isset( $item['log_id'] ) ) {
+			echo ' id="' . esc_attr( $item['log_id'] ) . '"';
+
+			if ( isset( $_GET['id'] ) && $_GET['id'] === $item['log_id'] ) {
+				echo ' class="active"';
+			}
+		}
+
+		echo '>';
+
+		$this->single_row_columns( $item );
+		echo '</tr>';
+	}
+
+
 	/**
 	 * Get list columns.
 	 *
@@ -116,12 +139,17 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_timestamp( $log ) {
-		return esc_html(
+		$output = esc_html(
 			mysql2date(
 				get_option( 'date_format' ) . ' H:i:s',
 				$log['timestamp']
 			)
 		);
+
+		$link    = admin_url( "tools.php?page=wpf-settings-logs&id={$log['log_id']}#{$log['log_id']}" );
+		$output .= sprintf( __( '<a class="wpf-log-link" href="%s"><span class="dashicons dashicons-admin-links"></span></a>', 'wp-fusion-lite' ), $link );
+
+		return $output;
 	}
 
 	/**
@@ -463,7 +491,6 @@ class WPF_Log_Table_List extends WP_List_Table {
 			</select>
 
 		<?php
-
 	}
 
 

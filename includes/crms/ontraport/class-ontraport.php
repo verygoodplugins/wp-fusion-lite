@@ -60,15 +60,13 @@ class WPF_Ontraport {
 
 	public function __construct() {
 
-
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Ontraport_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -89,7 +87,6 @@ class WPF_Ontraport {
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
-
 	}
 
 	/**
@@ -104,7 +101,6 @@ class WPF_Ontraport {
 		$cookies[] = 'oprid';
 
 		return $cookies;
-
 	}
 
 	/**
@@ -183,7 +179,6 @@ class WPF_Ontraport {
 		}
 
 		return $value;
-
 	}
 
 	/**
@@ -224,7 +219,6 @@ class WPF_Ontraport {
 		}
 
 		return $customer_data;
-
 	}
 
 	/**
@@ -274,7 +268,6 @@ class WPF_Ontraport {
 
 			}
 		}
-
 	}
 
 	/**
@@ -290,12 +283,10 @@ class WPF_Ontraport {
 			return;
 		}
 
-		$account_id = wpf_get_option( 'account_id' );
-
 		echo '<!-- Ontraport -->';
-		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . esc_js( wpf_get_option( 'account_id' ) ) . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
+		//echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . esc_js( wpf_get_option( 'account_id' ) ) . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
+		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri='101697',_mr_domain='verygoodplugins.ontraport.com',mrtracking();'></script>";
 		echo '<!-- end Ontraport -->';
-
 	}
 
 	/**
@@ -363,7 +354,6 @@ class WPF_Ontraport {
 		}
 
 		return $response;
-
 	}
 
 
@@ -443,7 +433,6 @@ class WPF_Ontraport {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -672,7 +661,6 @@ class WPF_Ontraport {
 		}
 
 		return true;
-
 	}
 
 
@@ -723,7 +711,6 @@ class WPF_Ontraport {
 		}
 
 		return $body->data->id;
-
 	}
 
 	/**
@@ -740,13 +727,25 @@ class WPF_Ontraport {
 			$data['lreferrer'] = sanitize_text_field( wp_unslash( $_COOKIE['aff_'] ) );
 		}
 
+		// Possibly merge any last referrer data.
+
+		$lead_source_data = wp_fusion()->lead_source_tracking->merge_lead_source();
+
+		if ( ! empty( $lead_source_data ) && ! empty( $lead_source_data[0] ) ) {
+			foreach ( $lead_source_data[0] as $key => $value ) {
+				$key          = str_replace( 'n_', 'l_', $key );
+				$data[ $key ] = $value;
+			}
+		}
+
 		$data['objectID'] = $this->object_type;
 		$data['id']       = $contact_id;
 
 		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request.
 		$data['use_utm_names']      = true; // @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
 
-		$params           = $this->get_params();;
+		$params = $this->get_params();
+
 		$params['method'] = 'PUT';
 		$params['body']   = wp_json_encode( $data );
 
@@ -816,19 +815,37 @@ class WPF_Ontraport {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag = false ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
+		$url = 'https://api.ontraport.com/1/objects';
+
+		if ( $tag ) {
+			$url .= '/tag';
+		}
+
+		$url         = add_query_arg( 'objectID', $this->object_type, $url );
 		$contact_ids = array();
 		$offset      = 0;
 		$proceed     = true;
 
 		while ( $proceed == true ) {
+			if ( $tag ) {
+				$url = add_query_arg( 'tag_id', $tag, $url );
+			}
 
-			$url     = 'https://api.ontraport.com/1/objects/tag?objectID=' . $this->object_type . '&tag_id=' . $tag . '&range=50&start=' . $offset . '&listFields=object_id';
+			$url = add_query_arg(
+				array(
+					'range'      => '50',
+					'start'      => $offset,
+					'listFields' => 'object_id',
+				),
+				$url
+			);
+
 			$results = wp_safe_remote_get( $url, $this->params );
 
 			if ( is_wp_error( $results ) ) {
@@ -849,7 +866,5 @@ class WPF_Ontraport {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

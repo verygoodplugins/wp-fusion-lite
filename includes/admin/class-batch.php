@@ -65,6 +65,7 @@ class WPF_Batch {
 
 		// Import contacts.
 		add_filter( 'wpf_batch_import_users_init', array( $this, 'import_users_init' ) );
+		add_filter( 'wpf_batch_import_users_args', array( $this, 'import_users_args' ), 10, 2 );
 		add_action( 'wpf_batch_import_users', array( $this, 'import_users_step' ), 10, 2 );
 
 		$this->includes();
@@ -100,7 +101,7 @@ class WPF_Batch {
 			'users_register'      => array(
 				'label'   => __( 'Export users', 'wp-fusion-lite' ),
 				'title'   => __( 'Users', 'wp-fusion-lite' ),
-				'tooltip' => sprintf( __( 'All WordPress users without a matching %s contact record will be exported as new contacts, and any registration tags will be applied.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+				'tooltip' => sprintf( __( 'Queries any WordPress users without a saved %s contact ID, and either creates new contacts or updates existing ones based on email address. Any registration tags will be applied to new contacts. Any existing contacts will have their tags loaded and cached.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 			'users_register_tags' => array(
 				'label'   => __( 'Apply registration tags', 'wp-fusion-lite' ),
@@ -246,7 +247,7 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Initialize batch process and return count of objects to be processed
+	 * Initialize batch process and return count of objects to be processed.
 	 *
 	 * @since 3.0
 	 * @return int Count
@@ -268,6 +269,9 @@ class WPF_Batch {
 
 		$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
 		$objects = apply_filters( 'wpf_batch_objects', $objects, $args );
+
+		$args = apply_filters( 'wpf_batch_' . $hook . '_args', $args, $objects );
+		$args = apply_filters( 'wpf_batch_args', $args, $objects );
 
 		if ( empty( $objects ) ) {
 
@@ -338,12 +342,10 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Returns number of remaining items in the queue
+	 * Returns number of remaining items in the queue.
 	 *
-	 * @since 3.0
-	 * @return int Remaining
+	 * @since 3.0.0
 	 */
-
 	public function batch_status() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
@@ -376,12 +378,10 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Cancels current batch process
+	 * Cancels current batch process.
 	 *
-	 * @since 3.0
-	 * @return int Remaining
+	 * @since 3.0.0
 	 */
-
 	public function batch_cancel() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
@@ -437,12 +437,15 @@ class WPF_Batch {
 	}
 
 	/**
-	 * Record errors to the status tracker
+	 * Record errors to the status tracker.
 	 *
 	 * @since 3.29.3
-	 * @return int Remaining
+	 *
+	 * @param string $timestamp Log timestamp.
+	 * @param string $level     emergency|alert|critical|error|warning|notice|info|debug
+	 * @param string $message   Log message.
+	 * @param array  $context   Additional information for log handlers.
 	 */
-
 	public function handle_error( $timestamp, $level, $user, $message, $context ) {
 
 		if ( 'error' == $level ) {
@@ -480,6 +483,10 @@ class WPF_Batch {
 
 	public function import_users_init( $args ) {
 
+		if ( 'false' === $args['tag'] ) {
+			$args['tag'] = false; // allow importing all contacts.
+		}
+
 		$contact_ids = wp_fusion()->crm->load_contacts( $args['tag'] );
 
 		if ( is_wp_error( $contact_ids ) ) {
@@ -488,9 +495,7 @@ class WPF_Batch {
 			return false;
 
 		} elseif ( empty( $contact_ids ) ) {
-
 			return false;
-
 		}
 
 		// Remove existing users
@@ -499,7 +504,7 @@ class WPF_Batch {
 
 		foreach ( $contact_ids as $i => $contact_id ) {
 
-			if ( wp_fusion()->user->get_user_id( $contact_id ) != false ) {
+			if ( wp_fusion()->user->get_user_id( $contact_id ) ) {
 
 				unset( $contact_ids[ $i ] );
 				$removed++;
@@ -516,13 +521,30 @@ class WPF_Batch {
 
 		wpf_log( 'info', 0, $message, array( 'source' => 'batch-process' ) );
 
+		return array_values( $contact_ids );
+
+	}
+
+	/**
+	 * Filters the args for the import users batch operation.
+	 *
+	 * @since 3.43.3
+	 *
+	 * @param array $args The args.
+	 * @param array $objects The objects.
+	 * @return array The args.
+	 */
+	public function import_users_args( $args, $objects ) {
+
 		// Keep track of import groups so they can be removed later.
 		$import_groups = get_option( 'wpf_import_groups', array() );
 
 		$params               = new stdClass();
 		$params->import_users = array( $args['tag'] );
 
-		$import_groups[ current_time( 'timestamp' ) ] = array(
+		$import_id = current_time( 'timestamp' );
+
+		$import_groups[ $import_id ] = array(
 			'params'   => $params,
 			'user_ids' => array(),
 			'role'     => $args['role'],
@@ -530,7 +552,11 @@ class WPF_Batch {
 
 		update_option( 'wpf_import_groups', $import_groups, false );
 
-		return $contact_ids;
+		$args['import_id'] = $import_id;
+
+		unset( $args['tag'] ); // don't need this anymore and it will save some space in the DB not to have it.
+
+		return $args;
 
 	}
 
@@ -553,33 +579,27 @@ class WPF_Batch {
 
 		$user_id = wp_fusion()->user->import_user( $contact_id, $args['notify'], $args['role'] );
 
-		if ( $user_id ) {
+		if ( ! is_wp_error( $user_id ) && isset( $args['import_id'] ) ) {
 
 			// Track the imported users.
 			$import_groups = get_option( 'wpf_import_groups', array() );
 
-			if ( empty( $import_groups ) ) {
-				$import_groups = array();
+			if ( ! isset( $import_groups[ $args['import_id'] ]['user_ids'] ) ) {
+				$import_groups[ $args['import_id'] ]['user_ids'] = array();
 			}
 
-			end( $import_groups );
-			$key = key( $import_groups );
-			reset( $import_groups );
-
-			if ( empty( $import_groups[ $key ] ) ) {
-				$import_groups[ $key ] = array();
+			if ( ! in_array( $user_id, $import_groups[ $args['import_id'] ]['user_ids'] ) ) {
+				// In case the data was loaded for an existing user.
+				$import_groups[ $args['import_id'] ]['user_ids'][] = $user_id;
 			}
-
-			if ( ! isset( $import_groups[ $key ]['user_ids'] ) ) {
-				$import_groups[ $key ]['user_ids'] = array();
-			}
-
-			$import_groups[ $key ]['user_ids'][] = $user_id;
 
 			update_option( 'wpf_import_groups', $import_groups, false );
 
-		}
+		} elseif ( is_wp_error( $user_id ) ) {
 
+			wpf_log( 'error', 0, 'Error importing contact #' . $contact_id . ': ' . $user_id->get_error_message() );
+
+		}
 	}
 
 

@@ -595,6 +595,12 @@ jQuery(document).ready(function($){
 			$('#wpf-settings').find('div.crm-active').slideUp().removeClass('crm-active').addClass('hidden');
 			$('#wpf-settings').find('div#' + $(this).val()).slideDown().addClass('crm-active').removeClass('hidden');
 
+			// if the CRM name is staging, enable the save button:
+
+			if ( $(this).val() == 'staging' ) {
+				$('p.submit input[type="submit"]').removeAttr('disabled');
+			};
+
 		});
 
 		function paramReplace( name, string, value ) {

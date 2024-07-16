@@ -86,6 +86,7 @@ class WPF_Lead_Source_Tracking {
 			'utm_term',
 			'utm_content',
 			'gclid',
+			'fbclid',
 		);
 
 		return apply_filters( 'wpf_leadsource_vars', $leadsource_vars );
@@ -145,13 +146,17 @@ class WPF_Lead_Source_Tracking {
 	}
 
 	/**
-	 * Merges lead source variables when a user registers
+	 * Merge Lead Source
+	 * Merges lead source variables when a user registers.
 	 *
-	 * @access  public
-	 * @return  array User Meta
+	 * @since  unknown
+	 * @since  3.43.2  Removed redundant UTM query parameters from the current page and landing page URLs.
+	 *
+	 * @param  array $args args.
+	 *
+	 * @return array User Meta
 	 */
-
-	public function merge_lead_source( $args = array() ) {
+	public function merge_lead_source( array $args = array() ): array {
 
 		$lead_source_data = array();
 
@@ -213,12 +218,39 @@ class WPF_Lead_Source_Tracking {
 				$args[0] = array(); // in case it came in empty.
 			}
 
+			// Remove any UTM query strings from the current page and landing page URL.
+			if ( ! empty( $lead_source_data['current_page'] ) ) {
+				$lead_source_data['current_page'] = $this->remove_query_parameters( $lead_source_data['current_page'] );
+			}
+			if ( ! empty( $lead_source_data['landing_page'] ) ) {
+				$lead_source_data['landing_page'] = $this->remove_query_parameters( $lead_source_data['landing_page'] );
+			}
+
 			$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $lead_source_data ); // dont overwrite anything we might have gotten from the database.
 
 		}
 
 		return $args;
+	}
 
+	/**
+	 * Remove Query Parameters
+	 * Removes UTM query parameters from a URL.
+	 *
+	 * @since  3.43.2
+	 *
+	 * @param  string $url The URL.
+	 * @return string $url The URL without query parameters.
+	 */
+	public function remove_query_parameters( string $url ): string {
+
+		$postion = strpos( $url, '/?' );
+
+		if ( false !== $postion ) {
+			$url = substr( $url, 0, $postion + 1 );
+		}
+
+		return $url;
 	}
 
 
@@ -314,6 +346,13 @@ class WPF_Lead_Source_Tracking {
 		$meta_fields['gclid'] = array(
 			'type'   => 'text',
 			'label'  => __( 'Google Click Identifier', 'wp-fusion-lite' ),
+			'group'  => 'leadsource',
+			'pseudo' => true,
+		);
+
+		$meta_fields['fbclid'] = array(
+			'type'   => 'text',
+			'label'  => __( 'Facebook Click Identifier', 'wp-fusion-lite' ),
 			'group'  => 'leadsource',
 			'pseudo' => true,
 		);

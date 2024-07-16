@@ -61,7 +61,7 @@ class WPF_Staging {
 	 * @return  bool
 	 */
 
-	public function connect( $api_url = null, $api_key = null, $test = false ) {
+	public static function connect( $api_url = null, $api_key = null, $test = false ) {
 
 		return true;
 
@@ -75,7 +75,7 @@ class WPF_Staging {
 	 * @return bool
 	 */
 
-	public function sync() {
+	public static function sync() {
 
 		$this->connect();
 
@@ -96,7 +96,7 @@ class WPF_Staging {
 	 * @return array Tags
 	 */
 
-	public function sync_tags() {
+	public static function sync_tags() {
 
 		return wpf_get_option( 'available_tags', array() );
 
@@ -110,7 +110,7 @@ class WPF_Staging {
 	 * @return array CRM Fields
 	 */
 
-	public function sync_crm_fields() {
+	public static function sync_crm_fields() {
 
 		$fields = array(
 			'email' => 'Email Address',
@@ -122,13 +122,12 @@ class WPF_Staging {
 
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @return string|bool Contact ID or false.
 	 */
 
-	public function get_contact_id( $email_address ) {
+	public static function get_contact_id( $email_address ) {
 
 		$user = get_user_by( 'email', $email_address );
 
@@ -154,7 +153,7 @@ class WPF_Staging {
 	 * @return void
 	 */
 
-	public function get_tags( $contact_id ) {
+	public static function get_tags( $contact_id ) {
 
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
@@ -175,7 +174,7 @@ class WPF_Staging {
 	 * @return bool
 	 */
 
-	public function apply_tags( $tags, $contact_id ) {
+	public static function apply_tags( $tags, $contact_id ) {
 
 		return true;
 
@@ -189,7 +188,7 @@ class WPF_Staging {
 	 * @return bool
 	 */
 
-	public function remove_tags( $tags, $contact_id ) {
+	public static function remove_tags( $tags, $contact_id ) {
 
 		return true;
 
@@ -203,7 +202,7 @@ class WPF_Staging {
 	 * @return int Contact ID
 	 */
 
-	public function add_contact( $data ) {
+	public static function add_contact( $data ) {
 
 		// Generate a random contact ID.
 		return 'staging_' . substr( md5( microtime() . wp_rand() ), 0, 10 );
@@ -218,7 +217,7 @@ class WPF_Staging {
 	 * @return bool
 	 */
 
-	public function update_contact( $contact_id, $data ) {
+	public static function update_contact( $contact_id, $data ) {
 
 		return true;
 
@@ -231,7 +230,7 @@ class WPF_Staging {
 	 * @return array User meta data that was returned
 	 */
 
-	public function load_contact( $contact_id ) {
+	public static function load_contact( $contact_id ) {
 
 		return array();
 
@@ -244,7 +243,7 @@ class WPF_Staging {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag ) {
+	public static function load_contacts( $tag ) {
 
 		return array();
 
@@ -260,7 +259,7 @@ class WPF_Staging {
 	 * @param  bool|string $email_address The user email address.
 	 * @return bool|WP_Error True if success, WP_Error if failed.
 	 */
-	public function track_event( $event, $event_data = false, $email_address = false ) {
+	public static function track_event( $event, $event_data = false, $email_address = false ) {
 
 		return true;
 

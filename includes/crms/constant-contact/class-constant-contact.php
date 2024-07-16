@@ -38,7 +38,7 @@ class WPF_Constant_Contact {
 	 * @since 3.40.0
 	 */
 
-	public $supports = array( 'add_tags_api' );
+	public $supports = array( 'add_tags_api', 'lists' );
 
 	/**
 	 * API parameters
@@ -64,7 +64,7 @@ class WPF_Constant_Contact {
 	 * @var string
 	 * @since  3.40.0
 	 */
-	public $client_id = 'd9fbad0a-574b-4037-81d8-09f0d48a9e41';
+	public $client_id = '03c99fe6-9bc6-493e-90bb-1594b79d14b6';
 
 	/**
 	 * Client secret for OAuth.
@@ -72,7 +72,7 @@ class WPF_Constant_Contact {
 	 * @var string
 	 * @since  3.40.0
 	 */
-	public $client_secret = 'ITYeqllKUlcGtZr47E-GUA';
+	public $client_secret = 'HVMvgNKQB-ejPV6uzqVblQ';
 
 	/**
 	 * Authorization URL for OAuth.
@@ -717,6 +717,7 @@ class WPF_Constant_Contact {
 	 * Adds a new contact.
 	 *
 	 * @since 3.40.0
+	 * @since 3.43.14 Added support for lists.
 	 *
 	 * @param array $contact_data    An associative array of contact fields and field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
@@ -773,8 +774,15 @@ class WPF_Constant_Contact {
 			}
 		}
 
-		// Assign to any lists.
-		$contact_data['list_memberships'] = wpf_get_option( 'cc_lists', array() );
+		// Lists.
+
+		if ( ! empty( $contact_data['lists'] ) ) {
+			$contact_data['list_memberships'] = $contact_data['lists'];
+			unset( $contact_data['lists'] );
+		} elseif ( wpf_get_option( 'assign_lists' ) ) {
+			// Set a default list.
+			$contact_data['list_memberships'] = wpf_get_option( 'assign_lists', array() );
+		}
 
 		$request = $this->url . '/contacts/';
 		$params  = $this->get_params();
@@ -797,6 +805,7 @@ class WPF_Constant_Contact {
 	 * Updates an existing contact record.
 	 *
 	 * @since 3.40.0
+	 * @since 3.43.14 Added support for lists.
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
 	 * @param array $contact_data    An associative array of contact fields and field values.
@@ -831,6 +840,13 @@ class WPF_Constant_Contact {
 		}
 
 		$contact_data['update_source'] = 'Contact';
+
+		// Lists.
+
+		if ( ! empty( $contact_data['lists'] ) ) {
+			$contact_data['list_memberships'] = $contact_data['lists'];
+			unset( $contact_data['lists'] );
+		}
 
 		if ( ! isset( $contact_data['email_address'] ) ) {
 			$contact_data['email_address'] = wp_fusion()->crm->get_email_from_cid( $contact_id ); // email address is required.

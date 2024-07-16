@@ -65,7 +65,7 @@ class WPF_HubSpot {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_HubSpot_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -74,7 +74,6 @@ class WPF_HubSpot {
 
 		// This has to run before init to be ready for WPF_Auto_Login::start_auto_login().
 		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
-
 	}
 
 	/**
@@ -103,7 +102,6 @@ class WPF_HubSpot {
 		if ( ! empty( $trackid ) && ! is_wp_error( $trackid ) ) {
 			$this->edit_url = 'https://app.hubspot.com/contacts/' . $trackid . '/contact/%d/';
 		}
-
 	}
 
 	/**
@@ -116,7 +114,6 @@ class WPF_HubSpot {
 	public function set_sleep_time( $seconds ) {
 
 		return 1;
-
 	}
 
 
@@ -191,7 +188,6 @@ class WPF_HubSpot {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -210,7 +206,6 @@ class WPF_HubSpot {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -227,7 +222,6 @@ class WPF_HubSpot {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -243,6 +237,10 @@ class WPF_HubSpot {
 		if ( empty( $access_token ) ) {
 			$access_token = wpf_get_option( 'hubspot_token' );
 		}
+
+		// if ( 'CJ7G_dqLMhIOUIECUAAAwSIAAAB8AgEY2efCAyDO0ooDKL__CjIUkoHGFBwxrcg3K2M7D9k9fKyKoBo6QQAEAMcAAAAEAPgDAAAAAAAAhgAAAAAAAAAAACAciAA-AOAxAAAAIADA_x8GABDwCwAAAAAAAAAAgAAAAAAAAAwEQhRT2JQNKjaCL_76R7Po6bg_6Fr4jkoDbmExUgBaAGAA' === $access_token ) {
+		// 	$access_token = 'CKvc4riKMhIOQAECUAAAwSAAAAB8AgEYq_YeIL_x-h0ov_8KMhQOCyvtQ0G-qCy2JmKiXxEdprYSvjpBAAAARwAAAAAA-AMAAAAAAACGAAAAAAAAAAAAIACIADAA4DEAAAAgAMD_HwYAELADAAAAAAAAAAAAAAAAAAAADARCFCt9edyhox7967Y6NWQLe1Wiv60sSgNuYTFSAFoAYAA';
+		// }
 
 		$this->params = array(
 			'user-agent'  => 'WP Fusion; ' . home_url(),
@@ -291,8 +289,12 @@ class WPF_HubSpot {
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( ! $body_json ) {
+		if ( ! is_object( $body_json ) ) {
 			return new WP_Error( 'error', 'Response was not a JSON object. <pre>' . $response['body'] . '</pre>' );
+		}
+
+		if ( ! isset( $body_json->access_token ) ) {
+			return new WP_Error( 'error', 'Refreshing token failed. No access token returned. <pre>' . print_r( $body_json, true ) . '</pre>' );
 		}
 
 		$this->get_params( $body_json->access_token );
@@ -300,7 +302,6 @@ class WPF_HubSpot {
 		wp_fusion()->settings->set( 'hubspot_token', $body_json->access_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -316,6 +317,11 @@ class WPF_HubSpot {
 
 			$code      = wp_remote_retrieve_response_code( $response );
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( 'https://api.hubapi.com/crm/v3/objects/deals/' === $url ) {
+				$code = 403;
+
+			}
 
 			if ( $code == 401 ) {
 
@@ -392,7 +398,6 @@ class WPF_HubSpot {
 		}
 
 		return $response;
-
 	}
 
 
@@ -406,16 +411,12 @@ class WPF_HubSpot {
 
 	public function connect( $access_token = null, $refresh_token = null, $test = false ) {
 
-		if ( ! $this->params ) {
-			$this->get_params( $access_token );
-		}
-
 		if ( $test == false ) {
 			return true;
 		}
 
 		$request  = 'https://api.hubapi.com/integrations/v1/me';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params( $access_token ) );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -428,7 +429,6 @@ class WPF_HubSpot {
 		wp_fusion()->settings->set( 'site_tracking_id', $body_json->{'portalId'} );
 
 		return true;
-
 	}
 
 
@@ -449,7 +449,6 @@ class WPF_HubSpot {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -595,7 +594,6 @@ class WPF_HubSpot {
 		wp_fusion()->settings->set( 'read_only_fields', $read_only_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -665,7 +663,6 @@ class WPF_HubSpot {
 		}
 
 		return $body_json->vid;
-
 	}
 
 
@@ -768,7 +765,6 @@ class WPF_HubSpot {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -825,7 +821,6 @@ class WPF_HubSpot {
 		}
 
 		return true;
-
 	}
 
 
@@ -860,7 +855,6 @@ class WPF_HubSpot {
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body_json->vid;
-
 	}
 
 	/**
@@ -903,12 +897,8 @@ class WPF_HubSpot {
 
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = 'https://api.hubapi.com/contacts/v1/contact/vid/' . $contact_id . '/profile';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -950,21 +940,51 @@ class WPF_HubSpot {
 
 
 	/**
-	 * Gets a list of contact IDs based on tag
+	 * Gets a list of contact IDs based on tag.
 	 *
-	 * @access public
-	 * @return array Contact IDs returned
+	 * @param string $tag Tag ID or name.
+	 * @return array|WP_Error Contact IDs returned or error.
 	 */
 
-	public function load_contacts( $tag ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+	public function load_contacts( $tag = '' ) {
 
 		$contact_ids = array();
 
-		if ( 'multiselect' === wpf_get_option( 'hubspot_tag_type' ) ) {
+		if ( empty( $tag ) ) {
+
+			// Import all contacts.
+
+			$offset  = 0;
+			$proceed = true;
+			while ( $proceed ) {
+
+				$request  = 'https://api.hubapi.com/contacts/v1/lists/all/contacts/all/?count=100&&vidOffset=' . $offset;
+				$response = wp_safe_remote_get( $request, $this->get_params() );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( empty( $body_json->contacts ) ) {
+					return $contact_ids;
+				}
+
+				foreach ( $body_json->contacts as $contact ) {
+					$contact_ids[] = $contact->vid;
+				}
+
+				if ( ! $body_json->{'has-more'} ) {
+					$proceed = false;
+				} else {
+					$offset = $body_json->{'vid-offset'};
+				}
+			}
+
+		} elseif ( 'multiselect' === wpf_get_option( 'hubspot_tag_type' ) ) {
+
+			// Import based on picklist value.
 
 			$field = wpf_get_option( 'hubspot_multiselect_field' );
 
@@ -981,16 +1001,18 @@ class WPF_HubSpot {
 					),
 				),
 			);
-			$params         = $this->params;
+			$params         = $this->get_params();
 			$params['body'] = wp_json_encode( $body );
 
 			$request  = 'https://api.hubapi.com/crm/v3/objects/contacts/search';
 			$response = wp_safe_remote_post( $request, $params );
+
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
 			if ( empty( $body_json->results ) ) {
 				return $contact_ids;
 			}
@@ -998,14 +1020,16 @@ class WPF_HubSpot {
 			foreach ( $body_json->results as $contact ) {
 				$contact_ids[] = $contact->id;
 			}
-
 		} else {
+
+			// Import based on list.
+
 			$offset  = 0;
 			$proceed = true;
 			while ( $proceed ) {
 
 				$request  = 'https://api.hubapi.com/contacts/v1/lists/' . $tag . '/contacts/all?count=100&vidOffset=' . $offset;
-				$response = wp_safe_remote_get( $request, $this->params );
+				$response = wp_safe_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
 					return $response;
@@ -1030,7 +1054,6 @@ class WPF_HubSpot {
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -1054,7 +1077,6 @@ class WPF_HubSpot {
 		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $customer_email . '.' );
 
 		setcookie( 'wpf_guest', $customer_email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 
@@ -1099,7 +1121,6 @@ class WPF_HubSpot {
 		}
 
 		echo '<!-- End of HubSpot Embed Code via WP Fusion -->';
-
 	}
 
 	/**
@@ -1127,7 +1148,6 @@ class WPF_HubSpot {
 		wp_fusion()->settings->set( 'site_tracking_id', $body_json->portalId );
 
 		return $body_json->portalId;
-
 	}
 
 	/**
@@ -1213,7 +1233,6 @@ class WPF_HubSpot {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->id;
-
 	}
 
 	/**
@@ -1243,7 +1262,6 @@ class WPF_HubSpot {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -1275,8 +1293,5 @@ class WPF_HubSpot {
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		return $response;
-
 	}
-
-
 }

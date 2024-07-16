@@ -62,12 +62,27 @@ class WPF_Constant_Contact_Admin {
 	public function init() {
 
 		// Hooks in init() will run on the admin screen when this CRM is active.
-
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+
+		if ( ! wpf_get_option( 'updated_cc_api' ) ) {
+			add_action( 'admin_notices', array( $this, 'update_api_notice' ) );
+		}
 
 	}
 
+	/**
+	 * Display a notice to update the API settings.
+	 *
+	 * @since  3.40.0
+	 */
+	public function update_api_notice() {
+
+		?>
+		<div class="notice notice-error">
+			<p><?php printf( esc_html__( 'The Constant Contact API integration has been updated. Please %1$sre-authorize the connection%2$s to continue using WP Fusion.', 'wp-fusion-lite' ), '<a href="' . esc_url( $this->get_oauth_url() ) . '">', '</a>' ); ?></p>
+		</div>
+		<?php
+	}
 
 	/**
 	 * Gets the OAuth URL for the initial connection. Remove if not using OAuth.
@@ -86,6 +101,7 @@ class WPF_Constant_Contact_Admin {
 		$args = array(
 			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings&crm=' . $this->slug ),
 			'action'   => "wpf_get_{$this->slug}_token",
+			'version'  => WP_FUSION_VERSION,
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
@@ -130,39 +146,12 @@ class WPF_Constant_Contact_Admin {
 			wp_fusion()->settings->set( "{$this->slug}_refresh_token", $response->refresh_token );
 			wp_fusion()->settings->set( "{$this->slug}_token", $response->access_token );
 			wp_fusion()->settings->set( 'crm', $this->slug );
+			wp_fusion()->settings->set( 'updated_cc_api', true );
 
 			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
 
 		}
-
-	}
-
-
-	/**
-	 * Loads specific settings fields.
-	 *
-	 * @since  3.40.0
-	 */
-
-	public function register_settings( $settings, $options ) {
-
-		if ( ! isset( $options['available_lists'] ) ) {
-			$options['available_lists'] = array();
-		}
-
-		$new_settings['cc_lists'] = array(
-			'title'       => __( 'Lists', 'wp-fusion-lite' ),
-			'desc'        => __( 'New contacts will be automatically added to the selected lists.', 'wp-fusion-lite' ),
-			'type'        => 'multi_select',
-			'placeholder' => __( 'Select lists', 'wp-fusion-lite' ),
-			'section'     => 'main',
-			'choices'     => $options['available_lists'],
-		);
-
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
-
-		return $settings;
 	}
 
 

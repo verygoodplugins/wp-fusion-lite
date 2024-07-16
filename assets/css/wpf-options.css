@@ -187,7 +187,7 @@ button.btn-verifying {
       transform: rotate( 0deg );
    }
    100% {
-      transform: rotate( 360deg );
+      transform: rotate( -360deg );
    }
 }
 
@@ -625,6 +625,24 @@ body.tools_page_wpf-settings-logs .alignleft span.select4-container.select4-cont
 .wp-list-table.wpf-logs a span.dashicons.dashicons-external {
 	vertical-align: middle;
     font-size: 16px;
+}
+
+.wp-list-table.wpf-logs .wpf-log-link{
+	visibility: hidden;
+}
+
+.wp-list-table.wpf-logs .wpf-log-link span{
+	font-size: 13px;
+    margin-top: 3px;
+    margin-left: 3px;
+}
+
+.wp-list-table.wpf-logs tr:hover .wpf-log-link, .wp-list-table.wpf-logs tr.active .wpf-log-link{
+	visibility:visible;
+}
+
+.wp-list-table.wpf-logs tr.active {
+	background-color: #c5d9ed;
 }
 
 @media screen and (min-width: 783px) {

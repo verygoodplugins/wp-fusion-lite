@@ -66,10 +66,9 @@ class WPF_Drip {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Drip_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -89,6 +88,9 @@ class WPF_Drip {
 
 		// Slow down the batch processses to get around the 3600 requests per hour limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
+		// Add tracking code to footer
+		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
 		$this->account_id = wpf_get_option( 'drip_account' );
 
@@ -110,7 +112,6 @@ class WPF_Drip {
 		$field = str_replace( ' ', '_', $field );
 
 		return str_replace( '-', '_', $field );
-
 	}
 
 	/**
@@ -123,7 +124,6 @@ class WPF_Drip {
 	public function set_sleep_time( $seconds ) {
 
 		return 2;
-
 	}
 
 
@@ -150,7 +150,6 @@ class WPF_Drip {
 		} else {
 			return $value;
 		}
-
 	}
 
 	/**
@@ -174,7 +173,6 @@ class WPF_Drip {
 		);
 
 		return $this->params;
-
 	}
 
 	/**
@@ -202,7 +200,6 @@ class WPF_Drip {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -239,7 +236,6 @@ class WPF_Drip {
 		} else {
 			wp_die( 'Unsupported method', 'Success', 200 );
 		}
-
 	}
 
 	/**
@@ -314,7 +310,6 @@ class WPF_Drip {
 
 		echo '</script>';
 		echo '<!-- end Drip -->';
-
 	}
 
 
@@ -338,7 +333,7 @@ class WPF_Drip {
 		}
 
 		if ( ! class_exists( 'Drip_API' ) ) {
-			require_once dirname( __FILE__ ) . '/includes/Drip_API.class.php';
+			require_once __DIR__ . '/includes/Drip_API.class.php';
 		}
 
 		$app = new Drip_API( $api_token );
@@ -392,7 +387,6 @@ class WPF_Drip {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -429,7 +423,6 @@ class WPF_Drip {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -447,7 +440,7 @@ class WPF_Drip {
 		}
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/drip-fields.php';
+		require __DIR__ . '/admin/drip-fields.php';
 
 		$built_in_fields = array();
 
@@ -489,7 +482,6 @@ class WPF_Drip {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -538,7 +530,6 @@ class WPF_Drip {
 		}
 
 		return $result['id'];
-
 	}
 
 
@@ -585,7 +576,6 @@ class WPF_Drip {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $result['tags'];
-
 	}
 
 	/**
@@ -623,7 +613,6 @@ class WPF_Drip {
 			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
-
 		}
 
 		return true;
@@ -657,7 +646,6 @@ class WPF_Drip {
 		}
 
 		return true;
-
 	}
 
 
@@ -700,7 +688,6 @@ class WPF_Drip {
 		}
 
 		return $result['id'];
-
 	}
 
 	/**
@@ -812,7 +799,6 @@ class WPF_Drip {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -875,7 +861,7 @@ class WPF_Drip {
 	 * @return array Contact IDs returned
 	 */
 
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag = false ) {
 
 		$this->connect();
 
@@ -886,8 +872,12 @@ class WPF_Drip {
 		// Load all subscribers.
 
 		while ( $continue ) {
+			$url = 'https://api.getdrip.com/v2/' . $this->account_id . '/subscribers/?status=all&per_page=1000&page=' . $page;
 
-			$url    = 'https://api.getdrip.com/v2/' . $this->account_id . '/subscribers/?tags=' . rawurlencode( $tag ) . '&status=all&per_page=1000&page=' . $page;
+			if ( $tag ) {
+				$url = add_query_arg( 'tags', rawurlencode( $tag ), $url );
+			}
+
 			$result = $this->app->make_request( $url );
 
 			if ( is_wp_error( $result ) ) {
@@ -906,12 +896,11 @@ class WPF_Drip {
 			if ( count( $result->subscribers ) < 1000 ) {
 				$continue = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -921,12 +910,12 @@ class WPF_Drip {
 	 *
 	 * @since  3.38.16
 	 *
-	 * @param  string      $event      The event title.
-	 * @param  bool|string $event_data The event description.
+	 * @param  string       $event      The event title.
+	 * @param  string|array $event_data The event data.
 	 * @param  bool|string $email_address The user email address.
 	 * @return bool|WP_Error True if success, WP_Error if failed.
 	 */
-	public function track_event( $event, $event_data = false, $email_address = false ) {
+	public function track_event( $event, $event_data = '', $email_address = false ) {
 
 		if ( empty( $email_address ) && ! wpf_is_user_logged_in() ) {
 			// Tracking only works if WP Fusion knows who the contact is.
@@ -961,5 +950,4 @@ class WPF_Drip {
 
 		return true;
 	}
-
 }

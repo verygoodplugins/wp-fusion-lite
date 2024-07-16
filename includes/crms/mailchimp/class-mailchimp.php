@@ -64,7 +64,7 @@ class WPF_MailChimp {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_MailChimp_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -81,7 +81,6 @@ class WPF_MailChimp {
 
 		// This has to run before init to be ready for WPF_Auto_Login::start_auto_login().
 		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
-
 	}
 
 	/**
@@ -96,7 +95,6 @@ class WPF_MailChimp {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -126,7 +124,6 @@ class WPF_MailChimp {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -143,7 +140,6 @@ class WPF_MailChimp {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -172,7 +168,6 @@ class WPF_MailChimp {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -222,7 +217,6 @@ class WPF_MailChimp {
 		}
 
 		return $response;
-
 	}
 
 
@@ -244,7 +238,7 @@ class WPF_MailChimp {
 		// Get data server from key
 		if ( empty( $dc ) && ! empty( $api_key ) ) {
 			$key_exploded = explode( '-', $api_key );
-			$dc           = (isset($key_exploded[1]) ? $key_exploded[1] : '');
+			$dc           = ( isset( $key_exploded[1] ) ? $key_exploded[1] : '' );
 		}
 
 		$this->params = array(
@@ -272,7 +266,7 @@ class WPF_MailChimp {
 
 	public function connect( $dc = null, $api_key = null, $test = false ) {
 
-		if (! $test  ) {
+		if ( ! $test ) {
 			return true;
 		}
 
@@ -310,7 +304,6 @@ class WPF_MailChimp {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -411,7 +404,7 @@ class WPF_MailChimp {
 	public function sync_crm_fields() {
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/mailchimp-fields.php';
+		require __DIR__ . '/admin/mailchimp-fields.php';
 
 		$crm_fields = array();
 
@@ -501,7 +494,6 @@ class WPF_MailChimp {
 		}
 
 		return $body->id;
-
 	}
 
 
@@ -574,7 +566,6 @@ class WPF_MailChimp {
 		}
 
 		return true;
-
 	}
 
 
@@ -686,7 +677,6 @@ class WPF_MailChimp {
 		}
 
 		return $body->id;
-
 	}
 
 
@@ -761,7 +751,6 @@ class WPF_MailChimp {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -810,7 +799,6 @@ class WPF_MailChimp {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -819,11 +807,11 @@ class WPF_MailChimp {
 	 * @param string $tag Tag name or ID.
 	 * @return array|WP_Error Contact IDs returned
 	 */
-	public function load_contacts( $tag ) {
+	public function load_contacts( $tag = false ) {
 
 		// We need the tag ID for this.
 
-		if ( ! is_numeric( $tag ) ) {
+		if ( false !== $tag && ! is_numeric( $tag ) ) {
 
 			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/tag-search/?name=' . rawurlencode( $tag );
 			$response = wp_safe_remote_get( $url, $this->get_params() );
@@ -842,11 +830,20 @@ class WPF_MailChimp {
 
 		}
 
+		$url = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list;
+
+		if ( $tag ) {
+			$url .= '/segments/' . $tag . '/members?count=1000';
+		} else {
+			$url .= '/members?count=1000';
+		}
+
 		$contact_ids = array();
 		$offset      = 0;
 
 		do {
-			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/' . $tag . '/members?count=1000&offset=' . $offset;
+			$url = add_query_arg( 'offset', $offset, $url );
+
 			$response = wp_safe_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
@@ -868,7 +865,6 @@ class WPF_MailChimp {
 		} while ( 1000 === $count ); // Continue if we got a full batch, indicating more records may be available.
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -923,7 +919,4 @@ class WPF_MailChimp {
 
 		return true;
 	}
-
-
-
 }

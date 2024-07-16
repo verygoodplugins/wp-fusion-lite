@@ -122,7 +122,7 @@ class WPF_Upgrades {
 	/**
 	 * Update the duplicate site key to include a hash to prevent it from
 	 * getting replaced on WP Engine / CloudWays.
-	 * 
+	 *
 	 * @see WPF_StagingSites::get_duplicate_site_lock_key().
 	 *
 	 * @since 3.40.16
@@ -164,7 +164,7 @@ class WPF_Upgrades {
 				$settings = array(
 					'lock_content' => true,
 					'allow_tags'   => wpf_get_option( 'bbp_allow_tags', array() ),
-					'redirect_url' => wpf_get_option( 'bbp_redirect', home_url() )
+					'redirect_url' => wpf_get_option( 'bbp_redirect', home_url() ),
 				);
 
 				update_post_meta( $forums_page_id, 'wpf-settings', $settings );
@@ -172,7 +172,6 @@ class WPF_Upgrades {
 				wp_fusion()->settings->set( 'bbp_lock', false );
 
 			}
-
 		}
 
 	}
@@ -189,6 +188,20 @@ class WPF_Upgrades {
 		}
 
 	}
+
+	/**
+	 * Moves lists from cc_lists to assign_lists in Constant Contact.
+	 *
+	 * @since 3.43.14
+	 */
+	public static function v_3_43_14() {
+
+		if ( wpf_get_option( 'cc_lists' ) ) {
+			wp_fusion()->settings->set( 'assign_lists', wpf_get_option( 'cc_lists' ) );
+		}
+
+	}
+
 
 }
 

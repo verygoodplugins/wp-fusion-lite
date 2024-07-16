@@ -640,13 +640,16 @@ function wpf_clean_tags( $tags ) {
 		$tags = array( $tags );
 	}
 
-	$tags = array_filter( $tags ); // Remove any empties.
-
-	// $tags = array_unique( $tags ); // Remove any duplicates. @TODO add this once Norm is ready.
+	$tags = array_values( array_filter( $tags ) ); // Remove any empties.
 
 	$tags = array_map( 'sanitize_text_field', $tags ); // Tags should be treated as an array of strings.
 
 	$tags = array_map( 'htmlspecialchars_decode', $tags ); // sanitize_text_field removes HTML special characters so we'll add them back.
+
+	// If we've switched from a CRM with add_tags to one without, we can convert labels to IDs automatically.
+	if ( ! empty( $tags ) && ! wp_fusion()->crm->supports( 'add_tags' ) && ! isset( wpf_get_option( 'available_tags' )[ $tags[0] ] ) ) {
+		$tags = array_map( 'wpf_get_tag_id', $tags );
+	}
 
 	return $tags;
 
@@ -726,4 +729,55 @@ function wpf_print_r( $expression, $return = false ) {
 	}
 
 	return false;
+}
+
+/**
+ * Get ISO 8601 date.
+ *
+ * Takes an input string and returns an ISO 8601 compatible date for API calls,
+ * for example 2024-04-24T00:18:01+08:00.
+ *
+ * @since 3.43.6
+ *
+ * @param int|string $timestamp      The timestamp to convert (in GMT by default).
+ * @param bool       $convert_to_gmt Whether the input date is local and needs to be converted to GMT.
+ * @return string|false The ISO 8601 date and time in GMT, or false if an error occurred.
+ */
+function wpf_get_iso8601_date( $timestamp = null, $convert_to_gmt = false ) {
+
+	try {
+
+		// If no timestamp is provided, use the current time
+		if ( empty( $timestamp ) ) {
+			$timestamp = time();
+		}
+
+		$offset = get_option( 'gmt_offset' );
+
+		// Convert date to GMT.
+		if ( $convert_to_gmt ) {
+			$timestamp -= $offset * 60 * 60;
+		}
+
+		$datetime = new DateTime( gmdate( 'c', $timestamp ) );
+
+		// DateTimeZone throws an error with 0 as the timezone
+		if ( $offset >= 0 ) {
+			$offset = '+' . $offset;
+		}
+
+		$datetime->setTimezone( new DateTimeZone( $offset ) );
+
+		if ( '+0' === $offset ) {
+			return $datetime->format( 'Y-m-d\TH:i:s\Z' );
+		} else {
+			return $datetime->format( 'c' );
+		}
+
+	} catch ( Exception $e ) {
+
+		wpf_log( 'error', wpf_get_current_user_id(), 'Error getting ISO 8601 date from timestamp: ' . $timestamp . '. Error: ' . $e->getMessage() );
+		return false;
+
+	}
 }

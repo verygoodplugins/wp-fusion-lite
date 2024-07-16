@@ -183,6 +183,7 @@ class WPF_Admin_Interfaces {
 
 		foreach ( $settings as $i => $setting ) {
 			if ( is_array( $setting ) ) {
+				$settings[ $i ] = array_unique( array_filter( $settings[ $i ] ) );
 				$settings[ $i ] = array_map( 'sanitize_text_field', $setting );
 			}
 		}
@@ -637,7 +638,7 @@ class WPF_Admin_Interfaces {
 			return $post_states;
 		}
 
-		$settings = get_post_meta( $post->ID, 'wpf-settings', true );
+		$settings = wp_fusion()->access->get_post_access_meta( $post->ID );
 
 		if ( ! empty( $settings ) && ! empty( $settings['lock_content'] ) ) {
 
@@ -649,12 +650,12 @@ class WPF_Admin_Interfaces {
 				$tags = array();
 
 				if ( ! empty( $settings['allow_tags'] ) ) {
-					$allow_tags = array_map( array( wp_fusion()->user, 'get_tag_label' ), (array) $settings['allow_tags'] );
+					$allow_tags = array_map( array( wp_fusion()->user, 'get_tag_label' ), $settings['allow_tags'] );
 					$tags       = array_merge( $tags, $allow_tags );
 				}
 
 				if ( ! empty( $settings['allow_tags_all'] ) ) {
-					$allow_tags_all = array_map( array( wp_fusion()->user, 'get_tag_label' ), (array) $settings['allow_tags_all'] );
+					$allow_tags_all = array_map( array( wp_fusion()->user, 'get_tag_label' ), $settings['allow_tags_all'] );
 					$tags           = array_merge( $tags, $allow_tags_all );
 				}
 
@@ -684,7 +685,13 @@ class WPF_Admin_Interfaces {
 
 			}
 
-			$post_states['wpfusion'] = '<span class="dashicons dashicons-lock wpf-tip wpf-tip-right" data-tip="' . esc_attr( $content ) . '"></span>';
+			$classes = 'dashicons dashicons-lock wpf-tip wpf-tip-right';
+
+			if ( ! empty( $settings['allow_tags'] ) && ! empty( array_diff( $settings['allow_tags'], array_keys( wpf_get_option( 'available_tags' ) ) ) ) ) {
+				$classes .= ' error';
+			}
+
+			$post_states['wpfusion'] = '<span class="' . $classes . '" data-tip="' . esc_attr( $content ) . '"></span>';
 
 		}
 
@@ -930,7 +937,7 @@ class WPF_Admin_Interfaces {
 		$this->menu_items[] = $item_id;
 
 		$defaults = array(
-			'lock_content' => false,
+			'lock_content'   => false,
 			'allow_tags'     => array(),
 			'allow_tags_all' => array(),
 			'allow_tags_not' => array(),
@@ -995,7 +1002,7 @@ class WPF_Admin_Interfaces {
 
 		</div>
 
-		<?php if ( has_filter( 'wpf_menu_item_settings' ) ) : // we only show these if User Menus is active. ?>
+		<?php if ( apply_filters( 'wpf_show_additional_menu_item_settings', false ) || has_filter( 'wpf_menu_item_settings' ) ) : // we only show these if User Menus is active. ?>
 
 
 			<div class="wpf_nav_menu_tags_field description-wide" style="<?php echo $hidden; ?>">
@@ -1018,7 +1025,7 @@ class WPF_Admin_Interfaces {
 
 			</div>
 
-			<div class="wpf_nav_menu_tags_field description-wide" style="<?php echo $hidden; ?> ">
+			<div class="wpf_nav_menu_tags_field description-wide">
 				<p class="description description-wide"><?php esc_html_e( 'Required tags (not)', 'wp-fusion-lite' ); ?>: <span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="<?php echo esc_attr__( 'If the user is logged in, they must have <em>none</em> of the tags specified to access the item.', 'wp-fusion-lite' ) ?>"></span></p>
 
 				<br />
@@ -1060,19 +1067,13 @@ class WPF_Admin_Interfaces {
 			return;
 		}
 
-		$saved_data = false;
-
-		if ( isset( $_POST['wpf-nav-menu'][ $menu_item_db_id ] ) && ! empty( $_POST['wpf-nav-menu'][ $menu_item_db_id ]['lock_content'] ) ) {
+		if ( isset( $_POST['wpf-nav-menu'][ $menu_item_db_id ] ) && ! empty( array_filter( $_POST['wpf-nav-menu'][ $menu_item_db_id ] ) ) ) {
 
 			$settings = $_POST['wpf-nav-menu'][ $menu_item_db_id ];
 
-			if ( ! empty( $settings['allow_tags'] ) ) {
+			$settings = $this::sanitize_tags_settings( $settings );
 
-				$settings['allow_tags'] = array_unique( $settings['allow_tags'] );
-
-			}
-
-			if ( $settings['lock_content'] == 'loggedout' ) {
+			if ( 'loggedout' === $settings['lock_content'] ) {
 				$settings['lock_content'] = false;
 				$settings['loggedout']    = true;
 			}
@@ -1368,7 +1369,7 @@ class WPF_Admin_Interfaces {
 
 			if ( false !== stripos( $tag, $search ) ) {
 				$return['results'][] = array(
-					'id'   => $id,
+					'id'   => strval( $id ),
 					'text' => $tag,
 				);
 			}

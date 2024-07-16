@@ -23,6 +23,10 @@ if ( ! class_exists( 'iSDK' ) ) {
 		static private $handle;
 		public $logname = '';
 		public $loggingEnabled = 0;
+		public $debug = false;
+		public $key = false;
+		public $client = false;
+		public $encKey = false;
 
 		/**
 		 * @method cfgCon
@@ -162,9 +166,7 @@ if ( ! class_exists( 'iSDK' ) ) {
 
 		// WPF formatting for HTML-ENTITIES
 		public function convert_encoding( &$item ) {
-			if(function_exists('mb_convert_encoding')) {
-				$item = mb_convert_encoding( $item, 'HTML-ENTITIES', 'UTF-8' );
-			}
+			$item = htmlentities($item, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 		}
 
 		/**

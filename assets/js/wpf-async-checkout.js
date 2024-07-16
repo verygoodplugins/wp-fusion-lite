@@ -11,7 +11,7 @@
 
 			$( document ).unbind( 'ajaxSuccess', handleAsyncOrder );
 
-			if ( 'success' == request.responseJSON.result && false == sent ) {
+			if ( request.responseJSON && 'success' == request.responseJSON.result && false == sent ) {
 
 				sent = true;
 

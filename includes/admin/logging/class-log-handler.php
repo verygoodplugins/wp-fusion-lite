@@ -77,20 +77,7 @@ class WPF_Log_Handler {
 	 */
 	public function __construct() {
 
-		add_action( 'init', array( $this, 'init' ) );
-
 		add_filter( 'validate_field_enable_logging', array( $this, 'validate_enable_logging' ), 10, 2 );
-
-	}
-
-	/**
-	 * Prepares logging functionalty if enabled
-	 *
-	 * @access public
-	 * @return void
-	 */
-
-	public function init() {
 
 		if ( ! wpf_get_option( 'enable_logging' ) ) {
 			return;
@@ -118,23 +105,28 @@ class WPF_Log_Handler {
 		add_action( 'admin_init', array( $this, 'export_logs' ) );
 		add_action( 'admin_init', array( $this, 'flush_logs' ) );
 
+		// Add log url redirect.
+		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'log_url_redirect' ) );
+
 		// HTTP API logging.
 		if ( wpf_get_option( 'logging_http_api' ) ) {
 			add_filter( 'http_request_args', array( $this, 'http_request_args' ), 10, 2 );
 			add_action( 'http_api_debug', array( $this, 'http_api_debug' ), 10, 5 );
 		}
 
+		// Export & Flush logs.
+		add_action( 'admin_init', array( $this, 'export_logs' ) );
+		add_action( 'admin_init', array( $this, 'flush_logs' ) );
+
 		// Error handling.
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
 
 		// Create the table if it hasn't been created yet.
 		if ( empty( wpf_get_option( 'log_table_version' ) ) ) {
-
 			$this->create_update_table();
-
 		}
-
 	}
+
 
 	/**
 	 * Drops / re-creates the logging table when logging is disabled or re-enabled.
@@ -158,7 +150,6 @@ class WPF_Log_Handler {
 		}
 
 		return $input;
-
 	}
 
 	/**
@@ -174,7 +165,6 @@ class WPF_Log_Handler {
 		if ( ! in_array( $source, $this->event_sources, true ) ) {
 			$this->event_sources[] = $source;
 		}
-
 	}
 
 	/**
@@ -204,10 +194,10 @@ class WPF_Log_Handler {
 
 		if ( 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
 			$args['blocking'] = true;
+			$args['duration'] = microtime( true );
 		}
 
 		return $args;
-
 	}
 
 	/**
@@ -219,18 +209,18 @@ class WPF_Log_Handler {
 
 	public function http_api_debug( $response, $context, $class, $parsed_args, $url ) {
 
-		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] ) {
+		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] || is_wp_error( $response ) ) {
 			return;
-		}
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
 		}
 
 		unset( $response['http_response'] ); // This is redundant, we don't need to log it.
 
+		// Calcluate the duration.
+		$response['duration'] = microtime( true ) - $parsed_args['duration'];
+
 		$message  = '<ul>';
 		$message .= '<li><strong>Request URI:</strong> ' . esc_url_raw( $url ) . '</li>';
+		$message .= '<li><strong>Duration:</strong> ' . round( $response['duration'], 2 ) . ' seconds</li>';
 
 		if ( ! is_array( $parsed_args['body'] ) && ! empty( $parsed_args['body'] ) ) {
 			$maybe_json = json_decode( $parsed_args['body'] );
@@ -252,7 +242,6 @@ class WPF_Log_Handler {
 		$message .= '</ul>';
 
 		$this->handle( 'http', $this->user_id, $message );
-
 	}
 
 	/**
@@ -299,7 +288,6 @@ class WPF_Log_Handler {
 			'wpf-settings-logs',
 			array( $this, 'show_logs_section' )
 		);
-
 	}
 
 
@@ -313,7 +301,6 @@ class WPF_Log_Handler {
 		if ( wpf_get_option( 'logging_badge', true ) ) {
 			delete_option( 'wpf_logs_unseen_errors' );
 		}
-
 	}
 
 	/**
@@ -324,6 +311,24 @@ class WPF_Log_Handler {
 	public function hide_notices() {
 
 		remove_all_actions( 'admin_notices' );
+	}
+
+
+	/**
+	 * Redirect to the correct page for log URL.
+	 */
+	public function log_url_redirect() {
+		if ( isset( $_REQUEST['id'] ) && (int) $_REQUEST['id'] !== 0 && ! isset( $_REQUEST['paged'] ) ) {
+			include_once WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php';
+			$log_table_list = new WPF_Log_Table_List();
+
+			global $wpdb;
+			$max_id   = $wpdb->get_var( "SELECT MAX(log_id) FROM `{$wpdb->prefix}wpf_logging`" );
+			$per_page = $log_table_list->get_items_per_page( 'wpf_status_log_items_per_page', 20 );
+			$paged    = ceil( ( (int) $max_id - (int) $_REQUEST['id'] + 1 ) / $per_page );
+			wp_safe_redirect( add_query_arg( array( 'paged' => $paged ), wp_unslash( esc_url_raw( $_SERVER['REQUEST_URI'] ) ) ) );
+			exit;
+		}
 	}
 
 	/**
@@ -342,7 +347,6 @@ class WPF_Log_Handler {
 		wp_enqueue_style( 'options-css', WPF_DIR_URL . 'includes/admin/options/css/options.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_style( 'wpf-options', WPF_DIR_URL . 'assets/css/wpf-options.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_style( 'wpf-admin', WPF_DIR_URL . 'assets/css/wpf-admin.css', array(), WP_FUSION_VERSION );
-
 	}
 
 	/**
@@ -361,7 +365,6 @@ class WPF_Log_Handler {
 		);
 
 		add_screen_option( 'per_page', $args );
-
 	}
 
 	/**
@@ -378,7 +381,6 @@ class WPF_Log_Handler {
 		}
 
 		return $status;
-
 	}
 
 	/**
@@ -416,7 +418,6 @@ class WPF_Log_Handler {
 		);
 
 		return $page;
-
 	}
 
 	/**
@@ -458,7 +459,6 @@ class WPF_Log_Handler {
 		}
 
 		wp_fusion()->settings->set( 'log_table_version', WP_FUSION_VERSION );
-
 	}
 
 	/**
@@ -585,7 +585,6 @@ class WPF_Log_Handler {
 		</div>
 
 		<?php
-
 	}
 
 
@@ -753,7 +752,7 @@ class WPF_Log_Handler {
 
 			$count = get_option( 'wpf_logs_unseen_errors', 0 );
 
-			$count++;
+			++$count;
 
 			update_option( 'wpf_logs_unseen_errors', $count );
 
@@ -769,7 +768,7 @@ class WPF_Log_Handler {
 	 *
 	 * @since  3.3.0
 	 *
-	 * @param  string $timestamp The timestamp.
+	 * @param  int    $timestamp The timestamp.
 	 * @param  string $level     emergency|alert|critical|error|warning|notice|info|debug.
 	 * @param  int    $user      The user ID.
 	 * @param  string $message   Log message.
@@ -782,7 +781,7 @@ class WPF_Log_Handler {
 		global $wpdb;
 
 		$insert = array(
-			'timestamp' => date( 'Y-m-d H:i:s', $timestamp ),
+			'timestamp' => gmdate( 'Y-m-d H:i:s', $timestamp ),
 			'level'     => self::get_level_severity( $level ),
 			'user'      => $user,
 			'message'   => $message,
@@ -817,7 +816,6 @@ class WPF_Log_Handler {
 		}
 
 		return $result;
-
 	}
 
 	/**
@@ -865,10 +863,9 @@ class WPF_Log_Handler {
 				fputcsv( $output, $line_data );
 			}
 
-			fclose( $output ) or die ( 'Can\'t close output file' );
+			fclose( $output ) or die( 'Can\'t close output file' );
 			exit;
 		}
-
 	}
 
 
@@ -1076,7 +1073,5 @@ class WPF_Log_Handler {
 
 			}
 		}
-
 	}
-
 }

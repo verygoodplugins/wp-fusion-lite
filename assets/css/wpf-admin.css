@@ -97,6 +97,10 @@ span.wpf-tip:hover {
 	color: #333;
 }
 
+span.wpf-tip.error {
+	color: #d63638;
+}
+
 .tips {
 	cursor: help;
 	text-decoration: none;
@@ -449,6 +453,21 @@ div.notice.wpf-tags-notice {
 }
 
 /* select4 */
+
+span.wpf-unknown-tags {
+	background: #d63638;
+    padding: 4px 10px;
+    font-size: 10px;
+    position: relative;
+    line-height: normal;
+	display: block;
+	width: fit-content;
+	color: #fff;
+}
+
+select.wpf-has-unknown-tags + span.select4 .select4-selection {
+	border: 2px solid #d63638;
+}
 
 .select4-container--default.select4-container--focus .select4-selection--multiple {
 	border-color: #007cba;

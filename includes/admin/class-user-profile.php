@@ -261,8 +261,9 @@ class WPF_User_Profile {
 	/**
 	 * Filters registration data before sending to the CRM (internal add / edit fields)
 	 *
-	 * @access public
-	 * @return array Registration data
+	 * @param array|null $post_data The registration data.
+	 * @param int        $user_id   The user ID.
+	 * @return array|null Registration data or null if we're bypassing the registration process.
 	 */
 
 	public function filter_form_fields( $post_data, $user_id ) {
@@ -275,7 +276,8 @@ class WPF_User_Profile {
 
 		if ( ! is_null( $screen ) && in_array( $screen->id, array( 'profile', 'user-edit', 'user-new', 'user' ) ) ) {
 
-			if ( 'user' === $screen->id && ! isset( $post_data['wpf_add_contact'] ) ) {
+			if ( 'user' === $screen->id && doing_filter( 'wpf_user_register' ) && ! isset( $post_data['wpf_add_contact'] ) ) {
+				wpf_log( 'notice', $user_id, 'Add to ' . wp_fusion()->crm->name . ' was not checked, the user will not be synced to the CRM.' );
 				return null; // cancel the signup process if the Add to CRM box isn't checked.
 			}
 

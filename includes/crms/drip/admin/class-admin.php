@@ -192,7 +192,13 @@ class WPF_Drip_Admin {
 		$site_tracking['email_change_event'] = array(
 			'title'   => __( 'Email Change Event', 'wp-fusion-lite' ),
 			'desc'    => __( 'Send an <code>Email Changed</code> event when a user changes their email address.', 'wp-fusion-lite' ),
-			'std'     => 0,
+			'type'    => 'checkbox',
+			'section' => 'main',
+		);
+
+		$site_tracking['site_tracking'] = array(
+			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enable <a target="_blank" href="https://wpfusion.com/documentation/tutorials/site-tracking-scripts/#drip">Drip site tracking</a>.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);

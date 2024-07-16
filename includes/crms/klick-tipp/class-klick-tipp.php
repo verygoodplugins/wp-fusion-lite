@@ -3,6 +3,20 @@
 class WPF_KlickTipp {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'klick-tipp';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Klick-Tipp';
+
+	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
 	 */
 
@@ -12,8 +26,7 @@ class WPF_KlickTipp {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
-
+	public $supports = array();
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -32,10 +45,6 @@ class WPF_KlickTipp {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'klick-tipp';
-		$this->name     = 'Klick-Tipp';
-		$this->supports = array();
 
 		// Set up admin options
 		if ( is_admin() ) {
@@ -199,7 +208,8 @@ class WPF_KlickTipp {
 		$result = $this->app->subscriber_get( $contact_id );
 
 		if ( ! empty( $result ) && ! empty( $result->tags ) ) {
-			return $result->tags;
+
+			return array_diff( $result->tags, array_keys( $result->smart_tags ) );
 		} else {
 			return array();
 		}

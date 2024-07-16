@@ -276,6 +276,21 @@ jQuery(document).ready(function($){
 		setTagLabels
 	);
 
+    function formatSmall (state) {
+        if (!state.id) {
+            return state.text;
+        }
+        var match = state.text.match(/(.*?)(\s+\(.*\))?$/);
+        if (!match) {
+            return state.text;
+        }
+        if (match[2]) {
+            return match[1] + '<small>' + match[2] + '</small>';
+        } else {
+            return state.text;
+        }
+    }
+
 
 	// Standard select
 
@@ -283,7 +298,12 @@ jQuery(document).ready(function($){
 
 		$("select.select4").select4({
 			minimumResultsForSearch: -1,
-			allowClear: true
+			allowClear: true,
+			templateResult: formatSmall, // used when displaying option in the dropdown
+			templateSelection: formatSmall, // used when item is selected
+			escapeMarkup: function (markup) {
+				return markup;
+			},
 		});
 		
 	}
