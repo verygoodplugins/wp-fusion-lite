@@ -50,6 +50,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Drip
 * EmailOctopus
 * Emercury
+* Encharge
 * Engage
 * EngageBay
 * Flexie
