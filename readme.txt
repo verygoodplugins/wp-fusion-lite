@@ -71,65 +71,66 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 
 = Supported CRMs and marketing automation platforms =
 
-* ActiveCampaign
-* AgileCRM
-* Autopilot
-* Autonami
-* Bento
-* BirdSend
-* Capsule
-* Constant Contact
-* ConvertKit
-* Copper
-* Customerly
-* Customer.io
-* Drift
-* Drip
-* EmailOctopus
-* Encharge
-* Engage
-* EngageBay
-* Flexie
-* FluentCRM (same site or REST API)
-* GetResponse
-* Gist
-* Groundhogg (same site or REST API)
-* Growmatik
-* HighLevel
-* HubSpot
-* Infusionsoft
-* Intercom
-* Jetpack CRM
-* Kartra
-* Klaviyo
-* Klick-Tipp
-* Loopify
-* MailChimp
-* MailEngine
-* MailerLite
-* Mailjet
-* MailPoet
-* Maropost
-* Mautic
-* Microsoft Dynamics 365
-* MooSend
-* NationBuilder
-* Omnisend
-* Ontraport
-* Ortto
-* Pipedrive
-* Platform.ly
-* PulseTechnologyCRM
-* Quentn
-* Salesflare
-* Salesforce
-* SendFox
-* SendinBlue
-* Sendlane
-* Tubular
-* UserEngage
-* WP ERP
-* Zoho
+* [ActiveCampaign](https://wpfusion.com/documentation/installation-guides/how-to-connect-activecampaign-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [AgileCRM](https://wpfusion.com/documentation/installation-guides/how-to-connect-agiilecrm-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Autopilot](https://wpfusion.com/documentation/installation-guides/how-to-connect-autopilot-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Autonami](https://wpfusion.com/documentation/installation-guides/how-to-connect-autonami-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Bento](https://wpfusion.com/documentation/installation-guides/how-to-connect-bento-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [BirdSend](https://wpfusion.com/documentation/installation-guides/how-to-connect-birdsend-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Capsule](https://wpfusion.com/documentation/installation-guides/how-to-connect-capsule-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Constant Contact](https://wpfusion.com/documentation/installation-guides/how-to-connect-constant-contact-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [ConvertKit](https://wpfusion.com/documentation/installation-guides/how-to-connect-convertkit-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Copper](https://wpfusion.com/documentation/installation-guides/how-to-connect-copper-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Customerly](https://wpfusion.com/documentation/installation-guides/how-to-connect-customerly-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Customer.io](https://wpfusion.com/documentation/installation-guides/how-to-connect-customer-io-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Drift](https://wpfusion.com/documentation/installation-guides/how-to-connect-drift-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Drip](https://wpfusion.com/documentation/installation-guides/how-to-connect-drip-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [EmailOctopus](https://wpfusion.com/documentation/installation-guides/how-to-connect-emailoctopus-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Encharge](https://wpfusion.com/documentation/installation-guides/how-to-connect-encharge-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Engage](https://wpfusion.com/documentation/installation-guides/how-to-connect-engage-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [EngageBay](https://wpfusion.com/documentation/installation-guides/how-to-connect-engagebay-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Flexie](https://wpfusion.com/documentation/installation-guides/how-to-connect-flexie-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [FluentCRM (same site or REST API)](https://wpfusion.com/documentation/installation-guides/how-to-connect-fluentcrm-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [GetResponse](https://wpfusion.com/documentation/installation-guides/how-to-connect-getresponse-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Gist](https://wpfusion.com/documentation/installation-guides/how-to-connect-gist-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Groundhogg (same site or REST API)](https://wpfusion.com/documentation/installation-guides/how-to-connect-groundhogg-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Growmatik](https://wpfusion.com/documentation/installation-guides/how-to-connect-growmatik-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [HighLevel](https://wpfusion.com/documentation/installation-guides/how-to-connect-highlevel-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [HubSpot](https://wpfusion.com/documentation/installation-guides/how-to-connect-hubspot-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Infusionsoft](https://wpfusion.com/documentation/installation-guides/how-to-connect-infusionsoft-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Intercom](https://wpfusion.com/documentation/installation-guides/how-to-connect-intercom-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Jetpack CRM](https://wpfusion.com/documentation/installation-guides/how-to-connect-jetpack-crm-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Kartra](https://wpfusion.com/documentation/installation-guides/how-to-connect-kartra-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Klaviyo](https://wpfusion.com/documentation/installation-guides/how-to-connect-klaviyo-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Klick-Tipp](https://wpfusion.com/documentation/installation-guides/how-to-connect-klick-tipp-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Loopify](https://wpfusion.com/documentation/installation-guides/how-to-connect-loopify-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [MailChimp](https://wpfusion.com/documentation/installation-guides/how-to-connect-mailchimp-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [MailEngine](https://wpfusion.com/documentation/installation-guides/how-to-connect-mailengine-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [MailerLite](https://wpfusion.com/documentation/installation-guides/how-to-connect-mailerlite-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Mailjet](https://wpfusion.com/documentation/installation-guides/how-to-connect-mailjet-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [MailPoet](https://wpfusion.com/documentation/installation-guides/how-to-connect-mailpoet-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Maropost](https://wpfusion.com/documentation/installation-guides/how-to-connect-maropost-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Mautic](https://wpfusion.com/documentation/installation-guides/how-to-connect-mautic-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Microsoft Dynamics 365](https://wpfusion.com/documentation/installation-guides/how-to-connect-microsoft-dynamics-365-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [MooSend](https://wpfusion.com/documentation/installation-guides/how-to-connect-moosend-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [NationBuilder](https://wpfusion.com/documentation/installation-guides/how-to-connect-nationbuilder-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Omnisend](https://wpfusion.com/documentation/installation-guides/how-to-connect-omnisend-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Ontraport](https://wpfusion.com/documentation/installation-guides/how-to-connect-ontraport-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Ortto](https://wpfusion.com/documentation/installation-guides/how-to-connect-ortto-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Pipedrive](https://wpfusion.com/documentation/installation-guides/how-to-connect-pipedrive-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Platform.ly](https://wpfusion.com/documentation/installation-guides/how-to-connect-platform-ly-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [PulseTechnologyCRM](https://wpfusion.com/documentation/installation-guides/how-to-connect-pulsetechnologycrm-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Quentn](https://wpfusion.com/documentation/installation-guides/how-to-connect-quentn-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Salesflare](https://wpfusion.com/documentation/installation-guides/how-to-connect-salesflare-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Salesforce](https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [SendFox](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendfox-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [SendinBlue](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendinblue-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Sendlane](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendlane-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Tubular](https://wpfusion.com/documentation/installation-guides/how-to-connect-tubular-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [UserEngage](https://wpfusion.com/documentation/installation-guides/how-to-connect-userengage-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [WP ERP](https://wpfusion.com/documentation/installation-guides/how-to-connect-wp-erp-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Zoho](https://wpfusion.com/documentation/installation-guides/how-to-connect-zoho-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+
 
 For more info on CRM compatibility, [check out the compatibility table](https://wpfusion.com/documentation/faq/crm-compatibility-table/?utm_campaign=free-plugin&utm_source=wp-org).
 
@@ -202,7 +203,7 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 == Changelog ==
 
-= 3.43.18
+= 3.43.17 7/18/2024 =
 * Improved - With Ontraport [lead source tracking](https://wpfusion.com/documentation/tutorials/lead-source-tracking/), the any enabled lead source fields will be synced to the corresponding Last Referrer fields when a contact is updated
 * Fixed custom properties with Klaviyo being treated as system properties if they are prefixed with a dollar sign
 * Removed the "Source" field from the Klaviyo integration (was not a system field)
