@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 6.6.2
-Stable tag: 3.43.17
+Stable tag: 3.43.17.1
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -203,7 +203,10 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 == Changelog ==
 
-= 3.43.17 7/18/2024 =
+= 3.43.17.1 - 7/25/2024 =
+* Fixed warnings about the use of deprecated methods when using MailPoet
+
+= 3.43.17 - 7/18/2024 =
 * Improved - With Ontraport [lead source tracking](https://wpfusion.com/documentation/tutorials/lead-source-tracking/), the any enabled lead source fields will be synced to the corresponding Last Referrer fields when a contact is updated
 * Fixed custom properties with Klaviyo being treated as system properties if they are prefixed with a dollar sign
 * Removed the "Source" field from the Klaviyo integration (was not a system field)
