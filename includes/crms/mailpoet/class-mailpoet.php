@@ -312,7 +312,12 @@ class WPF_MailPoet {
 
 		$data['id'] = $contact_id;
 
-		$this->app->updateSubscriber( $data['email'], $data );
+		// Use the new API method if it's available.
+		if ( method_exists( $this->app, 'updateSubscriber' ) ) {
+			$this->app->updateSubscriber( $contact_id, $data );
+		} else {
+			\MailPoet\Models\Subscriber::createOrUpdate( $data );
+		}
 
 		return true;
 	}
