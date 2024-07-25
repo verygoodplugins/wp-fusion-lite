@@ -312,7 +312,7 @@ class WPF_MailPoet {
 
 		$data['id'] = $contact_id;
 
-		\MailPoet\Models\Subscriber::createOrUpdate( $data );
+		$this->app->updateSubscriber( $data['email'], $data );
 
 		return true;
 	}
