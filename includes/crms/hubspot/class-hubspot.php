@@ -238,10 +238,6 @@ class WPF_HubSpot {
 			$access_token = wpf_get_option( 'hubspot_token' );
 		}
 
-		// if ( 'CJ7G_dqLMhIOUIECUAAAwSIAAAB8AgEY2efCAyDO0ooDKL__CjIUkoHGFBwxrcg3K2M7D9k9fKyKoBo6QQAEAMcAAAAEAPgDAAAAAAAAhgAAAAAAAAAAACAciAA-AOAxAAAAIADA_x8GABDwCwAAAAAAAAAAgAAAAAAAAAwEQhRT2JQNKjaCL_76R7Po6bg_6Fr4jkoDbmExUgBaAGAA' === $access_token ) {
-		// 	$access_token = 'CKvc4riKMhIOQAECUAAAwSAAAAB8AgEYq_YeIL_x-h0ov_8KMhQOCyvtQ0G-qCy2JmKiXxEdprYSvjpBAAAARwAAAAAA-AMAAAAAAACGAAAAAAAAAAAAIACIADAA4DEAAAAgAMD_HwYAELADAAAAAAAAAAAAAAAAAAAADARCFCt9edyhox7967Y6NWQLe1Wiv60sSgNuYTFSAFoAYAA';
-		// }
-
 		$this->params = array(
 			'user-agent'  => 'WP Fusion; ' . home_url(),
 			'timeout'     => 15,
@@ -301,6 +297,13 @@ class WPF_HubSpot {
 
 		wp_fusion()->settings->set( 'hubspot_token', $body_json->access_token );
 
+		// Check if it saved.
+		$options = get_option( 'wpf_options', array() );
+
+		if ( $options['hubspot_token'] !== $body_json->access_token ) {
+			wpf_log( 'error', wpf_get_current_user_id(), 'HubSpot refresh token failed. The token was not saved.' );
+		}
+
 		return $body_json->access_token;
 	}
 
@@ -317,11 +320,6 @@ class WPF_HubSpot {
 
 			$code      = wp_remote_retrieve_response_code( $response );
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( 'https://api.hubapi.com/crm/v3/objects/deals/' === $url ) {
-				$code = 403;
-
-			}
 
 			if ( $code == 401 ) {
 

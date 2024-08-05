@@ -308,15 +308,16 @@ class WPF_Settings {
 		// Special fields get saved to their own keys to reduce memory usage.
 
 		if ( 'available_tags' === $key ) {
-			update_option( 'wpf_available_tags', $value, false );
+			return update_option( 'wpf_available_tags', $value, false );
 		} elseif ( 'crm_fields' === $key ) {
-			update_option( 'wpf_crm_fields', $value, false );
+			return update_option( 'wpf_crm_fields', $value, false );
 		}
 
 		if ( ! empty( $GLOBALS['_wp_switched_stack'] ) && ! is_multisite() ) {
 			// Don't save the main settings if we've switched to another blog.
 			// This fixes the settings getting overwritten.
-			return;
+			wpf_log( 'notice', wpf_get_current_user_id(), "WP Fusion tried to save the settings key <strong>{$key}</strong> while switched to another blog. This is not allowed and the setting was not saved." );
+			return false;
 		}
 
 		if ( 'contact_fields' === $key ) {
@@ -333,7 +334,8 @@ class WPF_Settings {
 			unset( $options_to_save['crm_fields'] );
 		}
 
-		update_option( 'wpf_options', $options_to_save );
+		return update_option( 'wpf_options', $options_to_save );
+
 	}
 
 	/**
@@ -862,7 +864,7 @@ class WPF_Settings {
 
 			// With categories. Just HubSpot for now.
 
-			$available_tags[ $tag_id ] = array(
+			$available_tags[ $tag_id ] = array( 
 				'label'    => $tag_name,
 				'category' => 'Static Lists',
 			);

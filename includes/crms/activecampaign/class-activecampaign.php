@@ -781,13 +781,8 @@ class WPF_ActiveCampaign {
 	 */
 	public function add_contact( $data ) {
 
-		// Get lists. (really this setting should *only* apply to user registrations, not all
-		// new contacts but it's too late to change it now since folks are used to it working this way.)
-
-		$lists = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'assign_lists', array() ) );
-
 		if ( ! empty( $data['lists'] ) ) {
-			$lists = array_merge( $lists, $data['lists'] );
+			$lists = $data['lists'];
 			unset( $data['lists'] );
 		}
 

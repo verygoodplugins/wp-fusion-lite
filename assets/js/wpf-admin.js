@@ -727,46 +727,49 @@ jQuery(document).ready(function($){
 	// WooCommerce functions
 	//
 
-	if($('body').hasClass('post-type-product')) {
+	if ($('body').hasClass('post-type-product')) {
+        const targetNode = document.querySelector('#wpbody #variable_product_options');
+        const config = { childList: true, subtree: true };
 
-		// Update select4's when a new variation is added
+        const callback = function(mutationsList, observer) {
+            for (let mutation of mutationsList) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.classList && node.classList.contains('woocommerce_variation')) {
+                        initializeTagsSelect('#wpbody #variable_product_options');
 
-		$(document).on('DOMNodeInserted', function(e) {
+                        if ($("#wpbody #variable_product_options select.select4-search").length) {
+                            $("#wpbody #variable_product_options select.select4-search").select4({
+                                allowClear: true
+                            });
+                        }
+                    }
+                });
+            }
+        };
 
-			if ($(e.target).hasClass('woocommerce_variation')) {
+        const observer = new MutationObserver(callback);
+        observer.observe(targetNode, config);
+    }
 
-				initializeTagsSelect('#wpbody #variable_product_options');
+    // Advanced Ads functions
 
-				if( $("#wpbody #variable_product_options select.select4-search").length ) {
+    if ($('body').hasClass('post-type-advanced_ads')) {
+        const targetNodeAds = document.querySelector('#wpbody .advads-conditions-table');
+        const configAds = { childList: true, subtree: true };
 
-					$("#wpbody #variable_product_options select.select4-search").select4({
-						allowClear: true
-					});
-					
-				}
+        const callbackAds = function(mutationsList, observer) {
+            for (let mutation of mutationsList) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.querySelector && node.querySelector('input.wp-fusion')) {
+                        initializeTagsSelect('#wpbody .advads-conditions-table');
+                    }
+                });
+            }
+        };
 
-			}
-		});
-
-	}
-
-	//
-	// Advanced Ads functions
-	//
-
-	if($('body').hasClass('post-type-advanced_ads')) {
-
-		// Update select4's when a new condition is added
-
-		$(document).on('DOMNodeInserted', function(e) {
-
-			if( $(e.target).find( 'input.wp-fusion' ).length ) {
-				initializeTagsSelect('#wpbody .advads-conditions-table');
-			}
-
-		});
-
-	}
+        const observerAds = new MutationObserver(callbackAds);
+        observerAds.observe(targetNodeAds, configAds);
+    }
 
 	//
 	// User profile page

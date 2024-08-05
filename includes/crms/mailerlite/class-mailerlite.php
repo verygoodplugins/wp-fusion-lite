@@ -644,10 +644,18 @@ class WPF_MailerLite {
 
 			// New faster way.
 
+			$data = array(
+				'groups' => $tags,
+			);
+
+			if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
+				$data['status'] = 'active';
+			}
+
 			$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
 			$params           = $this->get_params();
 			$params['method'] = 'PUT';
-			$params['body']   = wp_json_encode( array( 'groups' => $tags ) );
+			$params['body']   = wp_json_encode( $data );
 
 			$response = wp_safe_remote_request( $url, $params );
 

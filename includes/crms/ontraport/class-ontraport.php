@@ -284,8 +284,7 @@ class WPF_Ontraport {
 		}
 
 		echo '<!-- Ontraport -->';
-		//echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . esc_js( wpf_get_option( 'account_id' ) ) . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
-		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri='101697',_mr_domain='verygoodplugins.ontraport.com',mrtracking();'></script>";
+		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . esc_js( wpf_get_option( 'account_id' ) ) . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
 		echo '<!-- end Ontraport -->';
 	}
 

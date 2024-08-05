@@ -51,6 +51,16 @@ class WPF_Klaviyo {
 	public $edit_url = 'https://www.klaviyo.com/profile/%s';
 
 	/**
+	 * The last $source used to create/update a contact.
+	 *
+	 * @since 3.43.19
+	 *
+	 * @var string The source name.
+	 *
+	 */
+	public $last_source = '';
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -465,7 +475,7 @@ class WPF_Klaviyo {
 			'data' => array(
 				'type'          => 'profile-subscription-bulk-create-job',
 				'attributes'    => array(
-					'custom_source' => __( 'WP Fusion', 'wp-fusion-lite' ),
+					'custom_source' => $this->last_source ?: __( 'WP Fusion', 'wp-fusion-lite' ),
 					'profiles'      => array(
 						'data' => array(
 							array(
@@ -602,6 +612,10 @@ class WPF_Klaviyo {
 				$data['properties'][ $key ] = $value;
 				unset( $data[ $key ] );
 
+				// Save the last source used to create/update a contact.
+				if ( '$source' === $key ) {
+					$this->last_source = $value;
+				}
 			} elseif ( false !== strpos( $key, '$' ) ) {
 
 				// Klavio doesn't allow the $ sign when updating a contact.

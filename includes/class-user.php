@@ -377,7 +377,7 @@ class WPF_User {
 		}
 
 		// Get any lists to add.
-		$assign_lists = wpf_get_option( 'assign_lists' );
+		$assign_lists = apply_filters( 'wpf_add_contact_lists', wpf_get_option( 'assign_lists', array() ) );
 
 		if ( ! empty( $assign_lists ) ) {
 			$post_data['lists'] = $assign_lists;

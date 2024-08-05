@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 6.6.2
-Stable tag: 3.43.17.2
+Stable tag: 3.44.0
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -203,18 +203,37 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 == Changelog ==
 
-= 3.43.17.2 - 7/25/2024 =
-* Fixed warnings about the use of deprecated methods when using MailPoet
+= 3.44.0 - 8/5/2024 =
+* Big update: WP Fusion has been updated to use the Infusionsoft REST API, and [Service Account Keys](https://developer.infusionsoft.com/pat-and-sak/) for authentication. You will need to update your API credentials to ensure uninterrupted service
+* Improved - wpf_get_iso8601_date() will now more forcefully use GMT for the time zone instead of the local time
+* Improved - Added logging if the HubSpot token refresh failed to save
+* Improved - wp_fusion()->settings->set() will now return false if the setting was not successfully saved
+* Fixed "Assign Lists" setting with ActiveCampaign applying to all new contacts
+* Fixed "Resubscribe unsubscribed subscribers when they are added to new groups" setting not working with MailerLite
+* Fixed MailerLite group IDs not saving correctly in the CartFlows UI
+* Fixed missing crm.schemas.deals.write scope in the HubSpot integration, which sometimes caused deal properties to not save
 
-= 3.43.17 - 7/18/2024 =
+
+= 3.43.20 - 7/29/24 =
+* Fixed fatal error on the post table list when no tags are available in the CRM
+* Fixed - removed use of deprecated \MailPoet\Models\Subscriber when updating MailPoet subscribers
+
+
+= 3.43.19 - 7/16/2024 =
+* Improved - If a $source is synced for a Klaviyo subscriber, the same $source will be used when opt-ing the subscriber in to marketing
+
+
+= 3.43.18 - 7/16/2024 =
 * Improved - With Ontraport [lead source tracking](https://wpfusion.com/documentation/tutorials/lead-source-tracking/), the any enabled lead source fields will be synced to the corresponding Last Referrer fields when a contact is updated
 * Fixed custom properties with Klaviyo being treated as system properties if they are prefixed with a dollar sign
 * Removed the "Source" field from the Klaviyo integration (was not a system field)
 * Developers: Added filter `wpf_background_process_memory_utilization_percentage` to allow customizing the memory utilization percentage for the background process
 
+
 = 3.43.16 - 7/1/2024 =
 * Added Source field for sync with Klaviyo
 * Improved - New contacts added to Pipedrive will be automatically have their marketing status set to "subscribed"
+
 
 = 3.43.15 - 6/24/2024 =
 * Fixed fatal error when tracking events with FluentCRM and the event value is empty
@@ -222,17 +241,21 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Developers: added filter `wpf_user_has_tag` to allow filtering the tags passed in to an access check against a user
 * Developers: added property `wp_fusion()->access->filter_queries_priorty` to allow setting Advanced query filtering to a custom priority
 
+
 = 3.43.14 - 6/17/2024 =
 * Added support for lists with Constant Contact (can be configured for new user registrations in the General settings)
 * Fixed the "Duplicate and Delete" [feature for email address changes](https://wpfusion.com/documentation/crm-specific-docs/email-address-changes-with-mailerlite/) not working with Mailerlite
+
 
 = 3.43.13 - 6/10/2024 =
 * Fixed - Applying an empty tag to a FluentCRM contact (REST API) caused the contact to receive all the tags in the account
 * Fixed - Spinning icon on the background worker status bar was spinning in the wrong direction
 * Fixed error "Uncaught TypeError: date(): Argument #2 ($timestamp) must be of type ?int" when syncing some dates to Mautic with PHP 8.1
 
+
 = 3.43.12 - 6/3/2024 =
 * Added ability to apply lists via form integrations with FluentCRM (same site)
+
 
 = 3.43.11 - 5/28/2024 =
 * Added support for [Encharge webhooks](https://wpfusion.com/documentation/webhooks/encharge-webhooks/)
@@ -240,6 +263,7 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Fixed - If Push All was enabled, adding a user from the admin could log a notice "no metadata found for user" if individual usermeta keys were updated before `user_register` was triggered
 * Fixed tags not being applied to new ActiveCampaign contacts when the "Account Name" field was enabled for sync
 * Fixed tags showing up twice in the Select Tags dropdowns with Encharge
+
 
 = 3.43.10 - 5/20/2024 =
 * Added an Encharge CRM integration
@@ -249,20 +273,25 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Fixed - If the user's tags were saved to usermeta as a boolean `true` or `false` instead of an array, this could cause that value to be returned from `wpf_get_tags()`, and cause errors with `array_intersect()` and other array functions
 * Developers: Updated Klaviyo API to the `2024-02-15` revision
 
+
 = 3.43.9 - 5/13/2024 =
 * Updated Constant Contact API token to use new API limits of 250,000 calls per day (was previously 10,000 calls per day) - *Requires re-authorizing the connection via the prompt*
+
 
 = 3.43.8 - 5/6/2024 =
 * Fixed errors pertaining to adding and removing subscribers from Klaviyo lists
 * Fixed fatal error handling updating a contact in ActiveCampaign when a "Email address already exists in the system." error is encountered while creating a contact
 * Fixed - Log entries will now be saved using `gmdate()` instead of `date()` to avoid timezone conversion shenanigans
 
+
 = 3.43.7 - 4/29/2024 =
 * Improved - If `wpf_get_contact_id()` is called with `$force_update`, and there is an API error, the existing cached contact ID (if any) will be returned instead of false
 * Fixed infinite loop when using the "Refresh if access is denied" setting and the API call to look up the user's contact ID fails
 
+
 = 3.43.6.2 - 4/25/2024 =
 * Fixed HighLevel tags not being converted to lowercase for the `remove_tags()` API call
+
 
 = 3.43.6 - 4/23/2024 =
 * Added support for [resubscribing unsubscribed contacts with ActiveCampaign](https://wpfusion.com/documentation/tutorials/double-opt-ins/#activecampaign)
@@ -276,16 +305,20 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Fixed Groundhogg integration syncing empty dates as 1/1/1970
 * Developers: added function `wpf_get_iso8601_date()`
 
+
 = 3.43.5 - 4/15/2024 =
 * Improved - The Bento webhook handler will now use the `email` field from the payload for lookups of existing users
 * Fixed notice `Deprecated: strpos(): Passing null to parameter #1 ($haystack) of type string is deprecated` when other plugins called `__()` without a text domain
 
+
 = 3.43.4.1 - 4/9/2024 =
 * Fixed fatal error calling methods that aren't in the WPF_Staging class, while in staging mode (i.e. `Argument #1 ($callback) must be a valid callback, class WPF_Staging does not have a method "get_connection_id"`)
+
 
 = 3.43.4 - 4/8/2024 =
 * Added ability to [link to individual entries in the activity logs](https://wpfusion.com/documentation/getting-started/activity-logs/#the-logs)
 * Fixed fatal error `Argument #1 ($array) must be of type array, string given` in the admin post list table with PHP 8.2 when a required tag on a post was saved with invalid data
+
 
 = 3.43.3 - 4/2/2024 =
 * Added support for importing all contacts from the CRM via the import tool (rather than a specific segment), [with selected platforms](https://wpfusion.com/documentation/tutorials/import-users/)
@@ -297,8 +330,10 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Fixed tags created by WP Fusion in FluentCRM (same site) using the tag label as the slug (instead of the sanitized title)
 * Developers - `wp_fusion()->user->apply_tags()` and `wp_fusion()->user->remove_tags()` will now attempt to convert tag labels to IDs if the CRM doesn't support adding tags (helps with switching CRMs)
 
+
 = 3.43.2 - 3/25/2024 =
 * Improved - Query parameters will now be removed from the "Current Page" and "Landing Page" URLs before being synced to the CRM
+
 
 = 3.43.1 - 3/19/2024 =
 * Improved - When using [HTTP API logging](https://wpfusion.com/documentation/getting-started/activity-logs/#http-api-logging), the amount of time to perform the API call will be recorded to the logs

@@ -687,7 +687,7 @@ class WPF_Admin_Interfaces {
 
 			$classes = 'dashicons dashicons-lock wpf-tip wpf-tip-right';
 
-			if ( ! empty( $settings['allow_tags'] ) && ! empty( array_diff( $settings['allow_tags'], array_keys( wpf_get_option( 'available_tags' ) ) ) ) ) {
+			if ( ! empty( $settings['allow_tags'] ) && ! empty( array_diff( $settings['allow_tags'], array_keys( wpf_get_option( 'available_tags', array() ) ) ) ) ) {
 				$classes .= ' error';
 			}
 

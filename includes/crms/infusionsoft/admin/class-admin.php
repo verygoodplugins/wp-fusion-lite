@@ -71,12 +71,12 @@ class WPF_Infusionsoft_iSDK_Admin {
 		);
 
 		$is_config['api_key'] = array(
-			'title'       => __( 'Legacy API Key', 'wp-fusion-lite' ),
-			'desc'        => __( 'For help finding your API key, please read <a target="_blank" href="https://help.keap.com/help/api-key">this knowledgebase article</a>.', 'wp-fusion-lite' ),
+			'title'       => __( 'Service Account Key', 'wp-fusion-lite' ),
+			'desc'        => __( 'For help finding your Service Account key, please read <a target="_blank" href="https://developer.infusionsoft.com/pat-and-sak/">this knowledgebase article</a>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'app_name', 'api_key' )
+			'post_fields' => array( 'app_name', 'api_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $is_config );

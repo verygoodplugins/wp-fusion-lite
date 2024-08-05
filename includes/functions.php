@@ -749,7 +749,7 @@ function wpf_get_iso8601_date( $timestamp = null, $convert_to_gmt = false ) {
 
 		// If no timestamp is provided, use the current time
 		if ( empty( $timestamp ) ) {
-			$timestamp = time();
+			$timestamp = gmdate( 'U' );
 		}
 
 		$offset = get_option( 'gmt_offset' );
