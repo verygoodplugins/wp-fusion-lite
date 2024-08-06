@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 6.6.2
-Stable tag: 3.44.0
+Stable tag: 3.44.0.1
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -202,6 +202,10 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.44.0.1 - 8/6/2024 =
+* Fixed new Keap / Infusionsoft integration not loading more than 1000 each of tags or tag categories
+* Fixed Keap / Infusionsoft integration not importing all contacts if no tag was specified for the import
 
 = 3.44.0 - 8/5/2024 =
 * Big update: WP Fusion has been updated to use the Infusionsoft REST API, and [Service Account Keys](https://developer.infusionsoft.com/pat-and-sak/) for authentication. You will need to update your API credentials to ensure uninterrupted service

@@ -31,14 +31,12 @@ class WPF_Infusionsoft_iSDK {
 	/**
 	 * Contains API params
 	 */
-
-	 public $params;
+	public $params;
 
 	/**
 	 * Allows for direct access to the API, bypassing WP Fusion
 	 */
-
-	 public $app;
+	public $app;
 
 
 	/**
@@ -454,35 +452,71 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	public function sync_tags() {
 
-		$response = wp_safe_remote_get( $this->url . 'tags/', $this->get_params() );
+		// Get the categories first.
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+		$categories = array();
+
+		$url = $this->url . 'tags/categories/?page_size=1000';
+
+		while ( $url ) {
+
+			$response = wp_safe_remote_get( $url, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			$categories = array_merge( $categories, $response['tag_categories'] );
+
+			if ( empty( $response['next_page_token'] ) ) {
+				break;
+			}
+
+			$url = $response['next_page_token'];
 		}
 
-		$category_response = wp_safe_remote_get( $this->url . 'tags/categories/', $this->get_params() );
+		// Then get the tags.
 
-		if ( is_wp_error( $category_response ) ) {
-			return $category_response;
+		$tags = array();
+
+		$url = $this->url . 'tags/?page_size=1000';
+
+		while ( $url ) {
+
+			$response = wp_safe_remote_get( $url, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			$tags = array_merge( $tags, $response['tags'] );
+
+			if ( empty( $response['next_page_token'] ) ) {
+				break;
+			}
+
+			$url = $response['next_page_token'];
 		}
-
-		$response          = json_decode( wp_remote_retrieve_body( $response ), true );
-		$category_response = json_decode( wp_remote_retrieve_body( $category_response ), true );
 
 		$available_tags = array();
 
-		foreach ( $response['tags'] as $tag ) {
+		foreach ( $tags as $tag ) {
 			$available_tags[ $tag['id'] ]['label'] = $tag['name'];
 
 			$category_name = 'No Category';
 
 			$category_index = false;
-			if ( isset( $tag['category']['id'] ) && isset( $category_response['tag_categories'] ) ) {
-				$category_index = array_search( $tag['category']['id'], array_column( $category_response['tag_categories'], 'id' ) );
+
+			if ( isset( $tag['category']['id'] ) ) {
+				$category_index = array_search( $tag['category']['id'], array_column( $categories, 'id' ) );
 			}
 
-			if ( $category_index !== false ) {
-				$category_name = $category_response['tag_categories'][ $category_index ]['name'];
+			if ( $category_index ) {
+				$category_name = $categories[ $category_index ]['name'];
 			}
 
 			$available_tags[ $tag['id'] ]['category'] = $category_name;
@@ -1167,15 +1201,21 @@ class WPF_Infusionsoft_iSDK {
 	 * @since 1.0.0
 	 * @since 3.44.0 Updated to use REST API.
 	 *
-	 * @param string $tag The tag name.
+	 * @param string $tag|bool The tag name or false to load all contacts.
 	 * @return array|WP_Error The contact IDs or error.
 	 */
 	public function load_contacts( $tag = false ) {
+
 		$contact_ids = array();
 		$proceed     = true;
 
-		$request = $this->url . 'tags/' . $tag . '/contacts/';
-		while ( $proceed == true ) {
+		if ( $tag ) {
+			$request = $this->url . 'tags/' . $tag . '/contacts/';
+		} else {
+			$request = $this->url . 'contacts/';
+		}
+
+		while ( $proceed ) {
 			$response = wp_safe_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
