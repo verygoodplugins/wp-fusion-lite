@@ -100,7 +100,6 @@ class WPF_Infusionsoft_iSDK {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_auto_login_query_var', array( $this, 'auto_login_query_var' ) );
-		add_filter( 'random_password', array( $this, 'generate_password' ) );
 
 		// Key update notices.
 		add_action( 'wpf_settings_notices', array( $this, 'api_key_warning' ) );
@@ -154,23 +153,6 @@ class WPF_Infusionsoft_iSDK {
 		$cookies[] = 'affiliate';
 
 		return $cookies;
-	}
-
-	/**
-	 * Infusionsoft default password field is limited to 16 chars so we'll keep WP passwords shorter than 16 chars as well
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $password The password.
-	 * @return string The password.
-	 */
-	public function generate_password( $password ) {
-
-		if ( is_admin() ) {
-			$password = substr( $password, 0, 16 );
-		}
-
-		return $password;
 	}
 
 
@@ -290,7 +272,7 @@ class WPF_Infusionsoft_iSDK {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'Ymd\TH:i:s', $value );
+			$date = wpf_get_iso8601_date( $value );
 
 			return $date;
 
@@ -298,7 +280,9 @@ class WPF_Infusionsoft_iSDK {
 
 			return implode( ',', array_filter( $value ) );
 
-		} elseif ( 'country' === $field_type ) {
+		} else {
+
+			// See if it's a country code or country name.
 
 			$country_codes = include __DIR__ . '/countries.php';
 			$country_names = include __DIR__ . '/country-names.php';
@@ -311,15 +295,9 @@ class WPF_Infusionsoft_iSDK {
 
 				return $country_names[ $value ];
 
-			} else {
-
-				return $value;
-
 			}
-		} else {
 
 			return sanitize_text_field( $value ); // fixes "Error adding: java.lang.Integer cannot be cast to java.lang.String".
-
 		}
 	}
 
@@ -543,7 +521,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$built_in_fields = array();
 
-		foreach ( $infusionsoft_fields as $index => $data ) {
+		foreach ( $infusionsoft_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
@@ -551,25 +529,33 @@ class WPF_Infusionsoft_iSDK {
 
 		// Get custom fields
 
-		$custom_fields = array();
+		$custom_fields    = array();
+		$custom_field_ids = array();
 
 		$response = wp_safe_remote_get( $this->url . 'contacts/model/', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
+
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $response->custom_fields as $field ) {
-			$custom_fields[ '_' . $field->label ] = $field->label;
+
+			$id = '_' . str_replace( ' ', '', $field->label );
+
+			// The old API used labels as IDs so we'll keep that for backwards compatibility.
+			$custom_fields[ $id ]    = $field->label;
+			$custom_field_ids[ $id ] = $field->id;
+
 		}
 
 		asort( $custom_fields );
 
-		// Social fields
+		// Social fields.
 		$social_fields = array();
 
-		foreach ( $infusionsoft_social_fields as $index => $data ) {
+		foreach ( $infusionsoft_social_fields as $data ) {
 			$social_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
@@ -581,6 +567,7 @@ class WPF_Infusionsoft_iSDK {
 			'Social Fields'   => $social_fields,
 		);
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+		wp_fusion()->settings->set( 'api_custom_fields', $custom_field_ids );
 
 		return $crm_fields;
 	}
@@ -765,28 +752,31 @@ class WPF_Infusionsoft_iSDK {
 				'JobTitle'    => 'job_title',
 				'Anniversary' => 'anniversary_date',
 				'ContactType' => 'contact_type',
-				'Leadsource'  => 'leadsource_id',
 				'MiddleName'  => 'middle_name',
 				'Leadsource'  => 'source_type',
 				'SpouseName'  => 'spouse_name',
 				'TimeZone'    => 'time_zone',
 				'Website'     => 'website',
 			),
-			'Objects' => array(
-				'addresses'     => array(
-					'StreetAddress1+line1',
-					'StreetAddress2+line2',
-					'City+locality',
-					'PostalCode+postal_code',
-					'Country+country_code',
-					'State+region',
-					'Address2Street1+line1+',
-					'Address2Street2+line2+',
-					'City2+locality+',
-					'PostalCode2+postal_code+',
-					'Country2+country_code+',
-					'State2+region+',
+			'addresses' => array(
+				'BILLING' => array(
+					'StreetAddress1' => 'line1',
+					'StreetAddress2' => 'line2',
+					'City'           => 'locality',
+					'PostalCode'     => 'postal_code',
+					'Country'        => 'country_code',
+					'State'          => 'region',
 				),
+				'SHIPPING' => array(
+					'Address2Street1' => 'line1',
+					'Address2Street2' => 'line2',
+					'City2'           => 'locality',
+					'PostalCode2'     => 'postal_code',
+					'Country2'        => 'country_code',
+					'State2'          => 'region',
+				),
+			),
+			'Objects' => array(
 				'company'       => array(
 					'CompanyID+id',
 					'Company+company_name',
@@ -862,6 +852,24 @@ class WPF_Infusionsoft_iSDK {
 			unset( $data[ $new ] );
 		}
 
+		// Addresses.
+
+		if ( isset( $data['addresses'] ) ) {
+			foreach ( $data['addresses'] as $address ) {
+				$type = $address['field'];
+				if ( isset( $fields_mapping['addresses'][ $type ] ) ) {
+
+					foreach ( $fields_mapping['addresses'][ $type ] as $old => $new ) {
+
+						if ( isset( $address[ $new ] ) ) {
+							$data[ $old ] = $address[ $new ];
+						}
+					}
+				}
+			}
+			unset( $data['addresses'] );
+		}
+
 		// Email addresses.
 		if ( isset( $data['email_addresses'] ) ) {
 			foreach ( $data['email_addresses'] as $value ) {
@@ -892,7 +900,8 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		// Custom fields.
-		$api_custom_fields = array_flip( wpf_get_option( 'api_custom_fields' ) );
+		$api_custom_fields = array_flip( wpf_get_option( 'api_custom_fields', array() ) );
+
 		if ( isset( $data['custom_fields'] ) ) {
 			foreach ( $data['custom_fields'] as $value ) {
 				if ( ! isset( $api_custom_fields[ $value['id'] ] ) || empty( $value['content'] ) ) {
@@ -929,6 +938,61 @@ class WPF_Infusionsoft_iSDK {
 			}
 		}
 
+		if ( isset( $data['Password'] ) ) {
+
+			// The password field was removed in the REST API.
+			wpf_log( 'notice', 0, 'The "Password" standard field was removed from the Infusionsoft REST API. To continue syncing passwords with Infusionsoft/Keap, please create a new custom text field to store the password.' );
+			unset( $data['Password'] );
+
+		}
+
+		if ( isset( $data['Username'] ) ) {
+
+			// The password field was removed in the REST API.
+			wpf_log( 'notice', 0, 'The "Username" standard field was removed from the Infusionsoft REST API. To continue syncing usernames with Infusionsoft/Keap, please create a new custom text field to store the username.' );
+			unset( $data['Username'] );
+
+		}
+
+		// Addresses.
+
+		foreach ( $fields_mapping['addresses'] as $address_type => $properties ) {
+
+			foreach ( $properties as $old => $new ) {
+
+				if ( isset( $data[ $old ] ) ) {
+
+					if ( ! isset( $data['addresses'] ) ) {
+						$data['addresses'] = array();
+					}
+
+					// See if we need to create the type.
+
+					$found = false;
+					foreach ( $data['addresses'] as $i => $address ) {
+						if ( $address['field'] === $address_type ) {
+							$found = true;
+							break;
+						}
+					}
+
+					// Create the array for that address type.
+
+					if ( ! $found ) {
+						$data['addresses'][] = array(
+							'field' => $address_type,
+							$new    => $data[ $old ],
+						);
+					} elseif ( isset( $i ) ) {
+						$data['addresses'][ $i ][ $new ] = $data[ $old ];
+					}
+
+					unset( $data[ $old ] );
+
+				}
+			}
+		}
+
 		// Objects.
 		foreach ( $fields_mapping['Objects'] as $new => $old ) {
 			$used = array();
@@ -940,13 +1004,11 @@ class WPF_Infusionsoft_iSDK {
 
 				if ( isset( $data[ $old_value ] ) ) {
 
-					if ( $new === 'addresses' || $new === 'phone_numbers' ) {
+					if ( 'phone_numbers' === $new ) {
 						$ar_key                        = count( $value ) - 1;
 						$used[ $ar_key ][ $new_value ] = $data[ $old_value ];
-						$field                         = ( $ar_key === 1 ? 'SHIPPING' : 'BILLING' );
-						if ( $new === 'phone_numbers' ) {
-							$field = 'PHONE' . $ar_key;
-						}
+
+						$field                    = 'PHONE' . $ar_key;
 						$used[ $ar_key ]['field'] = $field;
 					} else {
 						$used[ $new_value ] = $data[ $old_value ];
@@ -992,17 +1054,24 @@ class WPF_Infusionsoft_iSDK {
 		$crm_fields = wpf_get_option( 'crm_fields' );
 		if ( ! empty( $crm_fields['Custom Fields'] ) ) {
 			foreach ( $data as $crm_field => $value ) {
+
 				foreach ( $crm_fields['Custom Fields'] as $custom_field => $custom_field_value ) {
-					if ( $crm_field === $custom_field ) {
+
+					if ( $crm_field === $custom_field || str_replace( ' ', '', $crm_field ) === $custom_field ) {
+
+						// ^ fix for 3.44.0. Fields don't have spaces.
+
 						$id = $this->get_custom_field_id( $custom_field );
+
 						if ( ! $id ) {
 							continue;
 						}
+
 						$data['custom_fields'][] = array(
 							'content' => $value,
 							'id'      => $id,
 						);
-						unset( $data[ $custom_field ] );
+						unset( $data[ $crm_field ] );
 					}
 				}
 			}
@@ -1021,8 +1090,16 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	private function get_custom_field_id( $custom_field ) {
 
-		$new_custom_fields = wpf_get_option( 'api_custom_fields' );
-		if ( ! empty( $new_custom_fields ) && isset( $new_custom_fields[ $custom_field ] ) ) {
+		$new_custom_fields = wpf_get_option( 'api_custom_fields', array() );
+
+		if ( array_key_exists( $custom_field, $new_custom_fields ) ) {
+			return $new_custom_fields[ $custom_field ];
+		}
+
+		// Maybe fix it from when we temporarily stored spaces.
+		$custom_field = str_replace( ' ', '', $custom_field );
+
+		if ( array_key_exists( $custom_field, $new_custom_fields ) ) {
 			return $new_custom_fields[ $custom_field ];
 		}
 
@@ -1036,7 +1113,10 @@ class WPF_Infusionsoft_iSDK {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $response->custom_fields as $field ) {
-			$api_custom_fields[ '_' . $field->label ] = $field->id;
+
+			$id = '_' . str_replace( ' ', '', $field->label );
+
+			$api_custom_fields[ $id ] = $field->id;
 		}
 
 		wp_fusion()->settings->set( 'api_custom_fields', $api_custom_fields );
@@ -1165,8 +1245,9 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		$result = json_decode( wp_remote_retrieve_body( $response ), true );
+
 		if ( empty( $result ) ) {
-			return false;
+			return array();
 		}
 
 		$result    = $this->format_load_contact( $result );

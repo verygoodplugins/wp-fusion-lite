@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 5.6
 Tested up to: 6.6.2
-Stable tag: 3.44.0.1
+Stable tag: 3.44.1
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -202,6 +202,24 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.44.1 - 8/12/2024 =
+* *Note:* Infusionsoft/Keap have removed the standard "Password" and "Username" fields from the new API, due to security concerns. To avoid errors when syncing passwords and usernames, WP Fusion will log a notice when these fields are detected and remove them from the sync. If you need to sync usernames and passwords, please create new custom text fields to store the data.
+* Improved Ontraport error handling for duplicate and not found contacts
+* Improved - (Infusionsoft / Keap) Added ISO 3166-1 country name conversion for "United States" to "USA" (previously only matched "United States of America")
+* Fixed new Infusionsoft integration swapping the Billing and Shipping addresses
+* Fixed new Infusionsoft integration not syncing dates in ISO8601 format
+* Fixed new Infusionsoft integration not loading more than 10 available products
+* Fixed error "PHP error: Uncaught TypeError: array_flip(): Argument #1 ($array) must be of type array" when syncing new custom fields with the new Infusionsoft REST API integration
+* Fixed Groundhogg (same site) integration immediately loading custom fields that were added when creating a new contact
+* Fixed date fields syncing to Groundhogg (REST API) as timestamps instead of dates
+* Fixed tags that were removed in a FluentCRM automation (same site) that was triggered by WP Fusion applying a tag not triggering a sync back to the user's tags in WordPress
+* Developers: `add_contact()` will now return a `WP_Error` if no fields are enabled for sync, instead of `false`
+* Developers: The WP Fusion logs are now sorted by log ID instead of timestamp, to avoid confusion when changing the site's timezone
+
+= 3.44.0.2 - 8/6/2024 =
+* Fixed custom fields with spaces in the labels not migrating to the new Infusionsoft API field mapping
+* Fixed "Unprocessable entity" errors when syncing custom fields with spaces in the label to Infusionsoft/Keap since 3.44.0
 
 = 3.44.0.1 - 8/6/2024 =
 * Fixed new Keap / Infusionsoft integration not loading more than 1000 each of tags or tag categories

@@ -18,11 +18,6 @@ $infusionsoft_fields['nickname'] = array(
 	'crm_field' => 'Nickname',
 );
 
-$infusionsoft_fields['user_login'] = array(
-	'crm_label' => 'Username',
-	'crm_field' => 'Username',
-);
-
 $infusionsoft_fields['user_email'] = array(
 	'crm_label' => 'Email',
 	'crm_field' => 'Email',
@@ -36,11 +31,6 @@ $infusionsoft_fields[] = array(
 $infusionsoft_fields[] = array(
 	'crm_label' => 'Email Address 3',
 	'crm_field' => 'EmailAddress3',
-);
-
-$infusionsoft_fields['user_pass'] = array(
-	'crm_label' => 'Password',
-	'crm_field' => 'Password',
 );
 
 $infusionsoft_fields['country'] = array(

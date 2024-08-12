@@ -21,12 +21,15 @@ class WPF_Infusionsoft_App {
 	 */
 	public $params;
 
+	public $pending_orders = array();
+
 	/**
 	 * @var array The mapping of old field names to new field names.
 	 */
 	public $fields_mapping = array(
 		'ProductName'  => 'product_name',
 		'ProductPrice' => 'product_price',
+		'ProductDesc'  => 'product_desc',
 		'Id'           => 'id',
 		'Sku'          => 'sku',
 		'Referral'     => 'affiliate',
@@ -145,6 +148,9 @@ class WPF_Infusionsoft_App {
 	/**
 	 * Creates a blank order.
 	 *
+	 * We can't create a blank order anymore so let's just return the next expected order ID
+	 * and create the order in manualPmt.
+	 *
 	 * @since 3.44.0
 	 *
 	 * @param int    $contact_id The contact ID.
@@ -156,45 +162,7 @@ class WPF_Infusionsoft_App {
 	 */
 	public function blankOrder( $contact_id, $desc, $order_date, $lead_aff, $sale_aff ) {
 
-		// Add fake product as we can't create a blank order or empty order_items in rest api.
-		$rest_product_id = wpf_get_option( 'rest_product_id' );
-		if ( empty( $rest_product_id ) ) {
-			$rest_product_id = $this->dsAdd(
-				'Product',
-				array(
-					'ProductName'  => 'wpf_rest_product',
-					'ProductPrice' => 0,
-				)
-			);
-			wp_fusion()->settings->set( 'rest_product_id', $rest_product_id );
-		}
-
-		$params     = $this->params;
-		$order_date = date( 'Y-m-d\TH:i:s\Z', strtotime( $order_date ) );
-
-		$data = array(
-			'contact_id'  => $contact_id,
-			'order_title' => $desc,
-			'order_date'  => $order_date,
-			'order_items' => array(
-				array(
-					'product_id' => $rest_product_id,
-					'quantity'   => 0,
-				),
-			),
-			'order_type'  => 'Online',
-		);
-
-		if ( $lead_aff ) {
-			$data['lead_affiliate_id'] = $lead_aff;
-		}
-		if ( $sale_aff ) {
-			$data['sales_affiliate_id'] = $sale_aff;
-		}
-
-		$params['body'] = wp_json_encode( $data );
-		$request        = $this->url . 'orders/';
-		$response       = wp_safe_remote_post( $request, $params );
+		$response = wp_safe_remote_get( $this->url . 'orders/?limit=1', $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -202,10 +170,30 @@ class WPF_Infusionsoft_App {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		// Save fake order item to remove it later.
-		wp_fusion()->settings->set( 'rest_order_item', $response['order_items'][0]['id'] );
+		if ( ! empty( $response['orders'] ) ) {
+			$new_order_id = $response['orders'][0]['id'] + 1;
+		} else {
+			// New account.
+			$new_order_id = 1;
+		}
 
-		return $response['id'];
+		$this->pending_orders[ $new_order_id ] = array(
+			'contact_id'  => $contact_id,
+			'order_title' => $desc,
+			'order_date'  => gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $order_date ) ),
+			'order_items' => array(),
+			'order_type'  => 'Online',
+		);
+
+		if ( $lead_aff ) {
+			$this->pending_orders[ $new_order_id ]['lead_affiliate_id'] = $lead_aff;
+		}
+		if ( $sale_aff ) {
+			$this->pending_orders[ $new_order_id ]['sales_affiliate_id'] = $sale_aff;
+		}
+
+		return $new_order_id;
+
 	}
 
 	/**
@@ -271,7 +259,31 @@ class WPF_Infusionsoft_App {
 	 * @return bool|WP_Error True on success, WP_Error on failure.
 	 */
 	public function manualPmt( $invoice_id = '', $amt = '', $payment_date = '', $payment_type = '', $payment_description = '', $bypass_commissions = false ) {
+
 		$params = $this->params;
+
+		// If there's a pending order, create it now in a single API call.
+
+		if ( isset( $this->pending_orders[ $invoice_id ] ) ) {
+
+			$data = $this->pending_orders[ $invoice_id ];
+
+			$params['body'] = wp_json_encode( $data );
+			$request        = $this->url . 'orders/';
+
+			$response = wp_safe_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			unset( $this->pending_orders[ $invoice_id ] );
+
+			$invoice_id = $response['id'];
+
+		}
 
 		if ( strpos( strtolower( $payment_type ), 'cash' ) !== false ) {
 			$payemnt_type = 'CASH';
@@ -314,19 +326,9 @@ class WPF_Infusionsoft_App {
 	 * @param int    $qty The quantity of items.
 	 * @param string $desc The description of the item.
 	 * @param string $notes Any notes for the item.
-	 * @return boolean
+	 * @return bool|WP_Error True or error on failure.
 	 */
 	public function addOrderItem( $order_id, $product_id, $type, $price, $qty, $desc = '', $notes = '' ) {
-		$params = $this->params;
-
-		// Remove fake rest product.
-		$rest_order_item = wpf_get_option( 'rest_order_item' );
-		if ( $rest_order_item ) {
-			$params['method'] = 'DELETE';
-			$request          = $this->url . 'orders/' . $order_id . '/items/' . $rest_order_item . '';
-			$result           = wp_safe_remote_post( $request, $params );
-			$response         = json_decode( wp_remote_retrieve_body( $result ), true );
-		}
 
 		$data = array(
 			'product_id'  => $product_id,
@@ -335,13 +337,24 @@ class WPF_Infusionsoft_App {
 			'description' => $desc,
 		);
 
-		$params['body']   = wp_json_encode( $data );
-		$params['method'] = 'POST';
-		$request          = $this->url . 'orders/' . $order_id . '/items/';
-		$response         = wp_safe_remote_post( $request, $params );
+		if ( isset( $this->pending_orders[ $order_id ] ) ) {
 
-		if ( is_wp_error( $response ) ) {
-			return $response;
+			// Pending order
+			$this->pending_orders[ $order_id ]['order_items'][] = $data;
+
+		} else {
+
+			// Send the API call.
+
+			$params           = $this->params;
+			$params['body']   = wp_json_encode( $data );
+			$params['method'] = 'POST';
+			$request          = $this->url . 'orders/' . $order_id . '/items/';
+			$response         = wp_safe_remote_post( $request, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 		}
 
 		return true;
@@ -359,14 +372,19 @@ class WPF_Infusionsoft_App {
 	 * @param array  $r_fields The fields to retrieve.
 	 * @return mixed
 	 */
-	public function dsQuery( $t_name, $limit = 1000, $page = 1, $query = array(), $r_fields = array() ) {
-		$request  = $this->url . strtolower( $t_name ) . 's/';
+	public function dsQuery( $t_name, $limit = 1000, $page = 0, $query = array(), $r_fields = array() ) {
+
+		$offset = $page * $limit;
+
+		$request  = $this->url . strtolower( $t_name ) . 's/?limit=' . $limit . '&offset=' . $offset;
 		$response = wp_safe_remote_get( $request, $this->params );
+
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
 		if ( ! isset( $response['products'] ) || empty( $response['products'] ) ) {
 			return array();
 		}

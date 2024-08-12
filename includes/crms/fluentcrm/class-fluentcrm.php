@@ -37,6 +37,15 @@ class WPF_FluentCRM {
 	public $edit_url = '';
 
 	/**
+	 * Prevent syncing back tags that were just applied.
+	 *
+	 * @since 3.44.1
+	 *
+	 * @var bool Skip tag sync
+	 */
+	public $skip_tag_sync = false;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -327,9 +336,7 @@ class WPF_FluentCRM {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		if ( ! defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) ) {
-			define( 'FLUENTCRM_SKIP_TAG_SYNC', true ); // Prevents infinite loop (see contact_tags_added_removed() below).
-		}
+		$this->skip_tag_sync = true; // Prevents infinite loop (see contact_tags_added_removed() below).
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -352,9 +359,7 @@ class WPF_FluentCRM {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		if ( ! defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) ) {
-			define( 'FLUENTCRM_SKIP_TAG_SYNC', true ); // Prevents infinite loop (see contact_tags_added_removed() below).
-		}
+		$this->skip_tag_sync = true; // Prevents infinite loop (see contact_tags_added_removed() below).
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -571,8 +576,9 @@ class WPF_FluentCRM {
 	 */
 	public function contact_tags_added_removed( $tags, $subscriber ) {
 
-		if ( defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_add_contact_to_tag' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_detach_contact_from_tag' ) ) {
+		if ( $this->skip_tag_sync && ! doing_action( 'fluentcrm_funnel_sequence_handle_add_contact_to_tag' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_detach_contact_from_tag' ) ) {
 			// Don't sync tag changes if we've just applied them and aren't currently in a funnel sequence.
+			$this->skip_tag_sync = false; // allow it to repeat after this.
 			return;
 		}
 
@@ -594,7 +600,7 @@ class WPF_FluentCRM {
 
 		if ( $user_id ) {
 
-			if ( defined( 'FLUENTCRM_SKIP_TAG_SYNC' ) ) {
+			if ( $this->skip_tag_sync ) {
 
 				// If we're currently in the process of applying tags, then we need to wait
 				// until WPF_User::apply_tags() has updated the usermeta before we can load them.

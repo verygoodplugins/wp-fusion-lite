@@ -119,6 +119,9 @@ class WPF_Groundhogg_REST {
 		// Webhooks.
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
+		// Data formats.
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 2 );
+
 		// Add tracking code to footer.
 		// add_action( 'wp_enqueue_scripts', array( $this, 'tracking_code' ) );
 
@@ -159,6 +162,25 @@ class WPF_Groundhogg_REST {
 
 		return $post_data;
 
+	}
+
+	/**
+	 * Formats user entered data to match Groundhogg field formats.
+	 *
+	 * @since 3.44.1
+	 *
+	 * @param  mixed  $value      The field data.
+	 * @param  string $field_type The field type.
+	 * @param  string $field      The field in the CRM.
+	 * @return mixed  The field value.
+	 */
+	public function format_field_value( $value, $field_type ) {
+
+		if ( 'date' === $field_type ) {
+			$value = gmdate( 'Y-m-d H:i:s', $value );
+		}
+
+		return $value;
 	}
 
 

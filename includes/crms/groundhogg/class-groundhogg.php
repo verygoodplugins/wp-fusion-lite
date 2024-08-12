@@ -656,7 +656,7 @@ class WPF_Groundhogg {
 		}
 
 		// Prevent looping.
-		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
+		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ) );
 
 		$contact = new \Groundhogg\Contact( $data );
 
@@ -674,11 +674,15 @@ class WPF_Groundhogg {
 		unset( $data['last_name'] );
 		unset( $data['email'] );
 
+		// Prevent looping.
+		remove_action( 'groundhogg/meta/contact/update', array( $this, 'contact_post_update_fallback' ) );
+
 		foreach ( $data as $key => $value ) {
-
 			$contact->update_meta( $key, $value );
-
 		}
+
+		// Add it back in case the benchmark triggers custom field changes.
+		add_action( 'groundhogg/meta/contact/update', array( $this, 'contact_post_update_fallback' ), 10, 4 );
 
 		// Trigger user created benchmarks.
 

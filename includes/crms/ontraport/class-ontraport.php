@@ -292,7 +292,7 @@ class WPF_Ontraport {
 	 * Check HTTP Response for errors and return WP_Error if found
 	 *
 	 * @access public
-	 * @return HTTP Response
+	 * @return HTTP_Response|WP_Error 
 	 */
 
 	public function handle_http_response( $response, $args, $url ) {
@@ -307,21 +307,8 @@ class WPF_Ontraport {
 
 				if ( 'Object not found' == $body && ! empty( $args['body'] ) ) {
 
-					$data = json_decode( $args['body'], true );
+					return new WP_Error( 'not_found', 'Record not found.' );
 
-					$user_id = wp_fusion()->user->get_user_id( $data['id'] );
-
-					if ( $user_id ) {
-
-						$data['id'] = wp_fusion()->user->get_contact_id( $user_id, true );
-
-						if ( ! empty( $data['id'] ) ) {
-
-							$args['body'] = wp_json_encode( $data );
-
-							return wp_safe_remote_request( $url, $args );
-						}
-					}
 				} elseif ( 'Invalid Contact ID' == $body && ! empty( $args['body'] ) ) {
 
 					// Ecom addon
@@ -667,7 +654,7 @@ class WPF_Ontraport {
 	 * Adds a new contact
 	 *
 	 * @access public
-	 * @return int Contact ID
+	 * @return int|WP_Error Contact ID or error.
 	 */
 
 	public function add_contact( $data ) {
@@ -705,7 +692,8 @@ class WPF_Ontraport {
 
 		if ( ! isset( $body->data->id ) && isset( $body->data->attrs->id ) ) {
 
-			return new WP_Error( 'error', 'Failed to add contact with email ' . $data['email'] . ', contact already exists with ID #' . $body->data->attrs->id );
+			// Contact already existed.
+			return $body->data->attrs->id;
 
 		}
 

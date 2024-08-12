@@ -638,7 +638,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 			// $by = wc_clean( $_REQUEST['orderby'] );
 			$by = esc_attr( $_REQUEST['orderby'] );
 		} else {
-			$by = 'timestamp';
+			$by = 'log_id';
 		}
 		$by = esc_sql( $by );
 

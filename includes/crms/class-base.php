@@ -198,8 +198,7 @@ class WPF_CRM_Base {
 			$args[1] = false;
 
 			if ( empty( $args[0] ) ) {
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Attempted to add contact with no fields enabled for sync.' );
-				return false; // no enabled fields.
+				return new WP_Error( 'error', 'Attempted to add contact with no fields enabled for sync.' );
 			}
 		} elseif ( 'update_contact' === $method && ( ! isset( $args[2] ) || true === $args[2] ) ) {
 
