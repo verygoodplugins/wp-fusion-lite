@@ -38,13 +38,19 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	public $app;
 
-
 	/**
 	 * API URL
 	 *
 	 * @var string
 	 */
 	public $url = 'https://api.infusionsoft.com/crm/rest/v2/';
+
+	/**
+	 * API URL (v1 API)
+	 *
+	 * @var string
+	 */
+	public $urlv1 = 'https://api.infusionsoft.com/crm/rest/v1/';
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
@@ -81,7 +87,34 @@ class WPF_Infusionsoft_iSDK {
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
+	}
 
+	/**
+	 * Magic getter method to allow property access like $this->app.
+	 *
+	 * @param string $property
+	 * @return mixed
+	 */
+	public function __get( $property ) {
+		if ( 'app' === $property ) {
+			return $this->get_app();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Lazy-load the app instance.
+	 *
+	 * @return WPF_Infusionsoft_APP
+	 */
+	public function get_app() {
+		if ( ! isset( $this->app ) ) {
+			require_once __DIR__ . '/class-infusionsoft-app.php';
+			$this->app = new WPF_Infusionsoft_App( $this->get_params() );
+		}
+
+		return $this->app;
 	}
 
 
@@ -100,6 +133,9 @@ class WPF_Infusionsoft_iSDK {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_auto_login_query_var', array( $this, 'auto_login_query_var' ) );
+
+		// Slow down the batch processses to get around API limits.
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
 		// Key update notices.
 		add_action( 'wpf_settings_notices', array( $this, 'api_key_warning' ) );
@@ -202,6 +238,17 @@ class WPF_Infusionsoft_iSDK {
 		return 'contactId';
 	}
 
+	/**
+	 * Slow down batch processses to get around the 10 API calls per second limit
+	 *
+	 * @since 3.44.2
+	 *
+	 * @param int $seconds The seconds.
+	 * @return int Sleep time.
+	 */
+	public function set_sleep_time( $seconds ) {
+		return 2;
+	}
 
 	/**
 	 * Handle HTTP response.
@@ -227,11 +274,23 @@ class WPF_Infusionsoft_iSDK {
 
 			} elseif ( 500 === $response_code ) {
 
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
+				$request_body = json_decode( $args['body'], true );
 
+				if ( $request_body && isset( $request_body['owner_id'] ) ) {
+
+					$response = new WP_Error( 'error', sprintf( __( 'Owner ID %s is not valid.', 'wp-fusion-lite' ), $request_body['owner_id'] ) );
+
+				} else {
+
+					$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
+				}
 			} elseif ( 401 === $response_code ) {
 
 				$response = new WP_Error( 'error', 'Invalid API credentials.' );
+
+			} elseif ( 405 === $response_code ) {
+
+				$response = new WP_Error( 'error', 'Method not allowed.' );
 
 			} elseif ( 404 === $response_code ) {
 
@@ -241,12 +300,28 @@ class WPF_Infusionsoft_iSDK {
 				} else {
 					$response = new WP_Error( 'error', 'Not found [error 404]: ' . $url );
 				}
+			} elseif ( ( 429 === $response_code || 503 === $response_code ) && ! isset( $args['doing_retry'] ) ) {
+
+				// Too many requests. Sleep and try again.
+
+				wpf_log( 'notice', 0, 'Too many requests (' . $response_code . ' error). Waiting 2 seconds and trying again.' );
+
+				sleep( 2 );
+				$args['doing_retry'] = true;
+
+				$response = wp_safe_remote_request( $url, $args );
 
 			} else {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-				$response  = new WP_Error( 'error', $body_json->message );
 
+				if ( isset( $body_json->message ) ) {
+					$response = new WP_Error( 'error', $body_json->message );
+				} elseif ( isset( $body_json->fault ) ) {
+					$response = new WP_Error( 'error', $body_json->fault->faultstring );
+				} else {
+					$response = new WP_Error( 'error', 'Unknown error. <pre>' . wpf_print_r( $body_json, true ) . '</pre>' );
+				}
 			}
 		}
 
@@ -272,7 +347,12 @@ class WPF_Infusionsoft_iSDK {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = wpf_get_iso8601_date( $value );
+
+			if ( 'date_time' === wpf_get_remote_field_type( $field ) ) {
+				$date = wpf_get_iso8601_date( $value, true );
+			} else {
+				$date = gmdate( 'Y-m-d', $value );
+			}
 
 			return $date;
 
@@ -280,69 +360,33 @@ class WPF_Infusionsoft_iSDK {
 
 			return implode( ',', array_filter( $value ) );
 
-		} else {
+		} elseif ( false !== strpos( $field, 'State' ) ) {
 
-			// See if it's a country code or country name.
+			$state_code = wpf_state_to_iso3166( $value );
 
-			$country_codes = include __DIR__ . '/countries.php';
-			$country_names = include __DIR__ . '/country-names.php';
+			if ( $state_code ) {
+				return $state_code;
+			} else {
 
-			if ( isset( $country_codes[ $value ] ) ) {
-
-				return $country_codes[ $value ];
-
-			} elseif ( isset( $country_names[ $value ] ) ) {
-
-				return $country_names[ $value ];
+				// Unknown state.
+				return sanitize_text_field( $value );
 
 			}
+		} elseif ( false !== strpos( $field, 'Country' ) ) {
 
+			// See if it's a country code, country name, or state name.
+
+			$country_code = wpf_country_to_iso3166( $value, 'alpha-3' );
+
+			if ( $country_code ) {
+				return $country_code;
+			} else {
+
+				// Unknown country.
+				return false;
+			}
+		} else {
 			return sanitize_text_field( $value ); // fixes "Error adding: java.lang.Integer cannot be cast to java.lang.String".
-		}
-	}
-
-
-	/**
-	 * Maps local field types to IS field types.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $field_type The field type.
-	 * @return string The mapped field type.
-	 */
-	public function map_field_types( $field_type ) {
-
-		switch ( $field_type ) {
-			case 'text':
-				return 'Text';
-
-			case 'select':
-				return 'Select';
-
-			case 'multiselect':
-				return 'MultiSelect';
-
-			case 'textarea':
-				return 'TextArea';
-
-			case 'datepicker':
-				return 'Date';
-
-			case 'checkbox':
-				return 'YesNo';
-
-			case 'checkbox-full':
-				return 'YesNo';
-
-			case 'radio':
-				return 'Radio';
-
-			case 'radio-full':
-				return 'Radio';
-
-			default:
-				// In case no matching datatype is found, fall back to plain text
-				return 'Text';
 		}
 	}
 
@@ -364,7 +408,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
-			'timeout'    => 15,
+			'timeout'    => 20,
 			'headers'    => array(
 				'X-Keap-API-Key' => $api_key,
 				'Content-Type'   => 'application/json',
@@ -385,6 +429,7 @@ class WPF_Infusionsoft_iSDK {
 	public function connect( $app_name = null, $api_key = null, $test = false ) {
 
 		$params = $this->get_params( $api_key );
+
 		if ( ! $test ) {
 			return true;
 		}
@@ -395,7 +440,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -452,7 +496,12 @@ class WPF_Infusionsoft_iSDK {
 				break;
 			}
 
-			$url = $response['next_page_token'];
+			if ( wp_http_validate_url( $response['next_page_token'] ) ) {
+				$url = $response['next_page_token'];
+			} else {
+				// New V2 compliant spec: https://developer.infusionsoft.com/docs/restv2/#tag/Tags/operation/listTagsUsingGET_1.
+				$url = add_query_arg( 'page_token', $response['next_page_token'], $url );
+			}
 		}
 
 		// Then get the tags.
@@ -477,7 +526,12 @@ class WPF_Infusionsoft_iSDK {
 				break;
 			}
 
-			$url = $response['next_page_token'];
+			if ( wp_http_validate_url( $response['next_page_token'] ) ) {
+				$url = $response['next_page_token'];
+			} else {
+				// New V2 compliant spec: https://developer.infusionsoft.com/docs/restv2/#tag/Tags/operation/listTagsUsingGET_1.
+				$url = add_query_arg( 'page_token', $response['next_page_token'], $url );
+			}
 		}
 
 		$available_tags = array();
@@ -522,7 +576,10 @@ class WPF_Infusionsoft_iSDK {
 		$built_in_fields = array();
 
 		foreach ( $infusionsoft_fields as $data ) {
-			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
+			$built_in_fields[ $data['crm_field'] ] = array(
+				'crm_label' => $data['crm_label'],
+				'crm_type'  => isset( $data['crm_type'] ) ? $data['crm_type'] : 'text',
+			);
 		}
 
 		asort( $built_in_fields );
@@ -542,21 +599,40 @@ class WPF_Infusionsoft_iSDK {
 
 		foreach ( $response->custom_fields as $field ) {
 
-			$id = '_' . str_replace( ' ', '', $field->label );
+			$id = '_' . $this->remove_special_characters( $field->label );
 
 			// The old API used labels as IDs so we'll keep that for backwards compatibility.
-			$custom_fields[ $id ]    = $field->label;
+			$custom_fields[ $id ] = array(
+				'crm_label' => $field->label,
+				'crm_type'  => 'text',
+			);
+
+			if ( 'DATE' === $field->field_type ) {
+				$custom_fields[ $id ]['crm_type'] = 'date';
+			} elseif ( 'DATE_TIME' === $field->field_type ) {
+				$custom_fields[ $id ]['crm_type'] = 'date_time';
+			} elseif ( isset( $field->options ) ) {
+				$custom_fields[ $id ]['crm_type'] = 'select';
+
+				foreach ( $field->options as $option ) {
+					$custom_fields[ $id ]['choices'][ $option->id ] = $option->label;
+				}
+			}
+
 			$custom_field_ids[ $id ] = $field->id;
 
 		}
 
-		asort( $custom_fields );
+		uasort( $custom_fields, 'wpf_sort_remote_fields' );
 
 		// Social fields.
 		$social_fields = array();
 
 		foreach ( $infusionsoft_social_fields as $data ) {
-			$social_fields[ $data['crm_field'] ] = $data['crm_label'];
+			$social_fields[ $data['crm_field'] ] = array(
+				'crm_label' => $data['crm_label'],
+				'crm_type'  => 'text',
+			);
 		}
 
 		asort( $social_fields );
@@ -673,16 +749,14 @@ class WPF_Infusionsoft_iSDK {
 	public function apply_tags( $tags, $contact_id ) {
 
 		$params         = $this->get_params();
-		$data           = array( 'contact_ids' => array( $contact_id ) );
+		$data           = array( 'tagIds' => $tags );
 		$params['body'] = wp_json_encode( $data );
 
-		foreach ( $tags as $tag_id ) {
-			$request  = $this->url . 'tags/' . $tag_id . '/contacts:applyTags';
-			$response = wp_safe_remote_post( $request, $params );
+		$request  = $this->urlv1 . 'contacts/' . $contact_id . '/tags';
+		$response = wp_safe_remote_post( $request, $params );
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		return true;
@@ -701,16 +775,14 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	public function remove_tags( $tags, $contact_id ) {
 
-		$params         = $this->get_params();
-		$data           = array( 'contact_ids' => array( $contact_id ) );
-		$params['body'] = wp_json_encode( $data );
-		foreach ( $tags as $tag_id ) {
-			$request  = $this->url . 'tags/' . $tag_id . '/contacts:removeTags';
-			$response = wp_safe_remote_post( $request, $params );
+		$params           = $this->get_params();
+		$params['method'] = 'DELETE';
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
+		$request  = $this->urlv1 . 'contacts/' . $contact_id . '/tags?ids=' . rawurlencode( implode( ',', $tags ) );
+		$response = wp_safe_remote_request( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
 		return true;
@@ -744,22 +816,25 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	public function fields_mapping() {
 		return array(
-			'Regular' => array(
-				'FirstName'   => 'given_name',
-				'LastName'    => 'family_name',
-				'OwnerID'     => 'owner_id',
-				'Birthday'    => 'birth_date',
-				'JobTitle'    => 'job_title',
-				'Anniversary' => 'anniversary_date',
-				'ContactType' => 'contact_type',
-				'MiddleName'  => 'middle_name',
-				'Leadsource'  => 'source_type',
-				'SpouseName'  => 'spouse_name',
-				'TimeZone'    => 'time_zone',
-				'Website'     => 'website',
+			'Regular'   => array(
+				'FirstName'    => 'given_name',
+				'LastName'     => 'family_name',
+				'OwnerID'      => 'owner_id',
+				'Birthday'     => 'birth_date',
+				'JobTitle'     => 'job_title',
+				'Anniversary'  => 'anniversary_date',
+				'ContactType'  => 'contact_type',
+				'MiddleName'   => 'middle_name',
+				'Leadsource'   => 'source_type',
+				'SpouseName'   => 'spouse_name',
+				'TimeZone'     => 'time_zone',
+				'Website'      => 'website',
+				'ContactNotes' => 'notes',
+				'Language'     => 'preferred_locale',
+				'Nickname'     => 'preferred_name',
 			),
 			'addresses' => array(
-				'BILLING' => array(
+				'BILLING'  => array(
 					'StreetAddress1' => 'line1',
 					'StreetAddress2' => 'line2',
 					'City'           => 'locality',
@@ -776,7 +851,7 @@ class WPF_Infusionsoft_iSDK {
 					'State2'          => 'region',
 				),
 			),
-			'Objects' => array(
+			'Objects'   => array(
 				'company'       => array(
 					'CompanyID+id',
 					'Company+company_name',
@@ -793,7 +868,7 @@ class WPF_Infusionsoft_iSDK {
 					'Phone5+number++++',
 				),
 			),
-			'Emails'  => array(
+			'Emails'    => array(
 				'Email'         => 'EMAIL1',
 				'EmailAddress2' => 'EMAIL2',
 				'EmailAddress3' => 'EMAIL3',
@@ -839,13 +914,11 @@ class WPF_Infusionsoft_iSDK {
 						if ( strtolower( $data_value['field'] ) === strtolower( $old_value ) ) {
 							$data[ $old_value ] = $data_value[ $new_value ];
 						}
-					} else {
-						if ( isset( $data_value[ $new_value ] ) && ! empty( $data_value[ $new_value ] ) ) {
-							if ( isset( $value[2] ) && $key > 0 ) {
-								continue;
-							}
-							$data[ $old_value ] = $data_value[ $new_value ];
+					} elseif ( isset( $data_value[ $new_value ] ) && ! empty( $data_value[ $new_value ] ) ) {
+						if ( isset( $value[2] ) && $key > 0 ) {
+							continue;
 						}
+							$data[ $old_value ] = $data_value[ $new_value ];
 					}
 				}
 			}
@@ -886,9 +959,10 @@ class WPF_Infusionsoft_iSDK {
 
 		// Social fields.
 		$social_fields = $this->get_social_fields();
+
 		if ( isset( $data['social_accounts'] ) ) {
 			foreach ( $data['social_accounts'] as $value ) {
-				foreach ( $social_fields as $social_field ) {
+				foreach ( $social_fields as $social_field => $social_field_data ) {
 					$social_field = strtoupper( str_replace( 'LinkedIn', 'LINKED_IN', $social_field ) );
 					if ( $value['type'] === $social_field ) {
 						$data[ ucfirst( strtolower( $social_field ) ) ] = $value['name'];
@@ -916,7 +990,6 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		return $data;
-
 	}
 
 	/**
@@ -928,12 +1001,22 @@ class WPF_Infusionsoft_iSDK {
 	 * @return array The formatted data.
 	 */
 	public function format_contact_data( $data ) {
+
+		$crm_data = array();
+
 		// Regular fields.
 		$fields_mapping = $this->fields_mapping();
 
 		foreach ( $fields_mapping['Regular'] as $old => $new ) {
 			if ( isset( $data[ $old ] ) ) {
-				$data[ $new ] = $data[ $old ];
+
+				if ( 'preferred_locale' === $new && 5 !== strlen( $data[ $old ] ) ) {
+					wpf_log( 'notice', wpf_get_current_user_id(), 'To sync the "Language" field you must specify a valid locale code, for example "en_US". <strong>' . $data[ $old ] . '</strong> is not a valid value.', array( 'source' => $this->slug ) );
+					unset( $data[ $old ] );
+					continue;
+				}
+
+				$crm_data[ $new ] = $data[ $old ];
 				unset( $data[ $old ] );
 			}
 		}
@@ -960,16 +1043,17 @@ class WPF_Infusionsoft_iSDK {
 
 			foreach ( $properties as $old => $new ) {
 
-				if ( isset( $data[ $old ] ) ) {
+				if ( ! empty( $data[ $old ] ) ) {
 
-					if ( ! isset( $data['addresses'] ) ) {
-						$data['addresses'] = array();
+					if ( ! isset( $crm_data['addresses'] ) ) {
+						$crm_data['addresses'] = array();
 					}
 
 					// See if we need to create the type.
 
 					$found = false;
-					foreach ( $data['addresses'] as $i => $address ) {
+					$i     = 0;
+					foreach ( $crm_data['addresses'] as $i => $address ) {
 						if ( $address['field'] === $address_type ) {
 							$found = true;
 							break;
@@ -979,16 +1063,46 @@ class WPF_Infusionsoft_iSDK {
 					// Create the array for that address type.
 
 					if ( ! $found ) {
-						$data['addresses'][] = array(
+						$crm_data['addresses'][] = array(
 							'field' => $address_type,
 							$new    => $data[ $old ],
 						);
-					} elseif ( isset( $i ) ) {
-						$data['addresses'][ $i ][ $new ] = $data[ $old ];
 					}
+
+					$crm_data['addresses'][ $i ][ $new ] = $data[ $old ];
 
 					unset( $data[ $old ] );
 
+				}
+			}
+		}
+
+		// Format address country and region codes.
+
+		if ( ! empty( $crm_data['addresses'] ) ) {
+			foreach ( $crm_data['addresses'] as $i => $address ) {
+
+				if ( ! empty( $address['country_code'] ) && isset( $address['region'] ) && 2 === strlen( $address['region'] ) && ! is_numeric( $address['region'] ) ) {
+					// Add country code to region code.
+					$alpha_2_code                               = wpf_country_to_iso3166( $address['country_code'], 'alpha-2' );
+					$crm_data['addresses'][ $i ]['region_code'] = $alpha_2_code . '-' . strtoupper( $address['region'] );
+				} elseif ( empty( $address['country_code'] ) && isset( $address['region'] ) && wp_fusion()->iso_regions->is_us_state( $address['region'] ) ) {
+					// Add USA country code if a US state is supplied.
+					$crm_data['addresses'][ $i ]['region_code']  = 'US-' . strtoupper( $address['region'] );
+					$crm_data['addresses'][ $i ]['country_code'] = 'USA';
+
+				} elseif ( ! empty( $address['region'] ) && empty( $address['country_code'] ) ) {
+
+					// Log a notice for unknown countries.
+					wpf_log(
+						'notice',
+						wpf_get_current_user_id(),
+						'Unable to determine country code for address region <code>' . $address['region'] . '</code>. Please ensure a Country field is enabled and mapped for this address.',
+						array(
+							'source'              => wp_fusion()->crm->slug,
+							'meta_array_nofilter' => $crm_data['addresses'][ $i ],
+						)
+					);
 				}
 			}
 		}
@@ -1020,14 +1134,19 @@ class WPF_Infusionsoft_iSDK {
 
 			if ( ! empty( $used ) ) {
 				// Reset array keys for numbers and addresses.
-				$data[ $new ] = ( $new === 'company' ? $used : array_values( $used ) );
+				$crm_data[ $new ] = ( $new === 'company' ? $used : array_values( $used ) );
 			}
 		}
 
 		// Email addresses.
 		foreach ( $fields_mapping['Emails'] as $old_email => $new_email ) {
 			if ( isset( $data[ $old_email ] ) ) {
-				$data['email_addresses'][] = array(
+
+				if ( ! isset( $crm_data['email_addresses'] ) ) {
+					$crm_data['email_addresses'] = array();
+				}
+
+				$crm_data['email_addresses'][] = array(
 					'email'         => $data[ $old_email ],
 					'field'         => $new_email,
 					'opt_in_reason' => __( 'Contact was opted in through the WP Fusion integration.', 'wp-fusion-lite' ),
@@ -1041,7 +1160,12 @@ class WPF_Infusionsoft_iSDK {
 		if ( ! empty( $social_data ) ) {
 			foreach ( $data as $key => $value ) {
 				if ( array_search( $key, $social_data ) !== false ) {
-					$data['social_accounts'][] = array(
+
+					if ( ! isset( $crm_data['social_accounts'] ) ) {
+						$crm_data['social_accounts'] = array();
+					}
+
+					$crm_data['social_accounts'][] = array(
 						'name' => $value,
 						'type' => strtoupper( str_replace( 'LinkedIn', 'LINKED_IN', $key ) ),
 					);
@@ -1051,33 +1175,41 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		// Custom fields.
-		$crm_fields = wpf_get_option( 'crm_fields' );
-		if ( ! empty( $crm_fields['Custom Fields'] ) ) {
-			foreach ( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-				foreach ( $crm_fields['Custom Fields'] as $custom_field => $custom_field_value ) {
+			$id = $this->get_custom_field_id( $crm_field );
 
-					if ( $crm_field === $custom_field || str_replace( ' ', '', $crm_field ) === $custom_field ) {
-
-						// ^ fix for 3.44.0. Fields don't have spaces.
-
-						$id = $this->get_custom_field_id( $custom_field );
-
-						if ( ! $id ) {
-							continue;
-						}
-
-						$data['custom_fields'][] = array(
-							'content' => $value,
-							'id'      => $id,
-						);
-						unset( $data[ $crm_field ] );
-					}
-				}
+			if ( ! $id ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Custom field <strong>' . $crm_field . '</strong> is not a valid custom field.' );
+				continue;
 			}
+
+			if ( ! isset( $crm_data['custom_fields'] ) ) {
+				$crm_data['custom_fields'] = array();
+			}
+
+			$crm_data['custom_fields'][] = array(
+				'content' => $value,
+				'id'      => $id,
+			);
+
+			unset( $data[ $crm_field ] );
 		}
 
-		return $data;
+		return $crm_data;
+	}
+
+	/**
+	 * Removes special characters from a string (for custom field names).
+	 *
+	 * @since 3.44.3
+	 *
+	 * @param string $string The string to remove special characters from.
+	 * @return string The string with special characters removed.
+	 */
+	private function remove_special_characters( $string ) {
+		// Remove any special characters except letters, digits, and spaces
+		return preg_replace( '/[^a-zA-Z0-9]/', '', $string );
 	}
 
 	/**
@@ -1090,14 +1222,15 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	private function get_custom_field_id( $custom_field ) {
 
+		$custom_field = $this->remove_special_characters( $custom_field );
+
 		$new_custom_fields = wpf_get_option( 'api_custom_fields', array() );
 
-		if ( array_key_exists( $custom_field, $new_custom_fields ) ) {
-			return $new_custom_fields[ $custom_field ];
+		// Also check without special characters.
+		foreach ( $new_custom_fields as $key => $value ) {
+			$new_key                       = $this->remove_special_characters( $key );
+			$new_custom_fields[ $new_key ] = $value;
 		}
-
-		// Maybe fix it from when we temporarily stored spaces.
-		$custom_field = str_replace( ' ', '', $custom_field );
 
 		if ( array_key_exists( $custom_field, $new_custom_fields ) ) {
 			return $new_custom_fields[ $custom_field ];
@@ -1114,7 +1247,7 @@ class WPF_Infusionsoft_iSDK {
 
 		foreach ( $response->custom_fields as $field ) {
 
-			$id = '_' . str_replace( ' ', '', $field->label );
+			$id = '_' . $this->remove_special_characters( $field->label );
 
 			$api_custom_fields[ $id ] = $field->id;
 		}
@@ -1155,7 +1288,6 @@ class WPF_Infusionsoft_iSDK {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return intval( $response->id );
-
 	}
 
 
@@ -1170,6 +1302,7 @@ class WPF_Infusionsoft_iSDK {
 	 * @return bool|WP_Error True on success, error on failure.
 	 */
 	public function update_contact( $contact_id, $data ) {
+
 		$data = $this->format_contact_data( $data );
 
 		if ( isset( $data['OptinStatus'] ) ) {
@@ -1177,18 +1310,51 @@ class WPF_Infusionsoft_iSDK {
 			unset( $data['OptinStatus'] );
 		}
 
+		if ( isset( $data['notes'] ) ) {
+			// Append to the existing notes.
+			$existing_notes = $this->get_person_notes( $contact_id );
+
+			if ( is_wp_error( $existing_notes ) ) {
+				return $existing_notes;
+			}
+
+			$data['notes'] = $existing_notes . "\n" . $data['notes'];
+		}
+
 		$params           = $this->get_params();
 		$params['method'] = 'PATCH';
 
 		$params['body'] = wp_json_encode( $data );
 
-		$response = wp_safe_remote_post( $this->url . 'contacts/' . $contact_id, $params );
+		$response = wp_safe_remote_request( $this->url . 'contacts/' . $contact_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Gets the Person Notes field on a contact.
+	 *
+	 * @since 3.44.1.1
+	 *
+	 * @param int    $contact_id The contact ID.
+	 * @return string|WP_Error Notes on success, error on failure.
+	 */
+	public function get_person_notes( $contact_id ) {
+
+		$request  = $this->url . 'contacts/' . $contact_id . '?fields=notes';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return strval( $body_json->notes );
 	}
 
 
@@ -1202,42 +1368,10 @@ class WPF_Infusionsoft_iSDK {
 	 * @return array|WP_Error User meta data that was returned or error.
 	 */
 	public function load_contact( $contact_id ) {
-		$return_fields = array();
-		$field_map     = array();
 
-		foreach ( wpf_get_option( 'contact_fields', array() ) as $field_id => $field_data ) {
+		$return_fields = array( 'addresses', 'anniversary_date', 'birth_date', 'company', 'custom_fields', 'email_addresses', 'job_title', 'leadsource_id', 'owner_id', 'phone_numbers', 'social_accounts', 'website', 'notes' );
 
-			if ( $field_data['active'] && ! empty( $field_data['crm_field'] ) ) {
-
-				if ( 'OptinStatus' === $field_data['crm_field'] ) {
-					$field_map[ $field_id ] = 'optin';
-					continue;
-				}
-
-				$return_fields[]        = $field_data['crm_field'];
-				$field_map[ $field_id ] = $field_data['crm_field'];
-
-			}
-		}
-
-		if ( empty( $return_fields ) ) {
-			return array();
-		}
-
-		$return_fields          = array_combine( $return_fields, $return_fields );
-		$formated_return_fields = $this->format_contact_data( $return_fields );
-
-		$available_fields = array( 'addresses', 'anniversary_date', 'birth_date', 'company', 'custom_fields', 'email_addresses', 'job_title', 'leadsource_id', 'owner_id', 'phone_numbers', 'social_accounts', 'website' );
-
-		// Only return fields that we want.
-		$formated_return_fields = array_filter(
-			array_keys( $formated_return_fields ),
-			function ( $field ) use ( $available_fields ) {
-				return in_array( $field, $available_fields );
-			},
-		);
-
-		$request  = $this->url . 'contacts/' . $contact_id . '?fields=' . implode( ',', $formated_return_fields );
+		$request  = $this->url . 'contacts/' . $contact_id . '?fields=' . implode( ',', $return_fields );
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
@@ -1253,23 +1387,22 @@ class WPF_Infusionsoft_iSDK {
 		$result    = $this->format_load_contact( $result );
 		$user_meta = array();
 
-		foreach ( $field_map as $user_meta_key => $infusionsoft_key ) {
+		foreach ( $result as $field => $value ) {
 
-			if ( isset( $result[ $infusionsoft_key ] ) ) {
-				$field_data = $result[ $infusionsoft_key ];
-			} else {
-				continue;
+			foreach ( wpf_get_option( 'contact_fields' ) as $field_id => $field_data ) {
+
+				if ( $field_data['active'] && $field === $field_data['crm_field'] ) {
+
+					// Check if result is a date field
+					if ( DateTime::createFromFormat( 'Y-m-d\TH:i:s.u\Z', $value ) !== false ) {
+						// Set to default WP date format
+						$date_format = wpf_get_datetime_format();
+						$value       = gmdate( $date_format, strtotime( $value ) );
+					}
+
+					$user_meta[ $field_id ] = $value;
+				}
 			}
-
-			// Check if result is a date field
-			if ( DateTime::createFromFormat( 'Ymd\TG:i:s', $field_data ) !== false ) {
-				// Set to default WP date format
-				$date_format = get_option( 'date_format' );
-				$field_data  = date( $date_format, strtotime( $field_data ) );
-			}
-
-			$user_meta[ $user_meta_key ] = $field_data;
-
 		}
 
 		return $user_meta;

@@ -3,6 +3,20 @@
 class WPF_Mailjet {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'mailjet';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Mailjet';
+
+	/**
 	 * Contains API params
 	 */
 
@@ -13,7 +27,7 @@ class WPF_Mailjet {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -40,10 +54,6 @@ class WPF_Mailjet {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'mailjet';
-		$this->name     = 'Mailjet';
-		$this->supports = array();
 
 		// Set up admin options
 		if ( is_admin() ) {

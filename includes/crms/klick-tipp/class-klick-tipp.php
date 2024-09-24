@@ -48,10 +48,9 @@ class WPF_KlickTipp {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_KlickTipp_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -61,7 +60,26 @@ class WPF_KlickTipp {
 	 * @return void
 	 */
 
-	public function init() {}
+	public function init() {
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+	}
+
+	/**
+	 * Gets the contact ID out of outbound messages / webhooks.
+	 *
+	 * @since 3.44.2
+	 *
+	 * @param array $post_data The post data.
+	 * @return array $post_data The post data.
+	 */
+	public function format_post_data( $post_data ) {
+
+		if ( isset( $post_data['SubscriberID'] ) ) {
+			$post_data['contact_id'] = absint( $post_data['SubscriberID'] );
+		}
+
+		return $post_data;
+	}
 
 	/**
 	 * Initialize connection
@@ -82,7 +100,7 @@ class WPF_KlickTipp {
 			$password = wpf_get_option( 'klicktipp_pass' );
 		}
 
-		require_once dirname( __FILE__ ) . '/includes/klicktipp.api.inc';
+		require_once __DIR__ . '/includes/klicktipp.api.inc';
 
 		$this->app = new WPF_KlicktippConnector();
 		$result    = $this->app->login( $username, $password );
@@ -92,7 +110,6 @@ class WPF_KlickTipp {
 		}
 
 		return $this->app;
-
 	}
 
 
@@ -116,7 +133,6 @@ class WPF_KlickTipp {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -140,7 +156,6 @@ class WPF_KlickTipp {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -164,7 +179,6 @@ class WPF_KlickTipp {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -188,7 +202,6 @@ class WPF_KlickTipp {
 		} else {
 			return false;
 		}
-
 	}
 
 
@@ -213,7 +226,6 @@ class WPF_KlickTipp {
 		} else {
 			return array();
 		}
-
 	}
 
 	/**
@@ -246,7 +258,6 @@ class WPF_KlickTipp {
 		}
 
 		return true;
-
 	}
 
 
@@ -280,7 +291,6 @@ class WPF_KlickTipp {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -337,7 +347,6 @@ class WPF_KlickTipp {
 		}
 
 		return $result->id;
-
 	}
 
 
@@ -368,7 +377,6 @@ class WPF_KlickTipp {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -377,7 +385,6 @@ class WPF_KlickTipp {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -385,6 +392,10 @@ class WPF_KlickTipp {
 		}
 
 		$result = $this->app->subscriber_get( $contact_id );
+
+		if ( ! $result ) {
+			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id );
+		}
 
 		$user_meta = array();
 
@@ -402,7 +413,6 @@ class WPF_KlickTipp {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -430,7 +440,5 @@ class WPF_KlickTipp {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

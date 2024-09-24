@@ -28,7 +28,6 @@ class WPF_Shortcodes {
 		if ( ! shortcode_exists( 'the_excerpt' ) ) {
 			add_shortcode( 'the_excerpt', array( $this, 'shortcode_the_excerpt' ) );
 		}
-
 	}
 
 
@@ -188,7 +187,6 @@ class WPF_Shortcodes {
 			return do_shortcode( shortcode_unautop( $else_content ) );
 
 		}
-
 	}
 
 
@@ -206,7 +204,6 @@ class WPF_Shortcodes {
 		}
 
 		return '<!-- wpf_update_tags -->';
-
 	}
 
 	/**
@@ -223,7 +220,6 @@ class WPF_Shortcodes {
 		}
 
 		return '<!-- wpf_update_meta -->';
-
 	}
 
 	/**
@@ -303,10 +299,9 @@ class WPF_Shortcodes {
 
 		if ( ! empty( $atts['date-format'] ) && ! empty( $value ) ) {
 
-			if ( ! is_numeric( $value ) ) {
-
+			if ( ! is_numeric( $value ) || 8 >= strlen( strval( $value ) ) ) {
+				// Allows for dates like 2024 or 20240101 to not be treated as timestamps.
 				$value = strtotime( $value );
-
 			}
 
 			if ( ! empty( $atts['timezone-offset'] ) ) {
@@ -314,7 +309,6 @@ class WPF_Shortcodes {
 			}
 
 			// At this point the date is in GMT, let's switch it to local timezone for display.
-
 			$value = date_i18n( $atts['date-format'], $value );
 
 		}
@@ -328,7 +322,6 @@ class WPF_Shortcodes {
 		} else {
 			return $value;
 		}
-
 	}
 
 	/**
@@ -381,7 +374,6 @@ class WPF_Shortcodes {
 			return do_shortcode( shortcode_unautop( $else_content ) );
 
 		}
-
 	}
 
 	/**
@@ -396,7 +388,6 @@ class WPF_Shortcodes {
 		if ( ( wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
 			return do_shortcode( $content );
 		}
-
 	}
 
 
@@ -412,7 +403,6 @@ class WPF_Shortcodes {
 		if ( ( ! wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
 			return do_shortcode( $content );
 		}
-
 	}
 
 
@@ -483,9 +473,9 @@ class WPF_Shortcodes {
 		$value      = $atts['value_format'] && in_array( $atts['value_format'], $allowed_functions, true ) ? call_user_func( $atts['value_format'], $atts['value'] ) : $atts['value'];
 
 		if ( 'strtotime' === $atts['field_format'] && false === $meta_value ) {
-			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'userfield' );
+			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), $atts['field'] );
 		} elseif ( 'strtotime' === $atts['value_format'] && false === $value ) {
-			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), 'value' );
+			return sprintf( wp_kses_post( 'Oops! Your input string to the <code>%s</code> attribute was not successfully <a href="https://www.php.net/manual/en/function.strtotime.php" target="_blank">parsed by <code>strtotime()</code></a>.', 'wp-fusion-lite' ), $atts['field'] );
 		}
 
 		$atts['compare'] = wp_specialchars_decode( $atts['compare'] );
@@ -595,7 +585,6 @@ class WPF_Shortcodes {
 		}
 
 		return do_shortcode( $content );
-
 	}
 
 	/**
@@ -630,7 +619,7 @@ class WPF_Shortcodes {
 
 			add_filter(
 				'excerpt_length',
-				function() use ( &$length ) {
+				function () use ( &$length ) {
 					return $length;
 				},
 				4242 // 4242 so it's hopefully unique when we remove it.
@@ -643,9 +632,7 @@ class WPF_Shortcodes {
 		remove_all_filters( 'excerpt_length', 4242 );
 
 		return $excerpt;
-
 	}
-
 }
 
 new WPF_Shortcodes();

@@ -33,7 +33,6 @@ class WPF_HighLevel_Admin {
 
 		// OAuth.
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -87,7 +86,6 @@ class WPF_HighLevel_Admin {
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
-
 	}
 
 
@@ -137,7 +135,6 @@ class WPF_HighLevel_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -154,8 +151,10 @@ class WPF_HighLevel_Admin {
 
 		$new_settings = array();
 
+		$name = wpf_get_option( 'connection_configured' ) ? wp_fusion()->crm->name : __( 'HighLevel', 'wp-fusion-lite' ); // allows white-labelling.
+
 		$new_settings['highlevel_header'] = array(
-			'title'   => __( 'HighLevel Configuration', 'wp-fusion-lite' ),
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -188,6 +187,8 @@ class WPF_HighLevel_Admin {
 				'url'     => $this->get_oauth_url(),
 				'name'    => $this->name,
 				'slug'    => $this->slug,
+				// Translators: %s is the name of the CRM.
+				'desc'    => sprintf( __( 'You\'ll be taken to %1$s to authorize WP Fusion and generate access keys for this site.<br /><br />If you receive authorization errors, please %2$slog in to %1$s%3$s before attempting the connection.', 'wp-fusion-lite' ), $this->crm->name, '<a href="https://app.gohighlevel.com/">', '</a>' ),
 			);
 
 		} else {
@@ -222,7 +223,6 @@ class WPF_HighLevel_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -238,7 +238,7 @@ class WPF_HighLevel_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/highlevel-fields.php';
+			require_once __DIR__ . '/highlevel-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -249,7 +249,6 @@ class WPF_HighLevel_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -268,7 +267,6 @@ class WPF_HighLevel_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -288,7 +286,7 @@ class WPF_HighLevel_Admin {
 			$access_token = sanitize_text_field( wp_unslash( $_POST['highlevel_api_key'] ) );
 		}
 
-		$location_id  = sanitize_text_field( wp_unslash( $_POST['highlevel_location_id'] ) );
+		$location_id = sanitize_text_field( wp_unslash( $_POST['highlevel_location_id'] ) );
 
 		$connection = $this->crm->connect( $access_token, $location_id, $test = true );
 

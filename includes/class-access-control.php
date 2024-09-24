@@ -887,13 +887,13 @@ class WPF_Access_Control {
 
 		if ( ! empty( $result ) ) {
 
-			$lockout_url = wpf_get_option( 'lockout_redirect' );
+			$lockout_url = trailingslashit( wpf_get_option( 'lockout_redirect' ) );
 
 			if ( empty( $lockout_url ) || ! wp_http_validate_url( $lockout_url ) ) {
 				$lockout_url = wp_login_url();
 			}
 
-			if ( $lockout_url == wp_login_url() && $GLOBALS['pagenow'] === 'wp-login.php' ) {
+			if ( $lockout_url === wp_login_url() && $GLOBALS['pagenow'] === 'wp-login.php' ) {
 				return;
 			}
 
@@ -905,6 +905,7 @@ class WPF_Access_Control {
 
 				$additional_urls = explode( PHP_EOL, $additional_urls );
 				$additional_urls = array_map( 'trim', $additional_urls );
+				$additional_urls = array_map( 'trailingslashit', $additional_urls );
 
 				$lockout_urls = array_merge( $lockout_urls, $additional_urls );
 

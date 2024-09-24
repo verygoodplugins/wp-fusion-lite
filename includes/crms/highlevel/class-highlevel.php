@@ -99,6 +99,9 @@ class WPF_HighLevel {
 			new WPF_HighLevel_Admin( $this->slug, $this->name, $this );
 		}
 
+		// Has to be in constructor so it's available for the ThriveCart integration.
+		$this->location_id = wpf_get_option( 'highlevel_location_id' );
+
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 	}
@@ -111,8 +114,7 @@ class WPF_HighLevel {
 
 	public function init() {
 
-		$this->location_id = wpf_get_option( 'highlevel_location_id' );
-		$this->edit_url    = 'https://app.gohighlevel.com/v2/location/' . $this->location_id . '/contacts/detail/%s';
+		$this->edit_url = 'https://app.gohighlevel.com/v2/location/' . $this->location_id . '/contacts/detail/%s';
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -648,6 +650,10 @@ class WPF_HighLevel {
 		if ( $this->is_v2() ) {
 
 			$user_tags = $this->get_tags( $contact_id );
+
+			if ( is_wp_error( $user_tags ) ) {
+				return $user_tags;
+			}
 
 			if ( empty( $user_tags ) ) {
 				return true;

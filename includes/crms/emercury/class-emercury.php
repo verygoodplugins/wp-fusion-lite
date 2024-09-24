@@ -3,6 +3,20 @@
 class WPF_Emercury {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'emercury';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Emercury';
+
+	/**
 	 * Contains API interface.
 	 *
 	 * @var object
@@ -61,9 +75,6 @@ class WPF_Emercury {
 	 */
 
 	public function __construct() {
-
-		$this->slug = 'emercury';
-		$this->name = 'Emercury';
 
 		// Set up admin options
 		if ( is_admin() ) {

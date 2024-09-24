@@ -797,7 +797,7 @@ class WPF_ActiveCampaign {
 				return $response;
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$response   = json_decode( wp_remote_retrieve_body( $response ) );
 			$contact_id = $response->contact->id;
 
 		} else {
@@ -821,18 +821,20 @@ class WPF_ActiveCampaign {
 				return $response;
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+			$response   = json_decode( wp_remote_retrieve_body( $response ) );
 			$contact_id = $response->subscriber_id;
 		}
 
-		foreach ( $lists as $list_id ) {
+		if ( isset( $lists ) ) {
+			foreach ( $lists as $list_id ) {
 
-			// We'll ignore the _resubscribe flag here for new contacts.
-			$list_id = intval( str_replace( '_resubscribe', '', strval( $list_id ) ) );
+				// We'll ignore the _resubscribe flag here for new contacts.
+				$list_id = intval( str_replace( '_resubscribe', '', strval( $list_id ) ) );
 
-			// Add contact to list.
-			$this->add_contact_to_list( $contact_id, $list_id );
+				// Add contact to list.
+				$this->add_contact_to_list( $contact_id, $list_id );
 
+			}
 		}
 
 		return $contact_id;

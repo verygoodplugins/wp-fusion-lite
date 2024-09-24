@@ -3,6 +3,20 @@
 class WPF_SendFox {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'sendfox';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'SendFox';
+
+	/**
 	 * Contains API params
 	 */
 
@@ -13,7 +27,7 @@ class WPF_SendFox {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -41,10 +55,6 @@ class WPF_SendFox {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'sendfox';
-		$this->name     = 'SendFox';
-		$this->supports = array();
 
 		// Set up admin options
 		if ( is_admin() ) {

@@ -3,6 +3,20 @@
 class WPF_Flexie {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'flexie';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Flexie';
+
+	/**
 	 * URL to Flexie application
 	 */
 
@@ -25,7 +39,7 @@ class WPF_Flexie {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags' );
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -43,10 +57,6 @@ class WPF_Flexie {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'flexie';
-		$this->name     = 'Flexie';
-		$this->supports = array('add_tags');
 
 		// Set up admin options
 		if ( is_admin() ) {

@@ -152,7 +152,6 @@ class WP_Fusion_Options {
 
 		// Start it up
 		add_action( 'init', array( $this, 'init' ) );
-
 	}
 
 	public function init() {
@@ -194,7 +193,6 @@ class WP_Fusion_Options {
 		}
 
 		add_action( 'admin_menu', array( $this, 'add_menus' ) );
-
 	}
 
 
@@ -481,7 +479,6 @@ class WP_Fusion_Options {
 		}
 
 		return $settings;
-
 	}
 
 	/*
@@ -630,7 +627,6 @@ class WP_Fusion_Options {
 	public function enqueue_scripts_action() {
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'scripts' ), 20 );
-
 	}
 
 	/**
@@ -731,7 +727,8 @@ class WP_Fusion_Options {
 	 * Page wrappers and layout handlers
 	 */
 
-	public function show_page() { ?>
+	public function show_page() {
+		?>
 		<?php $page = $this->get_page_by_screen( get_current_screen() ); ?>
 		<?php $page = apply_filters( $this->setup['project_slug'] . '_configure_sections', $page, $this->options ); ?>
 
@@ -793,7 +790,8 @@ class WP_Fusion_Options {
 
 				<ul class="nav nav-tabs">
 					<?php $isfirst = true; ?>
-				<?php foreach ( $page['sections'] as $section_slug => $section ) {
+				<?php
+				foreach ( $page['sections'] as $section_slug => $section ) {
 
 					?>
 
@@ -820,7 +818,14 @@ class WP_Fusion_Options {
 
 								<li id="tab-<?php echo esc_attr( $section_slug ); ?>"> 
 
-									<?php $allowed_tags = array( 'span' => array( 'title' => true, 'class' => true ) ); ?>
+									<?php
+									$allowed_tags = array(
+										'span' => array(
+											'title' => true,
+											'class' => true,
+										),
+									);
+									?>
 
 									<a href="<?php echo esc_url( menu_page_url( $section['slug'], false ) ); ?>"><?php echo wp_kses( $section['title'], $allowed_tags ); ?></a>
 								</li>
@@ -882,7 +887,7 @@ class WP_Fusion_Options {
 					<?php $isfirst = false; ?>
 				<?php } ?>
 			</div>
-			<p class="submit"><input name="Submit" type="submit" class="button-primary" <?php disabled( ! $this->options['connection_configured'] ) ?> value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
+			<p class="submit"><input name="Submit" type="submit" class="button-primary" <?php disabled( ! $this->options['connection_configured'] ); ?> value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
 		</form>
 
 		<?php
@@ -910,9 +915,9 @@ class WP_Fusion_Options {
 					// For each part of the field (begin, content, and end) check to see if a user-specified override is available in the child class
 					$defaults = $this->default_setting;
 
-					if ( has_filter( 'default_field_' . $setting['type'] ) ) {
+					if ( has_filter( 'wpf_default_field_' . $setting['type'] ) ) {
 
-						$defaults = array_merge( $defaults, apply_filters( 'default_field_' . $setting['type'], $setting ) );
+						$defaults = array_merge( $defaults, apply_filters( 'default_field_' . $setting['type'], $setting, $id ) );
 
 					} elseif ( method_exists( $this, 'default_field_' . $setting['type'] ) ) {
 
@@ -921,6 +926,8 @@ class WP_Fusion_Options {
 					}
 
 					$setting = array_merge( $defaults, $setting );
+
+					$setting = apply_filters( 'wpf_configure_setting_type_' . $setting['type'], $setting, $this->options, $id );
 
 					$setting = apply_filters( 'wpf_configure_setting_' . $id, $setting, $this->options );
 
@@ -1343,7 +1350,6 @@ class WP_Fusion_Options {
 		if ( $field['desc'] != '' ) {
 			echo '<label for="' . esc_attr( $id ) . '">' . wp_kses_post( $field['desc'] ) . '</label>';
 		}
-
 	}
 
 	/**
@@ -1390,7 +1396,6 @@ class WP_Fusion_Options {
 		}
 
 		echo '<br />';
-
 	}
 
 	/**
@@ -1431,7 +1436,7 @@ class WP_Fusion_Options {
 				echo '<br />';
 			}
 
-			$i++;
+			++$i;
 		}
 	}
 
@@ -1493,7 +1498,7 @@ class WP_Fusion_Options {
 	private function default_field_select() {
 
 		$args = array(
-			'choices'    => array(),
+			'choices' => array(),
 		);
 
 		return $args;
@@ -1544,7 +1549,6 @@ class WP_Fusion_Options {
 		}
 
 		echo '</select>';
-
 	}
 
 	/**
@@ -1712,7 +1716,6 @@ class WP_Fusion_Options {
 	private function show_field_hidden( $id, $field ) {
 
 		echo '<input id="' . esc_attr( $id ) . '" type="hidden" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->options[ $id ] ) . '">';
-
 	}
 
 	/**
@@ -1742,7 +1745,6 @@ class WP_Fusion_Options {
 		}
 
 		return $input;
-
 	}
 
 	/**
@@ -1771,7 +1773,6 @@ class WP_Fusion_Options {
 		$this->options[ $id ] = stripslashes( $this->options[ $id ] );
 
 		echo '<input id="' . esc_attr( $id ) . '" class="form-control ' . esc_attr( $field['class'] ) . '" type="password" name="' . $this->option_group . '[' . esc_attr( $id ) . ']" placeholder="' . esc_attr( $field['std'] ) . '" value="' . esc_attr( $this->options[ $id ] ) . '" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . '>';
-
 	}
 
 	/**
@@ -2035,7 +2036,6 @@ class WP_Fusion_Options {
 	public function validate_field_editor( $input, $setting = false ) {
 
 		return wp_kses_post( $input );
-
 	}
 
 
@@ -2090,5 +2090,4 @@ class WP_Fusion_Options {
 
 		return $input;
 	}
-
 }

@@ -3,6 +3,20 @@
 class WPF_Growmatik {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'growmatik';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Growmatik';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var string
@@ -46,8 +60,6 @@ class WPF_Growmatik {
 
 	public function __construct() {
 
-		$this->slug     = 'growmatik';
-		$this->name     = 'Growmatik';
 		$this->supports = array(); // Tags and Custom attributes should be synced.
 		$this->url      = 'https://api.growmatik.ai/public/v1';
 

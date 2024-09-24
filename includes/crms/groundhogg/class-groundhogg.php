@@ -228,19 +228,25 @@ class WPF_Groundhogg {
 		} elseif ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Convert GMT back to local.
-			$value = intval( $value ) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+
+			// Check if the value is just a date (midnight) or a date with time.
+			$date_time = date( 'H:i:s', intval( $value ) );
+
+			// If the time is not midnight, apply the timezone offset.
+			if ( $date_time !== '00:00:00' ) {
+				$value = intval( $value ) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+			}
+
 			$value = date( 'Y-m-d', $value ); // @codingStandardsIgnoreLine - Groundhogg uses dates in local time.
 
-		}
+		} else {
 
-		// Maybe fix Country values
+			// Maybe fix Countries by converting the name to the ISO 3166-2 code.
 
-		$countries = include dirname( __FILE__ ) . '/countries.php';
+			$maybe_country = wpf_country_to_iso3166( $value, 'alpha-2' );
 
-		foreach ( $countries as $abbr => $name ) {
-
-			if ( $value == $name ) {
-				$value = $abbr;
+			if ( $maybe_country ) {
+				$value = $maybe_country;
 			}
 		}
 

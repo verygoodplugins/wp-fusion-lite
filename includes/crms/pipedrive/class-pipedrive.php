@@ -3,6 +3,20 @@
 class WPF_Pipedrive {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'pipedrive';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Pipedrive';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var string
@@ -70,9 +84,6 @@ class WPF_Pipedrive {
 	 * @since 3.40.33
 	 */
 	public function __construct() {
-
-		$this->slug = 'pipedrive';
-		$this->name = 'Pipedrive';
 
 		// Set up admin options.
 		if ( is_admin() ) {

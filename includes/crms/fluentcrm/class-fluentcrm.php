@@ -43,7 +43,7 @@ class WPF_FluentCRM {
 	 *
 	 * @var bool Skip tag sync
 	 */
-	public $skip_tag_sync = false;
+	public $wpf_modifying_tags = false;
 
 	/**
 	 * Get things started
@@ -336,7 +336,7 @@ class WPF_FluentCRM {
 
 	public function apply_tags( $tags, $contact_id ) {
 
-		$this->skip_tag_sync = true; // Prevents infinite loop (see contact_tags_added_removed() below).
+		$this->wpf_modifying_tags = true; // Prevents infinite loop (see contact_tags_added_removed() below).
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -359,7 +359,7 @@ class WPF_FluentCRM {
 
 	public function remove_tags( $tags, $contact_id ) {
 
-		$this->skip_tag_sync = true; // Prevents infinite loop (see contact_tags_added_removed() below).
+		$this->wpf_modifying_tags = true; // Prevents infinite loop (see contact_tags_added_removed() below).
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
 
@@ -576,9 +576,8 @@ class WPF_FluentCRM {
 	 */
 	public function contact_tags_added_removed( $tags, $subscriber ) {
 
-		if ( $this->skip_tag_sync && ! doing_action( 'fluentcrm_funnel_sequence_handle_add_contact_to_tag' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_detach_contact_from_tag' ) ) {
+		if ( $this->wpf_modifying_tags && ! doing_action( 'fluentcrm_funnel_sequence_handle_add_contact_to_tag' ) && ! doing_action( 'fluentcrm_funnel_sequence_handle_detach_contact_from_tag' ) ) {
 			// Don't sync tag changes if we've just applied them and aren't currently in a funnel sequence.
-			$this->skip_tag_sync = false; // allow it to repeat after this.
 			return;
 		}
 
@@ -600,29 +599,29 @@ class WPF_FluentCRM {
 
 		if ( $user_id ) {
 
-			if ( $this->skip_tag_sync ) {
+			if ( $this->wpf_modifying_tags ) {
 
 				// If we're currently in the process of applying tags, then we need to wait
 				// until WPF_User::apply_tags() has updated the usermeta before we can load them.
 
-				add_filter(
-					'update_user_metadata',
-					function ( $update, $user_id, $meta_key, $meta_value ) use ( &$tags ) {
+				$callback = function( $user_id ) use ( &$tags, &$callback ) {
 
-						if ( WPF_TAGS_META_KEY === $meta_key && count( $meta_value ) !== count( $tags ) ) {
-							return true;
-						}
+					// Prevent infinite loop when set_tags() triggers wpf_tags_modified.
+					remove_action( 'wpf_tags_modified', $callback );
+				
+					wp_fusion()->logger->add_source( 'fluentcrm' );
+					wp_fusion()->user->set_tags( $tags, $user_id );
 
-						return $update;
-					},
-					10,
-					4
-				);
+				};
+
+				add_action( 'wpf_tags_modified', $callback );
+
+			} else {
+
+				wp_fusion()->logger->add_source( 'fluentcrm' );
+				wp_fusion()->user->set_tags( $tags, $user_id );
 
 			}
-
-			wp_fusion()->logger->add_source( 'fluentcrm' );
-			wp_fusion()->user->set_tags( $tags, $user_id );
 
 		}
 	}

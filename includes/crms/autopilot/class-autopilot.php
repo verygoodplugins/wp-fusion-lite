@@ -3,10 +3,24 @@
 class WPF_Autopilot {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'autopilot';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Autopilot';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Contains API params
@@ -32,10 +46,6 @@ class WPF_Autopilot {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'autopilot';
-		$this->name     = 'Autopilot';
-		$this->supports = array();
 
 		// Set up admin options
 		if ( is_admin() ) {

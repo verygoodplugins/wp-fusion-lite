@@ -2,6 +2,20 @@
 
 class WPF_ConvertFox {
 
+	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'convertfox';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Gist';
+
 	//
 	// Unsubscribes: Gist can return a contact ID and tags from an unsubscribed subscriber, as well as update tags
 	//
@@ -16,7 +30,7 @@ class WPF_ConvertFox {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_fields', 'add_tags', 'events', 'leads', 'events_multi_key' );
 
 	/**
 	 * Get things started
@@ -26,10 +40,6 @@ class WPF_ConvertFox {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'convertfox';
-		$this->name     = 'Gist';
-		$this->supports = array( 'add_fields', 'add_tags', 'events', 'leads', 'events_multi_key' );
 
 		// Set up admin options
 		if ( is_admin() ) {

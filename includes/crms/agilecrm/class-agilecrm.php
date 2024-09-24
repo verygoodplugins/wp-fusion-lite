@@ -3,6 +3,20 @@
 class WPF_AgileCRM {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'agilecrm';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'AgileCRM';
+
+	/**
 	 * (deprecated)
 	 */
 
@@ -24,7 +38,7 @@ class WPF_AgileCRM {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags' );
 
 
 	/**
@@ -44,10 +58,6 @@ class WPF_AgileCRM {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'agilecrm';
-		$this->name     = 'AgileCRM';
-		$this->supports = array( 'add_tags' );
 
 		// Set up admin options
 		if ( is_admin() ) {

@@ -209,18 +209,20 @@ class WPF_Log_Handler {
 
 	public function http_api_debug( $response, $context, $class, $parsed_args, $url ) {
 
-		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] || is_wp_error( $response ) ) {
+		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] ) {
 			return;
 		}
 
-		unset( $response['http_response'] ); // This is redundant, we don't need to log it.
-
-		// Calcluate the duration.
-		$response['duration'] = microtime( true ) - $parsed_args['duration'];
-
 		$message  = '<ul>';
 		$message .= '<li><strong>Request URI:</strong> ' . esc_url_raw( $url ) . '</li>';
-		$message .= '<li><strong>Duration:</strong> ' . round( $response['duration'], 2 ) . ' seconds</li>';
+
+		if ( ! is_wp_error( $response ) ) {
+			unset( $response['http_response'] ); // This is redundant, we don't need to log it.
+
+			$response['duration'] = microtime( true ) - $parsed_args['duration']; // Calcluate the duration.
+
+			$message .= '<li><strong>Duration:</strong> ' . round( $response['duration'], 2 ) . ' seconds</li>';
+		}
 
 		if ( ! is_array( $parsed_args['body'] ) && ! empty( $parsed_args['body'] ) ) {
 			$maybe_json = json_decode( $parsed_args['body'] );
@@ -230,14 +232,21 @@ class WPF_Log_Handler {
 			}
 		}
 
-		$maybe_json = json_decode( $response['body'] );
+		if ( ! is_wp_error( $response ) ) {
+			$maybe_json = json_decode( $response['body'] );
 
-		if ( ! is_null( $maybe_json ) ) {
-			$message .= '<li><strong>Response (JSON Decoded):</strong><br /><pre>' . esc_html( wpf_print_r( $maybe_json, true ) ) . '</pre></li>';
+			if ( ! is_null( $maybe_json ) ) {
+				$message .= '<li><strong>Response (JSON Decoded):</strong><br /><pre>' . esc_html( wpf_print_r( $maybe_json, true ) ) . '</pre></li>';
+			}
 		}
 
 		$message .= '<li><strong>Request:</strong> <pre>' . esc_html( wpf_print_r( array_filter( $parsed_args ), true ) ) . '</pre></li>';
-		$message .= '<li><strong>Response:</strong><br /><pre>' . esc_html( wpf_print_r( array_filter( $response ), true ) ) . '</pre></li>';
+
+		if ( ! is_wp_error( $response ) ) {
+			$message .= '<li><strong>Response:</strong><br /><pre>' . esc_html( wpf_print_r( array_filter( $response ), true ) ) . '</pre></li>';
+		} else {
+			$message .= '<li><strong>Response:</strong><br /><pre>' . $response->get_error_message() . '</pre></li>';
+		}
 
 		$message .= '</ul>';
 

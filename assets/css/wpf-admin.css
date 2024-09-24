@@ -3,11 +3,6 @@ body > .select4-container--open {
 	z-index: 999999; 
 }
 
-/* Update message on plugins list */
-div.update-message.wpf-update-message {
-	margin: -1px -1px 0 0 !important;
-}
-
 /* Icon  (at the moment just used by RestroPress and LearnPress) */
 i.icon-wp-fusion:before {
 	content: '';
@@ -82,6 +77,47 @@ li.active i.icon-wp-fusion:before {
 .wrap p.wpf-notice {
 	padding: 12px 14px;
 	margin-left: -12px;
+}
+
+/* Batch Operations */
+
+.dashicons.wpf-spin {
+	animation: dashicons-spin 2s infinite;
+	animation-timing-function: linear;
+ }
+ 
+@keyframes dashicons-spin {
+	0% {
+	   transform: rotate( 0deg );
+	}
+	100% {
+	   transform: rotate( -360deg );
+	}
+}
+
+
+#wpf-batch-status {
+	position: relative;
+	width: 100%;
+}
+
+#wpf-batch-status.hidden {
+	display: none !important;
+}
+
+#wpf-batch-status span.dashicons {
+	color: #444;
+}
+
+#wpf-batch-status span.title {
+	display: inline-block;
+	padding-left: 8px;
+}
+
+#wpf-batch-status a#cancel-batch {
+	float: right;
+	position: relative;
+	top: -2px;
 }
 
 /* Tooltips */
@@ -939,7 +975,7 @@ ul.wc-tabs li.wp-fusion-settings-tab a svg {
 
 /* Elementor / WPBakery */
 .wpf-visibility-hidden {
-    outline: 1px dashed #E55B10 !important;
+    outline: 1px dashed #D5642c !important;
     outline-offset: -1px;
 }
 
@@ -1181,6 +1217,10 @@ ul.wc-tabs li.wp-fusion-settings-tab a svg {
 }
 
 /* Logs */
+
+body.tools_page_wpf-settings-logs input#start-date, body.tools_page_wpf-settings-logs input#end-date {
+	width: 138px;
+}
 
 body.tools_page_wpf-settings-logs .tablenav.bottom {
 	float: right; /* tightens it up a bit */

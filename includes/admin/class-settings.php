@@ -335,7 +335,6 @@ class WPF_Settings {
 		}
 
 		return update_option( 'wpf_options', $options_to_save );
-
 	}
 
 	/**
@@ -623,34 +622,24 @@ class WPF_Settings {
 			'sitetitle'  => rawurlencode( get_bloginfo( 'name' ) ),
 			'tag_type'   => $this->get( 'crm_tag_type' ),
 			'strings'    => array(
-				'deleteImportGroup'       => __( 'WARNING: All users from this import will be deleted, and any user content will be reassigned to your account.', 'wp-fusion-lite' ),
-				'batchErrorsEncountered'  => __( 'errors encountered. Check the logs for more details.', 'wp-fusion-lite' ),
-				'batchOperationComplete'  => sprintf(
-					'<strong>%s</strong> %s...',
-					__( 'Batch operation complete.', 'wp-fusion-lite' ),
-					__( 'Terminating...', 'wp-fusion-lite' )
-				),
-				'backgroundWorkerBlocked' => __( 'The background worker is being blocked by your server. Starting alternate (slower) method. Please do not refresh the page until the process completes.', 'wp-fusion-lite' ),
-				'processing'              => __( 'Processing', 'wp-fusion-lite' ),
-				'beginningProcessing'     => sprintf( __( 'Beginning %s Processing', 'wp-fusion-lite' ), 'ACTIONTITLE' ),
-				'startBatchWarning'       => __( "Heads Up: These background operations can potentially alter a lot of data and are irreversible. If you're not sure you need to run one, please contact our support.\n\nIf you want to resynchronize the dropdowns of available tags and fields, click \"Resynchronize Tags & Fields\" from the setup tab.\n\nPress OK to proceed or Cancel to cancel.", 'wp-fusion-lite' ),
-				'webhooks'                => array(
+				'deleteImportGroup'    => __( 'WARNING: All users from this import will be deleted, and any user content will be reassigned to your account.', 'wp-fusion-lite' ),
+				'webhooks'             => array(
 					'testing'         => __( 'Testing...', 'wp-fusion-lite' ),
 					'unexpectedError' => __( 'Unexpected error. Try again or contact support.', 'wp-fusion-lite' ),
 					'success'         => sprintf( __( 'Success! Your site is able to receive incoming webhooks. Note that this means your site is not blocking webhooks from wpfusion.com, it is still possible for your server to block webhooks from %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 					'unauthorized'    => __( 'Unauthorized. Your site is currently blocking incoming webhooks. Try changing your security settings, or contact our support.', 'wp-fusion-lite' ),
 					'cloudflare'      => __( 'Your site appears to be using CloudFlare CDN services. If you encounter issues with webhooks check your CloudFlare firewall.', 'wp-fusion-lite' ),
 				),
-				'error'                   => __( 'Error', 'wp-fusion-lite' ),
-				'syncTags'                => __( 'Syncing Tags &amp; Fields', 'wp-fusion-lite' ),
-				'loadContactIDs'          => __( 'Loading Contact IDs and Tags', 'wp-fusion-lite' ),
-				'connectionSuccess'       => sprintf( __( 'Congratulations: you\'ve successfully established a connection to %s and your tags and custom fields have been imported. Press "Save Changes" to continue.', 'wp-fusion-lite' ), 'CRMNAME' ),
-				'connecting'              => __( 'Connecting', 'wp-fusion-lite' ),
-				'refreshingTags'          => __( 'Refreshing tags', 'wp-fusion-lite' ),
-				'refreshingFields'        => __( 'Refreshing fields', 'wp-fusion-lite' ),
-				'licenseError'            => __( 'Error processing request. Debugging info below:', 'wp-fusion-lite' ),
-				'addFieldUnknown'         => __( "This doesn't look like a valid field key from the wp_usermeta database table.\n\nIf you're not sure what your field keys are please check your database.\n\nRegistering invalid keys for sync may result in unexpected behavior. Most likely it just won't do anything.", 'wp-fusion-lite' ),
-				'syncPasswordsWarning'    => sprintf( __( "----- WARNING -----\n\nWith 'user_pass' enabled, real user passwords will be synced bidirectionally with %s.\n\nWe strongly advise against this, as it introduces a significant security liability, and is illegal in many countries and jurisdictions.\n\nThere is almost never any reason to store real user passwords in plain text in your CRM.\n\nPress OK to proceed or Cancel to cancel.", 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+				'error'                => __( 'Error', 'wp-fusion-lite' ),
+				'syncTags'             => __( 'Syncing Tags &amp; Fields', 'wp-fusion-lite' ),
+				'loadContactIDs'       => __( 'Loading Contact IDs and Tags', 'wp-fusion-lite' ),
+				'connectionSuccess'    => sprintf( __( 'Congratulations: you\'ve successfully established a connection to %s and your tags and custom fields have been imported. Press "Save Changes" to continue.', 'wp-fusion-lite' ), 'CRMNAME' ),
+				'connecting'           => __( 'Connecting', 'wp-fusion-lite' ),
+				'refreshingTags'       => __( 'Refreshing tags', 'wp-fusion-lite' ),
+				'refreshingFields'     => __( 'Refreshing fields', 'wp-fusion-lite' ),
+				'licenseError'         => __( 'Error processing request. Debugging info below:', 'wp-fusion-lite' ),
+				'addFieldUnknown'      => __( "This doesn't look like a valid field key from the wp_usermeta database table.\n\nIf you're not sure what your field keys are please check your database.\n\nRegistering invalid keys for sync may result in unexpected behavior. Most likely it just won't do anything.", 'wp-fusion-lite' ),
+				'syncPasswordsWarning' => sprintf( __( "----- WARNING -----\n\nWith 'user_pass' enabled, real user passwords will be synced bidirectionally with %s.\n\nWe strongly advise against this, as it introduces a significant security liability, and is illegal in many countries and jurisdictions.\n\nThere is almost never any reason to store real user passwords in plain text in your CRM.\n\nPress OK to proceed or Cancel to cancel.", 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 		);
 
@@ -864,7 +853,7 @@ class WPF_Settings {
 
 			// With categories. Just HubSpot for now.
 
-			$available_tags[ $tag_id ] = array( 
+			$available_tags[ $tag_id ] = array(
 				'label'    => $tag_name,
 				'category' => 'Static Lists',
 			);
@@ -1358,7 +1347,6 @@ class WPF_Settings {
 			);
 			// phpcs:enable WordPress.Security.EscapeOutput
 		}
-
 	}
 
 
@@ -1829,10 +1817,10 @@ class WPF_Settings {
 
 			$settings['leads'] = array(
 				'title'   => __( 'Sync Leads', 'wp-fusion-lite' ),
-				'desc'    => sprintf( __( 'Sync guest form submissions to Leads in %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+				'desc'    => sprintf( __( 'Sync guest %1$sform submissions to Leads%2$s in %3$s.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/crm-specific-docs/updating-leads/" target="_blank">', '</a>', wp_fusion()->crm->name ),
 				'type'    => 'checkbox',
 				'section' => 'integrations',
-				'tooltip' => sprintf( __( 'WP Fusion now supports creating Leads in %s (instead of Contacts) when a lead form is submitted by a guest. When this setting is enabled, all form submissions will be synced to a Lead record, and any tags will be applied to the lead.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
+				'tooltip' => sprintf( __( 'WP Fusion now supports creating Leads in %s (instead of Contacts) when a lead form is submitted by a guest. When this setting is enabled, all form submissions will be synced to a Lead record, and any tags will be applied to the lead. If the user is logged in and already has a contact record, the existing contact will be used instead.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			);
 
 		}
@@ -2348,8 +2336,12 @@ class WPF_Settings {
 	 */
 	public function show_field_oauth_authorize( $id, $field ) {
 
-		echo '<a id="' . esc_attr( $field['slug'] ) . '-auth-btn" class="button ' . ( isset( $field['dis'] ) ? 'button-disabled' : 'button-primary' ) . '" href="' . esc_url( $field['url'] ) . '">' . sprintf( esc_html__( 'Authorize with %s', 'wp-fusion-lite' ), $field['name'] ) . '</a><br />';
-		echo '<span class="description">' . sprintf( esc_html__( 'You\'ll be taken to %s to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ), $field['name'] ) . '</td>';
+		echo '<a id="' . esc_attr( $field['slug'] ) . '-auth-btn" class="button ' . ( isset( $field['dis'] ) ? 'button-disabled' : 'button-primary' ) . '" href="' . esc_url( $field['url'] ) . '">' . sprintf( esc_html__( 'Authorize with %s', 'wp-fusion-lite' ), esc_html( $field['name'] ) ) . '</a><br />';
+
+		if ( empty( $field['desc'] ) ) {
+			// Translators: %s is the name of the CRM.
+			echo '<span class="description">' . sprintf( esc_html__( 'You\'ll be taken to %s to authorize WP Fusion and generate access keys for this site.', 'wp-fusion-lite' ), esc_html( $field['name'] ) ) . '</td>';
+		}
 
 		if ( ! is_ssl() ) {
 			echo '<p class="wpf-notice notice notice-error">' . sprintf( esc_html__( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the %s API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ), $field['name'] ) . '</p>';
@@ -2876,7 +2868,7 @@ class WPF_Settings {
 
 		echo '<div id="wpf-integrations-overview">';
 
-		echo '<p>' . sprintf( esc_html__( 'WP Fusion has detected and loaded compatibility modules for the plugins listed below. Click on each to learn how to make the most of the integration with %s. You can disable individual integrations by unchecking the checkbox next to the name.', 'wp-fusion-lite' ), wp_fusion()->crm->name ) . '</p>';
+		echo '<p>' . sprintf( esc_html__( 'WP Fusion has detected and loaded compatibility modules for the plugins listed below. Click on each to learn how to make the most of the integration with %1$s. %2$sYou can disable individual integrations%3$s by unchecking the checkbox next to the name.', 'wp-fusion-lite' ), wp_fusion()->crm->name, '<strong>', '</strong>' ) . '</p>';
 
 		$integrations = array();
 

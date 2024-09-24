@@ -3,10 +3,24 @@
 class WPF_NationBuilder {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'nationbuilder';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'NationBuilder';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags' );
 
 	/**
 	 * Contains API params
@@ -43,10 +57,6 @@ class WPF_NationBuilder {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'nationbuilder';
-		$this->name     = 'NationBuilder';
-		$this->supports = array( 'add_tags' );
 
 		// OAuth
 		$this->client_id     = '8c06f23bba8806809b946b0cf07e3bc6788909d806d34fc75d801e32c01f07c0';

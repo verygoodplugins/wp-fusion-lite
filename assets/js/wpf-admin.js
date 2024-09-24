@@ -189,6 +189,16 @@ function initializeTagsSelect(target) {
 				}
 			});;
 
+			if( jQuery.inArray('add_tags', wpf_admin.crm_supports) > -1 || jQuery.inArray('add_tags_api', wpf_admin.crm_supports) > -1 ) {
+
+				jQuery(this).on('select4:open', function(e) {
+					let selectField = jQuery(this).data('select4');
+					selectField.$selection.find('input.select4-search__field').attr('placeholder', function() {
+						return jQuery(this).attr('placeholder') + ' ' + wpf_admin.strings.addNewTags;
+					});				
+				});
+			}
+
 			// Prevent same tag in multiple selects if specified
 
 			if( typeof noDupes !== 'undefined' ) {
@@ -991,12 +1001,30 @@ jQuery(document).ready(function($){
 
 			var data = settings.data.split('&');
 
-			if( data[3] == 'provider=wp-fusion' && data[4] == 'task=new_connection' ) {
+			const isNewConnection = data.includes('provider=wp-fusion') && data.includes('task=new_connection');
+			if (isNewConnection) {
 				initializeTagsSelect( '.wpforms-provider-connections' );
 				initializeCRMFieldSelect();
 			}
 
 		});
+
+		// Make sure only one checkbox is checked in all connections.
+		$(document).on('change', 'input[name^="providers[wp-fusion]"][name$="[options][main_form_fields]"]', function() {
+			if ($(this).is(':checked')) {
+				// Uncheck other checkboxes
+				$('input[name^="providers[wp-fusion]"][name$="[options][main_form_fields]"]').not(this).prop('checked', false);
+				
+				// Hide all tables except the one in the current container
+				$('.wpforms-provider-fields').hide();
+				
+				// Show the table in the current container
+				$(this).closest('.wpforms-provider-fields').show();
+			} else {
+				$('.wpforms-provider-fields').show();
+			}
+		});
+		
 
 	}
 

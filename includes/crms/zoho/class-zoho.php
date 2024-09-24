@@ -20,7 +20,7 @@ class WPF_Zoho {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array();
+	public $supports = array( 'leads' );
 
 	/**
 	 * Contains API params
@@ -67,13 +67,12 @@ class WPF_Zoho {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Zoho_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -174,7 +173,6 @@ class WPF_Zoho {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -255,7 +253,6 @@ class WPF_Zoho {
 		wp_fusion()->settings->set( 'zoho_token', $body_json->access_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -336,7 +333,6 @@ class WPF_Zoho {
 		}
 
 		return $response;
-
 	}
 
 
@@ -364,7 +360,6 @@ class WPF_Zoho {
 		}
 
 		return true;
-
 	}
 
 
@@ -388,7 +383,6 @@ class WPF_Zoho {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -500,7 +494,6 @@ class WPF_Zoho {
 		wp_fusion()->settings->set( 'zoho_multiselect_fields', $multiselect_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -536,7 +529,6 @@ class WPF_Zoho {
 		wp_fusion()->settings->set( 'zoho_layouts', $available_layouts );
 
 		return $available_layouts;
-
 	}
 
 	/**
@@ -568,7 +560,6 @@ class WPF_Zoho {
 		wp_fusion()->settings->set( 'zoho_users', $available_users );
 
 		return $available_users;
-
 	}
 
 	/**
@@ -594,9 +585,24 @@ class WPF_Zoho {
 		}
 
 		return $body_json->data[0]->id;
-
 	}
 
+	/**
+	 * Gets the lead ID in the CRM.
+	 *
+	 * @since 3.44.3
+	 *
+	 * @param string $email_address The email address to look up.
+	 * @return int|WP_Error The lead ID in the CRM or error.
+	 */
+	public function get_lead_id( $email_address ) {
+
+		$this->object_type = 'Leads';
+
+		$contact_id = $this->get_contact_id( $email_address );
+
+		return $contact_id;
+	}
 
 	/**
 	 * Gets all tags currently applied to the user, also update the list of available tags.
@@ -675,7 +681,7 @@ class WPF_Zoho {
 				'$append_values' => array(
 					$field => true,
 				),
-				$field => $tags,
+				$field           => $tags,
 			);
 
 			$params['body']   = wp_json_encode( array( 'data' => array( $data ) ) );
@@ -692,7 +698,6 @@ class WPF_Zoho {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -741,7 +746,6 @@ class WPF_Zoho {
 		}
 
 		return true;
-
 	}
 
 
@@ -775,7 +779,7 @@ class WPF_Zoho {
 			$data['Last_Name'] = 'unknown';
 		}
 
-		$params         = $this->params;
+		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( array( 'data' => array( $data ) ) );
 
 		$request  = $this->api_domain . '/crm/v2/' . $this->object_type;
@@ -788,7 +792,26 @@ class WPF_Zoho {
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body_json->data[0]->details->id;
+	}
 
+
+	/**
+	 * Adds a lead.
+	 *
+	 * @since 3.44.3
+	 *
+	 * @param array $data The data to add.
+	 * @return int|WP_Error The lead ID in the CRM or error.
+	 */
+	public function add_lead( $data ) {
+
+		$this->object_type = 'Leads';
+
+		$contact_id = $this->add_contact( $data );
+
+		// We're not changing the object type back to Contacts here, so tagging works.
+
+		return $contact_id;
 	}
 
 	/**
@@ -812,6 +835,26 @@ class WPF_Zoho {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Updates a lead.
+	 *
+	 * @since 3.44.3
+	 *
+	 * @param int   $contact_id The contact ID.
+	 * @param array $data       The data to update.
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	public function update_lead( $contact_id, $data ) {
+
+		$this->object_type = 'Leads';
+
+		$contact_id = $this->update_contact( $contact_id, $data );
+
+		// We're not changing the object type back to Contacts here, so tagging works.
+
+		return $contact_id;
 	}
 
 	/**
@@ -898,12 +941,11 @@ class WPF_Zoho {
 			if ( $body_json->info->more_records == false ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -928,7 +970,5 @@ class WPF_Zoho {
 		wp_fusion()->settings->set( 'zoho_org_id', $zoho_org_id );
 
 		return $zoho_org_id;
-
 	}
-
 }

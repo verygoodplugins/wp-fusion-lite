@@ -20,7 +20,6 @@ class WPF_Lite_Helper {
 
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'handle_webhooks' ) );
-
 	}
 
 
@@ -52,6 +51,10 @@ class WPF_Lite_Helper {
 			add_filter( 'wpf_meta_fields', array( $this, 'meta_fields_affiliatewp' ) );
 		}
 
+		if ( class_exists( 'SFWD_LMS' ) ) {
+			add_filter( 'wpf_meta_fields', array( $this, 'meta_fields_learndash' ) );
+		}
+
 		add_action( 'show_field_contact_fields_end', array( $this, 'contact_fields_upgrade_message' ), 10, 2 );
 
 		add_action( 'wpf_user_created', array( $this, 'count_new_user_syncs' ) );
@@ -69,7 +72,6 @@ class WPF_Lite_Helper {
 				add_filter( "wpf_{$slug}_auth_url", array( $this, 'auth_url' ) );
 			}
 		}
-
 	}
 
 	/**
@@ -87,7 +89,6 @@ class WPF_Lite_Helper {
 			wp_die( $message );
 
 		}
-
 	}
 
 	/**
@@ -145,7 +146,6 @@ class WPF_Lite_Helper {
 		$settings = wp_fusion()->settings->insert_setting_after( 'access_key_header', $settings, $new_setting );
 
 		return $settings;
-
 	}
 
 	/**
@@ -200,8 +200,15 @@ class WPF_Lite_Helper {
 
 		}
 
-		return $field_groups;
+		if ( class_exists( 'SFWD_LMS' ) ) {
+			$field_groups['learndash_progress'] = array(
+				'title'    => 'LearnDash - Progress',
+				'fields'   => array(),
+				'disabled' => true,
+			);
+		}
 
+		return $field_groups;
 	}
 
 	/**
@@ -218,7 +225,7 @@ class WPF_Lite_Helper {
 		// to get the address fields since it tries to access the current customer, and
 		// there isn't one.
 
-		remove_filter( 'woocommerce_billing_fields', 'Billing_Fields_woofc', 10, 3); 
+		remove_filter( 'woocommerce_billing_fields', 'Billing_Fields_woofc', 10, 3 );
 
 		$woocommerce_fields = WC()->countries->get_address_fields( '', 'billing_' );
 
@@ -245,7 +252,6 @@ class WPF_Lite_Helper {
 				);
 
 			}
-
 		}
 
 		// Support for WooCommerce Checkout Field Editor Pro.
@@ -313,9 +319,7 @@ class WPF_Lite_Helper {
 		);
 
 		return $meta_fields;
-
 	}
-
 
 	/**
 	 * Adds tabs to left side of Woo product editor panel
@@ -331,7 +335,6 @@ class WPF_Lite_Helper {
 		echo '<span>' . esc_html_e( 'WP Fusion', 'wp-fusion-lite' ) . '</span>';
 		echo '</a>';
 		echo '</li>';
-
 	}
 
 	/**
@@ -456,7 +459,6 @@ class WPF_Lite_Helper {
 		echo '</div></div>';
 
 		echo '</div>';
-
 	}
 
 	/**
@@ -520,7 +522,6 @@ class WPF_Lite_Helper {
 		}
 
 		return $meta_fields;
-
 	}
 
 	/**
@@ -664,7 +665,70 @@ class WPF_Lite_Helper {
 		);
 
 		return $meta_fields;
+	}
 
+	/**
+	 * Prepare Meta Fields.
+	 *
+	 * Adds LearnDash meta fields to WPF contact fields list.
+	 *
+	 * @since 3.44.8
+	 *
+	 * @param array $meta_fields Meta Fields.
+	 * @return  array Meta Fields
+	 */
+	public function meta_fields_learndash( $meta_fields ) {
+
+		$meta_fields['ld_last_course_enrolled'] = array(
+			'label'  => 'Last Course Enrolled',
+			'type'   => 'text',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		$meta_fields['ld_last_lesson_completed'] = array(
+			'label'  => 'Last Lesson Completed',
+			'type'   => 'text',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		$meta_fields['ld_last_lesson_completed_date'] = array(
+			'label'  => 'Last Lesson Completed Date',
+			'type'   => 'date',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		$meta_fields['ld_last_topic_completed'] = array(
+			'label'  => 'Last Topic Completed',
+			'type'   => 'text',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		$meta_fields['ld_last_course_completed'] = array(
+			'label'  => 'Last Course Completed',
+			'type'   => 'text',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		$meta_fields['ld_last_course_completed_date'] = array(
+			'label'  => 'Last Course Completed Date',
+			'type'   => 'date',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		$meta_fields['ld_last_course_progressed'] = array(
+			'label'  => 'Last Course Progressed',
+			'type'   => 'text',
+			'group'  => 'learndash_progress',
+			'pseudo' => true,
+		);
+
+		return $meta_fields;
 	}
 
 	/**
@@ -678,7 +742,7 @@ class WPF_Lite_Helper {
 	 */
 	public function contact_fields_upgrade_message( $id, $field ) {
 
-		if ( ! class_exists( 'WooCommerce' ) && ! class_exists( 'BuddyPress' ) && ! class_exists( 'Affiliate_WP' ) ) {
+		if ( ! class_exists( 'WooCommerce' ) && ! class_exists( 'BuddyPress' ) && ! class_exists( 'Affiliate_WP' ) && ! class_exists( 'SFWD_LMS' ) ) {
 			return;
 		}
 
@@ -690,46 +754,58 @@ class WPF_Lite_Helper {
 
 		echo '<div class="innercontent">';
 
-		echo '<h2>Sync more data with ' . esc_html( wp_fusion()->crm->name ) . '.</h2>';
+		// Translating the h2 text
+		echo '<h2>' . sprintf( esc_html__( 'Sync more data with %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</h2>';
 
-		echo '<p>You\'re currently using <strong>WP Fusion Lite</strong>, which syncs your WordPress "core" fields with your CRM.</p>';
+		// Translating the first paragraph
+		echo '<p>' . esc_html__( 'You\'re currently using ', 'wp-fusion-lite' ) . '<strong>' . esc_html__( 'WP Fusion Lite', 'wp-fusion-lite' ) . '</strong>' . esc_html__( ', which syncs your WordPress "core" fields with your CRM.', 'wp-fusion-lite' ) . '</p>';
 
-		echo '<p>Did you know that the full version of WP Fusion supports syncing data from ';
+		// Translating the second paragraph
+		echo '<p>' . esc_html__( 'Did you know that the full version of WP Fusion supports syncing data from ', 'wp-fusion-lite' );
 
+		// Adding WooCommerce link if the class exists
 		if ( class_exists( 'WooCommerce' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">WooCommerce</a>, ';
+			echo '<a href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'WooCommerce', 'wp-fusion-lite' ) . '</a>, ';
 		}
 
+		// Adding BuddyPress link if the class exists
 		if ( class_exists( 'BuddyPress' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/membership/buddypress/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">BuddyPress</a>, ';
+			echo '<a href="https://wpfusion.com/documentation/membership/buddypress/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'BuddyPress', 'wp-fusion-lite' ) . '</a>, ';
 		}
 
+		// Adding Elementor link if the class exists
 		if ( class_exists( 'Elementor\\Frontend' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/page-builders/elementor/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">Elementor</a>, ';
+			echo '<a href="https://wpfusion.com/documentation/page-builders/elementor/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'Elementor', 'wp-fusion-lite' ) . '</a>, ';
 		}
 
+		// Adding LearnDash link if the class exists
 		if ( class_exists( 'SFWD_LMS' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/learning-management/learndash/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">LearnDash</a>, ';
+			echo '<a href="https://wpfusion.com/documentation/learning-management/learndash/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'LearnDash', 'wp-fusion-lite' ) . '</a>, ';
 		}
 
+		// Adding AffiliateWP link if the class exists
 		if ( class_exists( 'Affiliate_WP' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/other/affiliate-wp/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">AffiliateWP</a>, ';
+			echo '<a href="https://wpfusion.com/documentation/other/affiliate-wp/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'AffiliateWP', 'wp-fusion-lite' ) . '</a>, ';
 		}
 
+		// Adding LifterLMS link if the class exists
 		if ( class_exists( 'LifterLMS' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/learning-management/lifterlms/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">LifterLMS</a>, ';
+			echo '<a href="https://wpfusion.com/documentation/learning-management/lifterlms/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'LifterLMS', 'wp-fusion-lite' ) . '</a>, ';
 		}
 
-		echo 'and <a href="https://wpfusion.com/documentation/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields#integrations" target="_blank">over 100 other plugins</a> bidirectionally with ' . esc_html( wp_fusion()->crm->name ) . '</strong>?</p>';
+		// Translating the final link
+		echo esc_html__( 'and ', 'wp-fusion-lite' ) . '<a href="https://wpfusion.com/documentation/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields#integrations" target="_blank">' . esc_html__( 'over 100 other plugins', 'wp-fusion-lite' ) . '</a>' . sprintf( esc_html__( ' bidirectionally with %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</p>';
 
+		// Translating the button wrapper
 		echo '<div class="buttonwrapper">';
-		echo '<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">Learn More About Syncing Custom Fields</a>';
-		echo ' <span class="orange">or</span> <a class="button-primary" href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">View Pricing</a>';
+		echo '<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">' . esc_html__( 'Learn More About Syncing Custom Fields', 'wp-fusion-lite' ) . '</a>';
+		echo ' <span class="orange">' . esc_html__( 'or', 'wp-fusion-lite' ) . '</span> ';
+		echo '<a class="button-primary" href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">' . esc_html__( 'View Pricing', 'wp-fusion-lite' ) . '</a>';
 		echo '</div>';
 
 		echo '</div></div></div>';
-
 	}
+
 
 	/**
 	 * Gets the SVG for the webhooks section and contact fields list.
@@ -741,7 +817,6 @@ class WPF_Lite_Helper {
 	public function get_sync_svg() {
 
 		return '<svg width="100%" viewBox="0 0 572 475" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs> <path d="M418.424293,158.01353 C456.552553,193.252559 463.5789,245.737807 445.496391,290.458524 C427.413883,335.104582 384.222521,372.135426 326.66848,394.981067 C269.11444,417.826709 197.30105,426.561807 144.810112,407.74775 C92.3191737,388.859033 59.3573445,342.42116 44.8913379,293.743518 C30.3220027,245.065877 34.3518188,194.073807 70.310178,159.208073 C106.268537,124.26768 174.052111,105.378963 242.662313,105.005669 C311.169187,104.632374 380.399362,122.699842 418.424293,158.01353 Z" id="path-1"></path> <rect id="path-3" x="0" y="0" width="258" height="98" rx="20"></rect> <filter x="-35.3%" y="-79.6%" width="170.5%" height="308.2%" filterUnits="objectBoundingBox" id="filter-4"> <feOffset dx="0" dy="35" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset> <feGaussianBlur stdDeviation="24.5" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur> <feColorMatrix values="0 0 0 0 0.898039216   0 0 0 0 0.356862745   0 0 0 0 0.062745098  0 0 0 0.1 0" type="matrix" in="shadowBlurOuter1" result="shadowMatrixOuter1"></feColorMatrix> <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter2"></feOffset> <feGaussianBlur stdDeviation="19" in="shadowOffsetOuter2" result="shadowBlurOuter2"></feGaussianBlur> <feColorMatrix values="0 0 0 0 0.898039216   0 0 0 0 0.356862745   0 0 0 0 0.062745098  0 0 0 0.1 0" type="matrix" in="shadowBlurOuter2" result="shadowMatrixOuter2"></feColorMatrix> <feMerge> <feMergeNode in="shadowMatrixOuter1"></feMergeNode> <feMergeNode in="shadowMatrixOuter2"></feMergeNode> </feMerge> </filter> <rect id="path-5" x="0" y="0" width="258" height="98" rx="20"></rect> <filter x="-35.3%" y="-79.6%" width="170.5%" height="308.2%" filterUnits="objectBoundingBox" id="filter-6"> <feOffset dx="0" dy="35" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset> <feGaussianBlur stdDeviation="24.5" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur> <feColorMatrix values="0 0 0 0 0.898039216   0 0 0 0 0.356862745   0 0 0 0 0.062745098  0 0 0 0.1 0" type="matrix" in="shadowBlurOuter1" result="shadowMatrixOuter1"></feColorMatrix> <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter2"></feOffset> <feGaussianBlur stdDeviation="19" in="shadowOffsetOuter2" result="shadowBlurOuter2"></feGaussianBlur> <feColorMatrix values="0 0 0 0 0.898039216   0 0 0 0 0.356862745   0 0 0 0 0.062745098  0 0 0 0.1 0" type="matrix" in="shadowBlurOuter2" result="shadowMatrixOuter2"></feColorMatrix> <feMerge> <feMergeNode in="shadowMatrixOuter1"></feMergeNode> <feMergeNode in="shadowMatrixOuter2"></feMergeNode> </feMerge> </filter> <circle id="path-7" cx="40" cy="40" r="40"></circle> <filter x="-131.2%" y="-131.2%" width="362.5%" height="362.5%" filterUnits="objectBoundingBox" id="filter-8"> <feOffset dx="0" dy="0" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset> <feGaussianBlur stdDeviation="35" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur> <feColorMatrix values="0 0 0 0 0.898039216   0 0 0 0 0.356862745   0 0 0 0 0.062745098  0 0 0 0.5 0" type="matrix" in="shadowBlurOuter1"></feColorMatrix> </filter> </defs> <g id="Connect-X-to-Y" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"> <g id="Connect-X-to-Y-with-Extra-v2" transform="translate(-718.000000, -809.000000)"> <g id="Content" transform="translate(196.000000, 817.000000)"> <g id="Connect-X-to-Y-Example" transform="translate(571.000000, 0.000000)"> <g id="blob-shape-(3)" transform="translate(66.000000, 0.000000)"> <mask id="mask-2" fill="white"> <use xlink:href="#path-1"></use> </mask> <use id="Path" fill-opacity="0.557528409" fill="#FFE5D6" fill-rule="nonzero" transform="translate(246.000000, 261.500000) rotate(123.000000) translate(-246.000000, -261.500000) " xlink:href="#path-1"></use> </g> <g id="Card" transform="translate(0.000000, 271.000000)"> <g id="BG-Copy-2" fill-rule="nonzero"> <use fill="black" fill-opacity="1" filter="url(#filter-4)" xlink:href="#path-3"></use> <use fill="#FFFFFF" xlink:href="#path-3"></use> </g> <g id="explore-user" transform="translate(32.000000, 27.000000)" fill="#FFE5D6" stroke="#E55B10" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"> <path d="M43.172,16 C43.711,17.907 44,19.92 44,22 C44,34.15 34.15,44 22,44 C9.85,44 0,34.15 0,22 C0,9.85 9.85,0 22,0 C26.651,0 31.018,1.475 34.572,3.938" id="Path"></path> <circle id="Oval" cx="38" cy="6" r="4"></circle> <path d="M31,32 L13,32 L13,29.758 C13,27.983 14.164,26.424 15.866,25.92 C17.46,25.448 19.604,25 22,25 C24.356,25 26.514,25.456 28.125,25.932 C29.83,26.436 31,27.994 31,29.773 L31,32 Z" id="Path"></path> <path d="M17,16 C17,13.239 19.239,11 22,11 C24.761,11 27,13.239 27,16 C27,18.761 24.761,22 22,22 C19.239,22 17,18.761 17,16 Z" id="Path"></path> </g> <rect id="Rectangle-Copy-16" fill="#FFE5D6" x="95" y="32" width="128" height="8" rx="4"></rect> <rect id="Rectangle-Copy-17" fill="#FFE5D6" x="95" y="55" width="88" height="8" rx="4"></rect> <polyline id="Path" stroke="#FFE5D6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" points="196 56.8 199.2 60 207.2 52"></polyline> </g> <g id="Card" transform="translate(216.000000, 28.000000)"> <g id="BG-Copy-2" fill-rule="nonzero"> <use fill="black" fill-opacity="1" filter="url(#filter-6)" xlink:href="#path-5"></use> <use fill="#FFFFFF" xlink:href="#path-5"></use> </g> <g id="explore-user" transform="translate(32.000000, 27.000000)" fill="#FFE5D6" stroke="#E55B10" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"> <path d="M43.172,16 C43.711,17.907 44,19.92 44,22 C44,34.15 34.15,44 22,44 C9.85,44 0,34.15 0,22 C0,9.85 9.85,0 22,0 C26.651,0 31.018,1.475 34.572,3.938" id="Path"></path> <circle id="Oval" cx="38" cy="6" r="4"></circle> <path d="M31,32 L13,32 L13,29.758 C13,27.983 14.164,26.424 15.866,25.92 C17.46,25.448 19.604,25 22,25 C24.356,25 26.514,25.456 28.125,25.932 C29.83,26.436 31,27.994 31,29.773 L31,32 Z" id="Path"></path> <path d="M17,16 C17,13.239 19.239,11 22,11 C24.761,11 27,13.239 27,16 C27,18.761 24.761,22 22,22 C19.239,22 17,18.761 17,16 Z" id="Path"></path> </g> <rect id="Rectangle-Copy-16" fill="#FFE5D6" x="95" y="32" width="128" height="8" rx="4"></rect> <rect id="Rectangle-Copy-17" fill="#FFE5D6" x="95" y="55" width="88" height="8" rx="4"></rect> <polyline id="Path" stroke="#FFE5D6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" points="196 57.8 199.2 61 207.2 53"></polyline> </g> <g id="Lines" transform="translate(176.500000, 303.000000) scale(-1, 1) translate(-176.500000, -303.000000) translate(54.000000, 83.000000)" stroke="#E55B10" stroke-dasharray="2,14" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"> <path d="M29,32 L29,69 C29,98.2710917 52.7289083,122 82,122 L135,122 L190,122 C220.375661,122 245,146.624339 245,177 L245,205 L245,205" id="Line-4-Copy"></path> </g> <g id="WPF" transform="translate(133.000000, 164.000000)"> <g id="Oval"> <use fill="black" fill-opacity="1" filter="url(#filter-8)" xlink:href="#path-7"></use> <use fill="#E55B10" fill-rule="evenodd" xlink:href="#path-7"></use> </g> <g id="Type-3" transform="translate(40.500000, 40.000000) scale(-1, -1) rotate(-270.000000) translate(-40.500000, -40.000000) translate(26.000000, 25.000000)" fill="#FFFFFF"> <path d="M3.98571429,5.5 C4.81414141,5.5 5.48571429,6.17157288 5.48571429,7 L5.485,24.014 L22.5,24.0142857 C23.3284271,24.0142857 24,24.6858586 24,25.5142857 L24,28 C24,28.8284271 23.3284271,29.5 22.5,29.5 L2.18571429,29.5 C1.59431478,29.5 1.0828526,29.1577476 0.838589801,28.660505 C0.342252351,28.4171474 -5.6929507e-14,27.9056852 -5.68434189e-14,27.3142857 L-5.68434189e-14,7 C-5.71669165e-14,6.17157288 0.671572875,5.5 1.5,5.5 L3.98571429,5.5 Z" id="Rectangle-Copy-4" transform="translate(12.000000, 17.500000) rotate(-180.000000) translate(-12.000000, -17.500000) "></path> <path d="M8.98571429,-4.08562073e-14 C9.81414141,-4.10083869e-14 10.4857143,0.671572875 10.4857143,1.5 L10.485,18.514 L27.5,18.5142857 C28.3284271,18.5142857 29,19.1858586 29,20.0142857 L29,22.5 C29,23.3284271 28.3284271,24 27.5,24 L7.18571429,24 C6.59431478,24 6.0828526,23.6577476 5.8385898,23.160505 C5.34225235,22.9171474 5,22.4056852 5,21.8142857 L5,1.5 C5,0.671572875 5.67157288,-4.07040277e-14 6.5,-4.08562073e-14 L8.98571429,-4.08562073e-14 Z" id="Rectangle-Copy-7"></path> </g> </g> </g> </g> </g> </g> </svg>';
-
 	}
 
 	/**
@@ -754,10 +829,9 @@ class WPF_Lite_Helper {
 	public function count_new_user_syncs() {
 
 		$syncs = wpf_get_option( 'total_users_synced', 0 );
-		$syncs++;
+		++$syncs;
 
 		wp_fusion()->settings->set( 'total_users_synced', $syncs );
-
 	}
 
 	/**
@@ -777,7 +851,6 @@ class WPF_Lite_Helper {
 		}
 
 		return $notices;
-
 	}
 
 	/**
@@ -797,7 +870,6 @@ class WPF_Lite_Helper {
 			echo '</div>';
 
 		}
-
 	}
 
 	/**
@@ -811,9 +883,7 @@ class WPF_Lite_Helper {
 	public function auth_url( $url ) {
 
 		return add_query_arg( 'l', true, $url );
-
 	}
-
 }
 
 new WPF_Lite_Helper();

@@ -3,6 +3,20 @@
 class WPF_Engage {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'engage';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Engage';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var string
@@ -64,9 +78,6 @@ class WPF_Engage {
 	 * @since 3.40.42
 	 */
 	public function __construct() {
-
-		$this->slug = 'engage';
-		$this->name = 'Engage';
 
 		// Set up admin options.
 		if ( is_admin() ) {

@@ -27,7 +27,6 @@ if ( ! function_exists( 'wpf_log' ) ) {
 	function wpf_log( $level, $user, $message, $context = array() ) {
 
 		return wp_fusion()->logger->handle( $level, $user, $message, $context );
-
 	}
 }
 
@@ -42,7 +41,6 @@ if ( ! function_exists( 'wpf_has_tag' ) ) {
 	function wpf_has_tag( $tags, $user_id = false ) {
 
 		return wp_fusion()->user->has_tag( $tags, $user_id );
-
 	}
 }
 
@@ -62,7 +60,6 @@ if ( ! function_exists( 'wpf_user_can_access' ) ) {
 		}
 
 		return wp_fusion()->access->user_can_access( $post_id, $user_id );
-
 	}
 }
 
@@ -85,7 +82,6 @@ if ( ! function_exists( 'wpf_get_current_user_id' ) ) {
 			return get_current_user_id();
 
 		}
-
 	}
 }
 
@@ -110,7 +106,6 @@ if ( ! function_exists( 'wpf_get_current_user' ) ) {
 			return wp_get_current_user();
 
 		}
-
 	}
 }
 
@@ -125,7 +120,6 @@ if ( ! function_exists( 'wpf_get_current_user' ) ) {
 function wpf_get_current_user_email() {
 
 	return wp_fusion()->user->get_current_user_email();
-
 }
 
 /**
@@ -140,7 +134,6 @@ function wpf_get_current_user_email() {
 function wpf_get_user_id( $contact_id ) {
 
 	return wp_fusion()->user->get_user_id( $contact_id );
-
 }
 
 /**
@@ -155,7 +148,6 @@ function wpf_get_user_id( $contact_id ) {
 function wpf_get_contact_id( $user_id = false, $force_update = false ) {
 
 	return wp_fusion()->user->get_contact_id( $user_id, $force_update );
-
 }
 
 /**
@@ -172,7 +164,6 @@ function wpf_get_contact_id( $user_id = false, $force_update = false ) {
 function wpf_get_tags( $user_id = false, $force = false ) {
 
 	return wp_fusion()->user->get_tags( $user_id, $force );
-
 }
 
 /**
@@ -187,7 +178,6 @@ function wpf_get_users_with_contact_ids() {
 	if ( is_object( wp_fusion()->user ) ) {
 		return wp_fusion()->user->get_users_with_contact_ids();
 	}
-
 }
 
 /**
@@ -203,7 +193,6 @@ function wpf_get_users_with_tag( $tag ) {
 	if ( is_object( wp_fusion()->user ) ) {
 		return wp_fusion()->user->get_users_with_tag( $tag );
 	}
-
 }
 
 /**
@@ -227,7 +216,6 @@ if ( ! function_exists( 'wpf_is_user_logged_in' ) ) {
 			return is_user_logged_in();
 
 		}
-
 	}
 }
 
@@ -252,7 +240,6 @@ if ( ! function_exists( 'wpf_get_tag_id' ) ) {
 			return false;
 
 		}
-
 	}
 }
 
@@ -277,7 +264,6 @@ if ( ! function_exists( 'wpf_get_tag_label' ) ) {
 			return false;
 
 		}
-
 	}
 }
 
@@ -294,7 +280,6 @@ if ( ! function_exists( 'wpf_get_tag_label' ) ) {
 function wpf_get_crm_field( $meta_key, $default = false ) {
 
 	return wp_fusion()->crm->get_crm_field( $meta_key, $default );
-
 }
 
 /**
@@ -302,14 +287,13 @@ function wpf_get_crm_field( $meta_key, $default = false ) {
  *
  * @since 3.35.14
  *
- * @param string $meta_key The meta key to look up
+ * @param string|array $meta_key The meta key or array of meta keys to look up.
  * @return bool Whether or not the field is active
  */
 
 function wpf_is_field_active( $meta_key ) {
 
 	return wp_fusion()->crm->is_field_active( $meta_key );
-
 }
 
 /**
@@ -325,7 +309,6 @@ function wpf_is_field_active( $meta_key ) {
 function wpf_get_field_type( $meta_key, $default = 'text' ) {
 
 	return wp_fusion()->crm->get_field_type( $meta_key, $default );
-
 }
 
 
@@ -342,7 +325,6 @@ function wpf_get_field_type( $meta_key, $default = 'text' ) {
 function wpf_get_remote_field_type( $field_id, $default = 'text' ) {
 
 	return wp_fusion()->crm->get_remote_field_type( $field_id, $default );
-
 }
 
 /**
@@ -358,7 +340,6 @@ function wpf_get_remote_field_type( $field_id, $default = 'text' ) {
 function wpf_get_remote_option_value( $value, $field_id ) {
 
 	return wp_fusion()->crm->get_remote_option_value( $value, $field_id );
-
 }
 
 /**
@@ -373,7 +354,6 @@ function wpf_get_remote_option_value( $value, $field_id ) {
 function wpf_is_pseudo_field( $meta_key ) {
 
 	return wp_fusion()->crm->is_pseudo_field( $meta_key );
-
 }
 
 /**
@@ -388,7 +368,6 @@ function wpf_is_pseudo_field( $meta_key ) {
 function wpf_get_lookup_field() {
 
 	return wp_fusion()->crm->get_lookup_field();
-
 }
 
 /**
@@ -403,7 +382,6 @@ function wpf_get_lookup_field() {
 function wpf_sort_remote_fields( $a, $b ) {
 
 	return strcmp( $a['crm_label'], $b['crm_label'] );
-
 }
 
 /**
@@ -418,7 +396,6 @@ function wpf_sort_remote_fields( $a, $b ) {
 function wpf_sort_by_label( $a, $b ) {
 
 	return strcmp( $a['label'], $b['label'] );
-
 }
 
 
@@ -434,7 +411,6 @@ function wpf_sort_by_label( $a, $b ) {
 function wpf_is_staging_mode() {
 
 	return wpf_get_option( 'staging_mode' );
-
 }
 
 /**
@@ -450,7 +426,6 @@ function doing_wpf_auto_login() {
 	} else {
 		return false;
 	}
-
 }
 
 /**
@@ -466,7 +441,6 @@ function doing_wpf_webhook() {
 	} else {
 		return false;
 	}
-
 }
 
 /**
@@ -481,7 +455,6 @@ function wpf_get_datetime_format() {
 	$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
 
 	return apply_filters( 'wpf_datetime_format', $format );
-
 }
 
 /**
@@ -494,7 +467,7 @@ function wpf_get_datetime_format() {
  */
 function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
 
-	$country_codes =  array(
+	$country_codes = array(
 		'CN' => '86', // China
 		'IN' => '91', // India
 		'US' => '1',  // United States
@@ -560,7 +533,6 @@ function wpf_admin_override() {
 	}
 
 	return apply_filters( 'wpf_admin_override', $override );
-
 }
 
 /**
@@ -575,7 +547,6 @@ function wpf_admin_override() {
 function wpf_get_option( $key, $default = false ) {
 
 	return wp_fusion()->settings->get( $key, $default );
-
 }
 
 /**
@@ -623,7 +594,6 @@ function wpf_validate_phone_number( $input ) {
 	$pattern = '/^\+?\d[\d\s\-()]*$/';
 
 	return preg_match( $pattern, $cleaned_input ) === 1;
-
 }
 
 /**
@@ -652,7 +622,6 @@ function wpf_clean_tags( $tags ) {
 	}
 
 	return $tags;
-
 }
 
 /**
@@ -675,7 +644,6 @@ function wpf_shortcode_atts( $atts ) {
 	$atts = array_map( 'sanitize_text_field', $atts );
 
 	return $atts;
-
 }
 
 
@@ -732,6 +700,31 @@ function wpf_print_r( $expression, $return = false ) {
 }
 
 /**
+ * Get ISO 3166-1 alpha-3 and alpha-2 codes.
+ *
+ * @since 3.44.3
+ *
+ * @param string $name_or_abbreviation Country name or abbreviation.
+ * @param string $format               alpha-3 or alpha-2.
+ * @return string|false ISO 3166-1 alpha-3 or alpha-2 code or false if not found.
+ */
+function wpf_country_to_iso3166( $name_or_abbreviation, $format = 'alpha-3' ) {
+	return wp_fusion()->iso_regions->country_to_alpha( $name_or_abbreviation, $format );
+}
+
+/**
+ * Get ISO 3166-2 code.
+ *
+ * @since 3.44.3
+ *
+ * @param string $name State name.
+ * @return string|false ISO 3166-2 code or false if not found.
+ */
+function wpf_state_to_iso3166( $name ) {
+	return wp_fusion()->iso_regions->state_name_to_alpha( $name );
+}
+
+/**
  * Get ISO 8601 date.
  *
  * Takes an input string and returns an ISO 8601 compatible date for API calls,
@@ -773,7 +766,6 @@ function wpf_get_iso8601_date( $timestamp = null, $convert_to_gmt = false ) {
 		} else {
 			return $datetime->format( 'c' );
 		}
-
 	} catch ( Exception $e ) {
 
 		wpf_log( 'error', wpf_get_current_user_id(), 'Error getting ISO 8601 date from timestamp: ' . $timestamp . '. Error: ' . $e->getMessage() );

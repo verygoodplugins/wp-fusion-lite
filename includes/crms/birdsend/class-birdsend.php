@@ -2,6 +2,20 @@
 
 class WPF_BirdSend {
 
+	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'birdsend';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'BirdSend';
+
 	//
 	// Unsubscribes: BirdSend can return a contact ID and tags from an unsubscribed subscriber, as well as update tags
 	//
@@ -10,7 +24,7 @@ class WPF_BirdSend {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Contains API params
@@ -43,10 +57,6 @@ class WPF_BirdSend {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'birdsend';
-		$this->name     = 'BirdSend';
-		$this->supports = array();
 
 		// OAuth
 		$this->client_id     = '132';

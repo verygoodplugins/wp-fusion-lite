@@ -3,6 +3,20 @@
 class WPF_Mautic {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'mautic';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Mautic';
+
+	/**
 	 * URL to Mautic application
 	 */
 
@@ -32,7 +46,7 @@ class WPF_Mautic {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags', 'combined_updates' );
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -51,19 +65,14 @@ class WPF_Mautic {
 
 	public function __construct() {
 
-		$this->slug     = 'mautic';
-		$this->name     = 'Mautic';
-		$this->supports = array( 'add_tags', 'combined_updates' );
-
 		$this->client_id     = wpf_get_option( 'mautic_client_id' );
 		$this->client_secret = wpf_get_option( 'mautic_client_secret' );
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Mautic_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -80,7 +89,7 @@ class WPF_Mautic {
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 		// Add tracking code to footer
-		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
 		// Set tracking cookie
 		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
@@ -135,7 +144,6 @@ class WPF_Mautic {
 
 		echo '</script>';
 		echo '<!-- End WP Fusion Mautic site tracking -->';
-
 	}
 
 	/**
@@ -162,7 +170,6 @@ class WPF_Mautic {
 			setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
 
 		}
-
 	}
 
 	/**
@@ -175,7 +182,6 @@ class WPF_Mautic {
 	public function set_tracking_cookie_guest( $contact_id, $email_address ) {
 
 		setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 	/**
@@ -240,7 +246,6 @@ class WPF_Mautic {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -265,7 +270,7 @@ class WPF_Mautic {
 
 		} elseif ( $field_type == 'country' ) {
 
-			$countries = include dirname( __FILE__ ) . '/includes/countries.php';
+			$countries = include __DIR__ . '/includes/countries.php';
 
 			if ( isset( $countries[ $value ] ) ) {
 
@@ -278,7 +283,7 @@ class WPF_Mautic {
 			}
 		} elseif ( $field_type == 'state' ) {
 
-			$states = include dirname( __FILE__ ) . '/includes/states.php';
+			$states = include __DIR__ . '/includes/states.php';
 
 			if ( isset( $states[ $value ] ) ) {
 
@@ -305,7 +310,6 @@ class WPF_Mautic {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -343,7 +347,6 @@ class WPF_Mautic {
 		}
 
 		return $response;
-
 	}
 
 
@@ -387,7 +390,6 @@ class WPF_Mautic {
 		wp_fusion()->settings->set( "{$this->slug}_refresh_token", $body_json->refresh_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -504,7 +506,6 @@ class WPF_Mautic {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -710,7 +711,6 @@ class WPF_Mautic {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -743,7 +743,6 @@ class WPF_Mautic {
 		}
 
 		return true;
-
 	}
 
 
@@ -786,7 +785,6 @@ class WPF_Mautic {
 		}
 
 		return $body->contact->id;
-
 	}
 
 	/**
@@ -882,7 +880,6 @@ class WPF_Mautic {
 		$result = $this->update_contact( $contact_id, $data, false );
 
 		return $result;
-
 	}
 
 	/**
@@ -967,7 +964,5 @@ class WPF_Mautic {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

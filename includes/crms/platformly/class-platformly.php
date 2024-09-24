@@ -3,6 +3,20 @@
 class WPF_Platformly {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'platformly';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Platform.ly';
+
+	/**
 	 * Contains API params
 	 */
 
@@ -13,7 +27,7 @@ class WPF_Platformly {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -30,10 +44,6 @@ class WPF_Platformly {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'platformly';
-		$this->name     = 'Platform.ly';
-		$this->supports = array();
 
 		// Set up admin options
 		if ( is_admin() ) {

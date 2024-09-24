@@ -3,6 +3,20 @@
 class WPF_Maropost {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'maropost';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Maropost';
+
+	/**
 	 * Contains API params
 	 */
 	public $params;
@@ -46,9 +60,6 @@ class WPF_Maropost {
 	 */
 
 	public function __construct() {
-
-		$this->slug = 'maropost';
-		$this->name = 'Maropost';
 
 		// Set up admin options.
 		if ( is_admin() ) {

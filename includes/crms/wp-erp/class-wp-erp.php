@@ -3,9 +3,23 @@
 class WPF_WP_ERP {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'wp-erp';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'WP ERP';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
-	public $supports;
+	public $supports = array();
 
 
 	/**
@@ -25,10 +39,6 @@ class WPF_WP_ERP {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'wp-erp';
-		$this->name     = 'WP ERP';
-		$this->supports = array();
 
 		// Set up admin options
 		if ( is_admin() ) {

@@ -12,6 +12,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPF_User {
 
 	/**
+	 * Helps prevent the user_register hook from running twice.
+	 *
+	 * @since 3.44.3
+	 * @var bool
+	 */
+	public $inserting_user = false;
+
+	/**
 	 * WPF_User constructor.
 	 *
 	 * @since 1.0.0
@@ -23,6 +31,7 @@ class WPF_User {
 
 		// Register and profile updates.
 		add_action( 'user_register', array( $this, 'user_register' ), 20 ); // 20 so usermeta added by other plugins is saved.
+		add_action( 'user_register', array( $this, 'clear_inserting_user_flag' ), 21 );
 		add_action( 'profile_update', array( $this, 'profile_update' ), 10, 3 );
 		add_action( 'add_user_to_blog', array( $this, 'add_user_to_blog' ) );
 		add_filter( 'wpf_user_register', array( $this, 'maybe_set_first_last_name' ), 100, 2 ); // 100 so it runs after everything else
@@ -35,6 +44,7 @@ class WPF_User {
 		add_action( 'wp_login', array( $this, 'login' ), 10, 2 );
 
 		// Roles.
+		add_filter( 'wp_pre_insert_user_data', array( $this, 'set_inserting_user_flag' ), 10, 2 );
 		add_action( 'set_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'add_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
 		add_action( 'remove_user_role', array( $this, 'add_remove_user_role' ), 10, 2 );
@@ -49,7 +59,6 @@ class WPF_User {
 		// Dyanmic tagging (so so other plugins have had a chance to make their field changes).
 		add_filter( 'wpf_user_update', array( $this, 'dynamic_tagging' ), 30, 2 );
 		add_filter( 'wpf_user_register', array( $this, 'dynamic_tagging' ), 30, 2 );
-
 	}
 
 	/**
@@ -76,7 +85,6 @@ class WPF_User {
 		if ( ! defined( 'WPF_TAGS_META_KEY' ) ) {
 			define( 'WPF_TAGS_META_KEY', $slug . '_tags' );
 		}
-
 	}
 
 	/**
@@ -99,7 +107,6 @@ class WPF_User {
 		wp_fusion()->logger->user_id = $user_id;
 
 		return $user_id;
-
 	}
 
 	/**
@@ -125,7 +132,6 @@ class WPF_User {
 		}
 
 		return $email;
-
 	}
 
 	/**
@@ -161,7 +167,6 @@ class WPF_User {
 		}
 
 		return false;
-
 	}
 
 
@@ -183,7 +188,6 @@ class WPF_User {
 		}
 
 		return false;
-
 	}
 
 	/**
@@ -207,7 +211,6 @@ class WPF_User {
 		if ( ! empty( $assign_tags ) ) {
 			$this->apply_tags( $assign_tags, $user_id );
 		}
-
 	}
 
 
@@ -286,7 +289,6 @@ class WPF_User {
 		}
 
 		return $post_data;
-
 	}
 
 
@@ -399,7 +401,10 @@ class WPF_User {
 					'notice',
 					$user_id,
 					/* translators: %1$s: CRM Name, %2$s New user's role slug */
-					sprintf( __( 'User not added to %1$s because role %2$s isn\'t enabled for contact creation.', 'wp-fusion-lite' ), wp_fusion()->crm->name, '<strong>' . $post_data['role'] . '</strong>' )
+					sprintf( __( 'User not added to %1$s because role %2$s isn\'t enabled for contact creation.', 'wp-fusion-lite' ), wp_fusion()->crm->name, '<strong>' . $post_data['role'] . '</strong>' ),
+					array(
+						'source' => 'limit-user-roles',
+					)
 				);
 				return false;
 
@@ -483,6 +488,8 @@ class WPF_User {
 
 			// Load the tags from the existing contact record.
 
+			wp_fusion()->logger->add_source( 'user-register' );
+
 			$this->get_tags( $user_id, true, false );
 
 		}
@@ -498,7 +505,15 @@ class WPF_User {
 		do_action( 'wpf_user_created', $user_id, $contact_id, $post_data );
 
 		return $contact_id;
+	}
 
+	/**
+	 * Enables syncing additional role changes after a user has been synced to the CRM.
+	 *
+	 * @since 3.44.6
+	 */
+	public function clear_inserting_user_flag() {
+		$this->inserting_user = false;
 	}
 
 	/**
@@ -535,7 +550,6 @@ class WPF_User {
 			$this->push_user_meta( $user_id, $post_data );
 
 		}
-
 	}
 
 
@@ -557,7 +571,6 @@ class WPF_User {
 		if ( ! empty( $tags ) ) {
 			$this->apply_tags( $tags, $user_id );
 		}
-
 	}
 
 
@@ -580,7 +593,6 @@ class WPF_User {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -604,7 +616,6 @@ class WPF_User {
 		}
 
 		return wp_fusion()->crm->get_contact_edit_url( $contact_id );
-
 	}
 
 
@@ -700,7 +711,6 @@ class WPF_User {
 		do_action( 'wpf_got_contact_id', $user_id, $contact_id );
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -788,7 +798,6 @@ class WPF_User {
 		do_action( 'wpf_user_updated', $user_id, $user_meta );
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -811,7 +820,7 @@ class WPF_User {
 
 		$user_meta = get_user_meta( $user_id );
 
-		if ( ! $user_meta )  {
+		if ( ! $user_meta ) {
 			return apply_filters( 'wpf_get_user_meta', array(), $user_id );
 		}
 
@@ -855,7 +864,6 @@ class WPF_User {
 		$user_meta = apply_filters( 'wpf_get_user_meta', $user_meta, $user_id );
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -1095,7 +1103,6 @@ class WPF_User {
 		add_action( 'profile_update', array( $this, 'profile_update' ) );
 		add_action( 'updated_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
 		add_action( 'added_user_meta', array( $this, 'push_user_meta_single' ), 10, 4 );
-
 	}
 
 	/**
@@ -1163,7 +1170,6 @@ class WPF_User {
 		$this->set_tags( $tags, $user_id );
 
 		return apply_filters( 'wpf_user_tags', $tags, $user_id );
-
 	}
 
 	/**
@@ -1278,7 +1284,6 @@ class WPF_User {
 		 */
 
 		do_action( 'wpf_tags_modified', $user_id, $tags );
-
 	}
 
 	/**
@@ -1359,7 +1364,9 @@ class WPF_User {
 			}
 		}
 
-		$tags = array_values( $tags ); // Reindex the array to prevent it getting synced as an object.
+		if ( empty( array_filter( $tags ) ) ) {
+			return true;
+		}
 
 		// Check for chaining.
 
@@ -1420,7 +1427,6 @@ class WPF_User {
 		do_action( 'wpf_tags_modified', $user_id, $user_tags );
 
 		return true;
-
 	}
 
 	/**
@@ -1491,7 +1497,9 @@ class WPF_User {
 
 		$tags = $diff;
 
-		$tags = array_values( $tags ); // Reindex the array to prevent it getting synced as an object.
+		if ( empty( array_filter( $tags ) ) ) {
+			return true;
+		}
 
 		// Check for chaining.
 
@@ -1535,7 +1543,6 @@ class WPF_User {
 		do_action( 'wpf_tags_modified', $user_id, $user_tags );
 
 		return true;
-
 	}
 
 	/**
@@ -1548,7 +1555,6 @@ class WPF_User {
 	public function password_reset( $user, $new_pass ) {
 
 		$this->push_user_meta( $user->ID, array( 'user_pass' => $new_pass ) );
-
 	}
 
 
@@ -1596,7 +1602,6 @@ class WPF_User {
 			);
 
 		}
-
 	}
 
 	/**
@@ -1643,11 +1648,13 @@ class WPF_User {
 
 					// New user registration, harder.
 					add_action(
-						'wpf_user_created', function( $user_id, $contact_id, $post_data ) use ( &$apply_tags ) {
+						'wpf_user_created',
+						function ( $user_id, $contact_id, $post_data ) use ( &$apply_tags ) {
 
 							$this->apply_tags( $apply_tags, $user_id );
-
-						}, 10, 3
+						},
+						10,
+						3
 					);
 
 				}
@@ -1655,9 +1662,25 @@ class WPF_User {
 		}
 
 		return $user_meta;
-
 	}
 
+	/**
+	 * Prevents the user_register hook from running twice.
+	 *
+	 * @since 3.44.3
+	 *
+	 * @param array $user_data The user data.
+	 * @param bool  $update    Whether the user is being updated.
+	 * @return array The user data.
+	 */
+	public function set_inserting_user_flag( $user_data, $update ) {
+
+		if ( false === $update ) {
+			$this->inserting_user = true;
+		}
+
+		return $user_data;
+	}
 
 	/**
 	 * Triggered when user role added or removed
@@ -1665,10 +1688,9 @@ class WPF_User {
 	 * @access public
 	 * @return void
 	 */
-
 	public function add_remove_user_role( $user_id, $role ) {
 
-		if ( doing_action( 'user_register' ) || doing_action( 'set_current_user' ) || doing_wpf_webhook() ) {
+		if ( $this->inserting_user || empty( wp_fusion()->crm ) || doing_wpf_webhook() ) {
 			// User register will kick in later, and set_current_user sometimes causes
 			// errors because the CRM isn't set up yet. We also don't need to sync the role
 			// back if it was changed by a webhook.
@@ -1693,6 +1715,8 @@ class WPF_User {
 
 					// If we're limiting user roles and the user's role was just changed to a valid one.
 
+					wp_fusion()->logger->add_source( 'limit-user-roles' );
+
 					$this->user_register( $user_id );
 
 					remove_action( 'set_user_role', array( $this, 'add_remove_user_role' ), 10, 2 ); // Don't do it twice.
@@ -1701,20 +1725,24 @@ class WPF_User {
 				}
 			} else {
 
+				// Maybe sync the updated roles.
+
 				if ( doing_action( 'remove_user_role' ) ) {
 					$role = $roles[0]; // If we're removing a role, $role will be the role that was just removed, so let's grab the fist capability instead.
 				}
 
-				$update_data = array(
-					$user->cap_key    => $roles,
-					'wp_capabilities' => $roles,
-					'role'            => $role,
-				);
+				if ( wpf_is_field_active( array( $user->cap_key, 'wp_capabilities', 'role' ) ) ) {
 
-				$this->push_user_meta( $user_id, $update_data );
+					$update_data = array(
+						$user->cap_key    => $roles,
+						'wp_capabilities' => $roles,
+						'role'            => $role,
+					);
+
+					$this->push_user_meta( $user_id, $update_data );
+				}
 			}
 		}
-
 	}
 
 	/**
@@ -1767,7 +1795,6 @@ class WPF_User {
 		if ( isset( wp_fusion()->crm->params ) ) {
 			remove_filter( 'http_request_timeout', array( $this, 'http_request_timeout' ) );
 		}
-
 	}
 
 	/**
@@ -1843,7 +1870,6 @@ class WPF_User {
 		);
 
 		return get_users( $args );
-
 	}
 
 	/**
@@ -1870,7 +1896,6 @@ class WPF_User {
 		);
 
 		return get_users( $args );
-
 	}
 
 	/**
@@ -1918,7 +1943,6 @@ class WPF_User {
 		}
 
 		return false;
-
 	}
 
 	/**
@@ -1978,7 +2002,6 @@ class WPF_User {
 		}
 
 		return false;
-
 	}
 
 	/**
@@ -2026,7 +2049,6 @@ class WPF_User {
 			return false;
 
 		}
-
 	}
 
 	/**
@@ -2053,7 +2075,6 @@ class WPF_User {
 		}
 
 		$this->push_user_meta( $object_id, array( $meta_key => $_meta_value ) );
-
 	}
 
 
@@ -2112,7 +2133,6 @@ class WPF_User {
 		do_action( 'wpf_pushed_user_meta', $user_id, $contact_id, $user_meta );
 
 		return true;
-
 	}
 
 	/**
@@ -2364,7 +2384,6 @@ class WPF_User {
 		do_action( 'wpf_user_imported', $user_id, $user_meta );
 
 		return $user_id;
-
 	}
 
 	/**
@@ -2381,7 +2400,6 @@ class WPF_User {
 			'subject' => 'This email has been suppressed by WP Fusion during a user import, because send_notification was set to false.',
 			'message' => '',
 		);
-
 	}
 
 
@@ -2396,7 +2414,5 @@ class WPF_User {
 	public function http_request_timeout( $timeout ) {
 
 		return 5;
-
 	}
-
 }

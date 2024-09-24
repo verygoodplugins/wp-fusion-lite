@@ -14,6 +14,20 @@
 class WPF_PulseTechnologyCRM {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'pulsetech';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'PulseTechnologyCRM';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var string
@@ -65,8 +79,6 @@ class WPF_PulseTechnologyCRM {
 	 * @since 3.37.21
 	 */
 	public function __construct() {
-		$this->slug = 'pulsetech';
-		$this->name = 'PulseTechnologyCRM';
 
 		$api_url = wpf_get_option( 'pulsetech_url', '' );
 

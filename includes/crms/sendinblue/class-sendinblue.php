@@ -68,12 +68,11 @@ class WPF_SendinBlue {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_SendinBlue_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -88,9 +87,11 @@ class WPF_SendinBlue {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+
 		// Add tracking code to header.
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
-
 	}
 
 	/**
@@ -151,7 +152,6 @@ class WPF_SendinBlue {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -181,11 +181,9 @@ class WPF_SendinBlue {
 						$value[ $key ] = $dropdown_mappings[ $field ][ $val ];
 					}
 				}
-			} else {
+			} elseif ( isset( $dropdown_mappings[ $field ][ $value ] ) ) {
 
-				if ( isset( $dropdown_mappings[ $field ][ $value ] ) ) {
 					$value = $dropdown_mappings[ $field ][ $value ];
-				}
 			}
 		}
 
@@ -224,7 +222,6 @@ class WPF_SendinBlue {
 					$value = '1' . $value;
 
 				}
-
 			}
 
 			return $value;
@@ -268,7 +265,23 @@ class WPF_SendinBlue {
 			return $value;
 
 		}
+	}
 
+	/**
+	 * Set a cookie to fix tracking for guest checkouts / form submissions.
+	 *
+	 * @since 3.44.6
+	 *
+	 * @param string $contact_id The subscriber ID.
+	 * @param string $email      The email address.
+	 */
+	public function set_tracking_cookie_guest( $contact_id, $email ) {
+
+		if ( wpf_is_user_logged_in() || headers_sent() ) {
+			return;
+		}
+
+		setcookie( 'wpf_guest', $email, time() + HOUR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
 	}
 
 
@@ -291,13 +304,14 @@ class WPF_SendinBlue {
 			return;
 		}
 
+		echo '<!-- Brevo site tracking (via WP Fusion) -->';
 		echo '<script type="text/javascript">';
 		echo '(function() {';
 		echo '	window.sib = {';
 		echo '        equeue: [],';
 		echo '        client_key: "' . esc_js( $tracking_id ) . '"';
 		echo '    };';
-		if ( wpf_is_user_logged_in() ) {
+		if ( wpf_get_current_user_email() ) {
 			echo 'window.sib.email_id = "' . esc_js( wpf_get_current_user_email() ) . '";';
 		}
 		echo '    window.sendinblue = {};';
@@ -317,8 +331,8 @@ class WPF_SendinBlue {
 		echo '        i = document.getElementsByTagName("script")[0];';
 		echo '    n.type = "text/javascript", n.id = "sendinblue-js", n.async = !0, n.src = "https://sibautomation.com/sa.js?key=" + window.sib.client_key, i.parentNode.insertBefore(n, i), window.sendinblue.page();';
 		echo '})();';
-		echo '</script>';
 
+		echo '</script>';
 	}
 
 	/**
@@ -360,7 +374,6 @@ class WPF_SendinBlue {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -437,7 +450,6 @@ class WPF_SendinBlue {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -501,7 +513,7 @@ class WPF_SendinBlue {
 					'crm_label' => 'WhatsApp',
 					'crm_type'  => 'tel',
 				),
-				'SMS' => array(
+				'SMS'      => array(
 					'crm_label' => 'SMS',
 					'crm_type'  => 'tel',
 				),
@@ -532,7 +544,7 @@ class WPF_SendinBlue {
 			if ( isset( $field_data['enumeration'] ) ) {
 
 				$crm_fields['Custom Fields'][ $field_data['name'] ]['crm_type'] = 'select';
-				$crm_fields['Custom Fields'][ $field_data['name'] ]['choices']     = array();
+				$crm_fields['Custom Fields'][ $field_data['name'] ]['choices']  = array();
 
 				foreach ( $field_data['enumeration'] as $option ) {
 					$crm_fields['Custom Fields'][ $field_data['name'] ]['choices'][ $option['value'] ] = $option['label'];
@@ -544,7 +556,6 @@ class WPF_SendinBlue {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 	/**
@@ -577,7 +588,6 @@ class WPF_SendinBlue {
 		wp_fusion()->settings->set( 'optin_templates', $optin_templates );
 
 		return $optin_templates;
-
 	}
 
 	/**
@@ -632,7 +642,6 @@ class WPF_SendinBlue {
 		}
 
 		return $body_json['listIds'];
-
 	}
 
 	/**
@@ -662,7 +671,6 @@ class WPF_SendinBlue {
 		}
 
 		return true;
-
 	}
 
 
@@ -693,7 +701,6 @@ class WPF_SendinBlue {
 		}
 
 		return true;
-
 	}
 
 
@@ -757,7 +764,6 @@ class WPF_SendinBlue {
 		} else {
 			return new WP_Error( 'error', 'Unknown error adding contact:<pre>' . wpf_print_r( $body, true ) . '</pre>' );
 		}
-
 	}
 
 	/**
@@ -845,7 +851,6 @@ class WPF_SendinBlue {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -888,7 +893,6 @@ class WPF_SendinBlue {
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -944,6 +948,4 @@ class WPF_SendinBlue {
 
 		return true;
 	}
-
-
 }

@@ -32,6 +32,20 @@ class WPF_Admin_Notices {
 		add_action( 'wpf_settings_notices', array( $this, 'show_session_notices' ) );
 		add_action( 'wp_ajax_dismiss_wpf_notice', array( $this, 'dismiss_notice' ) );
 
+		add_action( 'admin_notices', array( $this, 'display_batch_notices' ) );
+	}
+
+
+	/**
+	 * Display batch operations notices.
+	 *
+	 * @since 3.44.6
+	 */
+	public function display_batch_notices() {
+		$screen = get_current_screen();
+		if ( $screen && ( 'settings_page_wpf-settings' === $screen->id || 'users' === $screen->id || 'woocommerce_page_wc-orders' === $screen->id ) ) {
+			do_action( 'wpf_settings_notices' );
+		}
 	}
 
 	/**
@@ -46,12 +60,11 @@ class WPF_Admin_Notices {
 
 			echo '<div id="wpf-needs-setup" data-notice="wpf-needs-setup" class="notice notice-warning wpf-notice is-dismissible">';
 			echo '<p>';
-			echo sprintf( esc_html__( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( get_admin_url() . 'options-general.php?page=wpf-settings#setup' ) . '">', '</a>' );
+			printf( esc_html__( 'To finish setting up WP Fusion, please go to the %1$sWP Fusion settings page%2$s.', 'wp-fusion-lite' ), '<a href="' . esc_url( get_admin_url() . 'options-general.php?page=wpf-settings#setup' ) . '">', '</a>' );
 			echo '</p>';
 			echo '</div>';
 
 		}
-
 	}
 
 	/**
@@ -73,7 +86,6 @@ class WPF_Admin_Notices {
 			echo '<div id="' . esc_attr( $id ) . '-notice" data-notice="' . esc_attr( $id ) . '" class="notice notice-warning wpf-notice is-dismissible"><p>' . wp_kses_post( $message ) . '</p></div>';
 
 		}
-
 	}
 
 	/**
@@ -120,7 +132,5 @@ class WPF_Admin_Notices {
 		}
 
 		wp_die();
-
 	}
-
 }

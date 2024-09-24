@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 5.6
-Tested up to: 6.6.2
-Stable tag: 3.44.1
+Tested up to: 6.7.0
+Stable tag: 3.44.8
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -204,6 +204,77 @@ You can report security bugs through the Patchstack Vulnerability Disclosure Pro
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.44.8 - 9/24/2024 =
+* Improved - Numeric states or regions will no longer be synced to Infusionsoft/Keap to prevent an API error
+* Fixed import tool with Groundhogg (REST API) not loading more than 100 contacts
+
+= 3.44.7 - 9/23/2024 =
+* Added support (via code snippet) for [syncing lead source data when updating a contact](https://wpfusion.com/documentation/tutorials/lead-source-tracking/#sync-lead-source-data-for-existing-contacts), instead of just when adding a new contact
+* Improved - New auto-login sessions will now record the current URL to the logs
+* Improved - Added links to CRM-specific setup documentation to the CRM configuration settings section
+* Improved - Added note to HighLevel setup about logging in to the HighLevel app before attempting the connection
+* Improved - Moved Mautic tracking script from footer to head to fix some console errors when playing mediaelement.js videos
+* Improved - Updated the list tags pagination API call with Infusionsoft/Keap to use the new V2 compliant specification
+* Developers: Added `wpf_api_{$method_name}` filter to allow [bypassing / overriding API calls in the CRM classes](https://wpfusion.com/documentation/filters/wpf_api_method_name/)
+* Fixed `user_meta` shortcode not properly converting dates stores as timestamps
+* Fixed lockout redirect URLs saved without a trailing slash causing an infinite redirect when a lockout redirect is triggered
+* Fixed the tags array API call with Infusionsoft/Keap not being reindexed before being sent, which would cause "Input could not be converted" errors in cases where invalid tags had been removed from the payload
+
+= 3.44.6 - 9/16/2024 =
+* Improved - With CRMs that support typing new tags into the tags dropdown, the placholder will update to say "(type to add new)" when the dropdown is open
+* Improved - The legacy Infusionsoft/Keap module at `wp_fusion()->crm->app` is now lazy-loaded, so it will only be loaded when needed instead of on every page load
+* Fixed user role changes after a user's initial registration not being synced to the CRM
+
+= 3.44.5 - 9/10/2024 =
+* Improved - The Infusionsoft/Keap integration will now convert all two-digit state abbreviations to uppercase
+* Improved - With Infusionsoft/Keap, if a US state is supplied for an address, and the country code is not provided, the country code will automatically be set to USA
+* Improved - With Infusionsoft/Keap, if a region code is provided for an address, and the country code is not provided, a notice will be recorded to the logs
+* Fixed the `wp_fusion_init_crm` hook not changing the CRM name on the Setup tab (when white-labelling)
+* Fixed error in the HighLevel integration when removing tags from a deleted contact
+
+= 3.44.4 - 9/3/2024 =
+* Added a delay to batch operations with Klaviyo to avoid the 3 requests per second (60 per minute) API limit
+* Improved - If you attempt to sync an invlalid country name or code with Infusionsoft/Keap, WP Fusion will remove the data from the API call to avoid an API error
+* Improved - If you attempt to sync an invalid Owner ID with Infusionsoft/Keap, this will crash the API (error code 500). We've added a more descriptive error message to the log to indicate when this field is causing the error
+* Improved - Extended the API timeout with Infusionsoft/Keap to 20 seconds
+* Improved - If an API call to Infusionsoft/Keap fails with a 503 error ("service unavailable"), WP Fusion will now retry the API call after a 2 second delay
+* Improved - WP Fusion will no longer apply timezone offsets to dates synced to Groundhogg (same site) that don't have a time component
+* Improved Salesforce error logging for failed access token refreshes
+* Fixed tags applied in FluentCRM (same site) automations, which were triggered by WP Fusion applying a tag, not syncing back to WordPress
+* Fixed the Nickname field not syncing with Infusionsoft/Keap
+* Fixed PHP warning "Automatic conversion of false to array is deprecated" when the shutdown hook runs multiple times
+
+= 3.44.3 - 8/26/2024 =
+* Improved support for syncing country and region codes with Infusionsoft/Keap
+* Improved - With the [`user_meta` shortcode](https://wpfusion.com/documentation/getting-started/shortcodes/#displaying-user-meta), input strings of 8 characters or less will no longer be treated as timestamps (allows for dates like 2024 or 20240101 to be formatted correctly as dates)
+* Improvements to the [add_object() method in the CRM base class](https://wpfusion.com/documentation/functions/add_object/)
+* Improved logging when a user is synced to the CRM due to a role change
+* Fixed errors syncing to Infusionsoft/Keap custom fields with special characters in the CRM field label (like, ?, !, etc)
+* Fixed user registration actions running twice when using the Limit User Roles setting
+* Fixed warning "Undefined variable $lists" in ActiveCampaign integration when creating a contact without any lists
+* Fixed notice "Add to CRM was not checked, the user will not be synced to the CRM." when adding users manually via the WP Admin
+* Fixed user role changes on the admin user profile triggering a sync to the CRM even if the role field is not enabled for sync
+* Developers: added functions `wpf_country_to_iso3166()` and `wpf_state_to_iso3166()` to convert country and state codes to ISO 3166-1 alpha-3 and alpha-2 codes
+* Developers: added filter `wpf_country_to_iso3166` to allow overriding the default country to ISO 3166-1 alpha-3 code conversion
+* Developers: `wpf_is_field_active()` can now take an array of field IDs, it will return true if any of the fields are active
+
+= 3.44.2 - 8/19/2024 =
+* Added a text search field to the WP Fusion Logs page
+* Improved API performance for applying and removing tags with Infusionsoft/Keap
+* Improved - If an Infusionsoft/Keap API call is throttled due to too many requests, WP Fusion will now wait 2 seconds and try again
+* Improved - The new Keap/Infusionsoft integration will now append to the existing Person Notes field when syncing notes, instead of replacing it
+* Improved - With the new Infusionsoft/Keap integration, if a US state is specified for an address, and the country is not provided, the country code will be set to USA
+* Improved - With the new Infusionsoft/Keap integration, if an invalid locale code is synced to the Language field, a notice will be logged and the field will be removed to avoid API errors
+* Improved KlickTipp error handling
+
+= 3.44.1.1 - 8/15/2024 =
+* Added US state name to ISO 3166-2 code conversion for updating billing and shipping addresses with Infusionsoft / Keap
+* Improved - Disabled syncing of the "Person Notes" field with Infusionsoft / Keap for existing contacts, since Keap now replaces the notes field when notes are synced, instead of appending to it
+* Improved - Custom fields with Infusionsoft / Keap will now be sorted alphabetically in the WP Fusion field dropdowns
+* Fixed "date" type fields (like Birthday) being synced to Infusionsoft / Keap as ISO8601 date-time data since 3.44.1, instead of the `Y-m-d` date format
+* Fixed date/time fields with Infusionsoft not being formatted into the WordPress date / time format when loaded
+* Fixed "Creation of dynamic property" PHP warnings in older CRM integrations with PHP 8.2
 
 = 3.44.1 - 8/12/2024 =
 * *Note:* Infusionsoft/Keap have removed the standard "Password" and "Username" fields from the new API, due to security concerns. To avoid errors when syncing passwords and usernames, WP Fusion will log a notice when these fields are detected and remove them from the sync. If you need to sync usernames and passwords, please create new custom text fields to store the data.

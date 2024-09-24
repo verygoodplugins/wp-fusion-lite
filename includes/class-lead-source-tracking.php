@@ -24,7 +24,6 @@ class WPF_Lead_Source_Tracking {
 		add_filter( 'wpf_meta_fields', array( $this, 'add_meta_fields' ) );
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_tracking_scripts' ) );
-
 	}
 
 	/**
@@ -53,7 +52,6 @@ class WPF_Lead_Source_Tracking {
 	private function get_leadsource_cookie_name() {
 
 		return apply_filters( 'wpf_leadsource_cookie_name', 'wpf_leadsource' );
-
 	}
 
 	/**
@@ -66,7 +64,6 @@ class WPF_Lead_Source_Tracking {
 	private function get_referral_cookie_name() {
 
 		return apply_filters( 'wpf_referral_cookie_name', 'wpf_ref' );
-
 	}
 
 	/**
@@ -90,7 +87,6 @@ class WPF_Lead_Source_Tracking {
 		);
 
 		return apply_filters( 'wpf_leadsource_vars', $leadsource_vars );
-
 	}
 
 	/**
@@ -142,7 +138,6 @@ class WPF_Lead_Source_Tracking {
 				setcookie( $ref_cookie_name, wp_json_encode( $cookie_data ), time() + DAY_IN_SECONDS * 90, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
-
 	}
 
 	/**
@@ -189,7 +184,6 @@ class WPF_Lead_Source_Tracking {
 				$data             = array_map( 'sanitize_text_field', wp_unslash( $cookies[ $ref_cookie_name ] ) );
 				$lead_source_data = array_merge( $lead_source_data, $data );
 			}
-
 		}
 
 		if ( wpf_is_field_active( 'current_page' ) ) {
@@ -226,8 +220,13 @@ class WPF_Lead_Source_Tracking {
 				$lead_source_data['landing_page'] = $this->remove_query_parameters( $lead_source_data['landing_page'] );
 			}
 
-			$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $lead_source_data ); // dont overwrite anything we might have gotten from the database.
-
+			if ( is_array( $args[0] ) ) {
+				// Add contact.
+				$args[0] = $args[0] + wp_fusion()->crm->map_meta_fields( $lead_source_data ); // dont overwrite anything we might have gotten from the database.
+			} elseif ( is_array( $args[1] ) ) {
+				// Update contact.
+				$args[1] = $args[1] + wp_fusion()->crm->map_meta_fields( $lead_source_data ); // dont overwrite anything we might have gotten from the database.
+			}
 		}
 
 		return $args;
@@ -267,7 +266,6 @@ class WPF_Lead_Source_Tracking {
 		$cookies[] = $this->get_referral_cookie_name();
 
 		return $cookies;
-
 	}
 
 	/**
@@ -287,7 +285,6 @@ class WPF_Lead_Source_Tracking {
 		);
 
 		return $field_groups;
-
 	}
 
 	/**
@@ -391,7 +388,6 @@ class WPF_Lead_Source_Tracking {
 		}
 
 		return $meta_fields;
-
 	}
 
 	/**
@@ -404,7 +400,5 @@ class WPF_Lead_Source_Tracking {
 		if ( wpf_get_option( 'js_leadsource_tracking' ) ) {
 			wp_enqueue_script( 'wpf-leadsource-tracking', WPF_DIR_URL . 'assets/js/wpf-leadsource-tracking.js', array(), WP_FUSION_VERSION, true );
 		}
-
 	}
-
 }

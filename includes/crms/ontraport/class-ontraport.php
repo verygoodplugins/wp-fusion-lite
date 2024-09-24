@@ -731,7 +731,7 @@ class WPF_Ontraport {
 		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request.
 		$data['use_utm_names']      = true; // @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
 
-		$params = $this->get_params();
+		$params = $this->get_params();;
 
 		$params['method'] = 'PUT';
 		$params['body']   = wp_json_encode( $data );

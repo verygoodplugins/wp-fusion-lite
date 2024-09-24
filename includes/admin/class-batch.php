@@ -68,9 +68,43 @@ class WPF_Batch {
 		add_filter( 'wpf_batch_import_users_args', array( $this, 'import_users_args' ), 10, 2 );
 		add_action( 'wpf_batch_import_users', array( $this, 'import_users_step' ), 10, 2 );
 
+		// Enqueue scripts.
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+
 		$this->includes();
 		$this->init();
+	}
 
+	/**
+	 * Enqueue scripts.
+	 *
+	 * @since 3.44.6
+	 */
+	public function enqueue_scripts() {
+		$screen = get_current_screen();
+
+		if ( $screen && ( 'settings_page_wpf-settings' === $screen->id || 'users' === $screen->id || 'woocommerce_page_wc-orders' === $screen->id ) ) {
+			$localize_data = array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'wpf_settings_nonce' ),
+				'strings' => array(
+					'batchErrorsEncountered'  => __( 'errors encountered. Check the logs for more details.', 'wp-fusion-lite' ),
+					'batchOperationComplete'  => sprintf(
+						'<strong>%s</strong> %s...',
+						__( 'Batch operation complete.', 'wp-fusion-lite' ),
+						__( 'Terminating...', 'wp-fusion-lite' )
+					),
+					'backgroundWorkerBlocked' => __( 'The background worker is being blocked by your server. Starting alternate (slower) method. Please do not refresh the page until the process completes.', 'wp-fusion-lite' ),
+					'processing'              => __( 'Processing', 'wp-fusion-lite' ),
+					'beginningProcessing'     => sprintf( __( 'Beginning %s processing', 'wp-fusion-lite' ), 'ACTIONTITLE' ),
+					'startBatchWarning'       => __( "Heads Up: These background operations can potentially alter a lot of data and are irreversible. If you're not sure you need to run one, please contact our support.\n\nIf you want to resynchronize the dropdowns of available tags and fields, click \"Resynchronize Tags & Fields\" from the setup tab.\n\nPress OK to proceed or Cancel to cancel.", 'wp-fusion-lite' ),
+					'atleastOneBatch'         => __( 'Please select at least one', 'wp-fusion-lite' ),
+				),
+			);
+
+			wp_enqueue_script( 'wpf-batch', WPF_DIR_URL . 'assets/js/wpf-batch.js', array( 'jquery' ), WP_FUSION_VERSION, true );
+			wp_localize_script( 'wpf-batch', 'wpf_batch_ajax', $localize_data );
+		}
 	}
 
 	/**
@@ -121,7 +155,6 @@ class WPF_Batch {
 		);
 
 		return apply_filters( 'wpf_export_options', $options );
-
 	}
 
 	/**
@@ -140,7 +173,6 @@ class WPF_Batch {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -154,7 +186,6 @@ class WPF_Batch {
 
 		require_once WPF_DIR_PATH . 'includes/admin/batch/class-async-request.php';
 		require_once WPF_DIR_PATH . 'includes/admin/batch/class-background-process.php';
-
 	}
 
 	/**
@@ -167,7 +198,6 @@ class WPF_Batch {
 	public function init() {
 
 		$this->process = new WPF_Background_Process();
-
 	}
 
 
@@ -243,7 +273,6 @@ class WPF_Batch {
 
 		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">' . esc_html__( 'Cancel', 'wp-fusion-lite' ) . '</a></p>';
 		echo '</div>';
-
 	}
 
 	/**
@@ -267,7 +296,16 @@ class WPF_Batch {
 			$args = array_map( 'sanitize_text_field', wp_unslash( $_POST['args'] ) );
 		}
 
-		$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
+		if ( ! empty( $_POST['object_ids'] ) && is_array( $_POST['object_ids'] ) ) {
+			// Allow passing specific records, for example via the Users or Orders screens.
+			$objects = array_map( 'sanitize_text_field', wp_unslash( $_POST['object_ids'] ) );
+		} elseif ( isset( $args['object_ids'] ) && is_array( $args['object_ids'] ) ) {
+			// Allow passing specific records, for example via the Users or Orders screens.
+			$objects = array_map( 'sanitize_text_field', $args['object_ids'] );
+		} else {
+			$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
+		}
+
 		$objects = apply_filters( 'wpf_batch_objects', $objects, $args );
 
 		$args = apply_filters( 'wpf_batch_' . $hook . '_args', $args, $objects );
@@ -338,7 +376,6 @@ class WPF_Batch {
 		} else {
 			return $objects;
 		}
-
 	}
 
 	/**
@@ -374,7 +411,6 @@ class WPF_Batch {
 		echo wp_json_encode( $status );
 
 		die();
-
 	}
 
 	/**
@@ -408,7 +444,6 @@ class WPF_Batch {
 		}
 
 		wp_send_json_success();
-
 	}
 
 	/**
@@ -433,7 +468,6 @@ class WPF_Batch {
 		if ( $start && ! wpf_get_option( 'enable_cron' ) ) {
 			$this->process->dispatch();
 		}
-
 	}
 
 	/**
@@ -466,12 +500,11 @@ class WPF_Batch {
 				$status['errors'] = 0;
 			}
 
-			$status['errors']++;
+			++$status['errors'];
 
 			update_site_option( 'wpfb_status_' . $keys[0], $status );
 
 		}
-
 	}
 
 	/**
@@ -507,7 +540,7 @@ class WPF_Batch {
 			if ( wp_fusion()->user->get_user_id( $contact_id ) ) {
 
 				unset( $contact_ids[ $i ] );
-				$removed++;
+				++$removed;
 
 			}
 		}
@@ -522,7 +555,6 @@ class WPF_Batch {
 		wpf_log( 'info', 0, $message, array( 'source' => 'batch-process' ) );
 
 		return array_values( $contact_ids );
-
 	}
 
 	/**
@@ -557,7 +589,6 @@ class WPF_Batch {
 		unset( $args['tag'] ); // don't need this anymore and it will save some space in the DB not to have it.
 
 		return $args;
-
 	}
 
 	/**
@@ -613,7 +644,6 @@ class WPF_Batch {
 	public function users_cid_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_contact_id( $user_id, true );
-
 	}
 
 	/**
@@ -626,7 +656,6 @@ class WPF_Batch {
 	public function users_tags_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_tags( $user_id, true, false );
-
 	}
 
 	/**
@@ -644,7 +673,6 @@ class WPF_Batch {
 		);
 
 		return get_users( $args );
-
 	}
 
 	/**
@@ -657,7 +685,6 @@ class WPF_Batch {
 	public function users_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_tags( $user_id, true );
-
 	}
 
 	/**
@@ -685,7 +712,6 @@ class WPF_Batch {
 		);
 
 		return get_users( $args );
-
 	}
 
 	/**
@@ -698,7 +724,6 @@ class WPF_Batch {
 	public function users_register_step( $user_id ) {
 
 		wp_fusion()->user->user_register( $user_id );
-
 	}
 
 	/**
@@ -717,7 +742,6 @@ class WPF_Batch {
 		if ( ! empty( $assign_tags ) ) {
 			wp_fusion()->user->apply_tags( $assign_tags, $user_id );
 		}
-
 	}
 
 	/**
@@ -730,7 +754,6 @@ class WPF_Batch {
 	public function users_meta_step( $user_id ) {
 
 		wp_fusion()->user->push_user_meta( $user_id );
-
 	}
 
 	/**
@@ -743,7 +766,5 @@ class WPF_Batch {
 	public function pull_users_meta_step( $user_id ) {
 
 		wp_fusion()->user->pull_user_meta( $user_id );
-
 	}
-
 }

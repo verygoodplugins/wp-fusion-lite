@@ -3,6 +3,20 @@
 class WPF_Intercom {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'intercom';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Intercom';
+
+	/**
 	 * (deprecated)
 	 */
 
@@ -38,9 +52,6 @@ class WPF_Intercom {
 	 */
 
 	public function __construct() {
-
-		$this->slug = 'intercom';
-		$this->name = 'Intercom';
 
 		// Set up admin options
 		if ( is_admin() ) {

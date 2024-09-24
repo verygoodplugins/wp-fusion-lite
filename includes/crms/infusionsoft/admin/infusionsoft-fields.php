@@ -250,6 +250,7 @@ $infusionsoft_fields[] = array(
 $infusionsoft_fields[] = array(
 	'crm_label' => 'Birthday',
 	'crm_field' => 'Birthday',
+	'crm_type'  => 'date',
 );
 
 $infusionsoft_fields[] = array(

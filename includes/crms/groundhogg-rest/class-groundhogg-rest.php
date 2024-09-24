@@ -92,7 +92,7 @@ class WPF_Groundhogg_REST {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-groundhogg-rest-admin.php';
+			require_once __DIR__ . '/class-groundhogg-rest-admin.php';
 			new WPF_Groundhogg_REST_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -104,7 +104,6 @@ class WPF_Groundhogg_REST {
 			$this->url      = trailingslashit( $url ) . 'wp-json/gh/v4';
 			$this->edit_url = trailingslashit( $url ) . 'wp-admin/admin.php?page=gh_contacts&action=edit&contact=%d';
 		}
-
 	}
 
 	/**
@@ -124,7 +123,6 @@ class WPF_Groundhogg_REST {
 
 		// Add tracking code to footer.
 		// add_action( 'wp_enqueue_scripts', array( $this, 'tracking_code' ) );
-
 	}
 
 
@@ -139,7 +137,6 @@ class WPF_Groundhogg_REST {
 		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
 			return;
 		}
-
 	}
 
 	/**
@@ -161,7 +158,6 @@ class WPF_Groundhogg_REST {
 		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
 
 		return $post_data;
-
 	}
 
 	/**
@@ -274,7 +270,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return $response;
-
 	}
 
 
@@ -312,7 +307,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return true;
-
 	}
 
 
@@ -334,7 +328,6 @@ class WPF_Groundhogg_REST {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -383,7 +376,6 @@ class WPF_Groundhogg_REST {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -437,7 +429,6 @@ class WPF_Groundhogg_REST {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -465,7 +456,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return $response->items[0]->ID;
-
 	}
 
 
@@ -496,7 +486,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return $tags;
-
 	}
 
 
@@ -523,7 +512,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -550,7 +538,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return true;
-
 	}
 
 
@@ -602,7 +589,6 @@ class WPF_Groundhogg_REST {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->item->ID;
-
 	}
 
 
@@ -676,7 +662,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return true;
-
 	}
 
 
@@ -716,7 +701,6 @@ class WPF_Groundhogg_REST {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -730,27 +714,38 @@ class WPF_Groundhogg_REST {
 	 */
 	public function load_contacts( $tag ) {
 
-		$request  = $this->url . '/contacts/?tags_include=' . $tag;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-		if ( empty( $response->items ) ) {
-			return array();
-		}
-
 		$contact_ids = array();
+		$request     = $this->url . '/contacts/?number=1000&tags_include=' . $tag;
+		$continue    = true;
+		$offset      = 0;
 
-		foreach ( $response->items as $contact ) {
-			$contact_ids[] = $contact->ID;
+		while ( $continue ) {
+
+			$response = wp_safe_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( empty( $response->items ) ) {
+				return array();
+			}
+
+			foreach ( $response->items as $contact ) {
+				$contact_ids[] = $contact->ID;
+			}
+
+			if ( count( $response->items ) < 1000 ) {
+				$continue = false;
+			} else {
+				$offset += 1000;
+				$request = add_query_arg( 'offset', $offset, $request );
+			}
 		}
 
 		return $contact_ids;
-
 	}
 
 
@@ -814,7 +809,4 @@ class WPF_Groundhogg_REST {
 
 		return true;
 	}
-
-
-
 }

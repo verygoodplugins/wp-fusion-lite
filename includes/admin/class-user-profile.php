@@ -39,7 +39,27 @@ class WPF_User_Profile {
 		add_filter( 'wpf_user_register', array( $this, 'filter_form_fields' ), 30, 2 ); // 30 so all other plugins have run.
 		add_filter( 'wpf_user_update', array( $this, 'filter_form_fields' ), 10, 2 );
 
+		// Bulk actions.
+		add_filter( 'bulk_actions-users', array( $this, 'add_bulk_actions' ) );
 	}
+
+
+
+	/**
+	 * Add bulk actions to the users page.
+	 *
+	 * @since 3.44.6
+	 *
+	 * @param array $bulk_actions The bulk actions array.
+	 * @return array The modified bulk actions array.
+	 */
+	public function add_bulk_actions( $bulk_actions ) {
+		$bulk_actions['users_sync']      = __( 'Resync contact IDs and tags', 'wp-fusion-lite' );
+		$bulk_actions['users_meta']      = __( 'Push user meta', 'wp-fusion-lite' );
+		$bulk_actions['pull_users_meta'] = __( 'Pull user meta', 'wp-fusion-lite' );
+		return $bulk_actions;
+	}
+
 
 	/**
 	 * Does manual actions on user profiles and displays the results
@@ -114,7 +134,6 @@ class WPF_User_Profile {
 		echo '<div class="notice notice-success">';
 		echo '<p>' . wp_kses_post( $message ) . '</p>';
 		echo '</div>';
-
 	}
 
 	/**
@@ -134,15 +153,13 @@ class WPF_User_Profile {
 				<th scope="row"><?php printf( esc_html__( 'Add to %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></th>
 				<td>
 					<input type="checkbox" name="wpf_add_contact" id="wpf_add_contact" value="1" <?php checked( wpf_get_option( 'create_users' ) ); ?> />
-					<label for="wpf_add_contact"><?php printf( esc_html__( 'Add the user as a contact in %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></label>
+					<label for="wpf_add_contact"><?php printf( esc_html__( 'Add the user as a contact in %s', 'wp-fusion-lite' ), wp_fusion()->crm->name ); ?></label>
 				</td>
 			</tr>
 
 		</table>
 
 		<?php
-
-
 	}
 
 	/**
@@ -212,7 +229,6 @@ class WPF_User_Profile {
 			wp_fusion()->user->push_user_meta( $user_id, array( 'user_email' => $user->user_email ) );
 
 		}
-
 	}
 
 
@@ -254,7 +270,6 @@ class WPF_User_Profile {
 		wp_send_json( $response );
 
 		wp_die();
-
 	}
 
 
@@ -276,7 +291,7 @@ class WPF_User_Profile {
 
 		if ( ! is_null( $screen ) && in_array( $screen->id, array( 'profile', 'user-edit', 'user-new', 'user' ) ) ) {
 
-			if ( 'user' === $screen->id && doing_filter( 'wpf_user_register' ) && ! isset( $post_data['wpf_add_contact'] ) ) {
+			if ( 'user' === $screen->id && doing_filter( 'wpf_user_register' ) && ! isset( $_POST['wpf_add_contact'] ) ) {
 				wpf_log( 'notice', $user_id, 'Add to ' . wp_fusion()->crm->name . ' was not checked, the user will not be synced to the CRM.' );
 				return null; // cancel the signup process if the Add to CRM box isn't checked.
 			}
@@ -308,7 +323,6 @@ class WPF_User_Profile {
 		}
 
 		return $post_data;
-
 	}
 
 
@@ -401,7 +415,7 @@ class WPF_User_Profile {
 				<td>
 
 					<a id="resync-contact" href="#" class="button button-default" data-user_id="<?php echo $user->ID; ?>"><?php esc_html_e( 'Resync Tags', 'wp-fusion-lite' ); ?></a>
-					<p class="description"><?php echo sprintf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and look up the contact again by email address in %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></p>
+					<p class="description"><?php printf( __( 'If the contact ID or tags aren\'t in sync, click here to reset the local data and look up the contact again by email address in %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ); ?></p>
 
 				</td>
 			</tr>

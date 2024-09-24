@@ -3,10 +3,24 @@
 class WPF_Kartra {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'kartra';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Kartra';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array();
 
 	/**
 	 * Contains API params
@@ -43,10 +57,6 @@ class WPF_Kartra {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'kartra';
-		$this->name     = 'Kartra';
-		$this->supports = array();
 
 		// WP Fusion app ID
 		$this->app_id  = 'EoPIrcjdRhQl';

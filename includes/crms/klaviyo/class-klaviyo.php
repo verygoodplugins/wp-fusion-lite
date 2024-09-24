@@ -88,11 +88,29 @@ class WPF_Klaviyo {
 
 	public function init() {
 
+		// Slow down the batch processses to get around API limits.
+		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_phone_numbers' ) );
 		add_filter( 'wpf_user_update', array( $this, 'format_phone_numbers' ), 5 ); // 5 so it's before WPF_WooCommerce::user_update().
 		add_filter( 'wpf_user_tags', array( $this, 'format_tags' ) );
 		add_filter( 'wpf_remove_tags', array( $this, 'format_tags' ) );
 
+	}
+
+	/**
+	 * Slow down batch processses to get around API throttling.
+	 * 
+	 * Burst: 3/second
+	 * Steady: 60/minute
+	 *
+	 * @since 3.44.2
+	 *
+	 * @param int $seconds The seconds.
+	 * @return int Sleep time.
+	 */
+	public function set_sleep_time( $seconds ) {
+		return 2;
 	}
 
 	/**

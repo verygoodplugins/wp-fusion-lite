@@ -42,7 +42,7 @@ class WPF_CRM_Base {
 	 * @var   buffer
 	 */
 
-	private $buffer = array( 'update_contact' => array(), 'remove_tags' => array(), 'apply_tags' => array() );
+	private $buffer = array();
 
 	/**
 	 * Last error.
@@ -67,7 +67,8 @@ class WPF_CRM_Base {
 			add_action( 'init', array( $this->crm, 'init' ), 5 );
 		}
 
-		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
+		add_filter( 'wpf_configure_setting_crm', array( $this, 'configure_setting_crm' ) );
+		add_filter( 'wpf_configure_setting_type_heading', array( $this, 'configure_setting_type_heading' ), 10, 3 );
 
 		// Guest tracking.
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_guest_email' ), 10, 2 );
@@ -88,7 +89,6 @@ class WPF_CRM_Base {
 
 		// Load the field mapping into memory.
 		$this->contact_fields = wpf_get_option( 'contact_fields', array() );
-
 	}
 
 
@@ -111,7 +111,6 @@ class WPF_CRM_Base {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -127,7 +126,6 @@ class WPF_CRM_Base {
 		if ( is_object( $this->crm ) ) {
 			$this->crm->{$key} = $value;
 		}
-
 	}
 
 	/**
@@ -145,7 +143,6 @@ class WPF_CRM_Base {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -186,7 +183,6 @@ class WPF_CRM_Base {
 			} else {
 				return false;
 			}
-
 		}
 
 		// Convert the meta field keys between WordPress fields and CRM fields, and apply formatting.
@@ -209,6 +205,11 @@ class WPF_CRM_Base {
 			if ( empty( $args[1] ) ) {
 				return false; // no enabled fields.
 			}
+		} elseif ( 'apply_tags' === $method || 'remove_tags' === $method ) {
+
+			// Reindex the tags array in case any have been removed.
+			$args[0] = array_values( $args[0] );
+
 		}
 
 		/**
@@ -253,12 +254,8 @@ class WPF_CRM_Base {
 			$object_type = array_pop( $args );
 
 			// Switch the object type for the API call.
-			add_filter(
-				'wpf_crm_object_type',
-				function() use ( &$object_type ) {
-					return $object_type;
-				}
-			);
+			$old_object_type        = $this->crm->object_type;
+			$this->crm->object_type = $object_type;
 
 			// Set $map_meta_fields to always false.
 
@@ -270,6 +267,8 @@ class WPF_CRM_Base {
 
 			$result = call_user_func_array( array( $this->crm, "{$method}_contact" ), $args ); // "add" becomes "add_contact"
 			$result = apply_filters( "wpf_api_{$method}_result", $result, $args );
+
+			$this->crm->object_type = $old_object_type;
 
 			return $result;
 
@@ -294,7 +293,6 @@ class WPF_CRM_Base {
 			return $this->request( $method, $args );
 
 		}
-
 	}
 
 	/**
@@ -312,7 +310,6 @@ class WPF_CRM_Base {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -327,7 +324,6 @@ class WPF_CRM_Base {
 	public function set_guest_email( $contact_id, $email_address ) {
 
 		$this->guest_email = $email_address;
-
 	}
 
 	/**
@@ -350,7 +346,6 @@ class WPF_CRM_Base {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -403,7 +398,6 @@ class WPF_CRM_Base {
 		$message .= '</ul>';
 
 		$this->error_last = $message;
-
 	}
 
 	/**
@@ -419,7 +413,12 @@ class WPF_CRM_Base {
 
 		$this->error_last = false; // reset it so it can be used again.
 
-		$result = call_user_func_array( array( $this->crm, $method ), $args );
+		// Allow short-circuiting the API calls.
+		$result = apply_filters( "wpf_api_{$method}", null, $args );
+
+		if ( null === $result ) {
+			$result = call_user_func_array( array( $this->crm, $method ), $args );
+		}
 
 		$contact_id = $this->get_contact_id_from_args( $method, $args );
 
@@ -464,7 +463,6 @@ class WPF_CRM_Base {
 				if ( ! is_wp_error( $result ) ) {
 					$result = $this->crm->update_contact( $result, $args[0] );
 				}
-
 			}
 
 			if ( doing_action( 'shutdown' ) ) {
@@ -502,7 +500,6 @@ class WPF_CRM_Base {
 		$result = wpf_clean( $result ); // wp_kses recursive.
 
 		return $result;
-
 	}
 
 	/**
@@ -541,7 +538,6 @@ class WPF_CRM_Base {
 		if ( wpf_is_staging_mode() ) {
 			require_once WPF_DIR_PATH . 'includes/crms/staging/class-staging.php';
 		}
-
 	}
 
 	/**
@@ -565,34 +561,32 @@ class WPF_CRM_Base {
 				return; // invalid CRM.
 			}
 
-			$this->crm = new $configured_crms[ $slug ](); // the value is the class name.
+			// We just need to load the one once the connection has been configured.
 
-			$this->available_crms[ $slug ] = array(
-				'name'      => $this->crm->name,
-				'menu_name' => isset( $this->crm->menu_name ) ? $this->crm->menu_name : $this->crm->name,
-			);
+			$configured_crms[ $slug ] = $configured_crms[ $slug ];
 
-		} else {
-
-			// Load all of them during setup.
-
-			foreach ( $configured_crms as $slug => $classname ) {
-
-				if ( class_exists( $classname ) ) {
-
-					$crm = new $classname();
-
-					$this->available_crms[ $slug ] = array( 'name' => $crm->name );
-
-					if ( isset( $crm->menu_name ) ) {
-						$this->available_crms[ $slug ]['menu_name'] = $crm->menu_name;
-					} else {
-						$this->available_crms[ $slug ]['menu_name'] = $crm->name;
-					}
-				}
-			}
 		}
 
+		// Build up the list of configured CRMs for the dropdowns.
+
+		foreach ( $configured_crms as $slug => $classname ) {
+
+			if ( class_exists( $classname ) ) {
+
+				$crm = new $classname();
+
+				if ( wpf_get_option( 'crm' ) === $slug ) {
+					$this->crm = $crm; // make it globally available.
+				}
+
+				$this->available_crms[ $slug ] = array(
+					'name'      => $crm->name,
+					'menu_name' => isset( $crm->menu_name ) ? $crm->menu_name : $crm->name,
+					'docs_url'  => isset( $crm->docs_url ) ? $crm->docs_url : "https://wpfusion.com/documentation/getting-started/installation-guides/how-to-connect-{$slug}-to-wordpress/",
+				);
+
+			}
+		}
 	}
 
 	/**
@@ -619,7 +613,6 @@ class WPF_CRM_Base {
 		}
 
 		return apply_filters( 'wpf_use_api_queue', $enabled, $method, $args );
-
 	}
 
 	/**
@@ -678,8 +671,7 @@ class WPF_CRM_Base {
 			return false;
 		}
 
-		return apply_filters( 'wpf_get_email_from_contact_id', $contact['user_email'], $contact_id ) ;
-
+		return apply_filters( 'wpf_get_email_from_contact_id', $contact['user_email'], $contact_id );
 	}
 
 	/**
@@ -701,24 +693,35 @@ class WPF_CRM_Base {
 		}
 
 		return false;
-
 	}
 
 
 	/**
 	 * Adds the available CRMs to the select dropdown on the setup page.
 	 *
-	 * @since  1.0
+	 * @since 1.0
+	 * @since 3.44.5 Moved from wpf_configure_settings to wpf_configure_setting_crm to allow whitelabelling the CRM.
 	 *
-	 * @param  array $settings The settings.
-	 * @return array The settings.
+	 * @param  array $setting The setting.
+	 * @return array The setting.
 	 */
-	public function configure_settings( $settings ) {
+	public function configure_setting_crm( $setting ) {
 
-		$settings['crm']['choices'] = $this->get_crms_for_select();
+		$setting['choices'] = $this->get_crms_for_select();
 
-		return $settings;
+		// Allows white-labelling the CRM by overriding the name in wp_fusion_init_crm.
+		if ( $this->crm ) {
 
+			if ( isset( $this->crm->menu_name ) ) {
+				$name = $this->crm->menu_name;
+			} else {
+				$name = $this->crm->name;
+			}
+
+			$setting['choices'][ $this->crm->slug ] = $name;
+		}
+
+		return $setting;
 	}
 
 	/**
@@ -740,7 +743,28 @@ class WPF_CRM_Base {
 		asort( $select_array );
 
 		return $select_array;
+	}
 
+	/**
+	 * Hack-ey method for adding a link to the setup documentation to the CRM configuration section.
+	 *
+	 * @since 3.44.7
+	 *
+	 * @param array  $setting The setting parameters.
+	 * @param array  $options The options.
+	 * @param string $id      The field ID.
+	 */
+	public function configure_setting_type_heading( $setting, $options, $id ) {
+
+		$crm = str_replace( '_header', '', $id );
+
+		if ( empty( $setting['url'] ) && isset( $this->available_crms[ $crm ] ) ) {
+
+			$setting['url'] = $this->available_crms[ $crm ]['docs_url'];
+
+		}
+
+		return $setting;
 	}
 
 	/**
@@ -758,18 +782,14 @@ class WPF_CRM_Base {
 
 			wp_send_json_success();
 
+		} elseif ( is_wp_error( $result ) ) {
+
+			wpf_log( 'error', 0, 'Error performing sync: ' . $result->get_error_message() );
+			wp_send_json_error( $result->get_error_message() );
+
 		} else {
-
-			if ( is_wp_error( $result ) ) {
-
-				wpf_log( 'error', 0, 'Error performing sync: ' . $result->get_error_message() );
-				wp_send_json_error( $result->get_error_message() );
-
-			} else {
-				wp_send_json_error();
-			}
+			wp_send_json_error();
 		}
-
 	}
 
 	/**
@@ -873,7 +893,6 @@ class WPF_CRM_Base {
 		$update_data = apply_filters( 'wpf_map_meta_fields', $update_data, $user_meta );
 
 		return $update_data;
-
 	}
 
 	/**
@@ -889,7 +908,6 @@ class WPF_CRM_Base {
 		$field = ! empty( $this->contact_fields['user_email']['crm_field'] ) ? $this->contact_fields['user_email']['crm_field'] : 'email';
 
 		return $field;
-
 	}
 
 	/**
@@ -905,23 +923,26 @@ class WPF_CRM_Base {
 		} else {
 			return $default;
 		}
-
 	}
 
 	/**
-	 * Determines if a field is active
+	 * Determines if a field is enabled for sync.
 	 *
-	 * @access public
-	 * @return bool
+	 * @param  string|array $meta_key The meta key or keys to check.
+	 * @return bool Whether or not the field is active.
 	 */
 	public function is_field_active( $meta_key ) {
 
-		if ( ! empty( $this->contact_fields[ $meta_key ] ) && ! empty( $this->contact_fields[ $meta_key ]['active'] ) ) {
-			return true;
-		} else {
-			return false;
+		// Ensure $meta_key is always an array.
+		$meta_key = (array) $meta_key;
+
+		foreach ( $meta_key as $key ) {
+			if ( ! empty( $this->contact_fields[ $key ] ) && ! empty( $this->contact_fields[ $key ]['active'] ) ) {
+				return true;
+			}
 		}
 
+		return false;
 	}
 
 	/**
@@ -940,7 +961,6 @@ class WPF_CRM_Base {
 		} else {
 			return $default;
 		}
-
 	}
 
 	/**
@@ -968,11 +988,9 @@ class WPF_CRM_Base {
 			if ( isset( $fields[ $remote_id ] ) && isset( $fields[ $remote_id ]['crm_type'] ) ) {
 				return $fields[ $remote_id ]['crm_type'];
 			}
-
 		}
 
 		return $default;
-
 	}
 
 	/**
@@ -999,7 +1017,6 @@ class WPF_CRM_Base {
 		}
 
 		return false;
-
 	}
 
 	/**
@@ -1018,7 +1035,6 @@ class WPF_CRM_Base {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -1057,7 +1073,6 @@ class WPF_CRM_Base {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -1151,9 +1166,7 @@ class WPF_CRM_Base {
 			return $value;
 
 		}
-
 	}
-
 
 	/**
 	 * Adds API requests to the API buffer
@@ -1280,9 +1293,7 @@ class WPF_CRM_Base {
 
 			}
 		}
-
 	}
-
 
 	/**
 	 * Executes the queued API requests on WordPress' shutdown hook.
@@ -1311,8 +1322,6 @@ class WPF_CRM_Base {
 			}
 		}
 
-		$this->buffer = false; // in case we need to call it again later, clear it out.
-
+		$this->buffer = array(); // in case we need to call it again later, clear it out.
 	}
-
 }

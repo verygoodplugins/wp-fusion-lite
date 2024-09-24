@@ -383,6 +383,34 @@ class WPF_Log_Table_List extends WP_List_Table {
 	}
 
 	/**
+	 * Search input field for searching logs.
+	 *
+	 * @since 3.44.2
+	 */
+	public function search_text() {
+		echo '<input type="text" placeholder="' . esc_attr__( 'Search Logs', 'wp-fusion-lite' ) . '" name="s" value="' . ( isset( $_REQUEST['s'] ) ? esc_attr( $_REQUEST['s'] ) : '' ) . '" />';
+		submit_button( esc_html__( 'Search Logs', 'wp-fusion-lite' ), '', 'search-action', false );
+	}
+
+	/**
+	 * Generates the table navigation above or below the table
+	 *
+	 * @since 3.44.2
+	 *
+	 * @param string $which The location of the navigation: Either 'top' or 'bottom'.
+	 */
+	public function display_tablenav( $which ) {
+		if ( 'top' === $which ) {
+			echo '<div class="alignright wpf-log-header">';
+			$this->search_text();
+			echo '</div>';
+		}
+
+		parent::display_tablenav( $which );
+	}
+
+
+	/**
 	 * Extra controls to be displayed between bulk actions and pagination.
 	 *
 	 * @param string $which
@@ -686,6 +714,14 @@ class WPF_Log_Table_List extends WP_List_Table {
 		if ( ! empty( $_REQUEST['enddate'] ) ) {
 			$where_conditions[] = 'timestamp < %s';
 			$where_values[]     = sanitize_text_field( $_REQUEST['enddate'] );
+		}
+
+		if ( ! empty( $_REQUEST['s'] ) ) {
+			$search_term        = '%' . $wpdb->esc_like( $_REQUEST['s'] ) . '%';
+			$where_conditions[] = '(message LIKE %s OR context LIKE %s OR source LIKE %s)';
+			$where_values[]     = $search_term;
+			$where_values[]     = $search_term;
+			$where_values[]     = $search_term;
 		}
 
 		if ( ! empty( $where_conditions ) ) {

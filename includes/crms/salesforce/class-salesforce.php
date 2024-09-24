@@ -388,7 +388,7 @@ class WPF_Salesforce {
 			add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 			if ( is_wp_error( $response ) ) {
-				return $response;
+				return new WP_Error( 'error', 'Error refreshing access token: ' . $response->get_error_message() );
 			}
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );

@@ -36,9 +36,16 @@
         savedMapObject[model.get("local_id")] = model.get("remote_id");
       });
 
-      this.collection.reset();
+      const collectionLength = this.collection.length;
+      for (let i = collectionLength - 1; i >= 0; i--) {
+        $e.run('document/repeater/remove', {
+          container: this.container,
+          name: this.model.get('name'),
+          index: i
+        });
+      }
 
-      var fields = this.elementSettingsModel.get("form_fields").models;
+      var fields = this.container.settings.get("form_fields").models;
 
       _.each(fields, (field) => {
         const model = {
@@ -49,7 +56,11 @@
             : "",
         };
 
-        this.collection.add(model);
+        $e.run('document/repeater/insert', {
+          container: this.container,
+          name: this.model.get('name'),
+          model: model
+        });
       });
 
       this.render();

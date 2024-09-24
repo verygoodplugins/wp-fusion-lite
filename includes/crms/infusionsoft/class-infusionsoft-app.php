@@ -42,7 +42,7 @@ class WPF_Infusionsoft_App {
 
 	/**
 	 * Constructor for WPF_Infusionsoft_App class.
-	 * 
+	 *
 	 * @since 3.44.0
 	 *
 	 * @param array $params The parameters to initialize the class with.
@@ -50,12 +50,11 @@ class WPF_Infusionsoft_App {
 	public function __construct( $params ) {
 
 		$this->params = $params;
-
 	}
 
 	/**
 	 * Magic method to get a property.
-	 * 
+	 *
 	 * @since 3.44.0
 	 *
 	 * @param string $name The name of the property.
@@ -193,7 +192,6 @@ class WPF_Infusionsoft_App {
 		}
 
 		return $new_order_id;
-
 	}
 
 	/**
@@ -221,7 +219,6 @@ class WPF_Infusionsoft_App {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -242,7 +239,6 @@ class WPF_Infusionsoft_App {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -285,6 +281,11 @@ class WPF_Infusionsoft_App {
 
 		}
 
+		// Free orders.
+		if ( empty( floatval( $amt ) ) ) {
+			return true;
+		}
+
 		if ( strpos( strtolower( $payment_type ), 'cash' ) !== false ) {
 			$payemnt_type = 'CASH';
 		} elseif ( strpos( strtolower( $payment_type ), 'check' ) !== false ) {
@@ -293,7 +294,7 @@ class WPF_Infusionsoft_App {
 			$payemnt_type = 'CREDIT_CARD';
 		}
 
-		$payment_date = date( 'Y-m-d\TH:i:s\Z', strtotime( $payment_date ) );
+		$payment_date = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $payment_date ) );
 
 		$data = array(
 			'date'                => $payment_date,
@@ -314,6 +315,74 @@ class WPF_Infusionsoft_App {
 		return true;
 	}
 
+
+	/**
+	 * The new API doesn't support line items, so we'll make product IDs for them.
+	 *
+	 * @since 3.44.2
+	 *
+	 * @param int    $type  The type of item from the XMLRPC API.
+	 * @param float  $price The price of the item.
+	 * @param string $desc  The description of the item.
+	 * @return int|WP_Error The product ID or error.
+	 */
+	public function get_line_item_product_id( $type, $price, $desc ) {
+
+		switch ( $type ) {
+			case 7:
+				$type = 'Discount';
+				break;
+			case 2:
+				$type = 'Tax';
+				break;
+			case 1:
+				$type = 'Shipping';
+				break;
+			case 3:
+				$type = 'Fee';
+				break;
+		}
+
+		$infusionsoft_products = get_option( 'wpf_infusionsoft_products', array() );
+
+		$product_id = array_search( $type, $infusionsoft_products );
+
+		if ( $product_id ) {
+			return $product_id;
+		}
+
+		// Make an API call to see if it exists.
+
+		$response = $this->dsFind( 'Product', 1, 0, 'ProductName', $type, array( 'Id' ) );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		if ( ! empty( $response ) ) {
+			$product_id = absint( $response[0]['Id'] );
+		} else {
+
+			// Add the product if not.
+
+			$new_product = array(
+				'ProductName'  => $type,
+				'ProductPrice' => $price,
+				'ProductDesc'  => $desc,
+			);
+
+			$product_id = $this->dsAdd( 'Product', $new_product );
+
+			if ( is_wp_error( $product_id ) ) {
+				return $product_id;
+			}
+		}
+
+		$infusionsoft_products[ $product_id ] = $type;
+		update_option( 'wpf_infusionsoft_products', $infusionsoft_products );
+		return $product_id;
+	}
+
 	/**
 	 * Adds an order item.
 	 *
@@ -321,7 +390,7 @@ class WPF_Infusionsoft_App {
 	 *
 	 * @param int    $order_id The order ID.
 	 * @param int    $product_id The product ID.
-	 * @param string $type The type of item.
+	 * @param int    $type The type of item.
 	 * @param float  $price The price of the item.
 	 * @param int    $qty The quantity of items.
 	 * @param string $desc The description of the item.
@@ -329,6 +398,19 @@ class WPF_Infusionsoft_App {
 	 * @return bool|WP_Error True or error on failure.
 	 */
 	public function addOrderItem( $order_id, $product_id, $type, $price, $qty, $desc = '', $notes = '' ) {
+
+		if ( 0 === $product_id && 4 !== $type ) {
+			// Line items.
+			$product_id = $this->get_line_item_product_id( $type, $price, $desc );
+
+			if ( is_wp_error( $product_id ) ) {
+				return $product_id;
+			}
+		}
+
+		if ( 0 === $product_id ) {
+			return new WP_Error( 'error', 'Invalid product ID.' );
+		}
 
 		$data = array(
 			'product_id'  => $product_id,
@@ -421,7 +503,6 @@ class WPF_Infusionsoft_App {
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		return $response['id'];
-
 	}
 
 	/**
@@ -452,7 +533,6 @@ class WPF_Infusionsoft_App {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 		return $response['id'];
-
 	}
 
 	/**
@@ -471,6 +551,7 @@ class WPF_Infusionsoft_App {
 	public function dsFind( $t_name, $limit = 1, $page = 0, $field = '', $value = '', $r_fields = array() ) {
 		$t_name  = strtolower( $t_name ) . 's';
 		$request = $this->url . $t_name . '/?limit=1000';
+
 		if ( 'AffCode' === $field ) {
 			$field   = 'AffiliateId';
 			$request = add_query_arg( 'code', $value, $request );
@@ -483,7 +564,7 @@ class WPF_Infusionsoft_App {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		$results  = $this->remap_fields( $response[ $t_name ], true );
+		$results = $this->remap_fields( $response[ $t_name ], true );
 
 		foreach ( $results as $result ) {
 			if ( isset( $result[ $field ] ) && $result[ $field ] === $value ) {

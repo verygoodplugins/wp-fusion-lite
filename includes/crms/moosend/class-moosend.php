@@ -3,6 +3,20 @@
 class WPF_MooSend {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'moosend';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'MooSend';
+
+	/**
 	 * Contains API url
 	 *
 	 * @var  string
@@ -84,14 +98,11 @@ class WPF_MooSend {
 	 */
 	public function __construct() {
 
-		$this->slug = 'moosend';
-		$this->name = 'MooSend';
-
 		$this->api_key = wpf_get_option( 'moosend_api_key' );
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-moosend-admin.php';
+			require_once __DIR__ . '/class-moosend-admin.php';
 			new WPF_MooSend_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -132,7 +143,6 @@ class WPF_MooSend {
 		}
 
 		return $post_data;
-
 	}
 
 
@@ -169,7 +179,6 @@ class WPF_MooSend {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -237,7 +246,6 @@ class WPF_MooSend {
 		}
 
 		return $response;
-
 	}
 
 
@@ -295,7 +303,6 @@ class WPF_MooSend {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -342,7 +349,6 @@ class WPF_MooSend {
 		}
 
 		return $available_lists;
-
 	}
 
 	/**
@@ -383,8 +389,8 @@ class WPF_MooSend {
 			if ( $paging->TotalResults < 100 || $limit === 5 ) {
 				$proceed = false;
 			} else {
-				$limit++;
-				$page++;
+				++$limit;
+				++$page;
 			}
 		}
 
@@ -411,7 +417,7 @@ class WPF_MooSend {
 		}
 
 		// Load built in fields first.
-		require dirname( __FILE__ ) . '/moosend-fields.php';
+		require __DIR__ . '/moosend-fields.php';
 
 		$built_in_fields = array();
 
@@ -579,7 +585,6 @@ class WPF_MooSend {
 			return $response;
 		}
 		return true;
-
 	}
 
 
@@ -644,7 +649,6 @@ class WPF_MooSend {
 		}
 
 		return $contact_id;
-
 	}
 
 
@@ -741,7 +745,7 @@ class WPF_MooSend {
 
 		if ( ! empty( $loaded_meta['name'] ) ) {
 
-			$names                  = explode( ' ', $loaded_meta['name'] );
+			$names                    = explode( ' ', $loaded_meta['name'] );
 			$loaded_meta['firstname'] = $names[0];
 
 			unset( $names[0] );
@@ -773,6 +777,4 @@ class WPF_MooSend {
 	public function load_contacts( $tag ) {
 		return array();
 	}
-
-
 }

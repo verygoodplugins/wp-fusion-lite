@@ -28,7 +28,6 @@ class WPF_SendinBlue_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -43,7 +42,6 @@ class WPF_SendinBlue_Admin {
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_filter( 'validate_field_double_optin_template', array( $this, 'validate_double_optin' ), 10, 3 );
-
 	}
 
 
@@ -70,13 +68,12 @@ class WPF_SendinBlue_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'sendinblue_key' )
+			'post_fields' => array( 'sendinblue_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -91,20 +88,17 @@ class WPF_SendinBlue_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/sendinblue-fields.php';
+			require_once __DIR__ . '/sendinblue-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $sendinblue_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $sendinblue_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -176,7 +170,6 @@ class WPF_SendinBlue_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 	/**
@@ -198,11 +191,9 @@ class WPF_SendinBlue_Admin {
 			} elseif ( empty( $options_class->post_data['double_optin_lists'] ) ) {
 				return new WP_Error( 'no_optin_lists', __( 'You must select at least one list to add subscribers to once they have confirmed their subscription.', 'wp-fusion-lite' ) );
 			}
-
 		}
 
 		return $value;
-
 	}
 
 	/**
@@ -217,7 +208,6 @@ class WPF_SendinBlue_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -253,7 +243,5 @@ class WPF_SendinBlue_Admin {
 		}
 
 		die();
-
 	}
-
 }

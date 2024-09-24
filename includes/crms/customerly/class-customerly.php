@@ -3,10 +3,24 @@
 class WPF_Customerly {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'customerly';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Customerly';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags', 'add_fields' );
 
 	/**
 	 * Contains API params
@@ -32,10 +46,6 @@ class WPF_Customerly {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'customerly';
-		$this->name     = 'Customerly';
-		$this->supports = array( 'add_tags', 'add_fields' );
 
 		// Set up admin options
 		if ( is_admin() ) {

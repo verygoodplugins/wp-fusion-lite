@@ -3,6 +3,20 @@
 class WPF_Sendlane {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'sendlane';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Sendlane';
+
+	/**
 	 * Contains API params
 	 */
 
@@ -12,7 +26,7 @@ class WPF_Sendlane {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array();
+	public $supports = array( 'add_tags', 'add_fields' );
 
 	/**
 	 * Default List
@@ -36,10 +50,6 @@ class WPF_Sendlane {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'sendlane';
-		$this->name     = 'Sendlane';
-		$this->supports = array( 'add_tags', 'add_fields' );
 
 		// Set up admin options
 		if ( is_admin() ) {

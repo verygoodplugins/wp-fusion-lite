@@ -38,6 +38,7 @@ abstract class WPF_Integrations_Base {
 			wp_fusion()->integrations->{$this->slug} = $this;
 		}
 
+		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
 	}
 
 	/**
@@ -49,6 +50,17 @@ abstract class WPF_Integrations_Base {
 	 */
 
 	abstract protected function init();
+
+	/**
+	 * Adds compatibility notices.
+	 *
+	 * @since 3.44.6
+	 *
+	 * @param array $notices The notices.
+	 */
+	public function compatibility_notices( $notices ) {
+		return $notices;
+	}
 
 	/**
 	 * Map meta fields collected at registration / profile update to internal fields
@@ -68,7 +80,6 @@ abstract class WPF_Integrations_Base {
 		}
 
 		return $meta_fields;
-
 	}
 
 	/**
@@ -91,7 +102,6 @@ abstract class WPF_Integrations_Base {
 		} else {
 			return true;
 		}
-
 	}
 
 	/**
@@ -133,7 +143,6 @@ abstract class WPF_Integrations_Base {
 		}
 
 		return $apply_tags;
-
 	}
 
 	/**
@@ -187,7 +196,5 @@ abstract class WPF_Integrations_Base {
 		}
 
 		return $contact_id;
-
 	}
-
 }

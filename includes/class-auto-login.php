@@ -47,7 +47,6 @@ class WPF_Auto_Login {
 		add_action( 'wp_head', array( $this, 'debug_mode' ), 1 );
 
 		add_action( 'wp_head', array( $this, 'maybe_doing_it_wrong' ), 100 );
-
 	}
 
 	/**
@@ -70,7 +69,6 @@ class WPF_Auto_Login {
 		$contact_id = apply_filters( 'wpf_auto_login_contact_id', $contact_id );
 
 		return $contact_id;
-
 	}
 
 
@@ -96,7 +94,6 @@ class WPF_Auto_Login {
 			</script>
 			<!-- END WP Fusion auto login -->";
 		}
-
 	}
 
 	/**
@@ -228,7 +225,6 @@ class WPF_Auto_Login {
 		do_action( 'wpf_started_auto_login', $this->auto_login_user['user_id'], $contact_id );
 
 		return $this->auto_login_user['user_id'];
-
 	}
 
 	/**
@@ -276,7 +272,6 @@ class WPF_Auto_Login {
 		}
 
 		return $end;
-
 	}
 
 	/**
@@ -298,7 +293,6 @@ class WPF_Auto_Login {
 		}
 
 		return $skip;
-
 	}
 
 	/**
@@ -323,7 +317,9 @@ class WPF_Auto_Login {
 		update_user_meta( $user_id, WPF_TAGS_META_KEY, $user_tags );
 		update_user_meta( $user_id, WPF_CONTACT_ID_META_KEY, $contact_id );
 
-		wpf_log( 'info', $user_id, 'Starting auto-login session for contact #' . $contact_id . ' with tags:', array( 'tag_array' => $user_tags ) );
+		$url = esc_url( home_url( $_SERVER['REQUEST_URI'] ) );
+
+		wpf_log( 'info', $user_id, 'Starting auto-login session for contact #' . $contact_id . ' at <a href="' . $url . '" target="_blank">' . $url . '</a> with tags:', array( 'tag_array' => $user_tags ) );
 
 		// Allow other integrations to quickly access the auto login user ID.
 		$this->auto_login_user['user_id'] = $user_id;
@@ -361,7 +357,6 @@ class WPF_Auto_Login {
 		}
 
 		return $user_id;
-
 	}
 
 	/**
@@ -383,7 +378,6 @@ class WPF_Auto_Login {
 		}
 
 		return $comment_author_data;
-
 	}
 
 
@@ -416,7 +410,6 @@ class WPF_Auto_Login {
 
 			}
 		}
-
 	}
 
 	/**
@@ -433,7 +426,6 @@ class WPF_Auto_Login {
 			remove_all_actions( 'wpf_tags_applied', 10 );
 			remove_all_actions( 'wpf_tags_removed', 10 );
 		}
-
 	}
 
 	/**
@@ -452,7 +444,6 @@ class WPF_Auto_Login {
 		}
 
 		wp_cache_delete( $user_id, 'users' );
-
 	}
 
 	/**
@@ -512,7 +503,6 @@ class WPF_Auto_Login {
 		$settings = wp_fusion()->settings->insert_setting_before( 'system_header', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -631,7 +621,6 @@ class WPF_Auto_Login {
 		echo PHP_EOL;
 
 		echo ' END WP FUSION AUTO LOGIN DEBUG INFO -->';
-
 	}
 
 
@@ -663,8 +652,5 @@ class WPF_Auto_Login {
 			echo '</div>';
 
 		}
-
 	}
-
 }
-;

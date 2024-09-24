@@ -3,10 +3,24 @@
 class WPF_Staging {
 
 	/**
+	 * The CRM slug.
+	 *
+	 * @var string
+	 */
+	public $slug = 'staging';
+
+	/**
+	 * The CRM name.
+	 *
+	 * @var string
+	 */
+	public $name = 'Staging';
+
+	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports;
+	public $supports = array( 'add_tags', 'add_fields' );
 
 	/**
 	 * Get things started
@@ -16,10 +30,6 @@ class WPF_Staging {
 	 */
 
 	public function __construct() {
-
-		$this->slug     = 'staging';
-		$this->name     = 'Staging';
-		$this->supports = array( 'add_tags', 'add_fields' );
 
 		// Set up admin options
 		if ( is_admin() ) {
