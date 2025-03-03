@@ -1,7 +1,7 @@
 ---
 description: Description: High-level guidance for AI agents on how to prioritize rules and manage workflows. This is a meta-rule that helps organize the application of other rules.
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # Agent Workflow Guidelines
 
@@ -16,5 +16,4 @@ Always maintain the scratchpad at [scratchpad.md](mdc:wp-fusion-lite/.cursor/scr
 ## Documentation References
 - For WordPress standards: See [wordpress.mdc](mdc:wp-fusion-lite/.cursor/rules/wordpress.mdc)
 - For CRM integrations: See [crm-integration.mdc](mdc:wp-fusion-lite/.cursor/rules/crm-integration.mdc)
-- For plugin integrations: See [plugin-integration.mdc](mdc:wp-fusion-lite/.cursor/rules/plugin-integration.mdc)
 - For core functionality: See [core.mdc](mdc:wp-fusion-lite/.cursor/rules/core.mdc)
