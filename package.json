@@ -1,0 +1,30 @@
+{
+  "name": "wp-fusion-lite",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "wp-scripts build",
+    "dev": "wp-scripts start",
+    "lint:js": "wp-scripts lint-js",
+    "lint:js:fix": "wp-scripts lint-js --fix"
+  },
+  "dependencies": {
+    "@codeamp/block-components": "0.0.1-beta.9",
+    "@verygoodplugins/wpfselect": "^1.1.3"
+  },
+  "devDependencies": {
+    "@wordpress/api-fetch": "^7.16.0",
+    "@wordpress/components": "^29.2.0",
+    "@wordpress/compose": "^7.16.0",
+    "@wordpress/element": "^6.16.0",
+    "@wordpress/hooks": "^4.16.0",
+    "@wordpress/i18n": "^4.47.0",
+    "@wordpress/scripts": "^30.9.0",
+    "classnames": "^2.5.1",
+    "gulp": "^5.0.0",
+    "gulp-replace": "^1.1.4",
+    "lodash.assign": "^4.2.0"
+  },
+  "engines": {
+    "node": "20"
+  }
+}

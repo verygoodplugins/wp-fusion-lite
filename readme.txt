@@ -7,6 +7,7 @@ Tested up to: 6.7.0
 Stable tag: 3.44.8
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
+Source Code: https://github.com/verygoodplugins/wp-fusion-lite
 
 WP Fusion Lite synchronizes your WordPress users with contact records in your CRM or marketing automation system.
 
@@ -36,7 +37,7 @@ It does not apply tags based on purchases or course activity, sync form entries,
 
 For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 100 other popular WordPress plugins](https://wpfusion.com/documentation/integrations/?utm_campaign=free-plugin&utm_source=wp-org), check out [one of our paid licenses](https://wpfusion.com/pricing/?utm_campaign=free-plugin&utm_source=wp-org).
 
-[youtube https://www.youtube.com/watch?v=wzRajxCUxNI] 
+[youtube https://www.youtube.com/watch?v=XolMCxnDMvQ] 
 
 = Benefits =
 
@@ -70,6 +71,8 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 > WP Fusion builds a critical bridge between our WooCommerce powered ecommerce site and LifterLMS powered training site to our CRM ActiveCampaign. It was easy to set up. The technical support is above and beyond anything I've ever seen. What it does is clearly intelligently designed and well built.
 
 > Chris Badgett - LifterLMS
+
+[youtube https://www.youtube.com/watch?v=wzRajxCUxNI]
 
 = Supported CRMs and marketing automation platforms =
 
@@ -198,6 +201,10 @@ If you'd prefer not to see these you can disable them with the filter:
 = How can I report security bugs? =
 
 You can report security bugs through the Patchstack Vulnerability Disclosure Program. The Patchstack team help validate, triage and handle any security vulnerabilities. [Report a security vulnerability.](https://patchstack.com/database/vdp/wp-fusion-lite)
+
+= Where can I find the source code? =
+
+The source code and build files for WP Fusion Lite are available on [GitHub](https://github.com/verygoodplugins/wp-fusion-lite).
 
 = Do you have more FAQs? = 
 

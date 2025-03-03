@@ -1,0 +1,136 @@
+---
+description: Base WordPress coding standards and patterns. Apply these rules to all PHP files in the project.
+globs: *.php
+alwaysApply: true
+---
+# WordPress Development Rules
+
+## File Documentation
+Every PHP file must start with:
+```php
+/**
+ * WP Fusion - Component Description
+ *
+ * @package   WP Fusion
+ * @copyright Copyright (c) 2024, Very Good Plugins, https://verygoodplugins.com
+ * @license   GPL-3.0+
+ * @since     3.37.14
+ */
+```
+
+## Code Style
+- Use tabs for indentation
+- Keep lines under 100 characters
+- Use Yoda conditions
+- Add spaces after opening parentheses
+- Follow WordPress.org PHP Coding Standards
+
+## Naming Conventions
+```
+files/
+├── class-example.php       # Classes
+├── interface-example.php   # Interfaces
+└── trait-example.php      # Traits
+
+WPF_Example          # Class names (StudlyCaps)
+wpf_function_name()  # Function names (lowercase_with_underscores)
+$descriptive_var     # Variable names (clear purpose)
+```
+
+## String Localization
+```php
+// Simple strings
+__( 'Text', 'wp-fusion' )
+_e( 'Text', 'wp-fusion' )
+
+// With variables
+// translators: %1$s is the field name, %2$s is the error message
+sprintf( __( 'Error in %1$s: %2$s', 'wp-fusion' ), $field, $message )
+
+// Escaping translations
+esc_html__( 'Text', 'wp-fusion' )
+esc_attr__( 'Text', 'wp-fusion' )
+```
+
+## Data Handling
+```php
+// Input sanitization
+$clean_text = sanitize_text_field( $_POST['text'] );
+$clean_email = sanitize_email( $_POST['email'] );
+$clean_int = absint( $_GET['number'] );
+$clean_html = wp_kses_post( $_POST['content'] );
+
+// Output escaping
+echo esc_html( $text );
+echo esc_url( $url );
+echo esc_attr( $attribute );
+echo wp_kses_post( $html );
+
+// Data validation
+if ( ! is_email( $email ) ) {
+    return new WP_Error( 'invalid_email', __( 'Invalid email address', 'wp-fusion' ) );
+}
+```
+
+## Database Operations
+```php
+global $wpdb;
+
+// Prepared statements
+$wpdb->get_row( $wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}table WHERE id = %d",
+    $id
+) );
+
+// Insert/update
+$wpdb->insert( 
+    $wpdb->prefix . 'table',
+    array( 'column' => $value ),
+    array( '%s' )
+);
+```
+
+## Action/Filter Usage
+```php
+// Adding hooks
+add_action( 'init', array( $this, 'init' ), 10, 1 );
+add_filter( 'wpf_example', array( $this, 'filter' ), 10, 2 );
+
+// Running hooks
+do_action( 'wpf_event', $arg1, $arg2 );
+$value = apply_filters( 'wpf_filter', $value, $arg );
+```
+
+## Documentation Standards
+- Only use `@access` tags for non-public methods and properties
+- Public methods and properties should not include `@access` tags
+
+1. Class docblocks:
+```php
+/**
+ * Class description.
+ *
+ * @package WP Fusion
+ * @since x.x.x
+ */
+```
+
+2. Method docblocks:
+```php
+/**
+ * Method description.
+ *
+ * @since x.x.x
+ *
+ * @param  string $param Description.
+ * @return mixed Description.
+ */
+```
+
+3. Complex logic needs inline comments:
+```php
+// Check if user has required capability before proceeding
+if ( ! current_user_can( 'manage_options' ) ) {
+    return new WP_Error( 'unauthorized', __( 'You do not have permission to perform this action.', 'wp-fusion' ) );
+}
+``` 

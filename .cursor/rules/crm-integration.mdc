@@ -1,0 +1,137 @@
+---
+description: Guidelines for creating new CRM integrations. Apply when developing or modifying CRM modules in /includes/crms/*
+globs: includes/crms/**/*.php
+alwaysApply: false
+---
+# CRM Integration Development Rules
+
+## File Structure
+- Place new CRM classes in `includes/crms/{crm-slug}/`
+- Main CRM class: `includes/crms/{crm-slug}/class-{crm-slug}.php`
+- Admin class: `includes/crms/{crm-slug}/class-{crm-slug}-admin.php`
+- Follow naming convention: lowercase with hyphens
+
+## Class Properties
+```php
+class WPF_Example extends WPF_CRM_Base {
+    /**
+     * The CRM slug
+     */
+    public $slug = 'example';
+
+    /**
+     * The CRM name
+     */
+    public $name = 'Example CRM';
+
+    /**
+     * API URL
+     */
+    public $url = 'https://api.example.com/v1';
+
+    /**
+     * HTTP API parameters
+     */
+    public $params = array();
+
+    /**
+     * Declares how this CRM handles tags and fields
+     */
+    public $supports = array( 'add_tags', 'add_fields' );
+}
+```
+
+## Required Methods
+```php
+abstract class WPF_CRM_Base {
+    public function get_contact_id( $email_address );
+    public function add_contact( $data );
+    public function update_contact( $contact_id, $data );
+    public function load_contact( $contact_id );
+    public function get_tags( $$contact_id );
+    public function apply_tags( $tags, $contact_id );
+    public function remove_tags( $tags, $contact_id );
+
+    // Required filter for handling API responses
+    public function handle_http_response( $response, $args, $url ) {
+        $body = json_decode( wp_remote_retrieve_body( $response ) );
+    
+        if ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
+            if ( ! empty( $body->error ) ) {
+                return new WP_Error( 'error', $body->error );
+            } else {
+                return new WP_Error( 'error', __( 'Unknown error', 'wp-fusion' ) );
+            }
+        }
+
+        return $response;
+    }
+}
+```
+
+## Initialization
+```php
+public function __construct() {
+    // Add HTTP response handler
+    add_filter( 'http_response', array( $this, 'handle_http_response' ), 10, 3 );
+}
+
+public function init() {
+    // Only initialize admin UI
+    if ( is_admin() ) {
+        require_once dirname( __FILE__ ) . '/class-' . $this->slug . '-admin.php';
+        new WPF_' . ucwords( $this->slug ) . '_Admin( $this );
+    }
+}
+```
+
+## Common Patterns
+- Use `wp_remote_*()` for API calls
+- Implement proper error handling
+- Use `wpf_log()` for debugging
+- Cache API responses when appropriate
+- Sanitize all data before sending to API
+
+## Testing Requirements
+- Test all abstract methods
+- Verify error handling
+- Check rate limiting
+- Test field mapping
+- Validate tag sync
+- Test HTTP response handler
+
+## Examples
+```php
+// API call pattern
+public function add_contact( $data ) {
+    $params = array(
+        'method'  => 'POST',
+        'headers' => $this->get_headers(),
+        'body'    => wp_json_encode( $data ),
+    );
+
+    $response = wp_remote_post( $this->url . '/contacts', $params );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    $body = json_decode( wp_remote_retrieve_body( $response ) );
+
+    return $body->contact_id;
+}
+```
+
+## Common Issues
+- Rate limiting
+- API version compatibility
+- Field type mismatches
+- Authentication errors
+- SSL certificate issues
+
+## Directory Structure Example
+```
+includes/crms/examplecrm/
+├── class-examplecrm.php       # Main CRM class
+├── class-examplecrm-admin.php # Admin settings
+``` 

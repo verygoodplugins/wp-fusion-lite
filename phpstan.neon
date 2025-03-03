@@ -1,0 +1,16 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    checkExplicitMixedMissingReturn: false
+    reportUnmatchedIgnoredErrors: false
+    bootstrapFiles:
+        - ./stubs.php
+    excludePaths:
+        - **/node_modules/*
+        - **/vendor/*
+        - **/tests/*
+        - !**/*.php
+    paths:
+        - ./

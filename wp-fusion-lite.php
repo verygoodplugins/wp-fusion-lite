@@ -7,7 +7,7 @@
  * Version: 3.44.8
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
- * Text Domain: wp-fusion
+ * Text Domain: wp-fusion-lite
  */
 
 /**

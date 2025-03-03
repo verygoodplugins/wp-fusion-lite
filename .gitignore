@@ -6,3 +6,5 @@ composer.json
 *.idea
 .idea/vcs.xml
 .idea/vcs.xml
+wp-fusion-lite.code-workspace
+.cursor/scratchpad.md
