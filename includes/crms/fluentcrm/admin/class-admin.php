@@ -27,7 +27,6 @@ class WPF_FluentCRM_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -39,8 +38,13 @@ class WPF_FluentCRM_Admin {
 
 	public function init() {
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 20, 2 ); // 20 so it runs after WooCommerce.
 		add_action( 'wpf_resync_contact', array( $this, 'resync_contact' ) );
+
+		// Enable the status field if we're collecting email optins.
+		add_action( 'validate_field_email_optin', array( $this, 'validate_field_email_optin' ), 10, 3 );
+		add_action( 'validate_field_give_email_optin', array( $this, 'validate_field_email_optin' ), 10, 3 );
+		add_action( 'validate_field_edd_email_optin', array( $this, 'validate_field_email_optin' ), 10, 3 );
 	}
 
 
@@ -56,7 +60,8 @@ class WPF_FluentCRM_Admin {
 		$new_settings = array();
 
 		$new_settings['fluentcrm_header'] = array(
-			'title'   => __( 'FluentCRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -72,7 +77,6 @@ class WPF_FluentCRM_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -101,15 +105,16 @@ class WPF_FluentCRM_Admin {
 		);
 
 		$new_settings['default_status'] = array(
-			'title'       => __( 'Default Status', 'wp-fusion-lite' ),
-			'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
-			'tooltip'     => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address. This can be overridden on a per-form basis by syncing a value of "subscribed" to the Status field.', 'wp-fusion-lite' ),
-			'type'        => 'select',
-			'std'         => 'subscribed',
-			'section'     => 'main',
-			'choices'     => array(
-				'subscribed' => 'Subscribed',
-				'pending'    => 'Pending',
+			'title'   => __( 'Default Status', 'wp-fusion-lite' ),
+			'desc'    => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
+			'tooltip' => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address. This can be overridden on a per-form basis by syncing a value of "subscribed" to the Status field.', 'wp-fusion-lite' ),
+			'type'    => 'select',
+			'std'     => 'subscribed',
+			'section' => 'main',
+			'choices' => array(
+				'subscribed'   => 'Subscribed',
+				'pending'      => 'Pending',
+				'unsubscribed' => 'Unsubscribed',
 			),
 		);
 
@@ -121,8 +126,55 @@ class WPF_FluentCRM_Admin {
 
 		$settings['fluentcrm_lists']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
 
-		return $settings;
+		if ( isset( $settings['email_optin_tags'] ) ) {
+			$new_settings = array(
+				'woo_optin_status' => array(
+					'title'   => __( 'Optin Status', 'wp-fusion-lite' ),
+					'desc'    => __( 'Select an opt-in status for customers who check the optin box.', 'wp-fusion-lite' ),
+					'tooltip' => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address.', 'wp-fusion-lite' ),
+					'type'    => 'select',
+					'std'     => 'subscribed',
+					'section' => 'integrations',
+					'choices' => array(
+						'subscribed' => 'Subscribed',
+						'pending'    => 'Pending',
+					),
+				),
+			);
 
+			$settings = wp_fusion()->settings->insert_setting_after( 'email_optin_tags', $settings, $new_settings );
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Enables the email optin field for sync if we're collecting it at checkout.
+	 *
+	 * @since 3.44.22
+	 *
+	 * @param bool              $input           The input value.
+	 * @param array             $setting         The setting array.
+	 * @param WP_Fusion_Options $options_class   The options class.
+	 * @return mixed The validated input.
+	 */
+	public function validate_field_email_optin( $input, $setting, $options_class ) {
+
+		if ( true === boolval( $input ) ) {
+
+			$target_field = str_replace( 'validate_field_', '', current_filter() );
+
+			if ( ! isset( $options_class->post_data['contact_fields'][ $target_field ] ) || empty( $options_class->post_data['contact_fields'][ $target_field ]['active'] ) ) {
+
+				$options_class->post_data['contact_fields'][ $target_field ] = array(
+					'active'    => true,
+					'crm_field' => 'status',
+					'type'      => 'checkbox',
+				);
+			}
+		}
+
+		return $input;
 	}
 
 
@@ -205,55 +257,53 @@ class WPF_FluentCRM_Admin {
 			$lists[] = $list_object->id;
 		}
 		update_user_meta( $user_id, 'fluentcrm_lists', $lists );
-
 	}
 
 
 	private function default_field_maps() {
-		$fields = [
-			'first_name'        => [
+		$fields = array(
+			'first_name'        => array(
 				'crm_label' => 'First Name',
 				'crm_field' => 'first_name',
-			],
-			'last_name'         => [
+			),
+			'last_name'         => array(
 				'crm_label' => 'Last Name',
 				'crm_field' => 'last_name',
-			],
-			'user_email'        => [
+			),
+			'user_email'        => array(
 				'crm_label' => 'Email',
 				'crm_field' => 'email',
-			],
-			'phone_number'      => [
+			),
+			'phone_number'      => array(
 				'crm_label' => 'Phone',
 				'crm_field' => 'phone',
-			],
-			'billing_address_1' => [
+			),
+			'billing_address_1' => array(
 				'crm_label' => 'Address 1',
 				'crm_field' => 'address_line_1',
-			],
-			'billing_address_2' => [
+			),
+			'billing_address_2' => array(
 				'crm_label' => 'Address 2',
 				'crm_field' => 'address_line_2',
-			],
-			'billing_city'      => [
+			),
+			'billing_city'      => array(
 				'crm_label' => 'City',
 				'crm_field' => 'city',
-			],
-			'billing_state'     => [
+			),
+			'billing_state'     => array(
 				'crm_label' => 'State',
 				'crm_field' => 'state',
-			],
-			'billing_postcode'  => [
+			),
+			'billing_postcode'  => array(
 				'crm_label' => 'Zip',
 				'crm_field' => 'postal_code',
-			],
-			'billing_country'   => [
+			),
+			'billing_country'   => array(
 				'crm_label' => 'Country',
 				'crm_field' => 'country',
-			],
-		];
+			),
+		);
 
 		return $fields;
 	}
-
 }

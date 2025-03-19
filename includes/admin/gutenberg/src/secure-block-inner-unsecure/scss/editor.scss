@@ -23,9 +23,11 @@ $wp_fusion_color_gutenberg_black: #32373c;
 	}
 
 	&__icon {
-		position: absolute;
+		position: absolute !important;
 		top: 8px;
 		right: 8px;
 		opacity: 0.8;
+		margin-top: 0;
+		margin-bottom: 0;
 	}
 }

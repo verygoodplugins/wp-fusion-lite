@@ -529,9 +529,43 @@ class WPF_ActiveCampaign {
 
 		asort( $custom_fields );
 
+		// Now get the account fields.
+
+		$offset         = 0;
+		$proceed        = true;
+		$account_fields = array(
+			'acct_name'       => 'Account Name',
+			'acct_accountUrl' => 'Account URL',
+		);
+
+		while ( $proceed ) {
+
+			$response = wp_safe_remote_get( $this->api_url . 'api/3/accountCustomFieldMeta?limit=100&offset=' . $offset, $this->params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			foreach ( $response->{'accountCustomFieldMeta'} as $field ) {
+				$account_fields[ 'acct_' . $field->id ] = $field->{'fieldLabel'};
+			}
+
+			if ( count( $response->{'accountCustomFieldMeta'} ) < 100 ) {
+				$proceed = false;
+			}
+
+			$offset += 100;
+
+		}
+
+		asort( $account_fields );
+
 		$crm_fields = array(
 			'Standard Fields' => $built_in_fields,
 			'Custom Fields'   => $custom_fields,
+			'Account Fields'  => $account_fields,
 		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
@@ -692,6 +726,14 @@ class WPF_ActiveCampaign {
 		return true;
 	}
 
+	/**
+	 * Formats contact data for the API.
+	 *
+	 * @since 3.44.21
+	 *
+	 * @param array $data The contact data.
+	 * @return array The formatted contact data.
+	 */
 	private function format_contact_data( $data ) {
 
 		$update_data = array(
@@ -717,6 +759,17 @@ class WPF_ActiveCampaign {
 		if ( isset( $data['phone'] ) ) {
 			$update_data['contact']['phone'] = $data['phone'];
 			unset( $data['phone'] );
+		}
+
+		if ( isset( $data['orgname'] ) ) {
+			unset( $data['orgname'] );
+		}
+
+		// Remove account fields.
+		foreach ( $data as $field => $value ) {
+			if ( 0 === strpos( $field, 'acct_' ) ) {
+				unset( $data[ $field ] );
+			}
 		}
 
 		// Fill out the custom fields array.
@@ -786,44 +839,17 @@ class WPF_ActiveCampaign {
 			unset( $data['lists'] );
 		}
 
-		if ( ! isset( $data['orgname'] ) ) {
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $this->format_contact_data( $data ) );
 
-			$params         = $this->get_params();
-			$params['body'] = wp_json_encode( $this->format_contact_data( $data ) );
+		$response = wp_remote_post( $this->api_url . 'api/3/contacts', $params );
 
-			$response = wp_remote_post( $this->api_url . 'api/3/contacts', $params );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$response   = json_decode( wp_remote_retrieve_body( $response ) );
-			$contact_id = $response->contact->id;
-
-		} else {
-
-			$request = add_query_arg(
-				array(
-					'api_key'    => wpf_get_option( 'ac_key' ),
-					'api_action' => 'contact_sync',
-					'api_output' => 'json',
-				),
-				$this->api_url . 'admin/api.php'
-			);
-
-			$params                            = $this->get_params();
-			$params['body']                    = $data;
-			$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
-
-			$response = wp_remote_post( $request, $params );
-
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$response   = json_decode( wp_remote_retrieve_body( $response ) );
-			$contact_id = $response->subscriber_id;
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
+
+		$response   = json_decode( wp_remote_retrieve_body( $response ) );
+		$contact_id = $response->contact->id;
 
 		if ( isset( $lists ) ) {
 			foreach ( $lists as $list_id ) {
@@ -835,6 +861,23 @@ class WPF_ActiveCampaign {
 				$this->add_contact_to_list( $contact_id, $list_id );
 
 			}
+		}
+
+		// Maybe create / update / link account.
+
+		$account_fields = array();
+
+		foreach ( $data as $field => $value ) {
+			if ( strpos( $field, 'acct_' ) !== false ) {
+				$field                    = str_replace( 'acct_', '', $field );
+				$account_fields[ $field ] = $value;
+			} elseif ( 'orgname' === $field ) {
+				$account_fields['name'] = $value;
+			}
+		}
+
+		if ( ! empty( $account_fields ) && ! empty( $account_fields['name'] ) ) {
+			$this->create_or_update_account( $account_fields, $contact_id );
 		}
 
 		return $contact_id;
@@ -855,40 +898,13 @@ class WPF_ActiveCampaign {
 			unset( $data['lists'] );
 		}
 
-		if ( ! isset( $data['orgname'] ) ) {
+		// v3 API.
 
-			// v3 API.
+		$params           = $this->get_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode( $this->format_contact_data( $data ) );
 
-			$params           = $this->get_params();
-			$params['method'] = 'PUT';
-			$params['body']   = wp_json_encode( $this->format_contact_data( $data ) );
-
-			$response = wp_remote_request( $this->api_url . 'api/3/contacts/' . $contact_id, $params );
-
-		} else {
-
-			// v1 API supports linking a contact to an account without a separate API call,
-			// though it's slower.
-
-			$data['id']        = $contact_id;
-			$data['overwrite'] = 0;
-
-			$request = add_query_arg(
-				array(
-					'api_key'    => wpf_get_option( 'ac_key' ),
-					'api_action' => 'contact_edit',
-					'api_output' => 'json',
-				),
-				$this->api_url . 'admin/api.php'
-			);
-
-			$params                            = $this->get_params();
-			$params['body']                    = $data;
-			$params['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
-
-			$response = wp_remote_post( $request, $params );
-
-		}
+		$response = wp_remote_request( $this->api_url . 'api/3/contacts/' . $contact_id, $params );
 
 		// Add to lists.
 		if ( ! empty( $lists ) ) {
@@ -908,14 +924,54 @@ class WPF_ActiveCampaign {
 			return $response;
 		}
 
+		// Maybe create / update / link account.
+
+		$account_fields = array();
+
+		foreach ( $data as $field => $value ) {
+			if ( strpos( $field, 'acct_' ) !== false ) {
+				$field                    = str_replace( 'acct_', '', $field );
+				$account_fields[ $field ] = $value;
+				unset( $data[ $field ] );
+			} elseif ( 'orgname' === $field ) {
+				$account_fields['name'] = $value;
+				unset( $data[ $field ] );
+			}
+		}
+
+		if ( ! empty( $account_fields ) ) {
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->contact->orgid ) &&
+				( empty( $account_fields['name'] ) || trim( $account_fields['name'] ) === trim( $response->contact->orgname ) )
+			) {
+				$account_id = $this->update_account( $response->contact->orgid, $account_fields );
+			} elseif ( ! empty( $account_fields['name'] ) ) {
+				$account_id = $this->create_or_update_account( $account_fields, $contact_id );
+			} else {
+				$account_id = false;
+				wpf_log(
+					'notice',
+					wpf_get_user_id( $contact_id ),
+					// translators: %d is the contact ID.
+					sprintf( __( 'Account fields were provided for contact #%d but no account name was specified, and the contact is not linked to an existing account. Account details were not updated.', 'wp-fusion-lite' ), $contact_id ),
+					array( 'meta_array_nofilter' => $account_fields )
+				);
+			}
+
+			if ( is_wp_error( $account_id ) ) {
+				return $account_id;
+			}
+		}
+
 		return true;
 	}
 
 	/**
 	 * Loads a contact and updates local user meta
 	 *
-	 * @access public
-	 * @return array User meta data that was returned
+	 * @return array|WP_Error User meta data that was returned or error.
 	 */
 
 	public function load_contact( $contact_id ) {
@@ -942,6 +998,7 @@ class WPF_ActiveCampaign {
 			'last_name'  => $response->contact->{'lastName'},
 			'email'      => $response->contact->{'email'},
 			'phone'      => $response->contact->{'phone'},
+			'orgname'    => $response->contact->{'orgname'},
 		);
 
 		// Maybe merge custom fields.
@@ -1185,14 +1242,6 @@ class WPF_ActiveCampaign {
 
 	public function get_customer_id( $contact_id, $connection_id, $order_id = false ) {
 
-		$transient = get_transient( 'wpf_abandoned_cart_' . $contact_id );
-
-		if ( ! empty( $transient ) && ! empty( $transient['customer_id'] ) ) {
-
-			// For cases where we just created the customer via the Abandoned Cart addon
-			return $transient['customer_id'];
-		}
-
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
 		if ( false !== $user_id ) {
@@ -1208,7 +1257,6 @@ class WPF_ActiveCampaign {
 
 		if ( empty( $user_id ) ) {
 
-			$external_id  = 'guest';
 			$contact_data = $this->load_contact( $contact_id );
 
 			if ( is_wp_error( $contact_data ) ) {
@@ -1221,9 +1269,8 @@ class WPF_ActiveCampaign {
 			$user_email = $contact_data['user_email'];
 
 		} else {
-			$external_id = $user_id;
-			$user        = get_userdata( $user_id );
-			$user_email  = $user->user_email;
+			$user       = get_userdata( $user_id );
+			$user_email = $user->user_email;
 		}
 
 		$params = $this->get_params();
@@ -1235,11 +1282,11 @@ class WPF_ActiveCampaign {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( ! empty( $body->ecomCustomers ) ) {
+		if ( ! empty( $body->{'ecomCustomers'} ) ) {
 
-			foreach ( $body->ecomCustomers as $customer ) {
+			foreach ( $body->{'ecomCustomers'} as $customer ) {
 
-				if ( $customer->connectionid == $connection_id ) {
+				if ( intval( $customer->connectionid ) === intval( $connection_id ) ) {
 
 					return $customer->id;
 
@@ -1247,13 +1294,46 @@ class WPF_ActiveCampaign {
 			}
 		}
 
+		// Create a new customer.
+
+		$customer_id = $this->add_customer( $user_email, $user_id );
+
+		if ( false === $customer_id ) {
+
+			wpf_log( 'error', $user_id, 'Unable to create customer or find existing customer. Aborting.', array( 'source' => 'wpf-ecommerce' ) );
+			return false;
+
+		}
+
+		return $customer_id;
+	}
+
+	/**
+	 * Add a customer to ActiveCampaign.
+	 *
+	 * @since 3.44.11
+	 *
+	 * @param string   $user_email The customer's email address.
+	 * @param int|bool $user_id    The user ID for the customer.
+	 *
+	 * @return int|false The customer ID if created successfully, false on failure.
+	 */
+	public function add_customer( $user_email, $user_id ) {
+
+		if ( false !== $user_id ) {
+			$external_id = $user_id;
+		} else {
+			$external_id = 'guest';
+		}
+
 		// If no customer was found, create a new one
 
 		$body = array(
 			'ecomCustomer' => array(
-				'connectionid' => $connection_id,
-				'externalid'   => $external_id,
-				'email'        => $user_email,
+				'connectionid'     => $this->get_connection_id(),
+				'externalid'       => $external_id,
+				'email'            => $user_email,
+				'acceptsMarketing' => wp_fusion()->crm->get_marketing_consent_from_email( $user_email ),
 			),
 		);
 
@@ -1267,6 +1347,7 @@ class WPF_ActiveCampaign {
 			)
 		);
 
+		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $body );
 
 		$response = wp_safe_remote_post( $this->api_url . 'api/3/ecomCustomers', $params );
@@ -1293,14 +1374,7 @@ class WPF_ActiveCampaign {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( is_object( $body ) ) {
-			$customer_id = $body->ecomCustomer->id;
-		}
-
-		if ( false === $customer_id ) {
-
-			wpf_log( 'error', $user_id, 'Unable to create customer or find existing customer. Aborting.', array( 'source' => 'wpf-ecommerce' ) );
-			return false;
-
+			$customer_id = intval( $body->{'ecomCustomer'}->id );
 		}
 
 		if ( false !== $user_id ) {
@@ -1309,6 +1383,10 @@ class WPF_ActiveCampaign {
 
 		return $customer_id;
 	}
+
+	//
+	// Event tracking
+	//
 
 	/**
 	 * Track event.
@@ -1391,5 +1469,279 @@ class WPF_ActiveCampaign {
 		}
 
 		return true;
+	}
+
+	//
+	// Account functions
+	//
+
+	/**
+	 * Creates or updates an account and links it to a contact
+	 *
+	 * @since 3.44.21
+	 *
+	 * @return void
+	 */
+	public function create_or_update_account( $account_fields, $contact_id ) {
+
+		$account_id = $this->get_account_id( $account_fields['name'] );
+
+		if ( is_wp_error( $account_id ) ) {
+			return $account_id;
+		}
+
+		if ( ! empty( $account_id ) ) {
+			$this->update_account( $account_id, $account_fields );
+		} else {
+			$account_id = $this->create_account( $account_fields );
+
+			if ( is_wp_error( $account_id ) ) {
+				return $account_id;
+			}
+
+			$result = $this->link_account_to_contact( $account_id, $contact_id );
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Gets account ID by name
+	 *
+	 * @since 3.44.21
+	 *
+	 * @return int|bool Account ID or false if not found
+	 */
+	public function get_account_id( $name ) {
+
+		$response = wp_safe_remote_get( $this->api_url . 'api/3/accounts?filters[name]=' . urlencode( $name ), $this->params );
+
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $response->accounts ) ) {
+			return false;
+		}
+
+		return $response->accounts[0]->id;
+	}
+
+	/**
+	 * Creates a new account
+	 *
+	 * @since 3.44.21
+	 *
+	 * @return int|WP_Error Account ID or error
+	 */
+	public function create_account( $account_fields ) {
+
+		$data = array(
+			'account' => array(
+				'name' => $account_fields['name'],
+			),
+		);
+
+		// Handle optional fields
+		if ( ! empty( $account_fields['accountUrl'] ) ) {
+			$data['account']['accountUrl'] = $account_fields['accountUrl'];
+		}
+
+		// Handle custom fields
+		if ( ! empty( $account_fields ) ) {
+			$data['account']['fields'] = array();
+
+			foreach ( $account_fields as $field => $value ) {
+				if ( is_numeric( $field ) ) { // Custom field IDs are numeric
+					$data['account']['fields'][] = array(
+						'customFieldId' => (int) $field,
+						'fieldValue'    => $value,
+					);
+				}
+			}
+		}
+
+		wpf_log(
+			'info',
+			0,
+			__( 'Creating new account with data:', 'wp-fusion-lite' ),
+			array(
+				'meta_array_nofilter' => $data,
+				'source'              => 'activecampaign',
+			)
+		);
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $data );
+
+		$response = wp_remote_post( $this->api_url . 'api/3/accounts', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return $response->account->id;
+	}
+
+	/**
+	 * Updates an existing account
+	 *
+	 * @since 3.44.21
+	 *
+	 * @return bool|WP_Error True on success, WP_Error on failure
+	 */
+	public function update_account( $account_id, $account_fields ) {
+
+		$data = array(
+			'account' => array(
+				'name' => $account_fields['name'],
+			),
+		);
+
+		// Handle optional fields
+		if ( ! empty( $account_fields['accountUrl'] ) ) {
+			$data['account']['accountUrl'] = $account_fields['accountUrl'];
+		}
+
+		// Handle custom fields
+		if ( ! empty( $account_fields ) ) {
+			$data['account']['fields'] = array();
+
+			foreach ( $account_fields as $field => $value ) {
+				if ( is_numeric( $field ) ) { // Custom field IDs are numeric
+					$data['account']['fields'][] = array(
+						'customFieldId' => (int) $field,
+						'fieldValue'    => $value,
+					);
+				}
+			}
+		}
+
+		wpf_log(
+			'info',
+			0,
+			__( 'Updating account with data:', 'wp-fusion-lite' ),
+			array(
+				'meta_array_nofilter' => $data,
+				'source'              => 'activecampaign',
+			)
+		);
+
+		$params           = $this->get_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode( $data );
+
+		$response = wp_remote_request( $this->api_url . 'api/3/accounts/' . $account_id, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return $account_id;
+	}
+
+	/**
+	 * Links a contact to an account. If the contact is already associated with an
+	 * account, it will update the association.
+	 *
+	 * @since 3.44.21
+	 *
+	 * @return int|WP_Error Account Contact ID or error
+	 */
+	public function link_account_to_contact( $account_id, $contact_id ) {
+
+		$data = array(
+			'accountContact' => array(
+				'contact'  => $contact_id,
+				'account'  => $account_id,
+				'jobTitle' => '',
+			),
+		);
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $data );
+
+		wpf_log(
+			'info',
+			wpf_get_user_id( $contact_id ),
+			sprintf(
+				// translators: %1$d is the contact ID, %2$d is the account ID.
+				__( 'Linking contact #%1$d to account #%2$d', 'wp-fusion-lite' ),
+				$contact_id,
+				$account_id
+			),
+			array( 'source' => 'activecampaign' )
+		);
+
+		$response = wp_remote_post( $this->api_url . 'api/3/accountContacts', $params );
+
+		if ( is_wp_error( $response ) ) {
+
+			if ( false !== strpos( $response->get_error_message(), 'This contact is already associated with an account.' ) ) {
+
+				// Get the current account association
+				$response = wp_safe_remote_get( $this->api_url . 'api/3/accountContacts?filters[contact]=' . $contact_id, $this->params );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( empty( $response->{'accountContacts'} ) ) {
+					return new WP_Error( 'error', 'Unable to look up existing account contact association.' );
+				}
+
+				wpf_log(
+					'notice',
+					wpf_get_user_id( $contact_id ),
+					sprintf(
+						// translators: %1$d is the contact ID, %2$d is the account ID.
+						__( 'The contact #%1$d was previously associated with account #%2$d, deleting existing association and attempting to link again to account #%3$d.', 'wp-fusion-lite' ),
+						$contact_id,
+						$response->{'accountContacts'}[0]->account,
+						$account_id
+					),
+					array(
+						'source' => 'activecampaign',
+					)
+				);
+
+				// Delete the existing association
+				$params           = $this->get_params();
+				$params['method'] = 'DELETE';
+
+				$result = wp_remote_request( $this->api_url . 'api/3/accountContacts/' . $response->{'accountContacts'}[0]->id, $params );
+
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+
+				// Try creating the new association
+				$params           = $this->get_params();
+				$params['body']   = wp_json_encode( $data );
+				$params['method'] = 'POST';
+
+				$response = wp_remote_post( $this->api_url . 'api/3/accountContacts', $params );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+			} else {
+				return $response;
+			}
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		return $response->{'accountContact'}->id;
 	}
 }

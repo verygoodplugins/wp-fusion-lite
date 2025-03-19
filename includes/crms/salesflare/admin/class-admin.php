@@ -28,7 +28,6 @@ class WPF_Salesflare_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -41,7 +40,6 @@ class WPF_Salesflare_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -57,10 +55,11 @@ class WPF_Salesflare_Admin {
 		$new_settings = array();
 
 		$new_settings['salesflare_header'] = array(
-			'title'   => __( 'Salesflare Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['salesflare_key'] = array(
@@ -69,13 +68,12 @@ class WPF_Salesflare_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'salesflare_key' )
+			'post_fields' => array( 'salesflare_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -90,7 +88,7 @@ class WPF_Salesflare_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/salesflare-fields.php';
+			require_once __DIR__ . '/salesflare-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -98,13 +96,10 @@ class WPF_Salesflare_Admin {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $salesflare_fields[ $field ] );
 
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -120,7 +115,6 @@ class WPF_Salesflare_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -156,7 +150,5 @@ class WPF_Salesflare_Admin {
 		}
 
 		die();
-
 	}
-
 }

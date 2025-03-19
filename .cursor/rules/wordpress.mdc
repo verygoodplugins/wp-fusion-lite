@@ -40,16 +40,16 @@ $descriptive_var     # Variable names (clear purpose)
 ## String Localization
 ```php
 // Simple strings
-__( 'Text', 'wp-fusion' )
-_e( 'Text', 'wp-fusion' )
+__( 'Text', 'wp-fusion-lite' )
+_e( 'Text', 'wp-fusion-lite' )
 
 // With variables
 // translators: %1$s is the field name, %2$s is the error message
-sprintf( __( 'Error in %1$s: %2$s', 'wp-fusion' ), $field, $message )
+sprintf( __( 'Error in %1$s: %2$s', 'wp-fusion-lite' ), $field, $message )
 
 // Escaping translations
-esc_html__( 'Text', 'wp-fusion' )
-esc_attr__( 'Text', 'wp-fusion' )
+esc_html__( 'Text', 'wp-fusion-lite' )
+esc_attr__( 'Text', 'wp-fusion-lite' )
 ```
 
 ## Data Handling
@@ -68,7 +68,7 @@ echo wp_kses_post( $html );
 
 // Data validation
 if ( ! is_email( $email ) ) {
-    return new WP_Error( 'invalid_email', __( 'Invalid email address', 'wp-fusion' ) );
+    return new WP_Error( 'invalid_email', __( 'Invalid email address', 'wp-fusion-lite' ) );
 }
 ```
 
@@ -131,6 +131,6 @@ $value = apply_filters( 'wpf_filter', $value, $arg );
 ```php
 // Check if user has required capability before proceeding
 if ( ! current_user_can( 'manage_options' ) ) {
-    return new WP_Error( 'unauthorized', __( 'You do not have permission to perform this action.', 'wp-fusion' ) );
+    return new WP_Error( 'unauthorized', __( 'You do not have permission to perform this action.', 'wp-fusion-lite' ) );
 }
 ``` 

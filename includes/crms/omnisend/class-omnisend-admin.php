@@ -114,7 +114,8 @@ class WPF_Omnisend_Admin {
 		$new_settings = array();
 
 		$new_settings['omnisend_header'] = array(
-			'title'   => __( 'Omnisend Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);

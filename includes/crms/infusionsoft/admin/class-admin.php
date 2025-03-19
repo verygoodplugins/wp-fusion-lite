@@ -28,7 +28,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -42,7 +41,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 20 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -58,17 +56,28 @@ class WPF_Infusionsoft_iSDK_Admin {
 		$is_config = array();
 
 		$is_config['infusionsoft_header'] = array(
-			'title'   => __( 'Infusionsoft Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$is_config['app_name'] = array(
 			'title'   => __( 'Application Name', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enter the name of your Infusionsoft application (i.e. "ab123").', 'wp-fusion-lite' ),
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
+
+		if ( ! empty( $options['connection_configured'] ) ) {
+
+			$is_config['backup_api_key'] = array(
+				'title'   => __( 'Backup Service Account Key', 'wp-fusion-lite' ),
+				'desc'    => __( 'Optional: Enter a backup Service Account Key to use if the primary key reaches its API limit. The system will automatically switch to this key if throttling is detected.', 'wp-fusion-lite' ),
+				'type'    => 'text',
+				'section' => 'setup',
+			);
+		}
 
 		$is_config['api_key'] = array(
 			'title'       => __( 'Service Account Key', 'wp-fusion-lite' ),
@@ -82,7 +91,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $is_config );
 
 		return $settings;
-
 	}
 
 	/**
@@ -99,7 +107,7 @@ class WPF_Infusionsoft_iSDK_Admin {
 			'desc'    => __( 'Check this box to make an API call when a profile is updated. See <a target="_blank" href="https://wpfusion.com/documentation/tutorials/infusionsoft-api-goals/">the documentation</a> for more info.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
-			'unlock'  => array( 'api_call_integration', 'api_call_name' )
+			'unlock'  => array( 'api_call_integration', 'api_call_name' ),
 		);
 
 		$new_settings['api_call_integration'] = array(
@@ -114,20 +122,21 @@ class WPF_Infusionsoft_iSDK_Admin {
 			'title'   => __( 'Call Name', 'wp-fusion-lite' ),
 			'std'     => 'contactUpdated',
 			'type'    => 'text',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$new_settings['site_tracking_header'] = array(
 			'title'   => __( 'Infusionsoft Site Tracking', 'wp-fusion-lite' ),
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$new_settings['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enable <a target="_blank" href="https://help.infusionsoft.com/userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-infusionsoft-tracking-code-into-your-website">Infusionsoft site tracking</a>.', 'wp-fusion-lite' ),'std'     => 0,
+			'desc'    => __( 'Enable <a target="_blank" href="https://help.infusionsoft.com/userguides/campaigns-and-broadcasts/lead-sources-and-visitor-traffic/embed-the-infusionsoft-tracking-code-into-your-website">Infusionsoft site tracking</a>.', 'wp-fusion-lite' ),
+			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $new_settings );
@@ -137,7 +146,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 		$settings['api_call_integration']['disabled'] = ( wpf_get_option( 'api_call' ) == 0 ? true : false );
 
 		return $settings;
-
 	}
 
 	/**
@@ -151,21 +159,17 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/infusionsoft-fields.php';
+			require_once __DIR__ . '/infusionsoft-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $infusionsoft_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ]['crm_field'] = $infusionsoft_fields[ $field ]['crm_field'];
 				}
-
 			}
-
 		}
 
-
 		return $options;
-
 	}
 
 
@@ -206,7 +210,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 				return $result[0];
 
 			}
-
 		} else {
 
 			// Add underscore to custom fields
@@ -215,7 +218,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 			return $result[0];
 
 		}
-
 	}
 
 
@@ -231,7 +233,6 @@ class WPF_Infusionsoft_iSDK_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -246,30 +247,23 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$app_name = sanitize_text_field( wp_unslash( $_POST['app_name'] ) );
-		$api_key  = sanitize_text_field( wp_unslash( $_POST['api_key'] ) );
+		$app_name = isset( $_POST['app_name'] ) ? sanitize_text_field( wp_unslash( $_POST['app_name'] ) ) : false;
+		$api_key  = isset( $_POST['api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['api_key'] ) ) : false;
 
 		$connection = $this->crm->connect( $app_name, $api_key, true );
 
 		if ( is_wp_error( $connection ) ) {
-
 			wp_send_json_error( $connection->get_error_message() );
-
-		} else {
-
-			$options                          = array();
-			$options['app_name']              = $app_name;
-			$options['api_key']               = $api_key;
-			$options['crm']                   = $this->slug;
-			$options['connection_configured'] = true;
-
-			wp_fusion()->settings->set_multiple( $options );
-
-			wp_send_json_success();
-
 		}
 
+		$options                          = array();
+		$options['app_name']              = $app_name;
+		$options['api_key']               = $api_key;
+		$options['crm']                   = $this->slug;
+		$options['connection_configured'] = true;
+
+		wp_fusion()->settings->set_multiple( $options );
+
+		wp_send_json_success();
 	}
-
-
 }

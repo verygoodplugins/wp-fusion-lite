@@ -181,8 +181,12 @@ class WPF_Encharge {
 
 	public function api_success( $user_id, $method ) {
 
-		wp_send_json_success( array( 'user_id' => $user_id, 'method' => $method ) );
-
+		wp_send_json_success(
+			array(
+				'user_id' => $user_id,
+				'method'  => $method,
+			)
+		);
 	}
 
 	/**
@@ -351,7 +355,7 @@ class WPF_Encharge {
 			echo '
 			<script>
 				EncTracking.identify({ 
-				email: "' . $email . '"
+				email: "' . esc_js( $email ) . '"
 			  });
 			</script>
 			';
@@ -418,7 +422,7 @@ class WPF_Encharge {
 		}
 
 		asort( $available_tags );
-		
+
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;

@@ -57,7 +57,8 @@ class WPF_SendinBlue_Admin {
 		$new_settings = array();
 
 		$new_settings['sendinblue_header'] = array(
-			'title'   => __( 'Brevo Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);

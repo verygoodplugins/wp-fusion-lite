@@ -28,7 +28,6 @@ class WPF_AgileCRM_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -42,7 +41,6 @@ class WPF_AgileCRM_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -58,10 +56,11 @@ class WPF_AgileCRM_Admin {
 		$new_settings = array();
 
 		$new_settings['agilecrm_header'] = array(
-			'title'   => __( 'Agile CRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['agile_domain'] = array(
@@ -69,7 +68,7 @@ class WPF_AgileCRM_Admin {
 			'desc'    => __( 'Enter your Agile CRM account subdomain (not the full URL).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['agile_user_email'] = array(
@@ -77,7 +76,7 @@ class WPF_AgileCRM_Admin {
 			'desc'    => __( 'Enter the email address for your AgileCRM account.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['agile_key'] = array(
@@ -86,13 +85,12 @@ class WPF_AgileCRM_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'agile_domain', 'agile_user_email', 'agile_key' )
+			'post_fields' => array( 'agile_domain', 'agile_user_email', 'agile_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -113,7 +111,7 @@ class WPF_AgileCRM_Admin {
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking'] = array(
@@ -121,7 +119,7 @@ class WPF_AgileCRM_Admin {
 			'desc'    => __( 'Enable <a target="_blank" href="https://www.agilecrm.com/marketing-automation/web-rules">AgileCRM analytics and web rules</a> scripts.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking_acct'] = array(
@@ -129,13 +127,12 @@ class WPF_AgileCRM_Admin {
 			'desc'    => __( 'Your account ID can be found in the Tracking Code in your AgileCRM account, under Admin Settings &raquo; Analytics. For example: <code>8g8fejferfqbi4g4mradq09373</code>', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 
@@ -150,20 +147,17 @@ class WPF_AgileCRM_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/agilecrm-fields.php';
+			require_once __DIR__ . '/agilecrm-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $agilecrm_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $agilecrm_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -179,7 +173,6 @@ class WPF_AgileCRM_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -214,8 +207,5 @@ class WPF_AgileCRM_Admin {
 		wp_fusion()->settings->set_multiple( $options );
 
 		wp_send_json_success();
-
 	}
-
-
 }

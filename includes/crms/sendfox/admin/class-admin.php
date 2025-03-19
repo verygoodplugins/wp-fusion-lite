@@ -28,7 +28,6 @@ class WPF_SendFox_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -41,7 +40,6 @@ class WPF_SendFox_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -57,7 +55,8 @@ class WPF_SendFox_Admin {
 		$new_settings = array();
 
 		$new_settings['sendfox_header'] = array(
-			'title'   => __( 'SendFox Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -75,7 +74,6 @@ class WPF_SendFox_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -90,7 +88,7 @@ class WPF_SendFox_Admin {
 
 		if ( $options['connection_configured'] ) {
 
-			require_once dirname( __FILE__ ) . '/sendfox-fields.php';
+			require_once __DIR__ . '/sendfox-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -102,7 +100,6 @@ class WPF_SendFox_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -123,7 +120,6 @@ class WPF_SendFox_Admin {
 		}
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -158,7 +154,5 @@ class WPF_SendFox_Admin {
 		}
 
 		die();
-
 	}
-
 }

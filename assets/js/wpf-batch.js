@@ -35,7 +35,7 @@ const BatchProcessing = (($) => {
             key: key,
         };
 
-        $.post(ajaxurl, data, handleBatchResponse(total, title));
+        $.post(ajaxurl, data, handleBatchResponse);
     };
 
     const handleNoBatchResults = (title) => {
@@ -57,7 +57,7 @@ const BatchProcessing = (($) => {
         $('#cancel-batch').removeAttr('disabled');
     };
 
-    const handleBatchResponse = (total, title) => (response) => {
+    const handleBatchResponse = (response) => {
         response = JSON.parse(response);
         attempts++;
 
@@ -72,11 +72,9 @@ const BatchProcessing = (($) => {
 
         const remaining = parseInt(response.remaining);
         const errors = parseInt(response.errors);
+        const total = parseInt(response.total);
+        const title = response.title;
         const misc = errors > 0 ? `- ${response.errors} ${wpf_batch_ajax.strings.batchErrorsEncountered}` : '';
-
-        if (response.title !== false) {
-            title = response.title;
-        }
 
         if (remaining == 0 || isNaN(remaining)) {
             completeBatchProcess();
@@ -103,9 +101,7 @@ const BatchProcessing = (($) => {
 
     const updateBatchStatus = (total, remaining, title, misc) => {
         completed = total - remaining;
-        const status = completed > 0
-            ? `${wpf_batch_ajax.strings.processing} ${completed} / ${total} ${title} ${misc}`
-            : `${wpf_batch_ajax.strings.processing} ${remaining} ${misc}`;
+        const status = `${wpf_batch_ajax.strings.processing} ${completed} / ${total} ${title} ${misc}`
         $('#wpf-batch-status span.status').html(status);
         getBatchStatus(total, title);
     };
@@ -159,11 +155,7 @@ jQuery(document).ready(($) => {
             key: $('#wpf-batch-status').attr('data-key'),
         };
 
-        $.post(ajaxurl, data, () => {
-            $('#wpf-batch-status').slideUp('slow', function() {
-                $(this).addClass('hidden');
-            });
-        });
+        $.post(ajaxurl, data);
     });
 
     // Export button
@@ -272,7 +264,8 @@ jQuery(document).ready(($) => {
         const args = {
             tag: $('select#wpf_options-import_users option:selected').val(),
             role: $('#import_role').val(),
-            notify: $('#email_notifications').is(':checked')
+            notify: $('#email_notifications').is(':checked'),
+            update_existing_users: $('#update_existing_users').is(':checked')
         };
 
         BatchProcessing.startBatch(button, action, args);

@@ -162,14 +162,12 @@ class WPF_Lite_Helper {
 		if ( class_exists( 'WooCommerce' ) ) {
 
 			$field_groups['woocommerce'] = array(
-				'title'    => 'WooCommerce Customer',
-				'fields'   => array(),
+				'title'    => __( 'WooCommerce Customer', 'wp-fusion-lite' ),
 				'disabled' => true,
 			);
 
 			$field_groups['woocommerce_order'] = array(
-				'title'    => 'WooCommerce Order',
-				'fields'   => array(),
+				'title'    => __( 'WooCommerce Order', 'wp-fusion-lite' ),
 				'disabled' => true,
 			);
 
@@ -178,8 +176,7 @@ class WPF_Lite_Helper {
 		if ( class_exists( 'BuddyPress' ) ) {
 
 			$field_groups['buddypress'] = array(
-				'title'    => 'BuddyPress',
-				'fields'   => array(),
+				'title'    => __( 'BuddyPress', 'wp-fusion-lite' ),
 				'disabled' => true,
 			);
 
@@ -188,13 +185,11 @@ class WPF_Lite_Helper {
 		if ( class_exists( 'AffiliateWP' ) ) {
 
 			$field_groups['awp']          = array(
-				'title'    => 'Affiliate WP - Affiliate',
-				'fields'   => array(),
+				'title'    => __( 'Affiliate WP - Affiliate', 'wp-fusion-lite' ),
 				'disabled' => true,
 			);
 			$field_groups['awp_referrer'] = array(
-				'title'    => 'Affiliate WP - Referrer',
-				'fields'   => array(),
+				'title'    => __( 'Affiliate WP - Referrer', 'wp-fusion-lite' ),
 				'disabled' => true,
 			);
 
@@ -202,8 +197,7 @@ class WPF_Lite_Helper {
 
 		if ( class_exists( 'SFWD_LMS' ) ) {
 			$field_groups['learndash_progress'] = array(
-				'title'    => 'LearnDash - Progress',
-				'fields'   => array(),
+				'title'    => __( 'LearnDash - Progress', 'wp-fusion-lite' ),
 				'disabled' => true,
 			);
 		}
@@ -746,64 +740,82 @@ class WPF_Lite_Helper {
 			return;
 		}
 
-		echo '<div id="contact-fields-pro-notice">';
+		$output  = '<div id="contact-fields-pro-notice"><div class="wpf-upgrade-nag-container">';
+		$output .= $this->get_sync_svg();
+		$output .= '<div class="innercontent">';
 
-		echo '<div class="wpf-upgrade-nag-container">';
+		$crm_name = esc_html( wp_fusion()->crm->name );
 
-		echo $this->get_sync_svg();
+		// translators: CRM name.
+		$output .= sprintf( '<h2>%s</h2>', sprintf( __( 'Sync more data with %s.', 'wp-fusion-lite' ), $crm_name ) );
 
-		echo '<div class="innercontent">';
+		$output .= '<p>' . __( 'You\'re currently using <strong>WP Fusion Lite</strong>, which syncs your WordPress "core" fields with your CRM.', 'wp-fusion-lite' ) . '</p>';
 
-		// Translating the h2 text
-		echo '<h2>' . sprintf( esc_html__( 'Sync more data with %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</h2>';
+		$output .= '<p>' . __( 'Did you know that the full version of WP Fusion supports syncing data from ', 'wp-fusion-lite' );
 
-		// Translating the first paragraph
-		echo '<p>' . esc_html__( 'You\'re currently using ', 'wp-fusion-lite' ) . '<strong>' . esc_html__( 'WP Fusion Lite', 'wp-fusion-lite' ) . '</strong>' . esc_html__( ', which syncs your WordPress "core" fields with your CRM.', 'wp-fusion-lite' ) . '</p>';
+		$integrations = array(
+			'WooCommerce' => array(
+				'class' => 'WooCommerce',
+				'name'  => 'WooCommerce',
+				'doc'   => 'ecommerce/woocommerce',
+			),
+			'BuddyPress'  => array(
+				'class' => 'BuddyPress',
+				'name'  => 'BuddyPress',
+				'doc'   => 'membership/buddypress',
+			),
+			'Elementor'   => array(
+				'class' => 'Elementor\\Frontend',
+				'name'  => 'Elementor',
+				'doc'   => 'page-builders/elementor',
+			),
+			'LearnDash'   => array(
+				'class' => 'SFWD_LMS',
+				'name'  => 'LearnDash',
+				'doc'   => 'learning-management/learndash',
+			),
+			'AffiliateWP' => array(
+				'class' => 'Affiliate_WP',
+				'name'  => 'AffiliateWP',
+				'doc'   => 'affiliates/affiliate-wp',
+			),
+			'LifterLMS'   => array(
+				'class' => 'LifterLMS',
+				'name'  => 'LifterLMS',
+				'doc'   => 'learning-management/lifterlms',
+			),
+		);
 
-		// Translating the second paragraph
-		echo '<p>' . esc_html__( 'Did you know that the full version of WP Fusion supports syncing data from ', 'wp-fusion-lite' );
-
-		// Adding WooCommerce link if the class exists
-		if ( class_exists( 'WooCommerce' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/ecommerce/woocommerce/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'WooCommerce', 'wp-fusion-lite' ) . '</a>, ';
+		foreach ( $integrations as $data ) {
+			if ( class_exists( $data['class'] ) ) {
+				$output .= sprintf(
+					'<a href="https://wpfusion.com/documentation/%s/?utm_campaign=free-plugin&utm_source=free-plugin&utm_medium=contact-fields" target="_blank">%s</a>, ',
+					$data['doc'],
+					$data['name'],
+				);
+			}
 		}
 
-		// Adding BuddyPress link if the class exists
-		if ( class_exists( 'BuddyPress' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/membership/buddypress/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'BuddyPress', 'wp-fusion-lite' ) . '</a>, ';
-		}
+		// translators: CRM name.
+		$output .= sprintf(
+			__( 'and %1$s bidirectionally with %2$s.</p>', 'wp-fusion-lite' ),
+			'<a href="https://wpfusion.com/documentation/?utm_campaign=free-plugin&utm_source=free-plugin&utm_medium=contact-fields#integrations" target="_blank">' . __( 'over 100 other plugins', 'wp-fusion-lite' ) . '</a>',
+			$crm_name
+		);
 
-		// Adding Elementor link if the class exists
-		if ( class_exists( 'Elementor\\Frontend' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/page-builders/elementor/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'Elementor', 'wp-fusion-lite' ) . '</a>, ';
-		}
+		$output .= '<div class="buttonwrapper">';
+		$output .= sprintf(
+			'<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">%s</a>',
+			__( 'Learn More About Syncing Custom Fields', 'wp-fusion-lite' )
+		);
+		$output .= ' <span class="orange">' . __( 'or', 'wp-fusion-lite' ) . '</span> ';
+		$output .= sprintf(
+			'<a class="button-primary" href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">%s</a>',
+			__( 'View Pricing', 'wp-fusion-lite' )
+		);
+		$output .= '</div></div></div></div>';
 
-		// Adding LearnDash link if the class exists
-		if ( class_exists( 'SFWD_LMS' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/learning-management/learndash/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'LearnDash', 'wp-fusion-lite' ) . '</a>, ';
-		}
-
-		// Adding AffiliateWP link if the class exists
-		if ( class_exists( 'Affiliate_WP' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/other/affiliate-wp/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'AffiliateWP', 'wp-fusion-lite' ) . '</a>, ';
-		}
-
-		// Adding LifterLMS link if the class exists
-		if ( class_exists( 'LifterLMS' ) ) {
-			echo '<a href="https://wpfusion.com/documentation/learning-management/lifterlms/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields" target="_blank">' . esc_html__( 'LifterLMS', 'wp-fusion-lite' ) . '</a>, ';
-		}
-
-		// Translating the final link
-		echo esc_html__( 'and ', 'wp-fusion-lite' ) . '<a href="https://wpfusion.com/documentation/?utm_campaign=free-plugin&utm_source=free-plugin&utm-medium=contact-fields#integrations" target="_blank">' . esc_html__( 'over 100 other plugins', 'wp-fusion-lite' ) . '</a>' . sprintf( esc_html__( ' bidirectionally with %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '</p>';
-
-		// Translating the button wrapper
-		echo '<div class="buttonwrapper">';
-		echo '<a style="margin-left: 0px" class="button-primary" href="https://wpfusion.com/documentation/getting-started/syncing-contact-fields/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">' . esc_html__( 'Learn More About Syncing Custom Fields', 'wp-fusion-lite' ) . '</a>';
-		echo ' <span class="orange">' . esc_html__( 'or', 'wp-fusion-lite' ) . '</span> ';
-		echo '<a class="button-primary" href="https://wpfusion.com/pricing/?utm_source=free-plugin&utm_medium=contact-fields&utm_campaign=free-plugin" target="_blank">' . esc_html__( 'View Pricing', 'wp-fusion-lite' ) . '</a>';
-		echo '</div>';
-
-		echo '</div></div></div>';
+		echo wp_kses_post( $output );
 	}
 
 

@@ -61,9 +61,8 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 
 			$this->identifier = $this->prefix . '_' . $this->action;
 
-			add_action( 'wp_ajax_' . $this->identifier, array( $this, 'maybe_handle' ) );
-			add_action( 'wp_ajax_nopriv_' . $this->identifier, array( $this, 'maybe_handle' ) );
-
+			add_action( 'wp_ajax_' . $this->identifier, array( $this, 'maybe_handle_ajax' ) );
+			add_action( 'wp_ajax_nopriv_' . $this->identifier, array( $this, 'maybe_handle_ajax' ) );
 		}
 
 
@@ -91,7 +90,6 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			$args = $this->get_post_args();
 
 			return wp_safe_remote_post( esc_url_raw( $url ), $args );
-
 		}
 
 		/**
@@ -110,7 +108,6 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 				'nonce'       => wp_create_nonce( $this->identifier ),
 				'cachebuster' => microtime(),
 			);
-
 		}
 
 		/**
@@ -125,7 +122,6 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			}
 
 			return admin_url( 'admin-ajax.php' );
-
 		}
 
 		/**
@@ -165,15 +161,16 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			}
 
 			return $args;
-
 		}
 
 		/**
 		 * Maybe handle
 		 *
 		 * Check for correct nonce and pass to handler.
+		 *
+		 * Overridden in WPF_Background_Process::maybe_handle().
 		 */
-		public function maybe_handle() {
+		public function maybe_handle_ajax() {
 
 			// Don't lock up other requests while processing
 			session_write_close();
@@ -183,7 +180,6 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			$this->handle();
 
 			wp_die();
-
 		}
 
 		/**
@@ -193,6 +189,5 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		 * during the async request.
 		 */
 		abstract protected function handle();
-
 	}
 }

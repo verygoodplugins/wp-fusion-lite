@@ -31,7 +31,6 @@ class WPF_Salesforce_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ), 1 );
-
 	}
 
 
@@ -48,7 +47,6 @@ class WPF_Salesforce_Admin {
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_action( 'validate_field_sf_tag_type', array( $this, 'validate_tag_type' ), 10, 3 );
 		add_filter( 'wpf_get_setting_crm_tag_type', array( $this, 'get_setting_crm_tag_type' ) );
-
 	}
 
 
@@ -64,7 +62,8 @@ class WPF_Salesforce_Admin {
 		$new_settings = array();
 
 		$new_settings['salesforce_header'] = array(
-			'title'   => __( 'Salesforce Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'url'     => 'https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/',
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -109,7 +108,7 @@ class WPF_Salesforce_Admin {
 				);
 
 				$new_settings['sf_tag_picklist'] = array(
-					'title'    => __( 'Tags Picklist' ),
+					'title'    => __( 'Tags Picklist', 'wp-fusion-lite' ),
 					'disabled' => isset( $options['sf_tag_type'] ) && 'Picklist' === $options['sf_tag_type'] ? false : true,
 					'type'     => 'crm_field',
 					'section'  => 'setup',
@@ -117,7 +116,7 @@ class WPF_Salesforce_Admin {
 				);
 
 				$new_settings['sf_object_type'] = array(
-					'title'   => __( 'Object Type' ),
+					'title'   => __( 'Object Type', 'wp-fusion-lite' ),
 					'type'    => 'select',
 					'section' => 'setup',
 					'choices' => get_option( 'wpf_salesforce_objects', array() ),
@@ -125,6 +124,19 @@ class WPF_Salesforce_Admin {
 					'desc'    => __( 'Select an object type to use with WP Fusion.', 'wp-fusion-lite' ),
 				);
 
+				$record_types = get_option( 'wpf_salesforce_record_types', array() );
+
+				if ( ! empty( $record_types ) ) {
+					$new_settings['sf_record_type'] = array(
+						'title'       => __( 'Record Type', 'wp-fusion-lite' ),
+						// translators: %s is the object type.
+						'desc'        => sprintf( __( 'Select a record type to be used when creating new %s.', 'wp-fusion-lite' ), strtolower( $this->crm->object_type ) . 's' ),
+						'section'     => 'setup',
+						'type'        => 'select',
+						'placeholder' => __( 'Select one', 'wp-fusion-lite' ),
+						'choices'     => $record_types,
+					);
+				}
 			}
 
 			$new_settings['sf_access_token'] = array(
@@ -151,7 +163,6 @@ class WPF_Salesforce_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -197,7 +208,6 @@ class WPF_Salesforce_Admin {
 		}
 
 		return $settings;
-
 	}
 
 	/**
@@ -234,7 +244,6 @@ class WPF_Salesforce_Admin {
 		}
 
 		return $input;
-
 	}
 
 	/**
@@ -248,7 +257,6 @@ class WPF_Salesforce_Admin {
 	public function get_setting_crm_tag_type( $setting ) {
 
 		return $this->crm->tag_type;
-
 	}
 
 	/**
@@ -262,7 +270,7 @@ class WPF_Salesforce_Admin {
 
 		if ( ! empty( $options['connection_configured'] ) ) {
 
-			require_once dirname( __FILE__ ) . '/salesforce-fields.php';
+			require_once __DIR__ . '/salesforce-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -273,7 +281,6 @@ class WPF_Salesforce_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -324,7 +331,6 @@ class WPF_Salesforce_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -340,7 +346,6 @@ class WPF_Salesforce_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -378,8 +383,5 @@ class WPF_Salesforce_Admin {
 			wp_send_json_success();
 
 		}
-
 	}
-
-
 }

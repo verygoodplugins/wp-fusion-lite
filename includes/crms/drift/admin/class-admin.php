@@ -32,7 +32,6 @@ class WPF_Drift_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -45,7 +44,6 @@ class WPF_Drift_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 	/**
@@ -68,7 +66,6 @@ class WPF_Drift_Admin {
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
-
 	}
 
 	/**
@@ -80,32 +77,32 @@ class WPF_Drift_Admin {
 
 	public function maybe_oauth_complete() {
 
-		if( isset( $_GET['code'] ) && isset( $_GET['state'] ) && $_GET['state'] == 'wpfdrift' )  {
+		if ( isset( $_GET['code'] ) && isset( $_GET['state'] ) && $_GET['state'] == 'wpfdrift' ) {
 
 			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
 
 			$params = array(
-				'headers'	=> array(
-					'Content-type' => 'application/x-www-form-urlencoded'
+				'headers' => array(
+					'Content-type' => 'application/x-www-form-urlencoded',
 				),
-				'body'		=> array(
-					'client_id'		=> $this->crm->client_id,
-					'client_secret'	=> $this->crm->client_secret,
-					'code'			=> $code,
-					'grant_type'	=> 'authorization_code'
+				'body'    => array(
+					'client_id'     => $this->crm->client_id,
+					'client_secret' => $this->crm->client_secret,
+					'code'          => $code,
+					'grant_type'    => 'authorization_code',
 
-				)
+				),
 			);
 
 			$response = wp_safe_remote_post( 'https://driftapi.com/oauth2/token', $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return false;
 			}
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body->error ) ) {
+			if ( isset( $body->error ) ) {
 				return false;
 			}
 
@@ -117,7 +114,6 @@ class WPF_Drift_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -133,12 +129,13 @@ class WPF_Drift_Admin {
 		$new_settings = array();
 
 		$new_settings['drift_header'] = array(
-			'title'   => __( 'Drift Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
 
-		if( empty( $options['drift_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
+		if ( empty( $options['drift_refresh_token'] ) && ! isset( $_GET['code'] ) ) {
 
 			$new_settings['drift_auth'] = array(
 				'title'   => __( 'Authorize', 'wp-fusion-lite' ),
@@ -163,7 +160,7 @@ class WPF_Drift_Admin {
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
-				'post_fields' => array( 'drift_token', 'drift_refresh_token' )
+				'post_fields' => array( 'drift_token', 'drift_refresh_token' ),
 			);
 
 		}
@@ -171,7 +168,6 @@ class WPF_Drift_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -187,20 +183,17 @@ class WPF_Drift_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/drift-fields.php';
+			require_once __DIR__ . '/drift-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $drift_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $drift_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -216,7 +209,6 @@ class WPF_Drift_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -235,14 +227,13 @@ class WPF_Drift_Admin {
 		echo '</td>';
 		echo '</tr>';
 
-		if( wp_fusion()->crm->slug == 'drift' ) {
-  			echo '<style type="text/css">#tab-import { display: none; }</style>';
-  		}
+		if ( wp_fusion()->crm->slug == 'drift' ) {
+			echo '<style type="text/css">#tab-import { display: none; }</style>';
+		}
 
 		echo '</table><div id="connection-output"></div>';
 		echo '</div>'; // close #drift div
 		echo '<table class="form-table">';
-
 	}
 
 	/**
@@ -280,8 +271,5 @@ class WPF_Drift_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

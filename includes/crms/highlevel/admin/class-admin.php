@@ -121,6 +121,12 @@ class WPF_HighLevel_Admin {
 			$response = wp_safe_remote_post( 'https://services.leadconnectorhq.com/oauth/token', $params );
 
 			if ( is_wp_error( $response ) ) {
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
+				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
+				return false;
+			} elseif ( 403 === wp_remote_retrieve_response_code( $response ) ) {
+				wp_fusion()->admin_notices->add_notice( '403 error requesting authorization code: ' . wp_remote_retrieve_body( $response ) );
+				wpf_log( 'error', 0, '403 error requesting authorization code: ' . wp_remote_retrieve_body( $response ) );
 				return false;
 			}
 
@@ -128,8 +134,35 @@ class WPF_HighLevel_Admin {
 
 			wp_fusion()->settings->set( 'highlevel_refresh_token', $response->refresh_token );
 			wp_fusion()->settings->set( 'highlevel_token', $response->access_token );
-			wp_fusion()->settings->set( 'highlevel_location_id', $response->locationId );
 			wp_fusion()->settings->set( 'crm', $this->slug );
+
+			if ( isset( $response->{'locationId'} ) ) {
+
+				// Single location.
+				wp_fusion()->settings->set( 'highlevel_location_id', $response->{'locationId'} );
+				wp_fusion()->settings->set( 'highlevel_locations', false );
+
+			} elseif ( 'Company' === $response->{'userType'} ) {
+
+				// Multiple locations.
+
+				$company_id = $response->{'companyId'};
+				$user_id    = $response->{'userId'};
+				$response   = wp_safe_remote_get( "https://services.leadconnectorhq.com/oauth/installedLocations/?companyId={$company_id}&appId=640f1d950acf1dc6569948aa", $this->crm->get_params() );
+				$response   = json_decode( wp_remote_retrieve_body( $response ) );
+
+				$locations = wp_list_pluck( $response->locations, 'name', '_id' );
+
+				wp_fusion()->settings->set( 'highlevel_locations', $locations );
+				wp_fusion()->settings->set( 'highlevel_location_id', $response->locations[0]->{'_id'} );
+				wp_fusion()->settings->set( 'highlevel_company_id', $company_id );
+				wp_fusion()->settings->set( 'highlevel_user_id', $user_id );
+
+				// Get the location access token.
+				$this->crm->location_id = $response->locations[0]->{'_id'};
+				$this->crm->refresh_location_token();
+
+			}
 
 			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
@@ -175,7 +208,7 @@ class WPF_HighLevel_Admin {
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
-				'post_fields' => array( 'highlevel_api_key' ),
+				'post_fields' => array( 'highlevel_api_key', 'highlevel_location_id' ),
 			);
 
 		} elseif ( empty( $options['highlevel_token'] ) && ! isset( $_GET['code'] ) ) {
@@ -199,7 +232,18 @@ class WPF_HighLevel_Admin {
 				'type'           => 'text',
 				'section'        => 'setup',
 				'input_disabled' => true,
+				'allow_null'     => false,
 			);
+
+			if ( wpf_get_option( 'highlevel_locations' ) ) {
+
+				$new_settings['highlevel_location_id']['title']          = __( 'Account Location', 'wp-fusion-lite' );
+				$new_settings['highlevel_location_id']['desc']           = __( 'Select the location you want to use for this site.', 'wp-fusion-lite' );
+				$new_settings['highlevel_location_id']['type']           = 'select';
+				$new_settings['highlevel_location_id']['choices']        = wpf_get_option( 'highlevel_locations' );
+				$new_settings['highlevel_location_id']['input_disabled'] = false;
+
+			}
 
 			$new_settings['highlevel_token'] = array(
 				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
@@ -214,6 +258,7 @@ class WPF_HighLevel_Admin {
 				'section'        => 'setup',
 				'class'          => 'api_key',
 				'input_disabled' => true,
+				'resync_fields'  => array( 'highlevel_location_id' ),
 				'post_fields'    => array( 'highlevel_token', 'highlevel_refresh_token', 'highlevel_location_id' ),
 				'desc'           => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
 			);
@@ -225,7 +270,6 @@ class WPF_HighLevel_Admin {
 		return $settings;
 	}
 
-
 	/**
 	 * Loads standard field names and attempts to match them up with standard local ones
 	 *
@@ -236,7 +280,7 @@ class WPF_HighLevel_Admin {
 	 */
 	public function add_default_fields( $options ) {
 
-		if ( $options['connection_configured'] == true ) {
+		if ( ! empty( $options['connection_configured'] ) ) {
 
 			require_once __DIR__ . '/highlevel-fields.php';
 
@@ -250,7 +294,6 @@ class WPF_HighLevel_Admin {
 
 		return $options;
 	}
-
 
 	/**
 	 * Puts a div around the CRM configuration section so it can be toggled

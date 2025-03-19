@@ -32,7 +32,6 @@ class WPF_Growmatik_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -49,7 +48,7 @@ class WPF_Growmatik_Admin {
 
 
 	/**
-	 * Registers Growmatik API settings
+	 * Registers ConvesioConvert API settings
 	 *
 	 * @since 3.36
 	 *
@@ -63,7 +62,8 @@ class WPF_Growmatik_Admin {
 		$new_settings = array();
 
 		$new_settings['growmatik_header'] = array(
-			'title'   => __( 'Growmatik CRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -71,14 +71,14 @@ class WPF_Growmatik_Admin {
 
 		$new_settings['growmatik_api_key'] = array(
 			'title'   => __( 'API Key', 'wp-fusion-lite' ),
-			'desc'    => __( 'Enter your Growmatik API key. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
+			'desc'    => __( 'Enter your ConvesioConvert API key. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
 			'type'    => 'text',
 			'section' => 'setup',
 		);
 
 		$new_settings['growmatik_api_secret'] = array(
 			'title'       => __( 'API Secret', 'wp-fusion-lite' ),
-			'desc'        => __( 'Enter your Growmatik API Secret. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter your ConvesioConvert API Secret. You can generate one in the <em>Site settings > Integrations > API</em>.', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
@@ -88,7 +88,6 @@ class WPF_Growmatik_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -105,7 +104,7 @@ class WPF_Growmatik_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/growmatik-fields.php';
+			require_once __DIR__ . '/growmatik-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -116,7 +115,6 @@ class WPF_Growmatik_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -135,7 +133,6 @@ class WPF_Growmatik_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**

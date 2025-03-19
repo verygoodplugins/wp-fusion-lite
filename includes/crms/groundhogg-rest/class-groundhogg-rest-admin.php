@@ -53,7 +53,6 @@ class WPF_Groundhogg_REST_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'handle_rest_authentication' ) );
-
 	}
 
 	/**
@@ -66,7 +65,6 @@ class WPF_Groundhogg_REST_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -92,7 +90,6 @@ class WPF_Groundhogg_REST_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -111,7 +108,8 @@ class WPF_Groundhogg_REST_Admin {
 		$new_settings = array();
 
 		$new_settings['groundhogg_rest_header'] = array(
-			'title'   => __( 'Groundhogg Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -152,7 +150,6 @@ class WPF_Groundhogg_REST_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -282,7 +279,6 @@ class WPF_Groundhogg_REST_Admin {
 		);
 
 		return $groundhogg_fields;
-
 	}
 
 
@@ -312,7 +308,6 @@ class WPF_Groundhogg_REST_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -330,12 +325,12 @@ class WPF_Groundhogg_REST_Admin {
 
 		$new_settings = array(
 			'gh_default_status' => array(
-				'title'       => __( 'Default Status', 'wp-fusion-lite' ),
-				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
-				'type'        => 'select',
-				'std'         => 2,
-				'section'     => 'main',
-				'choices'     => array(
+				'title'   => __( 'Default Status', 'wp-fusion-lite' ),
+				'desc'    => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
+				'type'    => 'select',
+				'std'     => 2,
+				'section' => 'main',
+				'choices' => array(
 					2 => 'Confirmed',
 					1 => 'Unconfimed',
 					3 => 'Unsubscribed',
@@ -348,7 +343,6 @@ class WPF_Groundhogg_REST_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -366,7 +360,6 @@ class WPF_Groundhogg_REST_Admin {
 		$crm = wpf_get_option( 'crm' );
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -407,8 +400,5 @@ class WPF_Groundhogg_REST_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

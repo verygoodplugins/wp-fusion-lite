@@ -27,7 +27,6 @@ class WPF_MailerLite_Admin {
 		if ( wpf_get_option( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -46,7 +45,6 @@ class WPF_MailerLite_Admin {
 		add_filter( 'validate_field_mailerlite_add_tag', array( $this, 'validate_import_trigger' ) );
 
 		add_action( 'wpf_resetting_options', array( $this, 'delete_webhooks' ) );
-
 	}
 
 
@@ -61,11 +59,12 @@ class WPF_MailerLite_Admin {
 
 		$new_settings = array(
 			'mailerlite_header' => array(
-				'title'   => __( 'MailerLite Configuration', 'wp-fusion-lite' ),
+				// translators: %s is the name of the CRM.
+				'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 				'type'    => 'heading',
 				'section' => 'setup',
 			),
-			'mailerlite_key' => array(
+			'mailerlite_key'    => array(
 				'title'       => __( 'API Token', 'wp-fusion-lite' ),
 				'desc'        => __( 'You can find your API token in the <a href="https://dashboard.mailerlite.com/integrations/api" target="_blank">Developer API</a> settings of your MailerLite account.', 'wp-fusion-lite' ),
 				'type'        => 'api_validate',
@@ -77,7 +76,6 @@ class WPF_MailerLite_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -92,17 +90,17 @@ class WPF_MailerLite_Admin {
 		$new_settings['contact_copy_header'] = array(
 			'title'   => __( 'MailerLite Settings', 'wp-fusion-lite' ),
 			'type'    => 'heading',
-			'section' => 'advanced'
+			'section' => 'advanced',
 		);
 
 		$new_settings['email_changes'] = array(
 			'title'   => __( 'Email Address Changes', 'wp-fusion-lite' ),
 			'type'    => 'select',
 			'section' => 'advanced',
-			'std'	  => 'ignore',
+			'std'     => 'ignore',
 			'choices' => array(
-				'ignore'	=> 'Ignore',
-				'duplicate' => 'Duplicate and Delete'
+				'ignore'    => 'Ignore',
+				'duplicate' => 'Duplicate and Delete',
 			),
 			'desc'    => __( 'MailerLite doesn\'t allow for changing the email address of an existing subscriber. Choose <strong>Ignore</strong> and WP Fusion will continue updating a single subscriber, ignoring email address changes. Choose <strong>Duplicate and Delete</strong> and WP Fusion will attempt to create a new subscriber with the same details when an email address has been changed, and remove the original subscriber.', 'wp-fusion-lite' ),
 		);
@@ -235,7 +233,6 @@ class WPF_MailerLite_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -275,16 +272,14 @@ class WPF_MailerLite_Admin {
 
 		add_filter(
 			'wpf_initialize_options',
-			function( $options ) use ( &$rule_ids ) {
+			function ( $options ) use ( &$rule_ids ) {
 
 				$options['mailerlite_add_tag_rule_id'] = $rule_ids[0];
 				return $options;
-
 			}
 		);
 
 		return $input;
-
 	}
 
 	/**
@@ -336,7 +331,7 @@ class WPF_MailerLite_Admin {
 
 		add_filter(
 			'wpf_initialize_options',
-			function( $options ) use ( &$rule_ids ) {
+			function ( $options ) use ( &$rule_ids ) {
 
 				$options['mailerlite_update_trigger_rule_id'] = $rule_ids[0];
 
@@ -349,12 +344,10 @@ class WPF_MailerLite_Admin {
 				}
 
 				return $options;
-
 			}
 		);
 
 		return $input;
-
 	}
 
 	/**
@@ -382,7 +375,6 @@ class WPF_MailerLite_Admin {
 			$this->crm->destroy_webhook( $options['mailerlite_update_trigger_group_remove_rule_id'] );
 
 		}
-
 	}
 
 	/**
@@ -396,20 +388,17 @@ class WPF_MailerLite_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/mailerlite-fields.php';
+			require_once __DIR__ . '/mailerlite-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $mailerlite_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $mailerlite_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -425,7 +414,6 @@ class WPF_MailerLite_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -461,7 +449,5 @@ class WPF_MailerLite_Admin {
 		}
 
 		die();
-
 	}
-
 }

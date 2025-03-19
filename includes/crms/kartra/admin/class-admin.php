@@ -29,7 +29,6 @@ class WPF_Kartra_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -43,7 +42,6 @@ class WPF_Kartra_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -59,10 +57,11 @@ class WPF_Kartra_Admin {
 		$new_settings = array();
 
 		$new_settings['kartra_header'] = array(
-			'title'   => __( 'Kartra Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['kartra_api_key'] = array(
@@ -70,7 +69,7 @@ class WPF_Kartra_Admin {
 			'desc'    => __( 'Enter the API Key for your Kartra account. You can find your key under <a href="https://app.kartra.com/integrations/api/key" target="_blank">the My Integrations menu</a>.', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['kartra_api_password'] = array(
@@ -79,13 +78,12 @@ class WPF_Kartra_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'kartra_api_key', 'kartra_api_password' )
+			'post_fields' => array( 'kartra_api_key', 'kartra_api_password' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -97,7 +95,7 @@ class WPF_Kartra_Admin {
 
 	public function register_settings( $settings, $options ) {
 
-		if( ! isset( $options['available_lists'] ) ) {
+		if ( ! isset( $options['available_lists'] ) ) {
 			$options['available_lists'] = array();
 		}
 
@@ -107,7 +105,7 @@ class WPF_Kartra_Admin {
 			'type'        => 'multi_select',
 			'placeholder' => 'Select lists',
 			'section'     => 'main',
-			'choices'     => $options['available_lists']
+			'choices'     => $options['available_lists'],
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
@@ -119,7 +117,6 @@ class WPF_Kartra_Admin {
 		$settings['kartra_lists']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
 
 		return $settings;
-
 	}
 
 
@@ -134,20 +131,17 @@ class WPF_Kartra_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/kartra-fields.php';
+			require_once __DIR__ . '/kartra-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $kartra_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $kartra_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -164,12 +158,11 @@ class WPF_Kartra_Admin {
 		$crm = wpf_get_option( 'crm' );
 
 		// Hide Import tab (for now)
-		if( wp_fusion()->crm->slug == 'kartra' ) {
+		if ( wp_fusion()->crm->slug == 'kartra' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -184,8 +177,8 @@ class WPF_Kartra_Admin {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$api_key 		= sanitize_text_field( $_POST['kartra_api_key'] );
-		$api_password 	= sanitize_text_field( $_POST['kartra_api_password'] );
+		$api_key      = sanitize_text_field( $_POST['kartra_api_key'] );
+		$api_password = sanitize_text_field( $_POST['kartra_api_password'] );
 
 		$connection = $this->crm->connect( $api_key, $api_password, true );
 
@@ -208,8 +201,5 @@ class WPF_Kartra_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

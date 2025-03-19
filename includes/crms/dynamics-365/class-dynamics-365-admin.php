@@ -53,7 +53,6 @@ class WPF_Dynamics_365_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -66,7 +65,6 @@ class WPF_Dynamics_365_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_render_tag_multiselect_args', array( $this, 'import_multiselect_args' ) );
-
 	}
 
 	/**
@@ -90,7 +88,6 @@ class WPF_Dynamics_365_Admin {
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
-
 	}
 
 
@@ -165,7 +162,6 @@ class WPF_Dynamics_365_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -184,7 +180,8 @@ class WPF_Dynamics_365_Admin {
 		$new_settings = array();
 
 		$new_settings['dynamics_365_rest_header'] = array(
-			'title'   => __( 'Dynamics 365 Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'url'     => 'https://wpfusion.com/documentation/installation-guides/how-to-connect-dynamics-365-marketing-to-wordpress/',
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -250,7 +247,6 @@ class WPF_Dynamics_365_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -281,7 +277,6 @@ class WPF_Dynamics_365_Admin {
 			),
 		);
 		return $fields;
-
 	}
 
 
@@ -310,7 +305,6 @@ class WPF_Dynamics_365_Admin {
 		}
 
 		return $options;
-
 	}
 
 	/**
@@ -328,7 +322,6 @@ class WPF_Dynamics_365_Admin {
 		}
 
 		return $args;
-
 	}
 
 
@@ -346,7 +339,6 @@ class WPF_Dynamics_365_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -387,8 +379,5 @@ class WPF_Dynamics_365_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

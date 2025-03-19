@@ -232,7 +232,6 @@ function wpf_render_tag_multiselect( $args = array() ) {
 	if ( $args['return'] ) {
 		return ob_get_clean();
 	}
-
 }
 
 /**
@@ -267,7 +266,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 	echo '<option></option>';
 
-	$crm_fields = wpf_get_option( 'crm_fields' );
+	$crm_fields = wpf_get_option( 'crm_fields', array() );
 
 	if ( ! empty( $crm_fields ) ) {
 
@@ -292,12 +291,12 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 					$label = str_replace( '(', '<small>', $label ); // (read only) and (compound field)
 					$label = str_replace( ')', '</small>', $label );
 
-					echo '<option ' . selected( esc_attr( $setting ), $field, false ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
+					echo '<option ' . selected( $setting, $field, false ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
 				}
 
 				echo '</optgroup>';
 
-			} else {
+			} elseif ( is_string( $fields ) ) {
 
 				$field = $group_header;
 				$label = $fields;
@@ -305,7 +304,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 				$label = str_replace( '(', '<small>', $label ); // (read only) and (compound field)
 				$label = str_replace( ')', '</small>', $label );
 
-				echo '<option ' . selected( esc_attr( $setting ), $field, false ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
+				echo '<option ' . selected( $setting, $field, false ) . ' value="' . esc_attr( $field ) . '">' . esc_html( $label ) . '</option>';
 
 			}
 		}
@@ -363,7 +362,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
 
 		echo '<optgroup label="Tagging">';
 
-			echo '<option ' . selected( esc_attr( $setting ), 'add_tag_' . $field_id ) . ' value="add_tag_' . esc_attr( $field_id ) . '">+ ' . esc_html__( 'Create tag(s) from value', 'wp-fusion-lite' ) . '</option>';
+			echo '<option ' . selected( $setting, 'add_tag_' . $field_id ) . ' value="add_tag_' . esc_attr( $field_id ) . '">+ ' . esc_html__( 'Create tag(s) from value', 'wp-fusion-lite' ) . '</option>';
 
 		echo '</optgroup>';
 
@@ -381,7 +380,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
  *
  * @since  3.37.13
  *
- * @param  string $width  The width in px.
+ * @param  int  $width  The width in px.
  * @return string The logo.
  */
 function wpf_logo_svg( $width = 24 ) {
@@ -395,6 +394,77 @@ function wpf_logo_svg( $width = 24 ) {
 	        </g>
 	    </g>
 	</svg>';
-
 }
 
+
+/**
+ * Gets the status icon for an entry, order, etc for display in admin columns.
+ *
+ * @since 3.44.22
+ *
+ * @param array  $complete_data The complete data.
+ * @param string $type          The type of entry (order, form, etc.).
+ * @return string The status icon.
+ */
+function wpf_status_icon( $complete_data, $type = 'entry' ) {
+
+	$url = false;
+
+	if ( $complete_data['contact_id'] ) {
+
+		$class = 'success';
+
+		// Get the contact edit URL.
+
+		$url = wp_fusion()->crm->get_contact_edit_url( $complete_data['contact_id'] );
+
+		if ( $url ) {
+			$id_text = '<a href="' . esc_url_raw( $url ) . '" target="_blank">#' . esc_html( $complete_data['contact_id'] ) . '</a>';
+		} else {
+			$id_text = '#' . esc_html( $complete_data['contact_id'] );
+		}
+
+		$show_date = date_i18n( get_option( 'date_format' ) . ' \a\t ' . get_option( 'time_format' ), strtotime( $complete_data['complete'] ) );
+		$tooltip   = sprintf(
+			// translators: %1$s is the type of entry (order, form, etc.), %2$s is the CRM name, %3$s is the contact ID, %4$s is the date and time.
+			__( 'This %1$s was synced to %2$s contact ID %3$s on %4$s.', 'wp-fusion-lite' ),
+			esc_html( $type ),
+			esc_html( wp_fusion()->crm->name ),
+			$id_text,
+			esc_html( $show_date )
+		);
+
+		if ( isset( $complete_data['ec_complete'] ) ) {
+
+			// Enhanced ecommerce.
+
+			if ( $complete_data['ec_complete'] ) {
+
+				if ( $complete_data['ec_invoice_id'] ) {
+					$tooltip .= '<br /><br />' . sprintf( __( 'It was processed by Enhanced Ecommerce with invoice ID #%s.', 'wp-fusion-lite' ), $complete_data['ec_invoice_id'] );
+				} else {
+					$tooltip .= '<br /><br />' . __( 'It was processed by Enhanced Ecommerce.', 'wp-fusion-lite' );
+				}
+			} else {
+
+				$class    = 'partial-success';
+				$tooltip .= '<br /><br />' . __( 'It was not processed by Enhanced Ecommerce.', 'wp-fusion-lite' );
+
+			}
+		}
+	} else {
+		$class   = 'fail';
+		$tooltip = sprintf(
+			// translators: %1$s is the type of entry (order, form, etc.), %2$s is the CRM name.
+			__( 'This %1$s was not synced to %2$s.', 'wp-fusion-lite' ),
+			esc_html( $type ),
+			esc_html( wp_fusion()->crm->name )
+		);
+	}
+
+	if ( $url ) {
+		return '<a href="' . esc_url( $url ) . '" target="_blank"><i class="icon-wp-fusion wpf-tip wpf-tip-bottom ' . esc_attr( $class ) . '" data-tip="' . esc_attr( $tooltip ) . '"></i></a>';
+	} else {
+		return '<i class="icon-wp-fusion wpf-tip wpf-tip-bottom ' . esc_attr( $class ) . '" data-tip="' . esc_attr( $tooltip ) . '"></i>';
+	}
+}

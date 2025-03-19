@@ -53,7 +53,6 @@ class WPF_FluentCRM_REST_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'handle_rest_authentication' ) );
-
 	}
 
 	/**
@@ -65,8 +64,12 @@ class WPF_FluentCRM_REST_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ) );
+		add_filter( 'wpf_configure_settings', array( $this, 'configure_settings' ), 20 ); // 20 so it runs after WooCommerce.
 
+		// Enable the status field if we're collecting email optins.
+		add_action( 'validate_field_email_optin', array( $this, 'validate_field_email_optin' ), 10, 3 );
+		add_action( 'validate_field_give_email_optin', array( $this, 'validate_field_email_optin' ), 10, 3 );
+		add_action( 'validate_field_edd_email_optin', array( $this, 'validate_field_email_optin' ), 10, 3 );
 	}
 
 
@@ -92,7 +95,6 @@ class WPF_FluentCRM_REST_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -111,7 +113,8 @@ class WPF_FluentCRM_REST_Admin {
 		$new_settings = array();
 
 		$new_settings['fluentcrm_rest_header'] = array(
-			'title'   => __( 'FluentCRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -135,6 +138,19 @@ class WPF_FluentCRM_REST_Admin {
 		$new_settings['fluentcrm_rest_url']['desc'] .= '<br /><br /><a id="fluentcrm_rest-auth-btn" class="' . $class . '" href="' . $href . '">' . __( 'Authorize with FluentCRM', 'wp-fusion-lite' ) . '</a>';
 		$new_settings['fluentcrm_rest_url']['desc'] .= '<span class="description">' . __( 'You can click the Authorize button to be taken to the FluentCRM site and generate an application password automatically.', 'wp-fusion-lite' ) . '</span>';
 
+		$new_settings['fluentcrm_tag_format'] = array(
+			'title'   => __( 'Tag Format', 'wp-fusion-lite' ),
+			'type'    => 'select',
+			'section' => 'setup',
+			'desc'    => sprintf( __( 'Select how FluentCRM tags should be %1$sreferenced by WP Fusion%2$s. For new installs we recommend using IDs, slugs are provided as an option for backwards compatibility.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-fluentcrm-rest-api-to-wordpress/#tag-format" target="_blank">', '</a>' ),
+			'std'     => ! empty( $options['connection_configured'] ) ? 'slug' : 'id',
+			'choices' => array(
+				'id'   => 'IDs',
+				'slug' => 'Slugs',
+			),
+			'tooltip' => __( 'After changing the tag format, you will need to Resync Tags for Every User from the Advanced settings tab to load the new tags.', 'wp-fusion-lite' ),
+		);
+
 		$new_settings['fluentcrm_rest_username'] = array(
 			'title'   => __( 'Application Username', 'wp-fusion-lite' ),
 			'type'    => 'text',
@@ -146,13 +162,12 @@ class WPF_FluentCRM_REST_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'fluentcrm_rest_url', 'fluentcrm_rest_username', 'fluentcrm_rest_password' ),
+			'post_fields' => array( 'fluentcrm_rest_url', 'fluentcrm_rest_username', 'fluentcrm_rest_password', 'fluentcrm_tag_format' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -164,48 +179,48 @@ class WPF_FluentCRM_REST_Admin {
 	 */
 	public static function get_default_fields() {
 
-		$fields = [
-			'first_name'        => [
+		$fields = array(
+			'first_name'        => array(
 				'crm_label' => 'First Name',
 				'crm_field' => 'first_name',
-			],
-			'last_name'         => [
+			),
+			'last_name'         => array(
 				'crm_label' => 'Last Name',
 				'crm_field' => 'last_name',
-			],
-			'user_email'        => [
+			),
+			'user_email'        => array(
 				'crm_label' => 'Email',
 				'crm_field' => 'email',
-			],
-			'phone_number'      => [
+			),
+			'phone_number'      => array(
 				'crm_label' => 'Phone',
 				'crm_field' => 'phone',
-			],
-			'billing_address_1' => [
+			),
+			'billing_address_1' => array(
 				'crm_label' => 'Address 1',
 				'crm_field' => 'address_line_1',
-			],
-			'billing_address_2' => [
+			),
+			'billing_address_2' => array(
 				'crm_label' => 'Address 2',
 				'crm_field' => 'address_line_2',
-			],
-			'billing_city'      => [
+			),
+			'billing_city'      => array(
 				'crm_label' => 'City',
 				'crm_field' => 'city',
-			],
-			'billing_state'     => [
+			),
+			'billing_state'     => array(
 				'crm_label' => 'State',
 				'crm_field' => 'state',
-			],
-			'billing_postcode'  => [
+			),
+			'billing_postcode'  => array(
 				'crm_label' => 'Zip',
 				'crm_field' => 'postal_code',
-			],
-			'billing_country'   => [
+			),
+			'billing_country'   => array(
 				'crm_label' => 'Country',
 				'crm_field' => 'country',
-			],
-		];
+			),
+		);
 
 		$fields[] = array(
 			'crm_label' => 'Name Prefix',
@@ -243,7 +258,6 @@ class WPF_FluentCRM_REST_Admin {
 		);
 
 		return $fields;
-
 	}
 
 	/**
@@ -258,25 +272,73 @@ class WPF_FluentCRM_REST_Admin {
 
 		$new_settings = array(
 			'default_status' => array(
-				'title'       => __( 'Default Status', 'wp-fusion-lite' ),
-				'desc'        => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
-				'tooltip'     => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address. This can be overridden on a per-form basis by syncing a value of "subscribed" to the Status field.', 'wp-fusion-lite' ),
-				'type'        => 'select',
-				'std'         => 'subscribed',
-				'section'     => 'main',
-				'choices'     => array(
-					'subscribed' => 'Subscribed',
-					'pending'    => 'Pending',
+				'title'   => __( 'Default Status', 'wp-fusion-lite' ),
+				'desc'    => __( 'Select a default optin status for new contacts.', 'wp-fusion-lite' ),
+				'tooltip' => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address. This can be overridden on a per-form basis by syncing a value of "subscribed" to the Status field.', 'wp-fusion-lite' ),
+				'type'    => 'select',
+				'std'     => 'subscribed',
+				'section' => 'main',
+				'choices' => array(
+					'subscribed'   => 'Subscribed',
+					'pending'      => 'Pending',
+					'unsubscribed' => 'Unsubscribed',
 				),
 			),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_lists', $settings, $new_settings );
 
-		return $settings;
+		if ( isset( $settings['email_optin_tags'] ) ) {
 
+			$new_settings = array(
+				'woo_optin_status' => array(
+					'title'   => __( 'Optin Status', 'wp-fusion-lite' ),
+					'desc'    => __( 'Select an opt-in status for customers who check the optin box.', 'wp-fusion-lite' ),
+					'tooltip' => __( 'If Pending is selected, a double opt-in email will be sent to confirm the subscriber\'s email address.', 'wp-fusion-lite' ),
+					'type'    => 'select',
+					'std'     => 'subscribed',
+					'section' => 'integrations',
+					'choices' => array(
+						'subscribed' => 'Subscribed',
+						'pending'    => 'Pending',
+					),
+				),
+			);
+
+			$settings = wp_fusion()->settings->insert_setting_after( 'email_optin_tags', $settings, $new_settings );
+		}
+
+		return $settings;
 	}
 
+	/**
+	 * Enables the email optin field for sync if we're collecting it at checkout.
+	 *
+	 * @since 3.44.22
+	 *
+	 * @param bool              $input           The input value.
+	 * @param array             $setting         The setting array.
+	 * @param WP_Fusion_Options $options_class   The options class.
+	 * @return mixed The validated input.
+	 */
+	public function validate_field_email_optin( $input, $setting, $options_class ) {
+
+		if ( true === boolval( $input ) ) {
+
+			$target_field = str_replace( 'validate_field_', '', current_filter() );
+
+			if ( ! isset( $options_class->post_data['contact_fields'][ $target_field ] ) || empty( $options_class->post_data['contact_fields'][ $target_field ]['active'] ) ) {
+
+				$options_class->post_data['contact_fields'][ $target_field ] = array(
+					'active'    => true,
+					'crm_field' => 'status',
+					'type'      => 'checkbox',
+				);
+			}
+		}
+
+		return $input;
+	}
 
 	/**
 	 * Loads standard FluentCRM_REST field names and attempts to match them up
@@ -303,7 +365,6 @@ class WPF_FluentCRM_REST_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -321,7 +382,6 @@ class WPF_FluentCRM_REST_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -336,10 +396,10 @@ class WPF_FluentCRM_REST_Admin {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$url      = esc_url_raw( wp_unslash( $_POST['fluentcrm_rest_url'] ) );
-		$username = sanitize_text_field( wp_unslash( $_POST['fluentcrm_rest_username'] ) );
-		$password = sanitize_text_field( wp_unslash( $_POST['fluentcrm_rest_password'] ) );
-
+		$url        = esc_url_raw( wp_unslash( $_POST['fluentcrm_rest_url'] ) );
+		$username   = sanitize_text_field( wp_unslash( $_POST['fluentcrm_rest_username'] ) );
+		$password   = sanitize_text_field( wp_unslash( $_POST['fluentcrm_rest_password'] ) );
+		$tag_format = sanitize_text_field( wp_unslash( $_POST['fluentcrm_tag_format'] ) );
 		$connection = $this->crm->connect( $url, $username, $password, true );
 
 		if ( is_wp_error( $connection ) ) {
@@ -352,6 +412,7 @@ class WPF_FluentCRM_REST_Admin {
 			$options['fluentcrm_rest_url']      = $url;
 			$options['fluentcrm_rest_username'] = $username;
 			$options['fluentcrm_rest_password'] = $password;
+			$options['fluentcrm_tag_format']    = $tag_format;
 			$options['crm']                     = $this->slug;
 			$options['connection_configured']   = true;
 
@@ -362,8 +423,5 @@ class WPF_FluentCRM_REST_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

@@ -29,7 +29,6 @@ class WPF_ActiveCampaign_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -47,7 +46,6 @@ class WPF_ActiveCampaign_Admin {
 
 		add_filter( 'validate_field_site_tracking', array( $this, 'validate_site_tracking' ), 10, 2 );
 		add_filter( 'wpf_initialize_options', array( $this, 'maybe_get_tracking_id' ), 10 );
-
 	}
 
 
@@ -63,7 +61,8 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings = array();
 
 		$new_settings['activecampaign_header'] = array(
-			'title'   => __( 'ActiveCampaign Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -87,7 +86,6 @@ class WPF_ActiveCampaign_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -105,14 +103,14 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings['site_tracking_header'] = array(
 			'title'   => __( 'ActiveCampaign Site Tracking', 'wp-fusion-lite' ),
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$new_settings['site_tracking'] = array(
 			'title'   => __( 'Site Tracking', 'wp-fusion-lite' ),
 			'desc'    => __( 'Enable <a target="_blank" href="https://help.activecampaign.com/hc/en-us/articles/221493708-How-to-set-up-Site-Tracking">ActiveCampaign site tracking</a>.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$new_settings['site_tracking_id'] = array(
@@ -125,7 +123,7 @@ class WPF_ActiveCampaign_Admin {
 		$new_settings = array();
 
 		$new_settings['ac_import_p'] = array(
-			'desc'    => __( '<strong>Note:</strong> Contacts cannot be imported from ActiveCampaign unless they are on at least one list.' ),
+			'desc'    => __( '<strong>Note:</strong> Contacts cannot be imported from ActiveCampaign unless they are on at least one list.', 'wp-fusion-lite' ),
 			'type'    => 'paragraph',
 			'class'   => 'wpf-notice notice notice-info',
 			'section' => 'import',
@@ -134,7 +132,6 @@ class WPF_ActiveCampaign_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'import_users_p', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -149,20 +146,17 @@ class WPF_ActiveCampaign_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/activecampaign-fields.php';
+			require_once __DIR__ . '/activecampaign-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $activecampaign_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $activecampaign_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 	/**
@@ -191,7 +185,6 @@ class WPF_ActiveCampaign_Admin {
 		}
 
 		return $input;
-
 	}
 
 	/**
@@ -218,7 +211,6 @@ class WPF_ActiveCampaign_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -234,7 +226,6 @@ class WPF_ActiveCampaign_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -271,7 +262,6 @@ class WPF_ActiveCampaign_Admin {
 		}
 
 		die();
-
 	}
 
 	/**
@@ -303,7 +293,5 @@ class WPF_ActiveCampaign_Admin {
 		}
 
 		update_user_meta( $user_id, 'activecampaign_lists', $lists );
-
 	}
-
 }

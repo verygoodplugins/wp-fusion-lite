@@ -39,6 +39,8 @@ abstract class WPF_Integrations_Base {
 		}
 
 		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
+		add_filter( 'wpf_meta_field_groups', array( $this, 'add_meta_field_group' ) );
+		add_filter( 'wpf_meta_fields', array( $this, 'add_meta_fields' ) );
 	}
 
 	/**
@@ -60,6 +62,28 @@ abstract class WPF_Integrations_Base {
 	 */
 	public function compatibility_notices( $notices ) {
 		return $notices;
+	}
+
+	/**
+	 * Adds a meta field group.
+	 *
+	 * @since 3.44.22
+	 *
+	 * @param array $field_groups The field groups.
+	 */
+	public function add_meta_field_group( $field_groups ) {
+		return $field_groups;
+	}
+
+	/**
+	 * Adds meta fields.
+	 *
+	 * @since 3.44.22
+	 *
+	 * @param array $meta_fields The meta fields.
+	 */
+	public function add_meta_fields( $meta_fields ) {
+		return $meta_fields;
 	}
 
 	/**
@@ -148,9 +172,12 @@ abstract class WPF_Integrations_Base {
 	/**
 	 * Handles signups from plugins which support guest registrations
 	 *
-	 * @access  public
 	 * @since   3.26.6
-	 * @return  mixed Contact ID
+	 *
+	 * @param string $email_address The email address of the contact.
+	 * @param array  $update_data   The update data.
+	 *
+	 * @return string|bool Contact ID on success or false in case of error.
 	 */
 
 	public function guest_registration( $email_address, $update_data ) {

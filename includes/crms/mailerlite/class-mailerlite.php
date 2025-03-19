@@ -61,7 +61,7 @@ class WPF_MailerLite {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_MailerLite_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -76,7 +76,6 @@ class WPF_MailerLite {
 
 		// This has to run before init to be ready for WPF_Auto_Login::start_auto_login().
 		add_filter( 'wpf_auto_login_contact_id', array( $this, 'auto_login_contact_id' ) );
-
 	}
 
 	/**
@@ -96,7 +95,6 @@ class WPF_MailerLite {
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
-
 	}
 
 	/**
@@ -113,7 +111,6 @@ class WPF_MailerLite {
 		} else {
 			return false;
 		}
-
 	}
 
 
@@ -127,7 +124,6 @@ class WPF_MailerLite {
 	public function set_sleep_time( $seconds ) {
 
 		return 2;
-
 	}
 
 	/**
@@ -146,6 +142,10 @@ class WPF_MailerLite {
 		if ( empty( $account_id ) ) {
 			// in case they're activating the feature after setting up the plugin pre 3.41.15.
 			$account_id = $this->connect( null, true );
+
+			if ( is_wp_error( $account_id ) ) {
+				return;
+			}
 		}
 
 		?>
@@ -162,7 +162,6 @@ class WPF_MailerLite {
 
 
 		<?php
-
 	}
 
 
@@ -206,7 +205,6 @@ class WPF_MailerLite {
 					if ( wpf_get_option( 'mailerlite_import_notification' ) ) {
 						$post_data['send_notification'] = true;
 					}
-
 				} else {
 
 					$received_name = wpf_get_tag_label( $payload->group->id );
@@ -215,13 +213,11 @@ class WPF_MailerLite {
 					wp_die( '', 'Success', 200 );
 
 				}
-			} else {
+			} elseif ( isset( $payload->subscriber ) ) {
 
-				if ( isset( $payload->subscriber ) ) {
 					$contact_ids[] = $payload->subscriber->id;
-				} else {
-					$contact_ids[] = $payload->id;
-				}
+			} else {
+				$contact_ids[] = $payload->id;
 			}
 		} else {
 
@@ -250,7 +246,6 @@ class WPF_MailerLite {
 					}
 				}
 			}
-
 		}
 
 		if ( empty( $contact_ids ) ) {
@@ -318,7 +313,6 @@ class WPF_MailerLite {
 			return $post_data;
 
 		}
-
 	}
 
 	/**
@@ -342,7 +336,6 @@ class WPF_MailerLite {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -359,7 +352,6 @@ class WPF_MailerLite {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -391,7 +383,6 @@ class WPF_MailerLite {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -468,7 +459,6 @@ class WPF_MailerLite {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -628,7 +618,6 @@ class WPF_MailerLite {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $tags;
-
 	}
 
 	/**
@@ -684,7 +673,6 @@ class WPF_MailerLite {
 		}
 
 		return true;
-
 	}
 
 
@@ -711,7 +699,6 @@ class WPF_MailerLite {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -808,7 +795,6 @@ class WPF_MailerLite {
 				$send_data['type']          = 'unconfirmed';
 				$send_data['subscribed_at'] = gmdate( 'Y-m-d H:i:s' );
 			}
-
 		} elseif ( ! in_array( $data['type'], array( 'unsubscribed', 'active', 'unconfirmed' ) ) ) {
 
 			wpf_log( 'notice', 0, 'Invalid optin status <code>' . $data['type'] . '</code> passed to MailerLite. Optin status must be one of <code>unsubscribed</code>, <code>active</code>, or <code>unconfirmed</code>.' );
@@ -843,7 +829,6 @@ class WPF_MailerLite {
 		}
 
 		return $send_data;
-
 	}
 
 	/**
@@ -874,7 +859,6 @@ class WPF_MailerLite {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
-
 	}
 
 	/**
@@ -1003,7 +987,6 @@ class WPF_MailerLite {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -1035,7 +1018,6 @@ class WPF_MailerLite {
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -1061,7 +1043,6 @@ class WPF_MailerLite {
 		} else {
 			return $response->data; // webhooks are stored in data in v2.
 		}
-
 	}
 
 	/**
@@ -1103,7 +1084,7 @@ class WPF_MailerLite {
 			}
 
 			$data = array(
-				'name'   => 'WP Fusion - ' . home_url(),
+				'name'   => 'WP Fusion - ' . get_bloginfo( 'name' ),
 				'url'    => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
 				'events' => $event_types,
 			);
@@ -1173,7 +1154,6 @@ class WPF_MailerLite {
 		}
 
 		return $ids;
-
 	}
 
 	/**
@@ -1200,7 +1180,5 @@ class WPF_MailerLite {
 		}
 
 		return true;
-
 	}
-
 }

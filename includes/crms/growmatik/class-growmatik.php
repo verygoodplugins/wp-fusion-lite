@@ -14,7 +14,7 @@ class WPF_Growmatik {
 	 *
 	 * @var string
 	 */
-	public $name = 'Growmatik';
+	public $name = 'ConvesioConvert';
 
 	/**
 	 * Contains API url
@@ -23,7 +23,7 @@ class WPF_Growmatik {
 	 * @since 3.36.0
 	 */
 
-	public $url;
+	public $url = 'https://api.convert.convesio.com/public/v1';
 
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
@@ -60,18 +60,14 @@ class WPF_Growmatik {
 
 	public function __construct() {
 
-		$this->supports = array(); // Tags and Custom attributes should be synced.
-		$this->url      = 'https://api.growmatik.ai/public/v1';
-
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Growmatik_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 
@@ -120,7 +116,6 @@ class WPF_Growmatik {
 		}
 
 		return $response;
-
 	}
 
 	private function get_user_attributes() {
@@ -141,7 +136,7 @@ class WPF_Growmatik {
 
 		$attributes['basics'] = array_filter(
 			$body_json['data'],
-			function( $array ) {
+			function ( $array ) {
 				return $array['type'] === 'basic';
 			}
 		);
@@ -165,7 +160,7 @@ class WPF_Growmatik {
 
 		$attributes['custom'] = array_filter(
 			$body_json['data'],
-			function( $array ) {
+			function ( $array ) {
 				return $array['type'] === 'custom';
 			}
 		);
@@ -247,7 +242,6 @@ class WPF_Growmatik {
 		}
 
 		return $results;
-
 	}
 
 
@@ -302,7 +296,7 @@ class WPF_Growmatik {
 		$params['body']['users'] = array();
 
 		// Post request.
-		$response      = wp_safe_remote_post( $request, $params );
+		$response      = wp_safe_remote_get( $request, $params );
 		$response_code = wp_remote_retrieve_response_code( $response );
 
 		if ( 200 === $response_code ) {
@@ -312,7 +306,6 @@ class WPF_Growmatik {
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
-
 	}
 
 
@@ -360,8 +353,10 @@ class WPF_Growmatik {
 		$available_tags = array();
 		$tags           = json_decode( wp_remote_retrieve_body( $response ) );
 
-		foreach ( $tags->data as $tag ) {
-			$available_tags[ strval( $tag->id ) ] = $tag->name;
+		if ( ! empty( $tags ) && ! empty( $tags->data ) ) {
+			foreach ( $tags->data as $tag ) {
+				$available_tags[ strval( $tag->id ) ] = $tag->name;
+			}
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -381,7 +376,7 @@ class WPF_Growmatik {
 	public function sync_crm_fields() {
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/growmatik-fields.php';
+		require __DIR__ . '/admin/growmatik-fields.php';
 
 		$built_in_fields = array();
 
@@ -405,10 +400,12 @@ class WPF_Growmatik {
 
 		$custom_fields = array();
 
-		foreach ( $fields->data as $field ) {
-			// Add custom attributes only.
-			if ( 'custom' === $field->type ) {
-				$custom_fields[ $field->id ] = $field->name;
+		if ( ! empty( $fields ) && ! empty( $fields->data ) ) {
+			foreach ( $fields->data as $field ) {
+				// Add custom attributes only.
+				if ( 'custom' === $field->type ) {
+					$custom_fields[ $field->id ] = $field->name;
+				}
 			}
 		}
 
@@ -456,7 +453,6 @@ class WPF_Growmatik {
 		} else {
 			return false; // Not found
 		}
-
 	}
 
 
@@ -585,7 +581,7 @@ class WPF_Growmatik {
 		}
 
 		// If successfully added contact, try to send its custom fields afterward to its own endpoint.
-		require_once dirname( __FILE__ ) . '/admin/growmatik-fields.php';
+		require_once __DIR__ . '/admin/growmatik-fields.php';
 
 		$basic_field_names = array_column( $growmatik_fields, 'crm_field' );
 		$attributes        = $this->get_user_attributes();
@@ -690,7 +686,5 @@ class WPF_Growmatik {
 		// Not currently supported by Growmatik
 
 		return false;
-
 	}
-
 }

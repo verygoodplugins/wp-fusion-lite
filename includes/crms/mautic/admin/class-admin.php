@@ -32,7 +32,6 @@ class WPF_Mautic_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ), 1 );
-
 	}
 
 	/**
@@ -46,7 +45,6 @@ class WPF_Mautic_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 	/**
@@ -110,7 +108,6 @@ class WPF_Mautic_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -165,7 +162,8 @@ class WPF_Mautic_Admin {
 			$admin_url                     = str_replace( 'http://', 'https://', get_admin_url() );
 			$redirect_url                  = $admin_url . 'options-general.php?page=wpf-settings&crm=mautic';
 			$new_settings['mautic_header'] = array(
-				'title'   => __( 'Mautic Configuration', 'wp-fusion-lite' ),
+				// translators: %s is the name of the CRM.
+				'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 				'type'    => 'heading',
 				'section' => 'setup',
 				'desc'    => sprintf( __( 'Connect to Mautic using OAuth, get the credentials by folowing <a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-mautic-to-wordpress/" target="_blank">these instructions</a>. Enter this as the Redirect URI while generating the client id: <br> <code>%s</code>', 'wp-fusion-lite' ), $redirect_url ),
@@ -224,7 +222,6 @@ class WPF_Mautic_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -253,7 +250,6 @@ class WPF_Mautic_Admin {
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, trailingslashit( $url ) . 'oauth/v2/authorize' ) );
-
 	}
 
 
@@ -279,7 +275,6 @@ class WPF_Mautic_Admin {
 		}
 
 		return $options;
-
 	}
 
 	/**
@@ -329,7 +324,6 @@ class WPF_Mautic_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 
@@ -345,7 +339,6 @@ class WPF_Mautic_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -403,8 +396,5 @@ class WPF_Mautic_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

@@ -1,207 +1,120 @@
-/**
- * Import Assets
- */
-import '../scss/editor.scss';
-import '../scss/admin.scss';
-
-/**
- * Block Dependencies
- */
-import icons from './icons';
-import classnames from 'classnames';
-import WpfSelect from '@verygoodplugins/wpfselect';
-
-/**
- * Internal Block Libraries
- */
-const { __ }                = wp.i18n;
-const { registerBlockType } = wp.blocks;
-const { apiFetch }          = wp;
-const {
-	registerStore,
-	withSelect,
-} = wp.data;
-const {
+import { __ } from '@wordpress/i18n';
+import { registerBlockType } from '@wordpress/blocks';
+import {
 	InnerBlocks,
 	InspectorControls,
-} = wp.editor;
-const {
-	PanelBody,
-	PanelRow,
-	Spinner,
-} = wp.components;
+	useBlockProps,
+} from '@wordpress/block-editor';
+import { useState, useEffect } from '@wordpress/element';
+import { PanelBody, PanelRow } from '@wordpress/components';
+import WpfSelect from '@verygoodplugins/wpfselect';
+import '../scss/editor.scss';
 
-const actions = {
-	setUserTags( userTags ) {
-		return {
-			type: 'SET_USER_TAGS',
-			userTags,
-		};
-	},
-	receiveUserTags( path ) {
-		return {
-			type: 'RECEIVE_USER_TAGS',
-			path,
-		};
-	},
+const Edit = ( { attributes: { tag }, setAttributes } ) => {
+	const [ selectedTags, setSelectedTags ] = useState( [] );
+	const blockProps = useBlockProps();
+
+	useEffect( () => {
+		if ( tag ) {
+			setSelectedTags( JSON.parse( tag ) );
+		}
+	}, [ tag, setSelectedTags ] );
+
+	const { className } = blockProps;
+
+	const handleTagChange = ( innerTag ) => {
+		setAttributes( { tag: JSON.stringify( innerTag ) } );
+	};
+
+	return (
+		<>
+			<InspectorControls>
+				<PanelBody
+					title={ __(
+						'Required Tags (Any)',
+						'secure-blocks-for-gutenberg'
+					) }
+					className="secure-block-inspector"
+				>
+					<PanelRow>
+						<label
+							htmlFor="secure-block-tags"
+							className="secure-block-inspector__label"
+						>
+							{ __(
+								'Restricted content is presented to users that are logged-in and have at least one of the following tags:',
+								'secure-blocks-for-gutenberg'
+							) }
+						</label>
+					</PanelRow>
+					<PanelRow>
+						<WpfSelect
+							existingTags={ selectedTags }
+							onChange={ handleTagChange }
+							elementID="wpf-secure-block-select"
+						/>
+					</PanelRow>
+					<PanelRow>
+						<em className="muted">
+							{ __(
+								'No selected tags mean that restricted content will be presented to all logged-in users.',
+								'secure-blocks-for-gutenberg'
+							) }
+						</em>
+					</PanelRow>
+				</PanelBody>
+			</InspectorControls>
+
+			<div { ...blockProps } className={ className }>
+				<InnerBlocks
+					template={ [
+						[ 'wp-fusion/secure-block-inner-secure' ],
+						[ 'wp-fusion/secure-block-inner-unsecure' ],
+					] }
+					templateLock="all"
+					allowedBlocksExample={ [
+						[ 'wp-fusion/secure-block-inner-secure' ],
+						[ 'wp-fusion/secure-block-inner-unsecure' ],
+					] }
+				/>
+				<footer className={ className + '__footer' }>
+					{ __( 'End: WP Fusion', 'wp-fusion-lite' ) }
+				</footer>
+			</div>
+		</>
+	);
 };
 
-const store = registerStore( 'wp-fusion/secure-block', {
-	reducer( state = { userTags: {} }, action ) {
+const Save = () => {
+	const blockProps = useBlockProps.save();
 
-		switch ( action.type ) {
-			case 'SET_USER_TAGS':
-				return {
-					state,
-					userTags: action.userTags,
-				};
-		}
+	return (
+		<div { ...blockProps }>
+			<InnerBlocks.Content />
+		</div>
+	);
+};
 
-		return state;
-	},
-
-	actions,
-
-	selectors: {
-		receiveUserTags( state ) {
-			const { userTags } = state;
-			return userTags;
+export default registerBlockType( 'wp-fusion/secure-block', {
+	apiVersion: 3,
+	title: __( 'WP Fusion', 'secure-blocks-for-gutenberg' ),
+	description: __(
+		'By default the secure content is only shown if a user is logged in. You can also restrict the block to be visible to users with certain tags.',
+		'wp-fusion-lite'
+	),
+	category: 'layout',
+	icon: 'lock',
+	keywords: [
+		__( 'Secure Block' ),
+		__( 'Permissions' ),
+		__( 'Password Protected' ),
+	],
+	attributes: {
+		tag: {
+			type: 'string',
+			default: null,
 		},
 	},
-
-	controls: {
-		RECEIVE_USER_TAGS( action ) {
-			return apiFetch( { path: action.path } );
-		},
-	},
-
-	resolvers: {
-		* receiveUserTags( state ) {
-			const userTags = yield actions.receiveUserTags( '/wp-fusion/secure-blocks/v1/available-tags/' );
-			return actions.setUserTags( userTags );
-		},
-	},
+	edit: Edit,
+	save: Save,
 } );
-
-/**
- * Register secure block
- */
-export default registerBlockType(
-	'wp-fusion/secure-block',
-	{
-		title:       __( 'WP Fusion', 'secure-blocks-for-gutenberg' ),
-		description: __( 'By default the secure content is only shown if a user is logged in. You can also restrict the block to be visible to users with certain tags.', 'wp-fusion-lite' ),
-		category:   'layout',
-		icon:       'lock',
-		keywords:   [
-			__( 'Secure Block' ),
-			__( 'Permissions' ),
-			__( 'Password Protected' )
-		],
-		attributes: {
-			tag: {
-				type:    'string',
-				default: null,
-			},
-		},
-		edit: withSelect( ( select ) => {
-			return {
-				userTags: select('wp-fusion/secure-block').receiveUserTags(),
-			};
-		} )( props => {
-			const { attributes: { tag }, userTags, className, setAttributes } = props;
-			const handleTagChange = ( tag ) => setAttributes( { tag: JSON.stringify( tag ) } );
-			let tagsToString = '';
-			let selectedTags = [];
-			if ( null !== tag ) {
-				selectedTags = JSON.parse( tag );
-			}
-
-			if ( ! userTags.length ) {
-				return (
-					<p className={className} >
-						<Spinner />
-						{ __( 'Loading Data', 'wp-fusion-lite' ) }
-					</p>
-				);
-			}
-			return [
-				<InspectorControls>
-					<PanelBody title={ __( 'Required Tags (Any)', 'secure-blocks-for-gutenberg' ) } className="secure-block-inspector">
-						<PanelRow>
-							<label htmlFor="secure-block-tags" className="secure-block-inspector__label">
-								{ __( 'Restricted content is presented to users that are logged-in and have at least one of the following tags:', 'secure-blocks-for-gutenberg' ) }
-							</label>
-						</PanelRow>
-						<PanelRow>
-							<WpfSelect
-								existingTags = { selectedTags }
-								onChange = { handleTagChange }
-								elementID = 'wpf-secure-block-select'
-							/>
-						</PanelRow>
-						<PanelRow>
-							<em className="muted">{ __( 'No selected tags mean that restricted content will be presented to all logged-in users.', 'secure-blocks-for-gutenberg' ) }</em>
-						</PanelRow>
-					</PanelBody>
-				</InspectorControls>,
-				<div className={ classnames( props.className ) }>
-					<header className={ classnames( props.className ) + '__handle' }>
-						<span className={ classnames( props.className ) + '__icon' }>
-							{ icons.lock }
-						</span>
-						<span className={classnames( props.className ) + '__description'}>
-							<span>{ __( 'Content shown to users that are ', 'secure-blocks-for-gutenberg' ) }</span>
-							<strong>{ __( 'logged-in', 'secure-blocks-for-gutenberg' ) }</strong>
-							{ selectedTags.length === 0  ?
-								<span>.</span>
-								:
-								<span>
-									{ 1 === selectedTags.length ?
-										<span>
-											{ __( ' and have the following tag: ', 'secure-blocks-for-gutenberg' ) }
-										</span>
-										:
-										<span>
-											{ __( ' and have any of the following tags: ', 'secure-blocks-for-gutenberg' ) }
-										</span>
-									}
-									<span className={classnames( props.className ) + '__tags'}>
-									{ Object( selectedTags ).map( ( value, key ) =>
-										<span className="tag">
-											<span className="tag__name">
-												{ value['label'] }
-											</span>
-										</span>
-									)}
-									</span>
-								</span>
-							}
-						</span>
-					</header>
-					<InnerBlocks
-						template={ [
-							[ 'wp-fusion/secure-block-inner-secure' ],
-							[ 'wp-fusion/secure-block-inner-unsecure' ],
-						] }
-						templateLock="all"
-						allowedBlocksExample={ [
-							[ 'wp-fusion/secure-block-inner-secure' ],
-							[ 'wp-fusion/secure-block-inner-unsecure' ],
-						] }
-					/>
-					<footer className={ classnames( props.className ) + '__footer' }>
-						{ __( 'End: WP Fusion', 'wp-fusion-lite' ) }
-					</footer>
-				</div>
-			];
-		} ),
-		save: props => {
-			return (
-				<div>
-					<InnerBlocks.Content />
-				</div>
-			);
-		},
-	},
-);

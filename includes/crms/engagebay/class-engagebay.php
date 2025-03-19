@@ -74,10 +74,9 @@ class WPF_EngageBay {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_EngageBay_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -103,7 +102,6 @@ class WPF_EngageBay {
 
 		if ( ! empty( $domain ) ) {
 			$this->edit_url = "https://{$domain}.engagebay.com/home#list/0/subscriber/%d";
-			$this->api_url  = "https://{$domain}.engagebay.com/dev/api/";
 		}
 	}
 
@@ -129,7 +127,6 @@ class WPF_EngageBay {
 		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $email . '.' );
 
 		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 	/**
@@ -200,7 +197,6 @@ class WPF_EngageBay {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -221,7 +217,6 @@ class WPF_EngageBay {
 		$post_data['contact_id'] = absint( $payload->entity->id );
 
 		return $post_data;
-
 	}
 
 
@@ -235,7 +230,6 @@ class WPF_EngageBay {
 	public function api_success( $user_id, $method ) {
 
 		wp_send_json_success();
-
 	}
 
 	/**
@@ -259,7 +253,6 @@ class WPF_EngageBay {
 		// Dates are already timestamps at this point
 
 		return $value;
-
 	}
 
 	/**
@@ -338,7 +331,6 @@ class WPF_EngageBay {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -393,7 +385,7 @@ class WPF_EngageBay {
 		$built_in_fields = array();
 
 		// Load built in fields
-		require dirname( __FILE__ ) . '/admin/engagebay-fields.php';
+		require __DIR__ . '/admin/engagebay-fields.php';
 
 		foreach ( $engagebay_fields as $index => $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -544,7 +536,6 @@ class WPF_EngageBay {
 		}
 
 		return true;
-
 	}
 
 
@@ -593,7 +584,6 @@ class WPF_EngageBay {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -897,7 +887,7 @@ class WPF_EngageBay {
 	public function format_contact_api_payload( $data ) {
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/engagebay-fields.php';
+		require __DIR__ . '/admin/engagebay-fields.php';
 
 		$contact_data = array( 'properties' => array() );
 		$address_data = array();
@@ -970,7 +960,5 @@ class WPF_EngageBay {
 		$contact_data['ignoreSendingWebhook'] = true;
 
 		return $contact_data;
-
 	}
-
 }

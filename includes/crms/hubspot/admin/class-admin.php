@@ -32,7 +32,6 @@ class WPF_HubSpot_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ), 1 );
-
 	}
 
 	/**
@@ -47,7 +46,6 @@ class WPF_HubSpot_Admin {
 		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -69,7 +67,6 @@ class WPF_HubSpot_Admin {
 		$notices['marketing-consent'] = sprintf( __( '<strong>Heads up!</strong> If you haven\'t done so already, we recommend %1$senabling marketing contacts%2$s for the WP Fusion integration in HubSpot.', 'wp-fusion-lite' ), '<a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-hubspot-to-wordpress/#marketing-contacts" target="_blank">', '</a>' );
 
 		return $notices;
-
 	}
 
 	/**
@@ -122,7 +119,6 @@ class WPF_HubSpot_Admin {
 				exit;
 			}
 		}
-
 	}
 
 
@@ -138,7 +134,8 @@ class WPF_HubSpot_Admin {
 		$new_settings = array();
 
 		$new_settings['hubspot_header'] = array(
-			'title'   => __( 'HubSpot Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -207,7 +204,6 @@ class WPF_HubSpot_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -244,7 +240,6 @@ class WPF_HubSpot_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 
@@ -259,7 +254,7 @@ class WPF_HubSpot_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/hubspot-fields.php';
+			require_once __DIR__ . '/hubspot-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -270,7 +265,6 @@ class WPF_HubSpot_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -286,7 +280,6 @@ class WPF_HubSpot_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -323,8 +316,5 @@ class WPF_HubSpot_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

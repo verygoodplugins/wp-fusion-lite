@@ -47,6 +47,11 @@ $klaviyo_fields['billing_city'] = array(
 	'crm_field' => 'location+city',
 );
 
+$klaviyo_fields['billing_state'] = array(
+	'crm_label' => 'Region',
+	'crm_field' => 'location+region',
+);
+
 $klaviyo_fields['billing_country'] = array(
 	'crm_label' => 'Country',
 	'crm_field' => 'location+country',
@@ -55,4 +60,9 @@ $klaviyo_fields['billing_country'] = array(
 $klaviyo_fields['billing_postcode'] = array(
 	'crm_label' => 'Zip',
 	'crm_field' => 'location+zip',
+);
+
+$klaviyo_fields[] = array(
+	'crm_label' => 'Time Zone',
+	'crm_field' => 'location+timezone',
 );

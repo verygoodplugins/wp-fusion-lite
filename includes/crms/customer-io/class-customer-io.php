@@ -141,7 +141,7 @@ class WPF_Customer_IO {
 	public static function get_default_fields() {
 
 		return array(
-			'user_email' => array(
+			'user_email'      => array(
 				'crm_label' => 'Email Address',
 				'crm_field' => 'email',
 				'crm_type'  => 'email',
@@ -151,8 +151,17 @@ class WPF_Customer_IO {
 				'crm_field' => 'created_at',
 				'crm_type'  => 'date',
 			),
+			'first_name'      => array(
+				'crm_label' => 'First Name',
+				'crm_field' => 'First Name',
+				'crm_type'  => 'text',
+			),
+			'last_name'       => array(
+				'crm_label' => 'Last Name',
+				'crm_field' => 'Last Name',
+				'crm_type'  => 'text',
+			),
 		);
-
 	}
 
 	/**
@@ -448,7 +457,33 @@ class WPF_Customer_IO {
 			return false;
 		}
 
-		return $response->results[0]->email;
+		$contact_id = $response->results[0]->email;
+
+		// Try to get custom properties:
+
+		$request = $this->url . "customers/{$contact_id}/attributes/?id_type=email";
+
+		$response = wp_safe_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		$crm_fields = wpf_get_option( 'crm_fields', array() );
+
+		foreach ( $response->customer->attributes as $key => $value ) {
+			if ( ! array_key_exists( $key, $crm_fields ) ) {
+				$crm_fields[ $key ] = $key;
+			}
+		}
+
+		asort( $crm_fields );
+
+		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
+
+		return $contact_id;
 	}
 
 

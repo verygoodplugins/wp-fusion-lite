@@ -142,8 +142,7 @@ class WPF_Salesforce {
 	/**
 	 * Formats POST data received from HTTP Posts into standard format
 	 *
-	 * @access public
-	 * @return array
+	 * @return array|bool
 	 */
 
 	public function format_post_data( $post_data ) {
@@ -152,10 +151,17 @@ class WPF_Salesforce {
 			return $post_data;
 		}
 
-		$xml = simplexml_load_string( file_get_contents( 'php://input' ) );
+		$input = file_get_contents( 'php://input' );
+
+		if ( empty( $input ) ) {
+			return false;
+		}
+
+		$xml = simplexml_load_string( $input );
 
 		if ( ! is_object( $xml ) ) {
-			wp_die( 'Invalid XML payload: ' . file_get_contents( 'php://input' ) );
+			wpf_log( 'error', 0, 'Invalid XML payload: ' . esc_html( file_get_contents( 'php://input' ) ) );
+			return false;
 		}
 
 		$data = $xml->children( 'http://schemas.xmlsoap.org/soap/envelope/' )->Body->children( 'http://soap.sforce.com/2005/09/outbound' )->notifications;
@@ -476,6 +482,12 @@ class WPF_Salesforce {
 					// For example: "This session is not valid for use with the REST API".
 					$response = new WP_Error( 403, 'Invalid API credentials: ' . $body[0]->message );
 				}
+
+			} elseif ( 'Not Found' === $response_message && 'GET' !== $args['method'] ) {
+
+				// For updates to deleted or merged contacts, this will trigger a re-lookup by email address.
+				$response = new WP_Error( 'not_found', 'Not found: ' . $body[0]->message );
+
 			} elseif ( $response_code != 200 && $response_code != 201 && $response_code != 204 && ! empty( $response_message ) ) {
 
 				if ( is_array( $body ) && ! empty( $body[0] ) && ! empty( $body[0]->message ) ) {
@@ -590,6 +602,7 @@ class WPF_Salesforce {
 		$this->sync_objects();
 		$this->sync_tags();
 		$this->sync_crm_fields();
+		$this->sync_record_types();
 
 		do_action( 'wpf_sync' );
 
@@ -804,6 +817,39 @@ class WPF_Salesforce {
 		return $crm_fields;
 	}
 
+	/**
+	 * Gets all available record types for the selected object
+	 *
+	 * @since  3.44.14
+	 *
+	 * @return array Record Types
+	 */
+	public function sync_record_types() {
+
+		$record_types = array();
+
+		$request  = $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/describe/';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! empty( $response->{'recordTypeInfos'} ) ) {
+			foreach ( $response->{'recordTypeInfos'} as $record_type ) {
+				if ( $record_type->available && ! $record_type->master ) {
+					$record_types[ $record_type->{'recordTypeId'} ] = $record_type->name;
+				}
+			}
+		}
+
+		update_option( 'wpf_salesforce_record_types', $record_types, false );
+
+		return $record_types;
+	}
+
 
 	/**
 	 * Gets contact ID for a user based on email address
@@ -824,7 +870,7 @@ class WPF_Salesforce {
 
 		$lookup_field = apply_filters( 'wpf_salesforce_lookup_field', $lookup_field );
 
-		$email_address = urlencode( $email_address );
+		$email_address = rawurlencode( $email_address );
 
 		$query_args = array( 'q' => "SELECT Id from {$this->object_type} WHERE {$lookup_field} = '{$email_address}'" );
 
@@ -1129,6 +1175,13 @@ class WPF_Salesforce {
 		// LastName is required to create a new contact.
 		if ( $this->object_type === 'Contact' && ! isset( $data['LastName'] ) ) {
 			$data['LastName'] = 'unknown';
+		}
+
+		// Add record type if specified
+		$record_type_id = wpf_get_option( 'sf_record_type' );
+
+		if ( ! empty( $record_type_id ) ) {
+			$data['RecordTypeId'] = $record_type_id;
 		}
 
 		// Since 3.41.45 we support checking against all required fields.

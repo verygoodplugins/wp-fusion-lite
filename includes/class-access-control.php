@@ -134,7 +134,6 @@ class WPF_Access_Control {
 
 		// Parse args again in case the filter messed them up.
 		return wp_parse_args( $settings, WPF_Admin_Interfaces::$meta_box_defaults );
-
 	}
 
 
@@ -168,7 +167,6 @@ class WPF_Access_Control {
 		}
 
 		return $this->taxonomy_rules;
-
 	}
 
 	/**
@@ -280,7 +278,6 @@ class WPF_Access_Control {
 				$can_access = $this->user_can_access( $post_id, $user_id );
 
 			}
-
 		}
 
 		/**
@@ -303,7 +300,6 @@ class WPF_Access_Control {
 		$this->cache_can_access( $can_access, $user_id, $post_id );
 
 		return $can_access;
-
 	}
 
 	/**
@@ -369,7 +365,6 @@ class WPF_Access_Control {
 
 		// If no tags matched
 		return apply_filters( 'wpf_user_can_access_archive', $can_access, $user_id, $term_id );
-
 	}
 
 	/**
@@ -427,7 +422,6 @@ class WPF_Access_Control {
 		}
 
 		return apply_filters( 'wpf_user_can_access_term', $can_access, $user_id, $post_id );
-
 	}
 
 	/**
@@ -467,7 +461,6 @@ class WPF_Access_Control {
 		}
 
 		return apply_filters( 'wpf_user_can_access_post_type', $can_access, $user_id, $post_type );
-
 	}
 
 	/**
@@ -532,7 +525,6 @@ class WPF_Access_Control {
 		}
 
 		return apply_filters( 'wpf_redirect_url', $redirect, $post_id );
-
 	}
 
 	/**
@@ -579,7 +571,6 @@ class WPF_Access_Control {
 		}
 
 		return false;
-
 	}
 
 
@@ -599,7 +590,6 @@ class WPF_Access_Control {
 		}
 
 		if ( is_admin() || is_search() || ( is_front_page() && is_home() ) ) { // Don't run if the front page is the blog index page
-
 			return true;
 
 		} elseif ( is_post_type_archive() ) {
@@ -684,6 +674,10 @@ class WPF_Access_Control {
 			// Don't do anything for archives if no redirect specified.
 			return true;
 
+		} elseif ( is_feed() ) {
+
+			add_filter( 'the_content_feed', array( $this, 'restrict_rss_feed_content' ) );
+
 		} else {
 
 			// Single post redirects.
@@ -728,9 +722,9 @@ class WPF_Access_Control {
 
 				add_filter( 'the_content', array( $this, 'restricted_content_filter' ) );
 
-				add_filter( 'comments_open', array( $this, 'turn_off_comments' ), 10, 2 );
-
-				add_filter( 'post_password_required', array( $this, 'hide_comments' ), 10, 2 );
+				// Hide comments on restricted posts.
+				add_filter( 'comments_open', '__return_false' );
+				add_filter( 'comments_array', '__return_empty_array' );
 
 				do_action( 'wpf_filtering_page_content', $post_id );
 
@@ -738,7 +732,6 @@ class WPF_Access_Control {
 
 			}
 		}
-
 	}
 
 	/**
@@ -757,7 +750,25 @@ class WPF_Access_Control {
 		$post_id = apply_filters( 'wpf_return_after_login_post_id', $post_id );
 
 		setcookie( 'wpf_return_to', absint( $post_id ), time() + 5 * MINUTE_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
+	}
 
+	/**
+	 * Restricts feed content based on access control.
+	 *
+	 * @since 3,44,17
+	 *
+	 * @param string $content The content to filter.
+	 * @return string The filtered content.
+	 */
+	public function restrict_rss_feed_content( $content ) {
+
+		global $post;
+
+		if ( is_a( $post, 'WP_Post' ) && ! $this->user_can_access( $post->ID ) ) {
+			return $this->get_restricted_content_message( $post->ID );
+		}
+
+		return $content;
 	}
 
 	/**
@@ -778,7 +789,6 @@ class WPF_Access_Control {
 		add_filter( 'the_content', array( $this, 'restricted_content_filter' ) );
 
 		return $content;
-
 	}
 
 	/**
@@ -822,40 +832,8 @@ class WPF_Access_Control {
 		$content = apply_filters( 'wpf_restricted_content_message', $content, $post_id );
 
 		return $content;
-
 	}
 
-
-	/**
-	 * Turn off comments if post is restricted and no redirect is specified
-	 *
-	 * @access public
-	 * @return bool
-	 */
-
-	public function turn_off_comments( $open, $post_id ) {
-
-		return false;
-
-	}
-
-
-	/**
-	 * Sets the post to be password required so existing comments are hidden
-	 *
-	 * @access public
-	 * @return bool
-	 */
-
-	public function hide_comments( $hide, $post ) {
-
-		if ( ! empty( get_comments_number( $post->ID ) ) ) {
-			return true;
-		}
-
-		return $hide;
-
-	}
 
 	/**
 	 * Handles site lockout functionality
@@ -905,9 +883,7 @@ class WPF_Access_Control {
 
 				$additional_urls = explode( PHP_EOL, $additional_urls );
 				$additional_urls = array_map( 'trim', $additional_urls );
-				$additional_urls = array_map( 'trailingslashit', $additional_urls );
-
-				$lockout_urls = array_merge( $lockout_urls, $additional_urls );
+				$lockout_urls    = array_merge( $lockout_urls, $additional_urls );
 
 			}
 
@@ -930,7 +906,6 @@ class WPF_Access_Control {
 			exit();
 
 		}
-
 	}
 
 	/**
@@ -1018,7 +993,6 @@ class WPF_Access_Control {
 
 		// Otherwise return false.
 		return false;
-
 	}
 
 	/**
@@ -1041,7 +1015,6 @@ class WPF_Access_Control {
 			return wp_trim_words( $content );
 
 		}
-
 	}
 
 
@@ -1072,24 +1045,6 @@ class WPF_Access_Control {
 
 					unset( $items[ $key ] );
 
-				} elseif ( $item->type == 'custom' ) {
-
-					/*
-					 * Removed for 3.37.5
-
-					if ( class_exists( 'SitePress' ) ) {
-						continue; // WPML sometimes crashes out running url_to_postid() here and we don't know why
-					}
-
-					// If it's a post, try and get the ID
-
-					$post_id = url_to_postid( $item->url );
-
-					if ( 0 !== $post_id && false === $this->user_can_access( $post_id ) ) {
-						unset( $items[ $key ] );
-					}
-
-					*/
 				}
 			}
 		}
@@ -1121,11 +1076,11 @@ class WPF_Access_Control {
 					continue;
 				}
 
-				if ( ! $this->user_can_access( $item_id ) ) {
+				if ( isset( $settings['loggedout'] ) && wpf_is_user_logged_in() ) {
 
 					unset( $items[ $key ] );
 
-				} elseif ( isset( $settings['loggedout'] ) && wpf_is_user_logged_in() ) {
+				} elseif ( ! $this->user_can_access( $item_id ) ) {
 
 					unset( $items[ $key ] );
 
@@ -1134,7 +1089,6 @@ class WPF_Access_Control {
 		}
 
 		return $items;
-
 	}
 
 
@@ -1199,7 +1153,6 @@ class WPF_Access_Control {
 		}
 
 		return $args;
-
 	}
 
 	/**
@@ -1262,7 +1215,6 @@ class WPF_Access_Control {
 		 */
 
 		return apply_filters( 'is_post_type_eligible_for_query_filtering', $is_eligible, $post_types );
-
 	}
 
 	/**
@@ -1331,7 +1283,6 @@ class WPF_Access_Control {
 		 */
 
 		return apply_filters( 'wpf_should_filter_query', true, $query );
-
 	}
 
 	/**
@@ -1429,7 +1380,6 @@ class WPF_Access_Control {
 		}
 
 		return $not_in;
-
 	}
 
 	/**
@@ -1462,7 +1412,6 @@ class WPF_Access_Control {
 		}
 
 		return $where;
-
 	}
 
 	/**
@@ -1508,7 +1457,6 @@ class WPF_Access_Control {
 		}
 
 		return apply_filters( 'wpf_restricted_terms_for_user', $term_ids, $user_id );
-
 	}
 
 	/**
@@ -1594,7 +1542,6 @@ class WPF_Access_Control {
 				}
 			}
 		}
-
 	}
 
 	/**
@@ -1653,7 +1600,6 @@ class WPF_Access_Control {
 		}
 
 		return $posts;
-
 	}
 
 	/**
@@ -1670,7 +1616,6 @@ class WPF_Access_Control {
 		}
 
 		return $post_id;
-
 	}
 
 	/**
@@ -1704,7 +1649,6 @@ class WPF_Access_Control {
 		$access_meta = array_merge( $access_meta, array_filter( $settings[ $post_type ] ) );
 
 		return $access_meta;
-
 	}
 
 	/**
@@ -1722,7 +1666,6 @@ class WPF_Access_Control {
 		}
 
 		return $data;
-
 	}
 
 
@@ -1744,7 +1687,6 @@ class WPF_Access_Control {
 		}
 
 		return $can_access;
-
 	}
 
 	/**
@@ -1755,7 +1697,6 @@ class WPF_Access_Control {
 	public function clear_access_cache() {
 
 		$this->can_access_posts = array();
-
 	}
 
 
@@ -1804,7 +1745,6 @@ class WPF_Access_Control {
 
 			}
 		}
-
 	}
 
 	/**
@@ -1835,11 +1775,9 @@ class WPF_Access_Control {
 			if ( ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
 				return $url;
 			}
-
 		}
 
 		return $redirect_to;
-
 	}
 
 	/**
@@ -1919,7 +1857,6 @@ class WPF_Access_Control {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -2008,7 +1945,6 @@ class WPF_Access_Control {
 					wp_fusion()->user->remove_tags( $settings['remove_tags'] );
 
 				}
-
 			} else {
 
 				wp_enqueue_script( 'wpf-apply-tags', WPF_DIR_URL . 'assets/js/wpf-apply-tags.js', array( 'jquery' ), WP_FUSION_VERSION, true );
@@ -2031,7 +1967,6 @@ class WPF_Access_Control {
 
 			}
 		}
-
 	}
 
 	/**
@@ -2061,7 +1996,6 @@ class WPF_Access_Control {
 
 		// Redirect so the query string doesn't stick around.
 		wp_safe_redirect( remove_query_arg( 'wpf-refresh', add_query_arg() ) );
-
 	}
 
 	/**
@@ -2079,7 +2013,6 @@ class WPF_Access_Control {
 		}
 
 		return $content;
-
 	}
 
 	/**
@@ -2115,7 +2048,6 @@ class WPF_Access_Control {
 			echo '</div>';
 
 		}
-
 	}
 
 	/**
@@ -2157,7 +2089,5 @@ class WPF_Access_Control {
 			return $url;
 
 		}
-
 	}
-
 }

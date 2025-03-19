@@ -1,4 +1,3 @@
-
 body > .select4-container--open {
 	z-index: 999999; 
 }
@@ -95,12 +94,6 @@ li.active i.icon-wp-fusion:before {
 	}
 }
 
-
-#wpf-batch-status {
-	position: relative;
-	width: 100%;
-}
-
 #wpf-batch-status.hidden {
 	display: none !important;
 }
@@ -122,6 +115,15 @@ li.active i.icon-wp-fusion:before {
 
 /* Tooltips */
 
+.wpf-tip {
+	text-decoration: none;
+	cursor: help;
+}
+
+a > .wpf-tip {
+	cursor: pointer;
+}
+
 span.wpf-tip {
 	font-size: 1.4em;
 	vertical-align: middle;
@@ -135,11 +137,6 @@ span.wpf-tip:hover {
 
 span.wpf-tip.error {
 	color: #d63638;
-}
-
-.tips {
-	cursor: help;
-	text-decoration: none;
 }
 
 img.tips {
@@ -316,7 +313,7 @@ table.wp-list-table.users div.wpf-users-tags.expanded:after {
 	max-width: 100%;
 }
 
-#wpf-coursewre-levels-table .select4-container {
+#wpf-coursewre-levels-table .select4-container, #side-sortables .select4-container {
 	min-width: 100%;
 	max-width: 100%;
 }
@@ -432,6 +429,17 @@ body .select4-drop.select4-drop-active {
     background-position: center center;
     background-size: 100%;
     background-repeat: no-repeat;
+}
+
+/* Forminator (integration box is no-overflow and doesn't scroll) */
+.wpmudev-forminator-forminator-cform-wizard .sui-box .sui-box-body {
+	max-height: 600px;
+	overflow-y: auto;
+}
+
+/* Gravity Forms */
+#entry_list_form .column-wp_fusion {
+	width: 20px;
 }
 
 /* RCP */
@@ -671,9 +679,20 @@ body.memberships_page_pmpro-discountcodes .select4-container {
 	display: inline-block;
 	margin-top: 5px;
 	min-width: 300px;
-    max-width: 100%px;
+    max-width: 100%;
     width: auto !important;
 }
+
+.product_options_page.wp-fusion p.form-field > label {
+	width: 180px;
+	display: inline-block;
+}
+
+.product_options_page.wp-fusion p.form-field span.description {
+	padding-left: 180px;
+	max-width: 600px;
+}
+
 
 /* CF7 */
 
@@ -769,6 +788,64 @@ h2.wp-fusion-user-profile-settings > svg {
 	line-height: 1.5;
 }
 
+/* Easy Digital Downloads / EDD */
+
+
+/* EDD Settings Grid */
+.wpf-edd-custom-price-option-section {
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    margin: 10px 0;
+	position: relative;
+}
+
+a.wpf-edd-docs-link {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+}
+
+.wpf-edd-custom-price-option-section-title {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.wpf-edd-settings-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.wpf-edd-field {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 250px;
+}
+
+.wpf-edd-field-full {
+    flex: 1 1 100%;
+}
+
+.wpf-edd-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.wpf-edd-field .select4-container {
+    width: 100% !important;
+}
+
+.wpf-edd-field .description {
+    display: block;
+    margin-top: 8px;
+    font-style: italic;
+    color: #666;
+}
+
 .edd-price-option-fields label {
 	display: block;
 	margin-bottom: 5px;
@@ -794,7 +871,7 @@ h2.wp-fusion-user-profile-settings > svg {
     right: 5px;
     height: 100%;
     text-align: center;
-    content: "";
+    content: "\f345";
     line-height: 28px;
     font-variant: normal;
     margin: 0px;
@@ -810,6 +887,11 @@ h2.wp-fusion-user-profile-settings > svg {
 
 li.ff_item_wpfusion {
 	display: none;
+}
+
+.ff_form_wrap.ff_screen_settings .integration_edit .el-select {
+	width: 60%;
+	max-width: 80%;
 }
 
 /* WPPayForm Pro */
@@ -835,7 +917,7 @@ li.ff_item_wpfusion {
 }
 
 #wpf-settings-table .select4-container, .wpf-settings-table .select4-container {
-	width: 100% !important;
+	width: 100%;
 	max-width: 380px;
 }
 
@@ -847,6 +929,33 @@ li.ff_item_wpfusion {
 	text-align: left;
 }
 
+#wpf-fluent-settings .wpf-settings-table th:nth-child(1) { min-width: 120px; }
+#wpf-fluent-settings .wpf-settings-table th:nth-child(2) { max-width: 200px; }
+#wpf-fluent-settings .wpf-settings-table th:nth-child(3) { min-width: 75px; }
+#wpf-fluent-settings .wpf-settings-table th:nth-child(4) { max-width: 200px; }
+#wpf-fluent-settings .wpf-settings-table th:nth-child(5) { max-width: 200px; }
+
+#wpf-fluent-settings .wpf-settings-table .select4-container {
+	max-width: 300px;
+	min-width: 300px;
+}
+
+#wpf-fluent-settings .wpf-page-redirect-select .select4-container--default {
+	min-width: 400px;
+    width: auto !important;
+}
+
+#wpf-fluent-settings .wpf-page-redirect-select label {
+	display: none !important;
+}
+
+#wpf-fluent-settings h1 svg {
+	vertical-align: middle;
+	color: #E55B10;
+    margin-right: 5px;
+    padding-bottom: 3px;
+}
+
 /* WooCommerce and addons */
 
 th.column-wp_fusion, td.column-wp_fusion {
@@ -855,6 +964,10 @@ th.column-wp_fusion, td.column-wp_fusion {
 
 th.column-wp_fusion span.wpf-woo-column-title > span {
 	display: none;
+}
+
+td.column-wp_fusion i.icon-wp-fusion {
+	position: relative;
 }
 
 td.column-wp_fusion i.icon-wp-fusion:before {

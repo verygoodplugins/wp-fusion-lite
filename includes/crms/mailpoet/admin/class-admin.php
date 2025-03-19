@@ -28,7 +28,6 @@ class WPF_MailPoet_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -42,7 +41,6 @@ class WPF_MailPoet_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 	/**
@@ -57,7 +55,8 @@ class WPF_MailPoet_Admin {
 		$new_settings = array();
 
 		$new_settings['mailpoet_header'] = array(
-			'title'   => __( 'MailPoet Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -73,7 +72,6 @@ class WPF_MailPoet_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -89,7 +87,8 @@ class WPF_MailPoet_Admin {
 		$new_settings = array();
 
 		$new_settings['mailpoet_header_2'] = array(
-			'title'   => __( 'MailPoet Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'main',
 		);
@@ -105,7 +104,6 @@ class WPF_MailPoet_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -119,7 +117,7 @@ class WPF_MailPoet_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/mailpoet-fields.php';
+			require_once __DIR__ . '/mailpoet-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -130,7 +128,6 @@ class WPF_MailPoet_Admin {
 		}
 
 		return $options;
-
 	}
 
 	/**
@@ -146,7 +143,6 @@ class WPF_MailPoet_Admin {
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 		echo '<style>#mailpoet_connect {display: none;} #tab-import { display: none; }</style>';
-
 	}
 
 
@@ -180,7 +176,5 @@ class WPF_MailPoet_Admin {
 		}
 
 		die();
-
 	}
-
 }

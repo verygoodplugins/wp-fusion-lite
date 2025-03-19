@@ -156,14 +156,14 @@ function wpf_get_contact_id( $user_id = false, $force_update = false ) {
  * @since  3.36.26
  * @since  3.39.2 Added second parameter $force.
  *
- * @param  int  $user_id The user ID to search by.
- * @param  bool $force   Whether or not to force-refresh the tags via an API
- *                       call.
+ * @param  int  $user_id    The user ID to search by.
+ * @param  bool $force      Whether or not to force-refresh the tags via an API call.
+ * @param  bool $lookup_cid Whether or not to lookup the contact ID from the user ID.
  * @return array The user's tags in the CRM.
  */
-function wpf_get_tags( $user_id = false, $force = false ) {
+function wpf_get_tags( $user_id = false, $force = false, $lookup_cid = true ) {
 
-	return wp_fusion()->user->get_tags( $user_id, $force );
+	return wp_fusion()->user->get_tags( $user_id, $force, $lookup_cid );
 }
 
 /**
@@ -444,6 +444,18 @@ function doing_wpf_webhook() {
 }
 
 /**
+ * Disables the API queue for the current request.
+ *
+ * @since 3.44.15
+ */
+function wpf_disable_api_queue() {
+
+	if ( ! defined( 'WPF_DISABLE_QUEUE' ) ) {
+		define( 'WPF_DISABLE_QUEUE', true );
+	}
+}
+
+/**
  * Gets the default datetime format for syncing with the CRM.
  *
  * @since  3.37.27
@@ -466,6 +478,11 @@ function wpf_get_datetime_format() {
  * @return string The E.164 formatted number.
  */
 function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
+
+	// If the number already has a country code, return it.
+	if ( 0 === strpos( $phone_number, '+' ) ) {
+		return $phone_number;
+	}
 
 	$country_codes = array(
 		'CN' => '86', // China
@@ -496,6 +513,8 @@ function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
 	// Remove any non-numeric characters from the phone number
 	$clean_number = preg_replace( '/\D/', '', $phone_number );
 
+	$clean_number = ltrim( $clean_number, '0' ); // remove leading 0s.
+
 	// Check if a country code is already present
 	$has_country_code = strlen( $clean_number ) > 10 || ( strlen( $clean_number ) === 10 && ! isset( $country_codes[ strtoupper( $country ) ] ) );
 
@@ -508,11 +527,11 @@ function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
 	}
 
 	// Ensure the number starts with a '+'
-	if ( ! empty( $clean_number ) && '+' !== $clean_number[0] ) {
+	if ( ! empty( $clean_number ) && false === strpos( $clean_number, '+' ) ) {
 		$clean_number = '+' . $clean_number;
 	}
 
-	return $clean_number;
+	return apply_filters( 'wpf_phone_number_to_e164', $clean_number, $country );
 }
 
 /**
@@ -617,7 +636,7 @@ function wpf_clean_tags( $tags ) {
 	$tags = array_map( 'htmlspecialchars_decode', $tags ); // sanitize_text_field removes HTML special characters so we'll add them back.
 
 	// If we've switched from a CRM with add_tags to one without, we can convert labels to IDs automatically.
-	if ( ! empty( $tags ) && ! wp_fusion()->crm->supports( 'add_tags' ) && ! isset( wpf_get_option( 'available_tags' )[ $tags[0] ] ) ) {
+	if ( ! empty( $tags ) && wp_fusion()->crm && ! wp_fusion()->crm->supports( 'add_tags' ) && ! isset( wpf_get_option( 'available_tags' )[ $tags[0] ] ) ) {
 		$tags = array_map( 'wpf_get_tag_id', $tags );
 	}
 
@@ -772,4 +791,53 @@ function wpf_get_iso8601_date( $timestamp = null, $convert_to_gmt = false ) {
 		return false;
 
 	}
+}
+
+/**
+ * Splits a full name into first and last name components
+ *
+ * @since 3.44.26
+ *
+ * @param string $full_name The full name to split.
+ * @return array Array containing first_name and last_name.
+ */
+function wpf_get_name_from_full_name( $full_name ) {
+
+	$full_name = trim( $full_name );
+
+	if ( empty( $full_name ) || false === strpos( $full_name, ' ' ) ) {
+		return array(
+			'first_name' => $full_name,
+			'last_name'  => '',
+		);
+	}
+
+	$parts = explode( ' ', $full_name );
+
+	// First name is always the first part
+	$first_name = array_shift( $parts );
+
+	// Last name is everything else joined together
+	$last_name = implode( ' ', $parts );
+
+	return array(
+		'first_name' => $first_name,
+		'last_name'  => $last_name,
+	);
+}
+
+/**
+ * Retrieve the metadata from the provided asset map.
+ *
+ * @since 3.44.23
+ *
+ * @param string $path The path to the asset map.
+ *
+ * @return array The asset map metadata.
+ */
+function wpf_get_asset_meta( $path ) {
+	return file_exists( $path ) ? require $path : array(
+		'dependencies' => array(),
+		'version'      => WP_FUSION_VERSION,
+	);
 }

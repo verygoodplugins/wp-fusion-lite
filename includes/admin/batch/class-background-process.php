@@ -8,10 +8,9 @@
 if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 	/**
-	 * Abstract WP_Background_Process class.
+	 * WP Background Process class.
 	 *
-	 * @abstract
-	 * @extends WP_Async_Request
+	 * @extends WPF_Async_Request
 	 */
 	class WPF_Background_Process extends WPF_Async_Request {
 
@@ -58,6 +57,15 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * @access protected
 		 */
 		protected $cron_interval_identifier;
+
+		/**
+		 * The status set when process is cancelling.
+		 *
+		 * @since 3.44.8
+		 *
+		 * @var int The status.
+		 */
+		const STATUS_CANCELLED = 1;
 
 		/**
 		 * Initiate new background process
@@ -159,12 +167,12 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 				$status['max_memory'] = $max_memory . 'MB';
 
-				update_option( 'wpfb_status_' . $key, $status );
+				update_site_option( 'wpfb_status_' . $key, $status );
 
 			}
 
 			if ( ! empty( $this->data ) ) {
-				$result = update_option( $key, $this->data );
+				$result = update_site_option( $key, $this->data );
 			}
 
 			// Cases where the data is too big to be saved
@@ -172,7 +180,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			if ( false === $result && isset( $status ) ) {
 
 				$status['saved'] = 'Failed to save';
-				update_option( 'wpfb_status_' . $key, $status );
+				update_site_option( 'wpfb_status_' . $key, $status );
 
 			}
 
@@ -189,7 +197,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		public function update( $key, $data ) {
 			if ( ! empty( $data ) ) {
-				update_option( $key, $data );
+				update_site_option( $key, $data );
 			}
 
 			return $this;
@@ -204,9 +212,31 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		public function delete( $key ) {
 
-			delete_option( $key );
+			delete_site_option( $key );
 
 			return $this;
+		}
+
+		/**
+		 * Is queued?
+		 *
+		 * @since 3.44.8
+		 *
+		 * @return bool True if queued.
+		 */
+		public function is_queued() {
+			return ! $this->is_queue_empty();
+		}
+
+		/**
+		 * Is the tool currently active, e.g. starting, working, paused or cleaning up?
+		 *
+		 * @since 3.44.8
+		 *
+		 * @return bool True if active.
+		 */
+		public function is_active() {
+			return $this->is_queued() || $this->is_process_running() || $this->is_cancelled();
 		}
 
 		/**
@@ -227,12 +257,23 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		}
 
 		/**
+		 * Get the status key.
+		 *
+		 * @since 3.44.8
+		 *
+		 * @return string The status key.
+		 */
+		public function get_status_key( $key ) {
+			return str_replace( 'process', 'status', $key );
+		}
+
+		/**
 		 * Maybe process queue
 		 *
 		 * Checks whether data exists within the queue and that
 		 * the process is not already running.
 		 */
-		public function maybe_handle() {
+		public function maybe_handle_ajax() {
 
 			// Don't lock up other requests while processing
 			session_write_close();
@@ -261,15 +302,15 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			global $wpdb;
 
-			$table  = $wpdb->options;
-			$column = 'option_name';
+			// Change from options to sitemeta for multisite
+			$table  = is_multisite() ? $wpdb->sitemeta : $wpdb->options;
+			$column = is_multisite() ? 'meta_key' : 'option_name';
 
 			$key = 'wpf_background_process_%';
 
 			$results = $wpdb->get_col( $wpdb->prepare( "SELECT {$column} FROM {$table} WHERE {$column} LIKE %s", $key ) );
 
 			return $results;
-
 		}
 
 		/**
@@ -279,14 +320,13 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		public function get_status( $key = false ) {
 
-			$status = get_option( 'wpfb_status_' . $key );
+			$status = get_site_option( 'wpfb_status_' . $key );
 
 			if ( empty( $status ) ) {
 				return false;
 			}
 
 			return $status;
-
 		}
 
 		/**
@@ -298,16 +338,22 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			global $wpdb;
 
-			$table  = $wpdb->options;
-			$column = 'option_name';
+			// Change from options to sitemeta for multisite
+			$table  = is_multisite() ? $wpdb->sitemeta : $wpdb->options;
+			$column = is_multisite() ? 'meta_key' : 'option_name';
 
 			$key = $this->identifier . '_%';
 
-			$count = $wpdb->get_var( $wpdb->prepare( "
+			$count = $wpdb->get_var(
+				$wpdb->prepare(
+					"
 			SELECT COUNT(*)
 			FROM {$table}
 			WHERE {$column} LIKE %s
-			", $key ) );
+			",
+					$key
+				)
+			);
 
 			return ( $count > 0 ) ? false : true;
 		}
@@ -373,27 +419,32 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			global $wpdb;
 
-			$table        = $wpdb->options;
-			$column       = 'option_name';
-			$key_column   = 'option_id';
-			$value_column = 'option_value';
+			// Change from options to sitemeta for multisite
+			$table        = is_multisite() ? $wpdb->sitemeta : $wpdb->options;
+			$column       = is_multisite() ? 'meta_key' : 'option_name';
+			$key_column   = is_multisite() ? 'meta_id' : 'option_id';
+			$value_column = is_multisite() ? 'meta_value' : 'option_value';
 
 			$key = $this->identifier . '_%';
 
-			$query = $wpdb->get_row( $wpdb->prepare( "
-				SELECT *
-				FROM {$table}
-				WHERE {$column} LIKE %s
-				ORDER BY {$key_column} ASC
-				LIMIT 1
-			", $key ) );
+			$query = $wpdb->get_row(
+				$wpdb->prepare(
+					"
+					SELECT *
+					FROM {$table}
+					WHERE {$column} LIKE %s
+					ORDER BY {$key_column} ASC
+					LIMIT 1
+				",
+					$key
+				)
+			);
 
-			$batch      = new stdClass();
-			$batch->key = $query->$column;
+			$batch       = new stdClass();
+			$batch->key  = $query->$column;
 			$batch->data = maybe_unserialize( $query->$value_column );
 
 			return $batch;
-
 		}
 
 		/**
@@ -405,7 +456,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 		protected function update_status( $batch, $key, $starttime ) {
 
-			$status = get_option( 'wpfb_status_' . $batch->key );
+			$status = get_site_option( 'wpfb_status_' . $batch->key );
 
 			if ( false !== $status && is_array( $status ) ) {
 
@@ -427,10 +478,9 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				$status['total_time']     = time() - $this->start_time;
 				$status['memory_percent'] = ( memory_get_usage( true ) / $this->get_memory_limit() ) * 100 . '%';
 
-				update_option( 'wpfb_status_' . $batch->key, $status );
+				update_site_option( 'wpfb_status_' . $batch->key, $status );
 
 			}
-
 		}
 
 		/**
@@ -460,7 +510,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 					// Update status after task.
 
-					$this->items_this_cycle++;
+					++$this->items_this_cycle;
 
 					$this->update_status( $batch, $key, $starttime );
 
@@ -468,21 +518,20 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 				}
 
+				// Keep the batch up to date while processing it.
+				if ( ! empty( $batch->data ) ) {
+					$this->update( $batch->key, $batch->data );
+				}
+
+				// Delete current batch if fully processed.
+				if ( empty( $batch->data ) ) {
+					$this->delete( $batch->key );
+				}
+
 				if ( $this->time_exceeded() || $this->memory_exceeded() || $this->is_cancelled( $batch->key ) ) {
 					// Batch limits reached.
 					break;
 				}
-			}
-
-			// Update or delete current batch.
-			if ( ! empty( $batch->data ) && $this->is_process_running() && ! $this->is_cancelled( $batch->key ) ) {
-
-				$this->update( $batch->key, $batch->data );
-
-			} else {
-
-				$this->delete( $batch->key );
-
 			}
 
 			$this->unlock_process();
@@ -501,8 +550,6 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				$this->complete( $batch->key );
 
 			}
-
-			wp_die();
 		}
 
 		/**
@@ -572,21 +619,6 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		}
 
 		/**
-		 * Check to see if batch is cancelled
-		 *
-		 * @return bool
-		 */
-		protected function is_cancelled( $key ) {
-
-			if ( ! empty( get_transient( 'wpfb_cancel_' . $key ) ) ) {
-				return true;
-			} else {
-				return false;
-			}
-
-		}
-
-		/**
 		 * Complete.
 		 *
 		 * Override if applicable, but ensure that the below actions are
@@ -597,15 +629,26 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			// Unschedule the cron healthcheck.
 			$this->clear_scheduled_event();
 
-			$status = get_option( 'wpfb_status_' . $key );
+			$status = get_site_option( 'wpfb_status_' . $key );
 
 			if ( ! empty( $status ) ) {
 
+				wpf_log(
+					'info',
+					wpf_get_current_user_id(),
+					sprintf(
+						// translators: 1: total records processed.
+						__( 'Batch operation %1$s completed on %2$d records.', 'wp-fusion-lite' ),
+						'<code>' . $status['last_step'][0] . '</code>',
+						intval( $status['total'] ),
+					),
+					array( 'source' => 'batch-process' )
+				);
+
 				// Delete counter variable
-				delete_option( 'wpfb_status_' . $key );
+				delete_site_option( 'wpfb_status_' . $key );
 
 			}
-
 		}
 
 		/**
@@ -628,7 +671,8 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			// Adds every 5 minutes to the existing schedules.
 			$schedules[ $this->identifier . '_cron_interval' ] = array(
 				'interval' => MINUTE_IN_SECONDS * $interval,
-				'display'  => sprintf( __( 'Every %d Minutes' ), $interval ),
+				// translators: %d is the number of minutes.
+				'display'  => sprintf( __( 'Every %d Minutes', 'wp-fusion-lite' ), $interval ),
 			);
 
 			return $schedules;
@@ -661,6 +705,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 			$this->handle();
 
+			// Cron jobs must return, not die, so other processes can run.
 		}
 
 		/**
@@ -685,6 +730,49 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		}
 
 		/**
+		 * Cancel the current process.
+		 *
+		 * @since 3.44.8
+		 *
+		 * @param string $key The key.
+		 */
+		public function cancel( $key ) {
+
+			$status_key = $this->get_status_key( $key );
+
+			update_site_option( $status_key, self::STATUS_CANCELLED );
+
+			// Just in case the job was paused at the time.
+			$this->dispatch();
+		}
+
+		/**
+		 * Has the process been cancelled?
+		 *
+		 * @since 3.44.8
+		 *
+		 * @param string $key The key.
+		 * @return bool True if cancelled.
+		 */
+		public function is_cancelled( $key = false ) {
+
+			$status_key = $this->get_status_key( $key );
+
+			// Make sure the option isn't cached as non-existent, in case it's been updated
+			// while the process was running.
+
+			$notoptions = wp_cache_get( 'notoptions', 'options' );
+
+			if ( isset( $notoptions[ $status_key ] ) ) {
+				wp_cache_set( 'notoptions', $notoptions, 'options' );
+			}
+
+			$status = get_site_option( $status_key, 0 );
+
+			return absint( $status ) === self::STATUS_CANCELLED;
+		}
+
+		/**
 		 * Cancel Process
 		 *
 		 * Stop processing queue items, clear cronjob and delete batch.
@@ -697,13 +785,12 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				$this->delete( $key );
 				$this->clear_scheduled_event();
 
-				delete_option( 'wpfb_status_' . $key );
-				delete_transient( 'wpfb_cancel_' . $key );
+				delete_site_option( 'wpfb_status_' . $key );
+				delete_site_option( $this->get_status_key( $key ) );
 
 				wpf_log( 'notice', 0, 'Batch operation cancelled', array( 'source' => 'batch-process' ) );
 
 			}
-
 		}
 
 		/**
@@ -735,15 +822,13 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				do_action_ref_array( $item[0], $item[1] );
 			}
 
-			$sleep = apply_filters( 'wpf_batch_sleep_time', 0 );
+			$sleep = apply_filters( 'wpf_batch_sleep_time', 2 );
 
 			if ( $sleep > 0 ) {
 				sleep( $sleep );
 			}
 
 			return false;
-
 		}
-
 	}
 }

@@ -168,9 +168,18 @@ class WPF_FluentCRM {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'Y-m-d h:i:s', $value );
+			$date = gmdate( 'Y-m-d H:i:s', $value );
 
 			return $date;
+
+		} elseif ( 'status' === $field ) {
+
+			// WooCommerce email optins.
+			if ( wpf_get_option( 'email_optin' ) && is_numeric( $value ) && 1 === intval( $value ) ) {
+				$value = wpf_get_option( 'woo_optin_status', 'subscribed' );
+			}
+
+			return $value;
 
 		} else {
 
@@ -382,6 +391,10 @@ class WPF_FluentCRM {
 
 	public function add_contact( $data ) {
 
+		if ( empty( $data['email'] ) ) {
+			return new WP_Error( 'error', 'Email address is required.' );
+		}
+
 		$custom_fields = $this->get_custom_fields();
 		$custom_data   = array_filter( \FluentCrm\Framework\Support\Arr::only( $data, array_keys( $custom_fields ) ) );
 
@@ -402,10 +415,6 @@ class WPF_FluentCRM {
 
 		if ( empty( $data['status'] ) ) {
 			$data['status'] = wpf_get_option( 'default_status', 'subscribed' );
-		}
-
-		if ( 'susbcribed' === $data['status'] ) {
-			$data['status'] = 'subscribed'; // fixes typo between v3.40.40 and 3.40.57.
 		}
 
 		$model = FluentCrmApi( 'contacts' )->getInstance();
@@ -604,14 +613,13 @@ class WPF_FluentCRM {
 				// If we're currently in the process of applying tags, then we need to wait
 				// until WPF_User::apply_tags() has updated the usermeta before we can load them.
 
-				$callback = function( $user_id ) use ( &$tags, &$callback ) {
+				$callback = function ( $user_id ) use ( &$tags, &$callback ) {
 
 					// Prevent infinite loop when set_tags() triggers wpf_tags_modified.
 					remove_action( 'wpf_tags_modified', $callback );
-				
+
 					wp_fusion()->logger->add_source( 'fluentcrm' );
 					wp_fusion()->user->set_tags( $tags, $user_id );
-
 				};
 
 				add_action( 'wpf_tags_modified', $callback );
@@ -622,7 +630,6 @@ class WPF_FluentCRM {
 				wp_fusion()->user->set_tags( $tags, $user_id );
 
 			}
-
 		}
 	}
 

@@ -100,7 +100,6 @@ class WPF_Omnisend {
 		// Guest site tracking.
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
-
 	}
 
 	/**
@@ -141,7 +140,6 @@ class WPF_Omnisend {
 	private function format_tag_for_property( $tag_name ) {
 
 		return 'tag_' . strtolower( str_replace( '-', '_', sanitize_title( $tag_name ) ) );
-
 	}
 
 	/**
@@ -248,19 +246,19 @@ class WPF_Omnisend {
 	public static function get_standard_fields() {
 
 		$standard_fields = array(
-			'first_name' => array(
+			'first_name'  => array(
 				'crm_label' => 'First Name',
 				'crm_field' => 'firstName',
 			),
-			'last_name' => array(
+			'last_name'   => array(
 				'crm_label' => 'Last Name',
 				'crm_field' => 'lastName',
 			),
-			'user_email' => array(
+			'user_email'  => array(
 				'crm_label' => 'Email Address',
 				'crm_field' => 'email',
 			),
-			'country' => array(
+			'country'     => array(
 				'crm_label' => 'Country',
 				'crm_field' => 'country',
 			),
@@ -268,35 +266,33 @@ class WPF_Omnisend {
 				'crm_label' => 'Country Code',
 				'crm_field' => 'countryCode',
 			),
-			'state' => array(
+			'state'       => array(
 				'crm_label' => 'State',
 				'crm_field' => 'state',
 			),
-			'city' => array(
+			'city'        => array(
 				'crm_label' => 'City',
 				'crm_field' => 'city',
 			),
-			'address' => array(
+			'address'     => array(
 				'crm_label' => 'Address',
 				'crm_field' => 'address',
 			),
-			'postalCode' => array(
+			'postalCode'  => array(
 				'crm_label' => 'Postal Code',
 				'crm_field' => 'postalCode',
 			),
-			'gender' => array(
+			'gender'      => array(
 				'crm_label' => 'Gender',
 				'crm_field' => 'gender',
 			),
-			'birthday' => array(
+			'birthday'    => array(
 				'crm_label' => 'Birthdate',
 				'crm_field' => 'birthdate',
 			),
 		);
 
 		return $standard_fields;
-
-
 	}
 
 	/**
@@ -363,7 +359,7 @@ class WPF_Omnisend {
 		echo '
 		<script type="text/javascript">
 			window.omnisend = window.omnisend || [];
-			omnisend.push(["accountID", "' . wpf_get_option( 'omnisend_brand_id' ) . '"]);
+			omnisend.push(["accountID", "' . esc_js( wpf_get_option( 'omnisend_brand_id' ) ) . '"]);
 			omnisend.push(["track", "$pageViewed"]);
 			!function(){var e=document.createElement("script");e.type="text/javascript",e.async=!0,e.src="https://omnisnippet1.com/inshop/launcher-v2.js";var t=document.getElementsByTagName("script")[0];t.parentNode.insertBefore(e,t)}();
 	
@@ -399,7 +395,6 @@ class WPF_Omnisend {
 		}
 
 		setcookie( 'wpf_guest', $email, time() + HOUR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 
@@ -611,7 +606,6 @@ class WPF_Omnisend {
 		}
 
 		return $this->update_contact( $contact_id, $update_data );
-
 	}
 
 	/**
@@ -632,11 +626,9 @@ class WPF_Omnisend {
 				$update_data['customProperties'][ $key ] = $value;
 				unset( $update_data[ $key ] );
 			}
-
 		}
 
 		return $update_data;
-
 	}
 
 	/**

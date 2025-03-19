@@ -49,7 +49,6 @@ class WPF_MooSend_Admin {
 		if ( wpf_get_option( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -62,7 +61,6 @@ class WPF_MooSend_Admin {
 		// Hooks in init() will run on the admin screen when this CRM is active.
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -80,7 +78,8 @@ class WPF_MooSend_Admin {
 		$new_settings = array();
 
 		$new_settings['moosend_header'] = array(
-			'title'   => __( 'MooSend CRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -105,12 +104,11 @@ class WPF_MooSend_Admin {
 				'choices'     => isset( $options['moosend_list'] ) ? $options['moosend_list'] : array(),
 			);
 
-		};
+		}
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -128,7 +126,7 @@ class WPF_MooSend_Admin {
 
 	public function add_default_fields( $options ) {
 
-		require dirname( __FILE__ ) . '/moosend-fields.php';
+		require __DIR__ . '/moosend-fields.php';
 
 		foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -138,7 +136,6 @@ class WPF_MooSend_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -194,6 +191,4 @@ class WPF_MooSend_Admin {
 			wp_send_json_success();
 		}
 	}
-
 }
-

@@ -23,7 +23,8 @@ class WPF_User_Profile {
 		add_action( 'show_user_profile', array( $this, 'user_profile' ), 5 );
 		add_action( 'edit_user_profile', array( $this, 'user_profile' ), 5 );
 
-		add_action( 'admin_notices', array( $this, 'profile_notices' ) );
+		add_action( 'load-profile.php', array( $this, 'process_profile_actions' ) );
+		add_action( 'load-user-edit.php', array( $this, 'process_profile_actions' ) );
 
 		// New users.
 		add_action( 'user_new_form', array( $this, 'user_new_form' ) );
@@ -65,28 +66,86 @@ class WPF_User_Profile {
 	 * Does manual actions on user profiles and displays the results
 	 *
 	 * @since 3.35.14
+	 * @since 3.44.15 Moved to the load-profile.php and load-user-edit.php actions for
+	 *                better compatibility with plugins that remove admin notices like
+	 *                "MemberPress Courses".
 	 *
 	 * @return mixed Notice Content
 	 */
-	public function profile_notices() {
+	public function process_profile_actions() {
 
-		if ( ! isset( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'wpf_profile_action' ) ) {
+		if ( ! isset( $_GET['wpf_profile_action'] ) || ! isset( $_GET['user_id'] ) ) {
 			return;
 		}
 
-		if ( ! isset( $_GET['user_id'] ) || ! isset( $_GET['wpf_profile_action'] ) ) {
-			return;
-		}
+		check_admin_referer( 'wpf_profile_action' );
 
 		$user_id = absint( $_GET['user_id'] );
 		$action  = sanitize_key( $_GET['wpf_profile_action'] );
 
+		wpf_disable_api_queue(); // get API responses immediately.
+
 		// For debugging purposes.
 		if ( 'register' === $action ) {
 
-			$contact_id = wp_fusion()->user->user_register( $user_id, null, true );
+			$result = wp_fusion()->user->user_register( $user_id, null, true );
 
-			if ( $contact_id ) {
+			if ( ! is_wp_error( $result ) ) {
+
+				$edit_url = wp_fusion()->user->get_contact_edit_url( $user_id );
+
+				if ( false !== $edit_url ) {
+					$result = '<a href="' . $edit_url . '" target="_blank">#' . $result . '</a>';
+				}
+
+				$message = sprintf(
+					/* translators: %1$s CRM name, %2$s contact ID */
+					__( '<strong>Success:</strong> User was added to %1$s with contact ID %2$s.', 'wp-fusion-lite' ),
+					wp_fusion()->crm->name,
+					$result
+				);
+
+			} else {
+
+				$message = sprintf(
+					/* translators: %1$s CRM name */
+					__( '<strong>Error:</strong> Unable to create contact in %1$s: %2$s.', 'wp-fusion-lite' ),
+					wp_fusion()->crm->name,
+					$result->get_error_message()
+				);
+
+			}
+		} elseif ( 'pull' === $action ) {
+
+			$result = wp_fusion()->user->pull_user_meta( $user_id );
+
+			if ( ! is_wp_error( $result ) ) {
+
+				$message = sprintf(
+					/* translators: %1$s CRM name */
+					__( '<strong>Success:</strong> Loaded metadata from %1$s:', 'wp-fusion-lite' ),
+					esc_html( wp_fusion()->crm->name )
+				);
+
+				$message .= '<br /><pre>' . wpf_print_r( $result, true ) . '</pre>';
+
+			} else {
+
+				$message = sprintf(
+					/* translators: %1$s CRM name */
+					__( '<strong>Error:</strong> Unable to pull metadata from %1$s: %2$s.', 'wp-fusion-lite' ),
+					esc_html( wp_fusion()->crm->name ),
+					$result->get_error_message()
+				);
+
+			}
+		} elseif ( 'push' === $action ) {
+
+			$result = wp_fusion()->user->push_user_meta( $user_id );
+
+			if ( ! is_wp_error( $result ) ) {
+
+				$contact_id = wpf_get_contact_id( $user_id );
 
 				$edit_url = wp_fusion()->user->get_contact_edit_url( $user_id );
 
@@ -94,46 +153,38 @@ class WPF_User_Profile {
 					$contact_id = '<a href="' . $edit_url . '" target="_blank">#' . $contact_id . '</a>';
 				}
 
-				$message = sprintf( __( '<strong>Success:</strong> User was added to %1$s with contact ID %2$s.' ), wp_fusion()->crm->name, $contact_id );
-
+				$message = sprintf(
+					/* translators: %1$s CRM name, %2$s contact ID */
+					__( '<strong>Success:</strong> Synced user meta to %1$s contact ID %2$s.', 'wp-fusion-lite' ),
+					esc_html( wp_fusion()->crm->name ),
+					$contact_id
+				);
 			} else {
 
-				$message = sprintf( __( '<strong>Error:</strong> Unable to create contact in %1$s, see the %2$sactivity logs%3$s for more information.' ), wp_fusion()->crm->name, '<a href="' . admin_url( 'tools.php?page=wpf-settings-logs' ) . '">', '</a>' );
+				$message = sprintf(
+					/* translators: %1$s CRM name */
+					__( '<strong>Error:</strong> Unable to push user meta to %1$s: %2$s.', 'wp-fusion-lite' ),
+					esc_html( wp_fusion()->crm->name ),
+					$result->get_error_message()
+				);
 
 			}
-		} elseif ( 'pull' === $action ) {
-
-			$user_meta = wp_fusion()->user->pull_user_meta( $user_id );
-
-			$message = sprintf( __( '<strong>Success:</strong> Loaded metadata from %1$s:' ), esc_html( wp_fusion()->crm->name ) );
-
-			$message .= '<br /><pre>' . wpf_print_r( $user_meta, true ) . '</pre>';
-
-		} elseif ( 'push' === $action ) {
-
-			wp_fusion()->user->push_user_meta( $user_id );
-
-			$contact_id = wpf_get_contact_id( $user_id );
-
-			$edit_url = wp_fusion()->user->get_contact_edit_url( $user_id );
-
-			if ( false !== $edit_url ) {
-				$contact_id = '<a href="' . $edit_url . '" target="_blank">#' . $contact_id . '</a>';
-			}
-
-			$message = sprintf( __( '<strong>Success:</strong> Synced user meta to %1$s contact ID %2$s.' ), esc_html( wp_fusion()->crm->name ), $contact_id );
-
 		} elseif ( 'show_meta' === $action ) {
 
-			$user_meta = wp_fusion()->user->get_user_meta( $user_id );
+			$result = wp_fusion()->user->get_user_meta( $user_id );
 
-			$message = '<pre>' . wpf_print_r( $user_meta, true ) . '</pre>';
+			$message = '<pre>' . wpf_print_r( $result, true ) . '</pre>';
 
 		}
 
-		echo '<div class="notice notice-success">';
-		echo '<p>' . wp_kses_post( $message ) . '</p>';
-		echo '</div>';
+		wp_admin_notice(
+			$message,
+			array(
+				'id'                 => 'wpf_profile_action_message',
+				'dismissible'        => true,
+				'additional_classes' => ! is_wp_error( $result ) ? array( 'updated' ) : array( 'error' ),
+			)
+		);
 	}
 
 	/**
@@ -163,10 +214,9 @@ class WPF_User_Profile {
 	}
 
 	/**
-	 * Updates the contact record in the CRM when a profile is edited in the backend
+	 * Updates the contact record in the CRM when a profile is edited in the backend.
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.44.15
 	 */
 	public function user_profile_update( $user_id ) {
 
@@ -175,49 +225,51 @@ class WPF_User_Profile {
 		// This sets the log source for the WPF_User::profile_update() function.
 		wp_fusion()->logger->add_source( 'user-profile' );
 
+		wpf_disable_api_queue(); // get API responses immediately.
+
 		// See if tags have manually been modified on the user edit screen.
 		if ( ! empty( $_POST['wpf_tags_field_edited'] ) ) {
-
-			do_action( 'wpf_admin_profile_tags_edited', $user_id );
 
 			// Prevent it from running more than once on a profile update.
 			unset( $_POST['wpf_tags_field_edited'] );
 
 			if ( isset( $_POST[ WPF_TAGS_META_KEY ] ) ) {
-				$posted_tags = array_map( 'sanitize_text_field', wp_unslash( $_POST[ WPF_TAGS_META_KEY ] ) );
+				$posted_tags = wpf_clean_tags( $_POST[ WPF_TAGS_META_KEY ] );
 			} else {
 				$posted_tags = array();
 			}
 
-			$user_tags = wp_fusion()->user->get_tags( $user_id );
+			$user_tags = wpf_get_tags( $user_id );
 
 			// Apply new tags.
-			$apply_tags = array();
-
-			foreach ( $posted_tags as $tag ) {
-
-				if ( ! in_array( $tag, $user_tags ) ) {
-					$apply_tags[] = $tag;
-				}
-			}
-
-			if ( ! empty( $apply_tags ) ) {
-
-				wp_fusion()->user->apply_tags( $apply_tags, $user_id );
-			}
+			$result = wp_fusion()->user->apply_tags( array_diff( $posted_tags, $user_tags ), $user_id );
 
 			// Remove removed tags.
-			$remove_tags = array();
 
-			foreach ( $user_tags as $tag ) {
-
-				if ( ! in_array( $tag, $posted_tags ) ) {
-					$remove_tags[] = $tag;
-				}
+			if ( ! is_wp_error( $result ) ) {
+				$result = wp_fusion()->user->remove_tags( array_diff( $user_tags, $posted_tags ), $user_id );
 			}
 
-			if ( ! empty( $remove_tags ) ) {
-				wp_fusion()->user->remove_tags( $remove_tags, $user_id );
+			if ( is_wp_error( $result ) ) {
+
+				// Copied from user-edit.php in core.
+
+				$message = sprintf(
+					/* translators: %1$s CRM name */
+					__( 'Error: Unable to update tags in %1$s: %2$s.', 'wp-fusion-lite' ),
+					esc_html( wp_fusion()->crm->name ),
+					$result->get_error_message()
+				);
+
+				add_action(
+					'user_profile_update_errors',
+					function ( $errors ) use ( $message ) {
+						$errors->add( 'wpf_error', $message );
+					}
+				);
+
+			} else {
+				do_action( 'wpf_admin_profile_tags_edited', $user_id );
 			}
 		}
 
@@ -226,8 +278,24 @@ class WPF_User_Profile {
 
 			$user = get_userdata( $user_id );
 
-			wp_fusion()->user->push_user_meta( $user_id, array( 'user_email' => $user->user_email ) );
+			$result = wp_fusion()->user->push_user_meta( $user_id, array( 'user_email' => $user->user_email ) );
 
+			if ( is_wp_error( $result ) ) {
+
+				$message = sprintf(
+					/* translators: %1$s CRM name */
+					__( '<strong>Error:</strong> Unable to update user email in %1$s: %2$s.', 'wp-fusion-lite' ),
+					esc_html( wp_fusion()->crm->name ),
+					$result->get_error_message()
+				);
+
+				add_action(
+					'user_profile_update_errors',
+					function ( $errors ) use ( $message ) {
+						$errors->add( 'wpf_error', $message );
+					}
+				);
+			}
 		}
 	}
 
@@ -292,7 +360,8 @@ class WPF_User_Profile {
 		if ( ! is_null( $screen ) && in_array( $screen->id, array( 'profile', 'user-edit', 'user-new', 'user' ) ) ) {
 
 			if ( 'user' === $screen->id && doing_filter( 'wpf_user_register' ) && ! isset( $_POST['wpf_add_contact'] ) ) {
-				wpf_log( 'notice', $user_id, 'Add to ' . wp_fusion()->crm->name . ' was not checked, the user will not be synced to the CRM.' );
+				// translators: %s is the name of the CRM
+				wpf_log( 'notice', $user_id, sprintf( __( 'Add to %1$s was not checked, the user will not be synced to %1$s.', 'wp-fusion-lite' ), wp_fusion()->crm->name ) );
 				return null; // cancel the signup process if the Add to CRM box isn't checked.
 			}
 
@@ -310,6 +379,14 @@ class WPF_User_Profile {
 					$post_data[ $field ] = $post_data[ $key ];
 				}
 			}
+
+			// Filter out any objects before stripslashes_deep
+			$post_data = array_filter(
+				$post_data,
+				function ( $value ) {
+					return ! is_object( $value );
+				}
+			);
 
 			$post_data = stripslashes_deep( $post_data );
 
@@ -456,3 +533,5 @@ class WPF_User_Profile {
 		<?php
 	}
 }
+
+

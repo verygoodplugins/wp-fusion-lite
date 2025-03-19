@@ -8,6 +8,13 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
+ * Deprecated file
+ *
+ * @deprecated 3.44.23 Use wp-fusion/includes/admin/class-tags-select-api.php instead.
+ */
+// _deprecated_file( __FILE__, '3.44.23', 'wp-fusion/includes/admin/class-tags-select-api.php' );
+
+/**
  * Class API
  *
  * WP REST API Custom Methods
@@ -24,19 +31,19 @@ class API {
 	 *
 	 * @return array
 	 */
-	public static function get_formatted_tags_array(){
-		$available_tags = wpf_get_option( 'available_tags', array() );
+	public static function get_formatted_tags_array() {
+		$available_tags  = wpf_get_option( 'available_tags', array() );
 		$tags_for_select = array();
-		$groupped_tags = array();
+		$groupped_tags   = array();
 
 		foreach ( $available_tags as $tag_id => $tag ) {
-			if( is_array( $tag ) ) {
-				if( isset( $tag['category'] ) ){
-					$groupped_tags[$tag['category']][] = array(
+			if ( is_array( $tag ) ) {
+				if ( isset( $tag['category'] ) ) {
+					$groupped_tags[ $tag['category'] ][] = array(
 						'value' => $tag_id,
-						'label' => $tag['label']
+						'label' => $tag['label'],
 					);
-				}else{
+				} else {
 					$tags_for_select[] = array(
 						'value' => $tag_id,
 						'label' => $tag['label'],
@@ -51,17 +58,17 @@ class API {
 			}
 		}
 
-		if( ! empty( $groupped_tags ) ){
-			foreach ( $groupped_tags as $label => $group ){
-				if( str_contains( strtolower( $label), '(read only)' ) ){
-					foreach($group as $key => $option){
-						$group[$key]['label'] = $option['label'] . ' (Read Only)';
+		if ( ! empty( $groupped_tags ) ) {
+			foreach ( $groupped_tags as $label => $group ) {
+				if ( str_contains( strtolower( $label ), '(read only)' ) ) {
+					foreach ( $group as $key => $option ) {
+						$group[ $key ]['label'] = $option['label'] . ' (Read Only)';
 					}
 				}
 
 				$tags_for_select[] = array(
-					'label' => $label,
-					'options' => $group
+					'label'   => $label,
+					'options' => $group,
 				);
 			}
 		}
@@ -149,7 +156,7 @@ class API {
 	 *
 	 * @return void
 	 */
-	public function update_available_tags( \WP_REST_Request $request) {
+	public function update_available_tags( \WP_REST_Request $request ) {
 
 		$tag = $request->get_param( 'tag_name' );
 
@@ -157,8 +164,8 @@ class API {
 			wp_send_json_error( new \WP_Error( 'error', __( 'Tag name is empty!.', 'wp-fusion-lite' ) ) );
 		}
 
-		if( in_array( 'add_tags_api', wp_fusion()->crm->supports ) ){
-			$tag_id   = wp_fusion()->crm->add_tag( $tag );
+		if ( in_array( 'add_tags_api', wp_fusion()->crm->supports ) ) {
+			$tag_id = wp_fusion()->crm->add_tag( $tag );
 
 			if ( is_wp_error( $tag_id ) ) {
 				wp_send_json_error( $tag_id );
@@ -171,13 +178,13 @@ class API {
 
 		$available_tags = wpf_get_option( 'available_tags', array() );
 
-		if( ! in_array( $tag, $available_tags ) ){
+		if ( ! in_array( $tag, $available_tags ) ) {
 			$available_tags[] = $tag;
 			asort( $available_tags );
 
 			wp_fusion()->settings->set( 'available_tags', $available_tags );
 
-			if( in_array( 'add_tags', wp_fusion()->crm->supports ) ){
+			if ( in_array( 'add_tags', wp_fusion()->crm->supports ) ) {
 				wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag <strong>' . $tag . '</strong></code>' );
 			}
 		}

@@ -136,9 +136,18 @@ class WPF_FluentCRM_REST {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
 			// Adjust formatting for date fields.
-			$date = gmdate( 'Y-m-d h:i:s', $value );
+			$date = gmdate( 'Y-m-d H:i:s', $value );
 
 			return $date;
+
+		} elseif ( 'status' === $field ) {
+
+			// WooCommerce email optins.
+			if ( wpf_get_option( 'email_optin' ) && is_numeric( $value ) && 1 === intval( $value ) ) {
+				$value = wpf_get_option( 'woo_optin_status', 'subscribed' );
+			}
+
+			return $value;
 
 		} else {
 
@@ -201,13 +210,9 @@ class WPF_FluentCRM_REST {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
+		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
 
-			if ( 404 === wp_remote_retrieve_response_code( $response ) || empty( wp_remote_retrieve_body( $response ) ) ) {
-
-				$response = new WP_Error( 'error', 'No response was returned. You may need to <a href="https://wordpress.org/support/article/using-permalinks/#mod_rewrite-pretty-permalinks" target="_blank">enable pretty permalinks</a>.' );
-
-			} elseif ( wp_remote_retrieve_response_code( $response ) > 204 ) {
+			if ( wp_remote_retrieve_response_code( $response ) > 204 ) {
 
 				$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -232,9 +237,17 @@ class WPF_FluentCRM_REST {
 
 					} elseif ( ! empty( $body ) && false !== strpos( $body, 'Enable JavaScript' ) ) {
 						$message .= '. ' . __( 'The API request is being blocked by a CloudFlare challenge page.', 'wp-fusion-lite' );
+					} elseif ( empty( $body ) ) {
+						$message .= '. ' . __( 'No response was returned. You may need to <a href="https://wordpress.org/support/article/using-permalinks/#mod_rewrite-pretty-permalinks" target="_blank">enable pretty permalinks</a>.', 'wp-fusion-lite' );
 					}
 
-					$response = new WP_Error( 'error', $message );
+					if ( 404 === wp_remote_retrieve_response_code( $response ) ) {
+						$code = 'not_found'; // handles possibly changed contact IDs.
+					} else {
+						$code = 'error';
+					}
+
+					$response = new WP_Error( $code, $message );
 
 				}
 			}
@@ -319,7 +332,7 @@ class WPF_FluentCRM_REST {
 		while ( $continue ) {
 
 			$request  = $this->url . '/tags?sort_by=id&sort_order=DESC&per_page=100&page=' . $page;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -331,8 +344,11 @@ class WPF_FluentCRM_REST {
 
 				foreach ( $response->tags->data as $tag ) {
 
-					$available_tags[ $tag->slug ] = $tag->title;
-
+					if ( 'id' === wpf_get_option( 'fluentcrm_tag_format' ) ) {
+						$available_tags[ $tag->id ] = $tag->title;
+					} else {
+						$available_tags[ $tag->slug ] = $tag->title;
+					}
 				}
 			}
 
@@ -366,7 +382,7 @@ class WPF_FluentCRM_REST {
 		while ( $continue ) {
 
 			$request  = $this->url . '/lists?sort_by=id&sort_order=DESC&per_page=100&page=' . $page;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -422,7 +438,7 @@ class WPF_FluentCRM_REST {
 		// Then get custom ones
 
 		$request  = $this->url . '/custom-fields/contacts?per_page=500';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -461,8 +477,8 @@ class WPF_FluentCRM_REST {
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request  = $this->url . '/subscribers?per_page=1&search=' . urlencode( $email_address );
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$request  = $this->url . '/subscribers/?per_page=1&search=' . rawurlencode( $email_address );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -496,7 +512,7 @@ class WPF_FluentCRM_REST {
 		$params['body'] = wp_json_encode( $body );
 
 		$request  = $this->url . '/tags';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -504,7 +520,11 @@ class WPF_FluentCRM_REST {
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $response->lists->slug;
+		if ( 'id' === wpf_get_option( 'fluentcrm_tag_format' ) ) {
+			return $response->item->id;
+		} else {
+			return $response->item->slug;
+		}
 	}
 
 
@@ -519,7 +539,7 @@ class WPF_FluentCRM_REST {
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . '/subscribers/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -530,7 +550,12 @@ class WPF_FluentCRM_REST {
 		$tags = array();
 
 		foreach ( $response->subscriber->tags as $tag ) {
-			$tags[] = $tag->slug;
+
+			if ( 'id' === wpf_get_option( 'fluentcrm_tag_format' ) ) {
+				$tags[] = $tag->id;
+			} else {
+				$tags[] = $tag->slug;
+			}
 		}
 
 		return $tags;
@@ -553,17 +578,33 @@ class WPF_FluentCRM_REST {
 			return true; // if you send an empty tag, the contact will get all the tags in the account.
 		}
 
-		$body = array(
-			'type'        => 'tags',
-			'attach'      => $tags,
-			'subscribers' => array( $contact_id ),
-		);
+		$params = $this->get_params();
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $body );
+		if ( 'id' === wpf_get_option( 'fluentcrm_tag_format' ) ) {
 
-		$request  = $this->url . '/subscribers/sync-segments';
-		$response = wp_safe_remote_post( $request, $params );
+			$update_data = array(
+				'attach_tags' => $tags,
+			);
+
+			$params['body']   = wp_json_encode( $update_data );
+			$params['method'] = 'PUT';
+
+			$request  = $this->url . '/subscribers/' . $contact_id;
+			$response = wp_remote_request( $request, $params );
+
+		} else {
+
+			$body = array(
+				'type'        => 'tags',
+				'attach'      => $tags,
+				'subscribers' => array( $contact_id ),
+			);
+
+			$params['body'] = wp_json_encode( $body );
+
+			$request  = $this->url . '/subscribers/sync-segments';
+			$response = wp_remote_post( $request, $params );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -584,17 +625,33 @@ class WPF_FluentCRM_REST {
 	 */
 	public function remove_tags( $tags, $contact_id ) {
 
-		$body = array(
-			'type'        => 'tags',
-			'detach'      => $tags,
-			'subscribers' => array( $contact_id ),
-		);
+		$params = $this->get_params();
 
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $body );
+		if ( 'id' === wpf_get_option( 'fluentcrm_tag_format' ) ) {
 
-		$request  = $this->url . '/subscribers/sync-segments';
-		$response = wp_safe_remote_post( $request, $params );
+			$update_data = array(
+				'detach_tags' => $tags,
+			);
+
+			$params['body']   = wp_json_encode( $update_data );
+			$params['method'] = 'PUT';
+
+			$request  = $this->url . '/subscribers/' . $contact_id;
+			$response = wp_remote_request( $request, $params );
+
+		} else {
+
+			$body = array(
+				'type'        => 'tags',
+				'detach'      => $tags,
+				'subscribers' => array( $contact_id ),
+			);
+
+			$params['body'] = wp_json_encode( $body );
+
+			$request  = $this->url . '/subscribers/sync-segments';
+			$response = wp_remote_post( $request, $params );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -639,10 +696,6 @@ class WPF_FluentCRM_REST {
 			$data['status'] = wpf_get_option( 'default_status', 'subscribed' );
 		}
 
-		if ( 'susbcribed' === $data['status'] ) {
-			$data['status'] = 'subscribed'; // fixes typo between v3.40.40 and 3.41.5.
-		}
-
 		if ( empty( $data['lists'] ) && get_user_by( 'email', $data['email'] ) ) {
 			// Default lists for new users.
 			$data['lists'] = wpf_get_option( 'assign_lists', array() );
@@ -652,7 +705,7 @@ class WPF_FluentCRM_REST {
 		$params['body'] = wp_json_encode( $data );
 
 		$request  = $this->url . '/subscribers';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -703,12 +756,17 @@ class WPF_FluentCRM_REST {
 			}
 		}
 
+		if ( isset( $data['lists'] ) ) {
+			$data['attach_lists'] = $data['lists'];
+			unset( $data['lists'] );
+		}
+
 		$params           = $this->get_params();
 		$params['body']   = wp_json_encode( array( 'subscriber' => $data ) );
 		$params['method'] = 'PUT';
 
 		$request  = $this->url . '/subscribers/' . $contact_id;
-		$response = wp_safe_remote_request( $request, $params );
+		$response = wp_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -730,7 +788,7 @@ class WPF_FluentCRM_REST {
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . '/subscribers/' . $contact_id . '?with%5B%5D=subscriber.custom_values';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -771,7 +829,7 @@ class WPF_FluentCRM_REST {
 			// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
 
 			$request  = $this->url . '/tags?sort_by=id&per_page=1&search=' . $tag;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -797,7 +855,7 @@ class WPF_FluentCRM_REST {
 		while ( $proceed ) {
 			$url = add_query_arg( 'page', $page, $url );
 
-			$response = wp_safe_remote_get( $url, $this->get_params() );
+			$response = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

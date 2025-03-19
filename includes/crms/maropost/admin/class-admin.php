@@ -19,7 +19,6 @@ class WPF_Maropost_Admin {
 		$this->name = $name;
 		$this->crm  = $crm;
 
-
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_maropost_header_begin', array( $this, 'show_field_maropost_header_begin' ), 10, 2 );
 
@@ -29,7 +28,6 @@ class WPF_Maropost_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -43,7 +41,6 @@ class WPF_Maropost_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		//add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -59,7 +56,8 @@ class WPF_Maropost_Admin {
 		$is_config = array();
 
 		$is_config['maropost_header'] = array(
-			'title'   => __( 'Maropost Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -69,7 +67,7 @@ class WPF_Maropost_Admin {
 			'desc'    => __( 'Enter your Maropost account ID (i.e. "1234").', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		if ( $settings['connection_configured'] && 'maropost' === wpf_get_option( 'crm' ) ) {
@@ -90,13 +88,12 @@ class WPF_Maropost_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'account_id', 'maropost_key', 'mp_list'  )
+			'post_fields' => array( 'account_id', 'maropost_key', 'mp_list' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $is_config );
 
 		return $settings;
-
 	}
 
 
@@ -111,20 +108,17 @@ class WPF_Maropost_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/maropost-fields.php';
+			require_once __DIR__ . '/maropost-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $maropost_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $maropost_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -140,12 +134,11 @@ class WPF_Maropost_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 
-		if( wp_fusion()->crm->slug == 'maropost' ) {
+		if ( wp_fusion()->crm->slug == 'maropost' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -185,7 +178,5 @@ class WPF_Maropost_Admin {
 		}
 
 		die();
-
 	}
-
 }

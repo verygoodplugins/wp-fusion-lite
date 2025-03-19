@@ -29,7 +29,6 @@ class WPF_GetResponse_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -56,7 +55,7 @@ class WPF_GetResponse_Admin {
 
 		$new_settings = array();
 
-		if( ! isset( $options['available_lists'] ) ) {
+		if ( ! isset( $options['available_lists'] ) ) {
 			$options['available_lists'] = array();
 		}
 
@@ -78,7 +77,8 @@ class WPF_GetResponse_Admin {
 		$settings['getresponse_list']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
 
 		$new_settings['getresponse_header'] = array(
-			'title'   => __( 'GetResponse Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -96,7 +96,6 @@ class WPF_GetResponse_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -121,7 +120,8 @@ class WPF_GetResponse_Admin {
 		if ( ! empty( $rule_id ) ) {
 			wp_fusion()->crm->destroy_webhook( $rule_id );
 			add_filter(
-				'validate_field_getresponse_add_tag_rule_id', function() {
+				'validate_field_getresponse_add_tag_rule_id',
+				function () {
 					return false;
 				}
 			);
@@ -141,13 +141,13 @@ class WPF_GetResponse_Admin {
 		}
 
 		add_filter(
-			'validate_field_getresponse_add_tag_rule_id', function() use ( &$rule_id ) {
+			'validate_field_getresponse_add_tag_rule_id',
+			function () use ( &$rule_id ) {
 				return $rule_id;
 			}
 		);
 
 		return $input;
-
 	}
 
 	/**
@@ -172,7 +172,8 @@ class WPF_GetResponse_Admin {
 		if ( ! empty( $rule_id ) ) {
 			wp_fusion()->crm->destroy_webhook( $rule_id );
 			add_filter(
-				'validate_field_getresponse_update_trigger_rule_id', function() {
+				'validate_field_getresponse_update_trigger_rule_id',
+				function () {
 					return false;
 				}
 			);
@@ -192,13 +193,13 @@ class WPF_GetResponse_Admin {
 		}
 
 		add_filter(
-			'validate_field_getresponse_update_trigger_rule_id', function() use ( &$rule_id ) {
+			'validate_field_getresponse_update_trigger_rule_id',
+			function () use ( &$rule_id ) {
 				return $rule_id;
 			}
 		);
 
 		return $input;
-
 	}
 
 
@@ -213,7 +214,7 @@ class WPF_GetResponse_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/getresponse-fields.php';
+			require_once __DIR__ . '/getresponse-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -224,7 +225,6 @@ class WPF_GetResponse_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -240,7 +240,6 @@ class WPF_GetResponse_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -254,7 +253,7 @@ class WPF_GetResponse_Admin {
 	public function show_field_getresponse_key_end( $id, $field ) {
 
 		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . $field['desc'] . '</span>';
+			echo '<span class="description">' . esc_html( $field['desc'] ) . '</span>';
 		}
 		echo '</td>';
 		echo '</tr>';
@@ -265,7 +264,6 @@ class WPF_GetResponse_Admin {
 		}
 		echo '</div>'; // close #GetResponse div
 		echo '<table class="form-table">';
-
 	}
 
 	/**
@@ -300,7 +298,5 @@ class WPF_GetResponse_Admin {
 		}
 
 		die();
-
 	}
-
 }

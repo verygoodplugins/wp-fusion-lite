@@ -271,7 +271,7 @@ class WPF_Batch {
 			echo esc_html__( 'Processing', 'wp-fusion-lite' ) . esc_html( ' ' . $done . ' / ' . $total . ' ' . $title );
 		}
 
-		echo '</span><a id="cancel-batch" class="btn btn-default btn-xs">' . esc_html__( 'Cancel', 'wp-fusion-lite' ) . '</a></p>';
+		echo '</span><a id="cancel-batch" class="button button-small">' . esc_html__( 'Cancel', 'wp-fusion-lite' ) . '</a></p>';
 		echo '</div>';
 	}
 
@@ -302,6 +302,7 @@ class WPF_Batch {
 		} elseif ( isset( $args['object_ids'] ) && is_array( $args['object_ids'] ) ) {
 			// Allow passing specific records, for example via the Users or Orders screens.
 			$objects = array_map( 'sanitize_text_field', $args['object_ids'] );
+			unset( $args['object_ids'] );
 		} else {
 			$objects = apply_filters( 'wpf_batch_' . $hook . '_init', $args );
 		}
@@ -437,9 +438,9 @@ class WPF_Batch {
 
 		if ( ! empty( $key ) ) {
 
-			// We'll set this in the DB and then the background worker will pick up on it when it's a good time.
+			// We'll set this in the DB and then the background worker will pick up on it on the next operation.
 
-			set_transient( 'wpfb_cancel_' . $key, true, 5 * MINUTE_IN_SECONDS );
+			$this->process->cancel( $key );
 
 		}
 
@@ -490,7 +491,7 @@ class WPF_Batch {
 				return;
 			}
 
-			$status = get_site_option( 'wpfb_status_' . $keys[0] );
+			$status = get_site_option( $this->process->get_status_key( $keys[0] ) );
 
 			if ( ! is_array( $status ) ) {
 				return;
@@ -502,7 +503,7 @@ class WPF_Batch {
 
 			++$status['errors'];
 
-			update_site_option( 'wpfb_status_' . $keys[0], $status );
+			update_site_option( $this->process->get_status_key( $keys[0] ), $status );
 
 		}
 	}
@@ -531,18 +532,21 @@ class WPF_Batch {
 			return false;
 		}
 
-		// Remove existing users
-
 		$removed = 0;
 
-		foreach ( $contact_ids as $i => $contact_id ) {
+		// Remove existing users if the option is not set to update existing users.
+		if ( empty( $args['update_existing_users'] ) || 'false' === $args['update_existing_users'] ) {
 
-			if ( wp_fusion()->user->get_user_id( $contact_id ) ) {
+			foreach ( $contact_ids as $i => $contact_id ) {
 
-				unset( $contact_ids[ $i ] );
-				++$removed;
+				if ( wp_fusion()->user->get_user_id( $contact_id ) ) {
 
+					unset( $contact_ids[ $i ] );
+					++$removed;
+
+				}
 			}
+
 		}
 
 		// Logging
@@ -684,7 +688,10 @@ class WPF_Batch {
 
 	public function users_sync_step( $user_id ) {
 
-		wp_fusion()->user->get_tags( $user_id, true );
+		// In case they've reset the CRM while the sync was running.
+		if ( wp_fusion()->user ) {
+			wp_fusion()->user->get_tags( $user_id, true );
+		}
 	}
 
 	/**

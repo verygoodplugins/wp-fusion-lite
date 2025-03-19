@@ -171,7 +171,21 @@ class WPF_Log_Table_List extends WP_List_Table {
 		if ( isset( $levels[ $level_key ] ) ) {
 			$level       = $levels[ $level_key ];
 			$level_class = sanitize_html_class( 'log-level--' . $level_key );
-			return '<span class="log-level ' . $level_class . '">' . esc_html( $level ) . '</span>';
+			$return      = '<span class="log-level ' . $level_class . '">' . esc_html( $level ) . '</span>';
+
+			if ( isset( $log['context'] ) ) {
+
+				$context = maybe_unserialize( $log['context'] );
+
+				if ( isset( $context['request_uri'] ) && isset( $context['request_args'] ) ) {
+
+					$link    = admin_url( "tools.php?page=wpf-settings-logs&wpf-retry-api-call={$log['log_id']}&_wpnonce=" . wp_create_nonce( 'wpf_retry_log' ) );
+					$return .= ' <a href="' . esc_url( $link ) . '" class="wpf-logs-retry-link dashicons dashicons-update wpf-tip wpf-tip-right" data-tip="' . esc_attr__( 'Retry API call', 'wp-fusion-lite' ) . '"></a>';
+				}
+			}
+
+			return $return;
+
 		} else {
 			return '';
 		}
@@ -338,6 +352,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 		$allowed_tags = array(
 			'ul'     => array(),
 			'li'     => array(),
+			'hr'     => array(),
 			'code'   => array(),
 			'pre'    => array(),
 			'strong' => array(),
@@ -371,15 +386,6 @@ class WPF_Log_Table_List extends WP_List_Table {
 		}
 
 		return esc_html( $log['source'] );
-	}
-
-	/**
-	 * Get bulk actions.
-	 *
-	 * @return array
-	 */
-	protected function get_bulk_actions() {
-		return array();
 	}
 
 	/**
@@ -512,8 +518,10 @@ class WPF_Log_Table_List extends WP_List_Table {
 				<option value=""><?php esc_html_e( 'All users', 'wp-fusion-lite' ); ?></option>
 				<?php
 				if ( ! empty( $selected_user ) ) {
-						$user = get_user_by( 'id', $selected_user );
+					$user = get_user_by( 'id', $selected_user );
+					if ( $user ) {
 						echo '<option selected value="' . esc_attr( $user->ID ) . '">' . esc_html( $user->user_login ) . '</option>';
+					}
 				}
 				?>
 			</select>

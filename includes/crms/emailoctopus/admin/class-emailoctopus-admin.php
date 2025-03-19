@@ -46,7 +46,6 @@ class WPF_EmailOctopus_Admin {
 		if ( wp_fusion()->settings->get( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -57,7 +56,6 @@ class WPF_EmailOctopus_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -75,7 +73,8 @@ class WPF_EmailOctopus_Admin {
 		$new_settings = array();
 
 		$new_settings['emailoctopus_header'] = array(
-			'title'   => __( 'EmailOctopus Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -105,7 +104,6 @@ class WPF_EmailOctopus_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -121,7 +119,7 @@ class WPF_EmailOctopus_Admin {
 
 		if ( $options['connection_configured'] ) {
 
-			require_once dirname( __FILE__ ) . '/emailoctopus-fields.php';
+			require_once __DIR__ . '/emailoctopus-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -132,7 +130,6 @@ class WPF_EmailOctopus_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -150,7 +147,6 @@ class WPF_EmailOctopus_Admin {
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm === false || $crm !== $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -188,8 +184,5 @@ class WPF_EmailOctopus_Admin {
 			wp_send_json_success();
 
 		}
-
 	}
-
-
 }

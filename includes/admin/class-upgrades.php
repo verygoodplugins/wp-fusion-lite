@@ -27,7 +27,6 @@ class WPF_Upgrades {
 
 		add_action( 'admin_init', array( $this, 'maybe_updated_plugin' ), 5 ); // 5 so it runs before staging site detection.
 		add_action( 'wpf_plugin_updated', array( $this, 'run_upgrade_scripts' ), 10, 2 );
-
 	}
 
 	/**
@@ -53,7 +52,6 @@ class WPF_Upgrades {
 			wp_fusion()->settings->set( 'wp_fusion_version', WP_FUSION_VERSION );
 
 		}
-
 	}
 
 	/**
@@ -77,7 +75,6 @@ class WPF_Upgrades {
 				}
 			}
 		}
-
 	}
 
 	/**
@@ -94,7 +91,6 @@ class WPF_Upgrades {
 		if ( ! empty( $taxonomy_rules ) ) {
 			update_option( 'wpf_taxonomy_rules', $taxonomy_rules, true );
 		}
-
 	}
 
 	/**
@@ -105,7 +101,6 @@ class WPF_Upgrades {
 	public static function v_3_38_39() {
 
 		wp_fusion()->settings->set( 'site_url', get_site_url() );
-
 	}
 
 	/**
@@ -116,7 +111,6 @@ class WPF_Upgrades {
 	public static function v_3_39_0() {
 
 		wp_fusion()->settings->set( 'restrict_content', true );
-
 	}
 
 	/**
@@ -130,7 +124,6 @@ class WPF_Upgrades {
 	public static function v_3_40_16() {
 
 		wp_fusion()->settings->set( 'site_url', WPF_Staging_Sites::get_duplicate_site_lock_key() );
-
 	}
 
 	/**
@@ -145,7 +138,6 @@ class WPF_Upgrades {
 		if ( ! empty( $setting ) ) {
 			wp_fusion()->settings->set( 'awp_apply_tags_active', $setting );
 		}
-
 	}
 
 	/**
@@ -173,7 +165,6 @@ class WPF_Upgrades {
 
 			}
 		}
-
 	}
 
 	/**
@@ -186,7 +177,6 @@ class WPF_Upgrades {
 		if ( wpf_get_option( 'ac_lists' ) ) {
 			wp_fusion()->settings->set( 'assign_lists', wpf_get_option( 'ac_lists' ) );
 		}
-
 	}
 
 	/**
@@ -199,10 +189,19 @@ class WPF_Upgrades {
 		if ( wpf_get_option( 'cc_lists' ) ) {
 			wp_fusion()->settings->set( 'assign_lists', wpf_get_option( 'cc_lists' ) );
 		}
-
 	}
 
+	/**
+	 * Deletes any orphaned batch operations from 3.44.8.
+	 *
+	 * @since 3.44.11
+	 */
+	public static function v_3_44_11() {
 
+		global $wpdb;
+
+		$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'wpfb_status_wpf_background_process_%';" );
+	}
 }
 
 new WPF_Upgrades();

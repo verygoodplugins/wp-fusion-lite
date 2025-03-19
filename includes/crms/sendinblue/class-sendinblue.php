@@ -121,7 +121,7 @@ class WPF_SendinBlue {
 			$user  = get_user_by( 'email', $email );
 
 			if ( $user ) {
-				$post_data['contact_id'] = wpf_get_contact_id( $user->ID );
+				$post_data['contact_id'] = wpf_get_contact_id( $user->ID, true );
 			} else {
 				$post_data['contact_id'] = $this->get_contact_id( $email );
 			}

@@ -13,6 +13,14 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 class Main {
+	/**
+	 * The array with the asset map.
+	 *
+	 * @since 3.44.23
+	 *
+	 * @var array The array map.
+	 */
+	private $asset_map = array();
 
 	/**
 	 * Constructor.
@@ -25,10 +33,12 @@ class Main {
 		if ( ! wpf_get_option( 'restrict_content', true ) ) {
 			return;
 		}
-		
+
+		// Register the asset map.
+		$this->asset_map = wpf_get_asset_meta( WPF_DIR_PATH . 'build/secure-block.asset.php' );
+
 		// Load Assets
 		add_action( 'enqueue_block_editor_assets', array( $this, 'editor_assets' ) ); // Load Editor Assets
-		add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );        // Load Admin Assets
 
 		// Load Classes
 		add_action( 'init', array( $this, 'includes' ) );
@@ -38,42 +48,42 @@ class Main {
 	/**
 	 * Enqueue editor scripts and styles
 	 *
+	 * @since unknown
+	 *
 	 * @access public
+	 *
 	 * @return void
 	 */
 
 	public function editor_assets() {
-
-		$scripts = '/build/index.js';
-
 		// Enqueue editor JS.
 		wp_enqueue_script(
 			'wpf-secure-blocks-for-gutenberg-editor-js',
-			plugins_url( $scripts, __FILE__ ),
-			array( 'wp-i18n', 'wp-element', 'wp-blocks', 'wp-components', 'wp-api', 'wp-editor' ),
-			filemtime( plugin_dir_path( __FILE__ ) . $scripts )
+			WPF_DIR_URL . 'build/secure-block.js',
+			$this->asset_map['dependencies'],
+			$this->asset_map['version'],
+			true
 		);
 
+		wp_enqueue_style(
+			'wpf-secure-blocks-for-gutenberg-admin-css',
+			WPF_DIR_URL . 'build/secure-block.css',
+			array(),
+			$this->asset_map['version'],
+		);
 	}
 
 	/**
 	 * Enqueue admin styles
+	 *
+	 * @deprecated 3.44.25 Use editor_assets() instead.
 	 *
 	 * @access public
 	 * @return void
 	 */
 
 	public function admin_assets() {
-
-		$styles = '/build/index.css';
-
-		// Enqueue Styles.
-		wp_enqueue_style(
-			'wpf-secure-blocks-for-gutenberg-admin-css',
-			plugins_url( $styles, __FILE__ ),
-			array(),
-			filemtime( plugin_dir_path( __FILE__ ) . $styles )
-		);
+		_deprecated_function( __METHOD__, '3.44.25', 'Main::editor_assets()' );
 	}
 
 	/**

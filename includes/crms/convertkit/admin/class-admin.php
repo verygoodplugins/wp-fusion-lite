@@ -28,7 +28,6 @@ class WPF_ConvertKit_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -45,7 +44,6 @@ class WPF_ConvertKit_Admin {
 		add_filter( 'validate_field_ck_update_tag', array( $this, 'validate_webhooks' ), 10, 2 );
 		add_filter( 'validate_field_ck_add_tag', array( $this, 'validate_webhooks' ), 10, 2 );
 		add_filter( 'validate_field_ck_notify_unsubscribe', array( $this, 'validate_unsubscribe_webhook' ), 10, 2 );
-
 	}
 
 
@@ -61,7 +59,8 @@ class WPF_ConvertKit_Admin {
 		$new_settings = array();
 
 		$new_settings['convertkit_header'] = array(
-			'title'   => __( 'ConvertKit Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -84,7 +83,6 @@ class WPF_ConvertKit_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -105,35 +103,35 @@ class WPF_ConvertKit_Admin {
 		$new_settings = array();
 
 		$new_settings['ck_update_tag'] = array(
-			'title' 	  => __( 'Update Trigger', 'wp-fusion-lite' ),
-			'desc'		  => __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion-lite' ),
-			'type'		  => 'assign_tags',
-			'section'	  => 'main',
+			'title'       => __( 'Update Trigger', 'wp-fusion-lite' ),
+			'desc'        => __( 'When this tag is applied to a contact in ConvertKit, their tags and meta data will be updated in WordPress.', 'wp-fusion-lite' ),
+			'type'        => 'assign_tags',
+			'section'     => 'main',
 			'placeholder' => 'Select a tag',
-			'action'	  => 'update',
-			'limit'		  => 1
+			'action'      => 'update',
+			'limit'       => 1,
 		);
 
 		$new_settings['ck_update_tag_rule_id'] = array(
-			'std'		=> false,
-			'type'		=> 'hidden',
-			'section'	=> 'main'
+			'std'     => false,
+			'type'    => 'hidden',
+			'section' => 'main',
 		);
 
 		$new_settings['ck_add_tag'] = array(
-			'title' 	=> __( 'Import Trigger', 'wp-fusion-lite' ),
-			'desc'		=> __( 'When this tag is applied to a contact in ConvertKit, they will be imported as a new WordPres user.', 'wp-fusion-lite' ),
-			'type'		=> 'assign_tags',
-			'section'	=> 'main',
+			'title'       => __( 'Import Trigger', 'wp-fusion-lite' ),
+			'desc'        => __( 'When this tag is applied to a contact in ConvertKit, they will be imported as a new WordPres user.', 'wp-fusion-lite' ),
+			'type'        => 'assign_tags',
+			'section'     => 'main',
 			'placeholder' => 'Select a tag',
-			'action'	=> 'add',
-			'limit'		=> 1
+			'action'      => 'add',
+			'limit'       => 1,
 		);
 
 		$new_settings['ck_add_tag_rule_id'] = array(
-			'std'		=> false,
-			'type'		=> 'hidden',
-			'section'	=> 'main'
+			'std'     => false,
+			'type'    => 'hidden',
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'access_key', $settings, $new_settings );
@@ -147,39 +145,37 @@ class WPF_ConvertKit_Admin {
 		$new_settings['ck_header'] = array(
 			'title'   => __( 'ConvertKit Settings', 'wp-fusion-lite' ),
 			'type'    => 'heading',
-			'section' => 'advanced'
+			'section' => 'advanced',
 		);
 
 		$new_settings['ck_notify_unsubscribe'] = array(
-			'title' 	=> __( 'Notify on Unsubscribe', 'wp-fusion-lite' ),
-			'desc'		=> __( 'Send a notification email when a subscriber with a WordPress user account unsubscribes. See <a href="https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/">the documentation</a> for more info.', 'wp-fusion-lite' ),
-			'type'		=> 'checkbox',
-			'section'	=> 'advanced',
-			'std'		=> 0,
-			'unlock'	=> array( 'ck_notify_email' ),
-			'action'    => 'unsubscribe',
+			'title'   => __( 'Notify on Unsubscribe', 'wp-fusion-lite' ),
+			'desc'    => __( 'Send a notification email when a subscriber with a WordPress user account unsubscribes. See <a href="https://wpfusion.com/documentation/crm-specific-docs/convertkit-unsubscribe-notifications/">the documentation</a> for more info.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'section' => 'advanced',
+			'std'     => 0,
+			'unlock'  => array( 'ck_notify_email' ),
+			'action'  => 'unsubscribe',
 		);
 
 		$new_settings['ck_unsubscribe_rule_id'] = array(
-			'std'		=> false,
-			'type'		=> 'hidden',
-			'section'	=> 'advanced'
-			);
+			'std'     => false,
+			'type'    => 'hidden',
+			'section' => 'advanced',
+		);
 
 		$new_settings['ck_notify_email'] = array(
-			'title' 	=> __( 'Notification Email', 'wp-fusion-lite' ),
-			'desc'		=> __( 'The notification will be sent to this email.', 'wp-fusion-lite' ),
-			'type'		=> 'text',
-			'section'	=> 'advanced',
-			'std'		=> get_option( 'admin_email' ),
-			'disabled'  => ( isset( $options['ck_notify_unsubscribe'] ) && $options['ck_notify_unsubscribe'] == true ? false : true ),
+			'title'    => __( 'Notification Email', 'wp-fusion-lite' ),
+			'desc'     => __( 'The notification will be sent to this email.', 'wp-fusion-lite' ),
+			'type'     => 'text',
+			'section'  => 'advanced',
+			'std'      => get_option( 'admin_email' ),
+			'disabled' => ( isset( $options['ck_notify_unsubscribe'] ) && $options['ck_notify_unsubscribe'] == true ? false : true ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_before( 'advanced_header', $settings, $new_settings );
 
-
 		return $settings;
-
 	}
 
 	/**
@@ -191,50 +187,59 @@ class WPF_ConvertKit_Admin {
 
 	public function validate_webhooks( $input, $setting ) {
 
-		$type = $setting['action'];
-		$tag = 0;
+		$type     = $setting['action'];
+		$tag      = 0;
 		$prev_tag = 0;
 
-		if(is_array($input)) {
+		if ( is_array( $input ) ) {
 			$tag = $input[0];
 		}
 
-		$prev_value = wpf_get_option('ck_' . $type .'_tag');
+		$prev_value = wpf_get_option( 'ck_' . $type . '_tag' );
 
-		if(is_array($prev_value)) {
+		if ( is_array( $prev_value ) ) {
 			$prev_tag = $prev_value[0];
 		}
 
 		// If no changes have been made, quit early
-		if($tag == $prev_tag) {
+		if ( $tag == $prev_tag ) {
 			return $input;
 		}
 
 		// See if we need to destroy an existing webhook before creating a new one
-		$rule_id = wpf_get_option('ck_' . $type .'_tag_rule_id');
+		$rule_id = wpf_get_option( 'ck_' . $type . '_tag_rule_id' );
 
-
-		if(!empty($rule_id)) {
-			wp_fusion()->crm->destroy_webhook($rule_id);
-			add_filter( 'validate_field_ck_' . $type . '_tag_rule_id', function() { return false; } );
+		if ( ! empty( $rule_id ) ) {
+			wp_fusion()->crm->destroy_webhook( $rule_id );
+			add_filter(
+				'validate_field_ck_' . $type . '_tag_rule_id',
+				function () {
+					return false;
+				}
+			);
 		}
 
 		// Abort if tag has been removed and no new one provided
-		if(empty($tag)) {
+		if ( empty( $tag ) ) {
 			return $input;
 		}
 
 		// Add new rule and save
-		$rule_id = wp_fusion()->crm->register_webhook($type, $tag);
+		$rule_id = wp_fusion()->crm->register_webhook( $type, $tag );
 
 		// If there was an error, make the user select the tag again
-		if($rule_id == false)
+		if ( $rule_id == false ) {
 			return false;
+		}
 
-		add_filter( 'validate_field_ck_' . $type . '_tag_rule_id', function() use (&$rule_id) { return $rule_id; } );
+		add_filter(
+			'validate_field_ck_' . $type . '_tag_rule_id',
+			function () use ( &$rule_id ) {
+				return $rule_id;
+			}
+		);
 
 		return $input;
-
 	}
 
 	/**
@@ -260,9 +265,12 @@ class WPF_ConvertKit_Admin {
 
 			wp_fusion()->crm->destroy_webhook( $rule_id );
 
-			add_filter( 'validate_field_ck_unsubscribe_rule_id', function() {
-				return false;
-			} );
+			add_filter(
+				'validate_field_ck_unsubscribe_rule_id',
+				function () {
+					return false;
+				}
+			);
 
 		}
 
@@ -279,12 +287,14 @@ class WPF_ConvertKit_Admin {
 			return false;
 		}
 
-		add_filter( 'validate_field_ck_unsubscribe_rule_id', function() use ( &$rule_id ) {
-			return $rule_id;
-		} );
+		add_filter(
+			'validate_field_ck_unsubscribe_rule_id',
+			function () use ( &$rule_id ) {
+				return $rule_id;
+			}
+		);
 
 		return $input;
-
 	}
 
 
@@ -299,20 +309,17 @@ class WPF_ConvertKit_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/convertkit-fields.php';
+			require_once __DIR__ . '/convertkit-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $convertkit_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $convertkit_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -328,7 +335,6 @@ class WPF_ConvertKit_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -363,8 +369,5 @@ class WPF_ConvertKit_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

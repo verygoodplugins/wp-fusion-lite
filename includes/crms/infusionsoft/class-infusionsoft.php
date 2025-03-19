@@ -144,6 +144,9 @@ class WPF_Infusionsoft_iSDK {
 		// Add tracking code to header
 		add_action( 'wp_head', array( $this, 'tracking_code_output' ) );
 
+		// Register cron hook for switching back to primary key
+		add_action( 'wpf_infusionsoft_switch_to_primary_key', array( $this, 'switch_to_primary_key' ) );
+
 		// Set edit link
 		$app_name = wpf_get_option( 'app_name' );
 		if ( ! empty( $app_name ) ) {
@@ -167,10 +170,17 @@ class WPF_Infusionsoft_iSDK {
 
 			echo '<div class="notice notice-warning wpf-notice"><p>';
 
+			// translators: %1$s is the opening link tag, %2$s is the closing link tag, %3$s is another opening link tag
 			echo wp_kses_post( sprintf( __( '<strong>Heads up:</strong> WP Fusion\'s Infusionsoft / Keap integration has been updated to use Service Account Keys. Please %1$sgenerate a new Service Account Key%2$s and update it on the %3$sSetup tab in the WP Fusion settings%2$s to avoid service interruption.', 'wp-fusion-lite' ), '<a href="https://developer.infusionsoft.com/pat-and-sak/">', '</a>', '<a href="' . esc_url( admin_url( 'options-general.php?page=wpf-settings#setup' ) ) . '">' ) );
 
 			echo '</p></div>';
+		}
 
+		// Display notice if using backup key.
+		if ( get_transient( 'wpf_keap_backup_key' ) ) {
+			echo '<div class="notice notice-warning wpf-notice"><p>';
+			echo wp_kses_post( __( '<strong>Note:</strong> WP Fusion is currently using your backup Infusionsoft Service Account Key due to API throttling on the primary key. It will switch back to the primary key at 12am UTC.', 'wp-fusion-lite' ) );
+			echo '</p></div>';
 		}
 	}
 
@@ -280,6 +290,10 @@ class WPF_Infusionsoft_iSDK {
 
 					$response = new WP_Error( 'error', sprintf( __( 'Owner ID %s is not valid.', 'wp-fusion-lite' ), $request_body['owner_id'] ) );
 
+				} elseif ( $request_body && isset( $request_body['message'] ) ) {
+
+					$response = new WP_Error( 'error', $request_body['message'] );
+
 				} else {
 
 					$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
@@ -300,17 +314,39 @@ class WPF_Infusionsoft_iSDK {
 				} else {
 					$response = new WP_Error( 'error', 'Not found [error 404]: ' . $url );
 				}
-			} elseif ( ( 429 === $response_code || 503 === $response_code ) && ! isset( $args['doing_retry'] ) ) {
+			} elseif ( ( 429 === $response_code || 503 === $response_code ) ) {
 
-				// Too many requests. Sleep and try again.
+				if ( ! isset( $args['doing_retry'] ) ) {
 
-				wpf_log( 'notice', 0, 'Too many requests (' . $response_code . ' error). Waiting 2 seconds and trying again.' );
+					// Too many requests. Sleep and try again.
 
-				sleep( 2 );
-				$args['doing_retry'] = true;
+					wpf_log( 'notice', 0, 'Too many requests (' . $response_code . ' error). Waiting 2 seconds and trying again.', array( 'source' => 'infusionsoft' ) );
 
-				$response = wp_safe_remote_request( $url, $args );
+					sleep( 2 );
+					$args['doing_retry'] = true;
 
+					$response = wp_remote_request( $url, $args );
+
+				} elseif ( wpf_get_option( 'backup_api_key' ) && ! get_transient( 'wpf_keap_backup_key' ) ) {
+
+					$backup_api_key = wpf_get_option( 'backup_api_key' );
+
+					$args['headers']['X-Keap-API-Key'] = $backup_api_key;
+					$response                          = wp_remote_request( $url, $args );
+
+					if ( ! is_wp_error( $response ) ) {
+
+						wpf_log( 'notice', 0, 'Switched to backup Service Account Key due to API throttling.', array( 'source' => 'infusionsoft' ) );
+
+						// If the backup SAK worked, calculate time until midnight UTC
+						$seconds_until_midnight = strtotime( 'tomorrow midnight UTC' ) - time();
+						set_transient( 'wpf_keap_backup_key', $backup_api_key, $seconds_until_midnight );
+					}
+				} else {
+
+					// Throttled request.
+					$response = new WP_Error( 'error', 'Too many requests. Please try again later, or add a backup Service Account Key in the WP Fusion settings.' );
+				}
 			} else {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
@@ -372,7 +408,7 @@ class WPF_Infusionsoft_iSDK {
 				return sanitize_text_field( $value );
 
 			}
-		} elseif ( false !== strpos( $field, 'Country' ) ) {
+		} elseif ( false !== strpos( $field, 'Country' ) && is_string( $value ) ) {
 
 			// See if it's a country code, country name, or state name.
 
@@ -404,6 +440,10 @@ class WPF_Infusionsoft_iSDK {
 
 		if ( empty( $api_key ) ) {
 			$api_key = wpf_get_option( 'api_key' );
+
+			if ( get_transient( 'wpf_keap_backup_key' ) ) {
+				$api_key = get_transient( 'wpf_keap_backup_key' );
+			}
 		}
 
 		$this->params = array(
@@ -434,7 +474,7 @@ class WPF_Infusionsoft_iSDK {
 			return true;
 		}
 
-		$response = wp_safe_remote_get( $this->url . 'contacts/', $params );
+		$response = wp_remote_get( $this->url . 'contacts/', $params );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -482,7 +522,7 @@ class WPF_Infusionsoft_iSDK {
 
 		while ( $url ) {
 
-			$response = wp_safe_remote_get( $url, $this->get_params() );
+			$response = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -512,7 +552,7 @@ class WPF_Infusionsoft_iSDK {
 
 		while ( $url ) {
 
-			$response = wp_safe_remote_get( $url, $this->get_params() );
+			$response = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -589,7 +629,7 @@ class WPF_Infusionsoft_iSDK {
 		$custom_fields    = array();
 		$custom_field_ids = array();
 
-		$response = wp_safe_remote_get( $this->url . 'contacts/model/', $this->get_params() );
+		$response = wp_remote_get( $this->url . 'contacts/model/', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -667,7 +707,7 @@ class WPF_Infusionsoft_iSDK {
 		);
 
 		$params['body'] = wp_json_encode( $body );
-		$response       = wp_safe_remote_post( $request, $params );
+		$response       = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -690,9 +730,15 @@ class WPF_Infusionsoft_iSDK {
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request = $this->url . 'contacts/?filter=email' . rawurlencode( '==' . $email_address );
+		$query_args = array(
+			'filter' => 'email' . rawurlencode( '==' . $email_address ),
+		);
 
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$query_args = apply_filters( 'wpf_infusionsoft_query_args', $query_args, 'get_contact_id', $email_address );
+
+		$request = add_query_arg( $query_args, $this->url . 'contacts/' );
+
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -720,7 +766,7 @@ class WPF_Infusionsoft_iSDK {
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . 'contacts/' . $contact_id . '?fields=tag_ids';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -753,7 +799,7 @@ class WPF_Infusionsoft_iSDK {
 		$params['body'] = wp_json_encode( $data );
 
 		$request  = $this->urlv1 . 'contacts/' . $contact_id . '/tags';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -779,7 +825,7 @@ class WPF_Infusionsoft_iSDK {
 		$params['method'] = 'DELETE';
 
 		$request  = $this->urlv1 . 'contacts/' . $contact_id . '/tags?ids=' . rawurlencode( implode( ',', $tags ) );
-		$response = wp_safe_remote_request( $request, $params );
+		$response = wp_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -825,7 +871,7 @@ class WPF_Infusionsoft_iSDK {
 				'Anniversary'  => 'anniversary_date',
 				'ContactType'  => 'contact_type',
 				'MiddleName'   => 'middle_name',
-				'Leadsource'   => 'source_type',
+				'Leadsource'   => 'leadsource_id',
 				'SpouseName'   => 'spouse_name',
 				'TimeZone'     => 'time_zone',
 				'Website'      => 'website',
@@ -894,7 +940,7 @@ class WPF_Infusionsoft_iSDK {
 
 		// Objects.
 		foreach ( $fields_mapping['Objects'] as $new => $old ) {
-			if ( ! isset( $data[ $new ] ) || empty( $data[ $new ] ) ) {
+			if ( ! isset( $data[ $new ] ) ) {
 				continue;
 			}
 
@@ -978,7 +1024,7 @@ class WPF_Infusionsoft_iSDK {
 
 		if ( isset( $data['custom_fields'] ) ) {
 			foreach ( $data['custom_fields'] as $value ) {
-				if ( ! isset( $api_custom_fields[ $value['id'] ] ) || empty( $value['content'] ) ) {
+				if ( ! isset( $api_custom_fields[ $value['id'] ] ) ) {
 					continue;
 				}
 
@@ -1012,6 +1058,12 @@ class WPF_Infusionsoft_iSDK {
 
 				if ( 'preferred_locale' === $new && 5 !== strlen( $data[ $old ] ) ) {
 					wpf_log( 'notice', wpf_get_current_user_id(), 'To sync the "Language" field you must specify a valid locale code, for example "en_US". <strong>' . $data[ $old ] . '</strong> is not a valid value.', array( 'source' => $this->slug ) );
+					unset( $data[ $old ] );
+					continue;
+				}
+
+				if ( 'leadsource_id' === $new && ! is_numeric( $data[ $old ] ) ) {
+					wpf_log( 'notice', wpf_get_current_user_id(), 'The Lead Source ID field must be a numeric value. <strong>' . $data[ $old ] . '</strong> is not a valid value.', array( 'source' => $this->slug ) );
 					unset( $data[ $old ] );
 					continue;
 				}
@@ -1238,7 +1290,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$api_custom_fields = array();
 
-		$response = wp_safe_remote_get( $this->url . 'contacts/model/', $this->get_params() );
+		$response = wp_remote_get( $this->url . 'contacts/model/', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1279,7 +1331,7 @@ class WPF_Infusionsoft_iSDK {
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );
 
-		$response = wp_safe_remote_post( $this->url . 'contacts/', $params );
+		$response = wp_remote_post( $this->url . 'contacts/', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1326,7 +1378,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$params['body'] = wp_json_encode( $data );
 
-		$response = wp_safe_remote_request( $this->url . 'contacts/' . $contact_id, $params );
+		$response = wp_remote_request( $this->url . 'contacts/' . $contact_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1346,7 +1398,7 @@ class WPF_Infusionsoft_iSDK {
 	public function get_person_notes( $contact_id ) {
 
 		$request  = $this->url . 'contacts/' . $contact_id . '?fields=notes';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1372,7 +1424,7 @@ class WPF_Infusionsoft_iSDK {
 		$return_fields = array( 'addresses', 'anniversary_date', 'birth_date', 'company', 'custom_fields', 'email_addresses', 'job_title', 'leadsource_id', 'owner_id', 'phone_numbers', 'social_accounts', 'website', 'notes' );
 
 		$request  = $this->url . 'contacts/' . $contact_id . '?fields=' . implode( ',', $return_fields );
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1430,7 +1482,7 @@ class WPF_Infusionsoft_iSDK {
 		}
 
 		while ( $proceed ) {
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -1476,7 +1528,7 @@ class WPF_Infusionsoft_iSDK {
 
 			$params['body'] = wp_json_encode( $data );
 			$request        = $this->url . 'funnelIntegration/trigger/';
-			$response       = wp_safe_remote_post( $request, $params );
+			$response       = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

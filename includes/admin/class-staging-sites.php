@@ -24,7 +24,6 @@ class WPF_Staging_Sites {
 
 		add_action( 'admin_notices', array( $this, 'show_staging_notice' ) );
 		add_action( 'wpf_settings_notices', array( $this, 'show_staging_notice_wpf' ) );
-
 	}
 
 	/**
@@ -44,7 +43,6 @@ class WPF_Staging_Sites {
 		}
 
 		return $value;
-
 	}
 
 
@@ -60,7 +58,6 @@ class WPF_Staging_Sites {
 	public static function get_site_url() {
 
 		return str_replace( '_[wpf_siteurl]_', '', wpf_get_option( 'site_url', get_site_url() ) );
-
 	}
 
 	/**
@@ -89,7 +86,6 @@ class WPF_Staging_Sites {
 
 			}
 		}
-
 	}
 
 	/**
@@ -134,7 +130,6 @@ class WPF_Staging_Sites {
 		}
 
 		return apply_filters( 'wpf_is_duplicate_site', $is_duplicate );
-
 	}
 
 	/**
@@ -202,14 +197,13 @@ class WPF_Staging_Sites {
 
 			echo '<a href="' . esc_url( wp_nonce_url( add_query_arg( 'wpf_duplicate_site', 'update' ), 'wpf_duplicate_site', '_wpfnonce' ) ) . '" class="button">';
 
-			esc_html_e( 'Disable staging mode', 'wp-fusion-lite' );
+			esc_html_e( 'Disable staging mode and make this the production site', 'wp-fusion-lite' );
 
 			echo '</a>';
 
 			echo '</p></div>';
 
 		}
-
 	}
 
 	/**
@@ -258,9 +252,7 @@ class WPF_Staging_Sites {
 			$this->show_staging_notice();
 
 		}
-
 	}
-
 }
 
 new WPF_Staging_Sites();

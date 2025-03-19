@@ -50,7 +50,6 @@ class WPF_Emercury_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -83,7 +82,8 @@ class WPF_Emercury_Admin {
 		$new_settings = array();
 
 		$new_settings['emercury_header'] = array(
-			'title'   => __( 'Emercury CRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -107,7 +107,6 @@ class WPF_Emercury_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -188,7 +187,7 @@ class WPF_Emercury_Admin {
 
 				add_filter(
 					'validate_field_site_tracking_id',
-					function() use ( &$result ) {
+					function () use ( &$result ) {
 						return $result;
 					}
 				);
@@ -202,7 +201,6 @@ class WPF_Emercury_Admin {
 		}
 
 		return $input;
-
 	}
 
 	/**
@@ -216,7 +214,7 @@ class WPF_Emercury_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/emercury-fields.php';
+			require_once __DIR__ . '/emercury-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -227,7 +225,6 @@ class WPF_Emercury_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -246,7 +243,6 @@ class WPF_Emercury_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -290,8 +286,5 @@ class WPF_Emercury_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

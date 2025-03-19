@@ -49,7 +49,6 @@ class WPF_Bento_Admin {
 		if ( wpf_get_option( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -63,7 +62,6 @@ class WPF_Bento_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -95,7 +93,6 @@ class WPF_Bento_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 
@@ -113,7 +110,8 @@ class WPF_Bento_Admin {
 		$new_settings = array();
 
 		$new_settings['bento_header'] = array(
-			'title'   => __( 'Bento CRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -138,7 +136,6 @@ class WPF_Bento_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -153,7 +150,7 @@ class WPF_Bento_Admin {
 
 	public function add_default_fields( $options ) {
 
-		require dirname( __FILE__ ) . '/bento-fields.php';
+		require __DIR__ . '/bento-fields.php';
 
 		foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -163,7 +160,6 @@ class WPF_Bento_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -221,6 +217,4 @@ class WPF_Bento_Admin {
 			wp_send_json_success();
 		}
 	}
-
 }
-

@@ -28,7 +28,6 @@ class WPF_Ontraport_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -43,7 +42,6 @@ class WPF_Ontraport_Admin {
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 		add_filter( 'wpf_initialize_options', array( $this, 'get_tracking_id' ), 10 );
-
 	}
 
 
@@ -59,10 +57,11 @@ class WPF_Ontraport_Admin {
 		$new_settings = array();
 
 		$new_settings['ontraport_header'] = array(
-			'title'   => __( 'Ontraport Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['op_url'] = array(
@@ -70,7 +69,7 @@ class WPF_Ontraport_Admin {
 			'desc'    => __( 'Enter the App ID for your Ontraport account (find it under Settings >> Administration >> Ontraport API in your account).', 'wp-fusion-lite' ),
 			'std'     => '',
 			'type'    => 'text',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['op_key'] = array(
@@ -79,13 +78,12 @@ class WPF_Ontraport_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'op_url', 'op_key' )
+			'post_fields' => array( 'op_url', 'op_key' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -100,20 +98,17 @@ class WPF_Ontraport_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/ontraport-fields.php';
+			require_once __DIR__ . '/ontraport-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $ontraport_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $ontraport_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -134,7 +129,7 @@ class WPF_Ontraport_Admin {
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['site_tracking'] = array(
@@ -142,19 +137,18 @@ class WPF_Ontraport_Admin {
 			'desc'    => __( 'Enable <a target="_blank" href="https://support.ontraport.com/hc/en-us/articles/217882408-Web-Page-Tracking">Ontraport site tracking</a>.', 'wp-fusion-lite' ),
 			'std'     => 0,
 			'type'    => 'checkbox',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['account_id'] = array(
 			'std'     => '',
 			'type'    => 'hidden',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 
@@ -167,7 +161,7 @@ class WPF_Ontraport_Admin {
 
 	public function get_tracking_id( $options ) {
 
-		if( ! empty( $options['site_tracking'] ) && empty( $options['account_id'] ) ) {
+		if ( ! empty( $options['site_tracking'] ) && empty( $options['account_id'] ) ) {
 
 			// Get site tracking ID
 			$request  = 'https://api.ontraport.com/1/objects/meta?format=byId&objectID=0';
@@ -181,7 +175,6 @@ class WPF_Ontraport_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -197,7 +190,6 @@ class WPF_Ontraport_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -234,8 +226,5 @@ class WPF_Ontraport_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

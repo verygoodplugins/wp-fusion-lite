@@ -755,7 +755,8 @@ class WPF_Drip {
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
 		if ( ! empty( $result['status'] ) && 'active' !== $result['status'] ) {
-			wpf_log( 'notice', $user_id, 'Person has unsubscribed from marketing. Updates may not have been saved.', array( 'source' => 'drip' ) );
+			// translators: %s is the documentation URL
+			wpf_log( 'notice', $user_id, sprintf( __( 'Person has unsubscribed from marketing. Updates may not have been saved. For more information, see <a href="%s" target="_blank">our documentation</a>.', 'wp-fusion-lite' ), 'https://wpfusion.com/documentation/crm-specific-docs/inactive-people-in-drip/' ), array( 'source' => 'drip' ) );
 
 			if ( ! empty( $user_id ) ) {
 				update_user_meta( $user_id, 'drip_inactive', true );

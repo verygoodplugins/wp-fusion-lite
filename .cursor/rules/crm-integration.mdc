@@ -60,7 +60,7 @@ abstract class WPF_CRM_Base {
             if ( ! empty( $body->error ) ) {
                 return new WP_Error( 'error', $body->error );
             } else {
-                return new WP_Error( 'error', __( 'Unknown error', 'wp-fusion' ) );
+                return new WP_Error( 'error', __( 'Unknown error', 'wp-fusion-lite' ) );
             }
         }
 

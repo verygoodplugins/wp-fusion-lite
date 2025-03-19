@@ -28,7 +28,6 @@ class WPF_Drip_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -46,7 +45,6 @@ class WPF_Drip_Admin {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -62,7 +60,6 @@ class WPF_Drip_Admin {
 		if ( ! empty( get_user_meta( $user_id, 'drip_inactive', true ) ) ) {
 			echo '<span class="label label-default"><strong><em>(Inactive - <a href="https://wpfusion.com/documentation/crm-specific-docs/inactive-people-in-drip/" target="_blank">May not be updatable over the API</a>)</em></strong></span>';
 		}
-
 	}
 
 	/**
@@ -77,7 +74,6 @@ class WPF_Drip_Admin {
 		$options['inactive'] = __( '(Inactive in Drip)', 'wp-fusion-lite' );
 
 		return $options;
-
 	}
 
 	/**
@@ -99,7 +95,6 @@ class WPF_Drip_Admin {
 		}
 
 		return $meta_query;
-
 	}
 
 
@@ -115,7 +110,8 @@ class WPF_Drip_Admin {
 		$new_settings = array();
 
 		$new_settings['drip_header'] = array(
-			'title'   => __( 'Drip Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -139,7 +135,6 @@ class WPF_Drip_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -154,7 +149,7 @@ class WPF_Drip_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/drip-fields.php';
+			require_once __DIR__ . '/drip-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -165,7 +160,6 @@ class WPF_Drip_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -186,7 +180,7 @@ class WPF_Drip_Admin {
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
-			'section' => 'main'
+			'section' => 'main',
 		);
 
 		$site_tracking['email_change_event'] = array(
@@ -206,7 +200,6 @@ class WPF_Drip_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $site_tracking );
 
 		return $settings;
-
 	}
 
 
@@ -223,7 +216,6 @@ class WPF_Drip_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -261,8 +253,5 @@ class WPF_Drip_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

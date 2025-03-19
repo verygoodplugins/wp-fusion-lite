@@ -24,6 +24,17 @@ class WPF_Infusionsoft_App {
 	public $pending_orders = array();
 
 	/**
+	 * API key.
+	 *
+	 * Used with the XMLRPC API.
+	 *
+	 * @var string API key.
+	 *
+	 * @since 3.44.10
+	 */
+	public $api_key;
+
+	/**
 	 * @var array The mapping of old field names to new field names.
 	 */
 	public $fields_mapping = array(
@@ -147,8 +158,7 @@ class WPF_Infusionsoft_App {
 	/**
 	 * Creates a blank order.
 	 *
-	 * We can't create a blank order anymore so let's just return the next expected order ID
-	 * and create the order in manualPmt.
+	 * We can't create a blank order anymore so let's just generate a temporary order ID.
 	 *
 	 * @since 3.44.0
 	 *
@@ -161,20 +171,7 @@ class WPF_Infusionsoft_App {
 	 */
 	public function blankOrder( $contact_id, $desc, $order_date, $lead_aff, $sale_aff ) {
 
-		$response = wp_safe_remote_get( $this->url . 'orders/?limit=1', $this->params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response = json_decode( wp_remote_retrieve_body( $response ), true );
-
-		if ( ! empty( $response['orders'] ) ) {
-			$new_order_id = $response['orders'][0]['id'] + 1;
-		} else {
-			// New account.
-			$new_order_id = 1;
-		}
+		$new_order_id = uniqid();
 
 		$this->pending_orders[ $new_order_id ] = array(
 			'contact_id'  => $contact_id,
@@ -192,6 +189,34 @@ class WPF_Infusionsoft_App {
 		}
 
 		return $new_order_id;
+	}
+
+	/**
+	 * Adds an order note.
+	 *
+	 * @since 3.45.0
+	 *
+	 * @param int    $order_id The order ID.
+	 * @param string $note The note to add.
+	 * @return bool True on success, false otherwise.
+	 */
+	public function addOrderNote( $order_id, $note ) {
+
+		$this->api_key = wpf_get_option( 'api_key' );
+
+		$data = array(
+			$this->api_key,
+			'Job',
+			(int) $order_id,
+			array(
+				'JobNotes' => $note,
+			),
+		);
+
+		$response = $this->xmlrpc_request( 'DataService.update', $data );
+
+		return $response;
+
 	}
 
 	/**
@@ -254,9 +279,14 @@ class WPF_Infusionsoft_App {
 	 * @param boolean $bypass_commissions  Whether to bypass commission.
 	 * @return bool|WP_Error True on success, WP_Error on failure.
 	 */
-	public function manualPmt( $invoice_id = '', $amt = '', $payment_date = '', $payment_type = '', $payment_description = '', $bypass_commissions = false ) {
+	public function manualPmt( $invoice_id = '', $amt = '', $payment_date = '', $payment_type = '', $payment_description = '', $bypass_commissions = false, $order_notes = '' ) {
 
 		$params = $this->params;
+
+		if ( 0 > floatval( $amt ) || 'Credit' === $payment_type ) {
+			// Refunds use the old XMLRPC API.
+			return $this->process_refund( $invoice_id, $amt, $payment_date, $payment_type, $payment_description );
+		}
 
 		// If there's a pending order, create it now in a single API call.
 
@@ -278,12 +308,17 @@ class WPF_Infusionsoft_App {
 			unset( $this->pending_orders[ $invoice_id ] );
 
 			$invoice_id = $response['id'];
-
+			// Fixes error "The manual payment amount exceeds the amount due on the invoices being processed." when
+			// sending the payment amount to Infusionsoft if the order total calculation is off by a couple of cents
+			// due to taxes, discounts, and the totals being rounded.
+			if ( floatval( $amt ) > floatval( $response['total_due'] ) ) {
+				$amt = $response['total_due'];
+			}
 		}
 
 		// Free orders.
 		if ( empty( floatval( $amt ) ) ) {
-			return true;
+			return $invoice_id;
 		}
 
 		if ( strpos( strtolower( $payment_type ), 'cash' ) !== false ) {
@@ -312,7 +347,12 @@ class WPF_Infusionsoft_App {
 			return $response;
 		}
 
-		return true;
+		$response = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		// In some cases the invoice ID is different than the Job ID.
+		$invoice_id = $response['invoice_id'];
+
+		return $invoice_id;
 	}
 
 
@@ -573,5 +613,178 @@ class WPF_Infusionsoft_App {
 		}
 
 		return false;
+	}
+
+	/**
+	 *
+	 * XMLRPC API
+	 *
+	 */
+
+	/**
+	 * Process a WooCommerce refund and post it to Infusionsoft.
+	 *
+	 * @param int    $order_id          The ID of the refunded order.
+	 * @param object $order             The WooCommerce order object.
+	 */
+	public function process_refund( $invoice_id, $amt, $payment_date, $payment_type, $payment_description ) {
+
+		$this->api_key = wpf_get_option( 'api_key' );
+
+		$payment_date = new DateTime( $payment_date );
+
+		$refund_data = array(
+			$this->api_key,
+			(int) $invoice_id,
+			(float) $amt,
+			$payment_date,
+			$payment_type,
+			$payment_description,
+			true, // Bypass commissions.
+		);
+
+		$response = $this->xmlrpc_request( 'InvoiceService.addManualPayment', $refund_data );
+
+		return $response;
+	}
+
+	/**
+	 * Post data to Infusionsoft.
+	 *
+	 * @since 3.45.0
+	 *
+	 * @param string $method The XML-RPC method.
+	 * @param array $data The data to send.
+	 * @return bool True if the request was successful, false otherwise.
+	 */
+	private function xmlrpc_request( $method, $data ) {
+		$xml      = $this->build_xml_rpc_request( $method, $data );
+		$response = $this->send_xml_rpc_request( $xml );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		return $this->parse_xml_rpc_response( $body );
+	}
+
+	/**
+	 * Build XML-RPC request.
+	 *
+	 * @param string $method The XML-RPC method.
+	 * @param array  $params The parameters for the request.
+	 * @return string The generated XML-RPC request.
+	 */
+	private function build_xml_rpc_request( $method, $params ) {
+		$xml  = '<?xml version="1.0" encoding="UTF-8"?>';
+		$xml .= '<methodCall>';
+		$xml .= '<methodName>' . esc_xml( $method ) . '</methodName>';
+		$xml .= '<params>';
+
+		foreach ( $params as $param ) {
+			$xml .= '<param><value>';
+			
+			if ( $param instanceof DateTime ) {
+				$xml .= '<dateTime.iso8601>' . esc_xml( $param->format( 'Ymd\TH:i:s' ) ) . '</dateTime.iso8601>';
+			} elseif ( is_array( $param ) ) {
+				$xml .= '<struct>';
+				foreach ( $param as $key => $value ) {
+					$xml .= '<member>';
+					$xml .= '<name>' . esc_xml( $key ) . '</name>';
+					$xml .= '<value>';
+					if ( is_string( $value ) ) {
+						$xml .= '<string>' . esc_xml( $value ) . '</string>';
+					} elseif ( is_int( $value ) ) {
+						$xml .= '<int>' . $value . '</int>';
+					} elseif ( is_float( $value ) || is_double( $value ) ) {
+						$xml .= '<double>' . number_format( $value, 2, '.', '' ) . '</double>';
+					} elseif ( is_bool( $value ) ) {
+						$xml .= '<boolean>' . ( $value ? '1' : '0' ) . '</boolean>';
+					}
+					$xml .= '</value>';
+					$xml .= '</member>';
+				}
+				$xml .= '</struct>';
+			} elseif ( is_string( $param ) ) {
+				$xml .= '<string>' . esc_xml( htmlspecialchars( $param ) ) . '</string>';
+			} elseif ( is_int( $param ) ) {
+				$xml .= '<int>' . intval( $param ) . '</int>';
+			} elseif ( is_float( $param ) || is_double( $param ) ) {
+				$xml .= '<double>' . number_format( $param, 2, '.', '' ) . '</double>';
+			} elseif ( is_bool( $param ) ) {
+				$xml .= '<boolean>' . ( $param ? '1' : '0' ) . '</boolean>';
+			}
+			
+			$xml .= '</value></param>';
+		}
+
+		$xml .= '</params>';
+		$xml .= '</methodCall>';
+
+		return $xml;
+	}
+
+	/**
+	 * Send an XML-RPC request.
+	 *
+	 * @param string $xml The XML-RPC request.
+	 * @return WP_Error|array The response or WP_Error on failure.
+	 */
+	private function send_xml_rpc_request( $xml ) {
+		$url  = 'https://api.infusionsoft.com/crm/xmlrpc/v1';
+		$args = array(
+			'body'    => $xml,
+			'headers' => array(
+				'Content-Type'   => 'text/xml',
+				'X-Keap-API-Key' => sanitize_text_field( $this->api_key ),
+			),
+			'timeout' => 30,
+		);
+
+		return wp_remote_post( esc_url_raw( $url ), $args );
+	}
+
+	/**
+	 * Parse the XML-RPC response.
+	 *
+	 * @param string $xml The XML response.
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	private function parse_xml_rpc_response( $xml ) {
+		$doc = new DOMDocument();
+		if ( ! $doc->loadXML( $xml ) ) {
+			return new WP_Error( 'error', 'Failed to parse XML response.' );
+		}
+
+		$fault_node = $doc->getElementsByTagName( 'fault' )->item( 0 );
+		if ( $fault_node ) {
+			$fault_string = $this->extract_fault_string( $fault_node );
+			return new WP_Error( 'error', $fault_string );
+		}
+
+		$value_node = $doc->getElementsByTagName( 'value' )->item( 0 );
+		return ( $value_node && 'boolean' === $value_node->firstChild->nodeName && '1' === $value_node->nodeValue );
+	}
+
+	/**
+	 * Extract the fault string from the fault node.
+	 *
+	 * @param DOMNode $fault_node The fault node.
+	 * @return string The fault string.
+	 */
+	private function extract_fault_string( $fault_node ) {
+		$fault_string = '';
+		$members      = $fault_node->getElementsByTagName( 'member' );
+
+		foreach ( $members as $member ) {
+			$name_node = $member->getElementsByTagName( 'name' )->item( 0 );
+			if ( $name_node && 'faultString' === $name_node->nodeValue ) {
+				$fault_string = $member->getElementsByTagName( 'value' )->item( 0 )->nodeValue;
+				break;
+			}
+		}
+
+		return $fault_string;
 	}
 }

@@ -26,7 +26,6 @@ class WPF_Sendlane_Admin {
 		if ( wpf_get_option( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -37,7 +36,6 @@ class WPF_Sendlane_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ) );
-
 	}
 
 
@@ -52,7 +50,8 @@ class WPF_Sendlane_Admin {
 		$new_settings = array();
 
 		$new_settings['sendlane_header'] = array(
-			'title'   => __( 'Sendlane Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -81,7 +80,6 @@ class WPF_Sendlane_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -93,20 +91,17 @@ class WPF_Sendlane_Admin {
 
 		if ( $options['connection_configured'] ) {
 
-			require_once dirname( __FILE__ ) . '/sendlane-fields.php';
+			require_once __DIR__ . '/sendlane-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $sendlane_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $sendlane_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 	/**
@@ -120,7 +115,6 @@ class WPF_Sendlane_Admin {
 		$crm = wpf_get_option( 'crm' );
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -155,7 +149,5 @@ class WPF_Sendlane_Admin {
 		}
 
 		die();
-
 	}
-
 }

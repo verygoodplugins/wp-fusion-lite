@@ -306,7 +306,7 @@ class WPF_Autonami {
 				$results = BWFCRM_Tag::get_tags( array(), false, $offset, $limit );
 			} else {
 				$request  = $this->url . 'tags?limit=' . $limit . '&offset=' . $offset;
-				$response = wp_safe_remote_get( $request, $this->get_params() );
+				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
 					return $response;
@@ -358,7 +358,7 @@ class WPF_Autonami {
 				$results = BWFCRM_Lists::get_lists( array(), false, $offset, $limit );
 			} else {
 				$request  = $this->url . 'lists?limit=' . $limit . '&offset=' . $offset;
-				$response = wp_safe_remote_get( $request, $this->get_params() );
+				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
 					return $response;
@@ -415,7 +415,7 @@ class WPF_Autonami {
 			$results['extra_fields'] = BWFCRM_Fields::get_address_fields_from_db();
 		} else {
 			$request  = $this->url . 'groupfields';
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -427,14 +427,17 @@ class WPF_Autonami {
 
 		$extra_fields = $results['extra_fields'];
 		$groupfields  = $results['fields'];
+
 		foreach ( $extra_fields as $field ) {
 			$custom_fields[ $field['ID'] ] = $field['name'];
 		}
 
 		foreach ( $groupfields as $group ) {
+
 			if ( empty( $group['fields'] ) ) {
 				continue;
 			}
+
 			foreach ( $group['fields'] as $field ) {
 
 				if ( ! isset( $standard_fields[ $field['id'] ] ) ) {
@@ -481,7 +484,7 @@ class WPF_Autonami {
 			$results = $contact->get_array( false, true, true, true, true );
 		} else {
 			$request  = $this->url . 'contacts?search=' . urlencode( $email_address );
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -516,13 +519,13 @@ class WPF_Autonami {
 		if ( $this->same_site ) {
 			$contact = new BWFCRM_Contact( $contact_id );
 			if ( ! $contact->is_contact_exists() ) {
-				return false;
+				return new WP_Error( 'error', 'Contact not found.' );
 			}
 
 			$results = $contact->get_array( false, true, true, true, true );
 		} else {
 			$request  = $this->url . 'contacts/' . $contact_id;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -583,7 +586,7 @@ class WPF_Autonami {
 			$params['body'] = wp_json_encode( $body );
 
 			$request  = $this->url . 'contacts/' . $contact_id . '/tags';
-			$response = wp_safe_remote_post( $request, $params );
+			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -631,7 +634,7 @@ class WPF_Autonami {
 			$params['body']   = wp_json_encode( $body );
 
 			$request  = $this->url . 'contacts/' . $contact_id . '/tags';
-			$response = wp_safe_remote_request( $request, $params );
+			$response = wp_remote_request( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -683,7 +686,7 @@ class WPF_Autonami {
 			$params['body'] = wp_json_encode( $contact_data );
 
 			$request  = $this->url . 'contacts';
-			$response = wp_safe_remote_post( $request, $params );
+			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -732,7 +735,7 @@ class WPF_Autonami {
 			$params['body'] = wp_json_encode( $contact_data );
 
 			$request  = $this->url . 'contacts/' . $contact_id . '/fields';
-			$response = wp_safe_remote_post( $request, $params );
+			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -753,6 +756,7 @@ class WPF_Autonami {
 	 * @since  3.37.14
 	 */
 	public function load_contact( $contact_id ) {
+
 		if ( $this->same_site ) {
 			$contact = new BWFCRM_Contact( $contact_id );
 			if ( ! $contact->is_contact_exists() ) {
@@ -762,7 +766,7 @@ class WPF_Autonami {
 			$results = $contact->get_array( false, true, true, true, true );
 		} else {
 			$request  = $this->url . 'contacts/' . $contact_id;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -818,7 +822,7 @@ class WPF_Autonami {
 
 			} else {
 				$request  = $this->url . 'tags?search=' . $tag . '&limit=1';
-				$response = wp_safe_remote_get( $request, $this->get_params() );
+				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
 					return $response;
@@ -854,7 +858,7 @@ class WPF_Autonami {
 				}
 			} else {
 				$request  = $this->url . 'contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset;
-				$response = wp_safe_remote_get( $request, $this->get_params() );
+				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
 					return $response;

@@ -32,7 +32,6 @@ class WPF_Zoho_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -102,7 +101,6 @@ class WPF_Zoho_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -118,7 +116,8 @@ class WPF_Zoho_Admin {
 		$new_settings = array();
 
 		$new_settings['zoho_header'] = array(
-			'title'   => __( 'Zoho Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -181,7 +180,6 @@ class WPF_Zoho_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -218,7 +216,6 @@ class WPF_Zoho_Admin {
 		}
 
 		return $input;
-
 	}
 
 
@@ -273,7 +270,6 @@ class WPF_Zoho_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'import_users', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -288,7 +284,7 @@ class WPF_Zoho_Admin {
 
 		if ( ! empty( $options['connection_configured'] ) ) {
 
-			require_once dirname( __FILE__ ) . '/zoho-fields.php';
+			require_once __DIR__ . '/zoho-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -299,7 +295,6 @@ class WPF_Zoho_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -315,7 +310,6 @@ class WPF_Zoho_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -354,8 +348,5 @@ class WPF_Zoho_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

@@ -55,7 +55,7 @@ jQuery(document).ready(function($){
 				});
 
 			} else {
-				button.removeAttr('disabled');
+				button.prop('disabled', false);
 			}
 
 		});
@@ -216,7 +216,17 @@ jQuery(document).ready(function($){
 
 		}
 
+		// Handle resync fields when inputs change on the setup tab.
+		$('[data-resync-fields]').each(function() {
+			var resyncFields = $(this).data('resync-fields').split(',');
+			var testConnectionButton = $(this);
 
+			$.each(resyncFields, function(index, fieldId) {
+				$('#' + fieldId).on('change', function() {
+					testConnectionButton.trigger('click');
+				});
+			});
+		});
 
 		// Button handler for test connection / resync
 
@@ -236,15 +246,17 @@ jQuery(document).ready(function($){
 				'_ajax_nonce' : wpf_ajax.nonce,
 			};
 
-			// Add the submitted data
-			postFields = $(crmContainer).find('#test-connection').attr('data-post-fields').split(',');
-
-			$(postFields).each(function(index, el) {
-
-				if ( $('#' + el).length ) {
-					data[el] = $('#' + el).val();
-				}
-			});
+			// Add the submitted data - fixed version
+			var postFields = $(crmContainer).find('#test-connection').attr('data-post-fields');
+			
+			if(postFields) {
+				postFields.split(',').forEach(function(el) {
+					var field = $('#' + el);
+					if(field.length && field.val()) {
+						data[el] = field.val();
+					}
+				});
+			}
 
 			// Test the CRM connection
 
@@ -267,9 +279,14 @@ jQuery(document).ready(function($){
 					var total = parseFloat(button.attr('data-total-users'));
 					syncTags(button, total, crmContainer);
 
-					// remove disabled on submit button:
+					// disable the CRM select.
+					$('#wpf-settings select#crm').prop('disabled', true);
 
-					$('p.submit input[type="submit"]').removeAttr('disabled');
+					// Hide all non-selected CRM containers so their settings don't get saved.
+					$('div.crm-config').not('#' + crm).remove();
+
+					// remove disabled on submit button.
+					$('p.submit input[type="submit"]').prop('disabled', false);
 
 				}
 
@@ -293,11 +310,10 @@ jQuery(document).ready(function($){
 				var proceed = true;
 
 				$(postFields).each(function(index, el) {
-
-					if( $('input#' + el).val().length == 0 ) {
+					var field = $('#' + el);
+					if (field.length && (field.val() === null || field.val().length === 0)) {
 						proceed = false;
 					}
-
 				});
 
 				if( proceed == true ) {
@@ -322,7 +338,7 @@ jQuery(document).ready(function($){
 			// if the CRM name is staging, enable the save button:
 
 			if ( $(this).val() == 'staging' ) {
-				$('p.submit input[type="submit"]').removeAttr('disabled');
+				$('p.submit input[type="submit"]').prop('disabled', false);
 			};
 
 		});
@@ -508,7 +524,7 @@ jQuery(document).ready(function($){
 				
 				if(response.success == true && response.data == 'activated') {
 
-					button.html('Deactivate License').removeAttr('disabled').attr('data-action', 'edd_deactivate');
+					button.html('Deactivate License').prop('disabled', false).attr('data-action', 'edd_deactivate');
 					button.addClass('activated');
 					$('#license_key').attr('disabled', 'disabled');
 					$('#license_status').val('valid');
@@ -516,16 +532,16 @@ jQuery(document).ready(function($){
 
 				} else if(response.success == true && response.data == 'deactivated') {
 
-					button.html('Activate License').removeAttr('disabled').attr('data-action', 'edd_activate');
+					button.html('Activate License').prop('disabled', false).attr('data-action', 'edd_activate');
 					button.removeClass('activated');
-					$('#license_key').removeAttr('disabled');
+					$('#license_key').prop('disabled', false);
 					$('#license_key').val('');
 					$('#license_status').val('invalid');
 
 				} else {
 
-					$('#license_key').removeAttr('disabled');
-					button.html('Retry').removeAttr('disabled');
+					$('#license_key').prop('disabled', false);
+					button.html('Retry').prop('disabled', false);
 					$('#connection-output-edd').html('<div class="error validation-error"><p>' + wpf_ajax.strings.licenseError + '</p></div><br/>' + response.data);
 
 
@@ -570,6 +586,15 @@ jQuery(document).ready(function($){
 
 		});
 
+		// FluentCRM tag format warning
+		$('#fluentcrm_tag_format').on('change', function() {
+			if(wpf_ajax.connected) {
+				if(confirm(wpf_ajax.strings.fluentcrmTagFormatWarning)) {
+					$('a#test-connection').trigger('click');
+				}
+			}
+		});
+
 		// Passwords warning
 
 		$( '#wpf_cb_user_pass' ).on( 'change', function(event) {
@@ -597,7 +622,7 @@ jQuery(document).ready(function($){
 
 			} else {
 
-				$(this).closest('td').siblings().find('input.contact-fields-checkbox').removeAttr('disabled');
+				$(this).closest('td').siblings().find('input.contact-fields-checkbox').prop('disabled', false);
 				$(this).closest('tr').find('input.contact-fields-checkbox').prop('checked', true).trigger('change');
 				$(this).closest('tr').addClass('success');
 
@@ -653,7 +678,7 @@ jQuery(document).ready(function($){
 		});
 
 		$('form').on('submit', function() {
-	    	$(this).find(':input').removeAttr('disabled');
+	    	$(this).find(':input').prop('disabled', false);
 	    });
 
 	    // Lite upgrade on Contact Fields

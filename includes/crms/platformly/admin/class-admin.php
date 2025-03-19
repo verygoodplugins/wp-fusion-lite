@@ -28,7 +28,6 @@ class WPF_Platformly_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -41,7 +40,6 @@ class WPF_Platformly_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -57,10 +55,11 @@ class WPF_Platformly_Admin {
 		$new_settings = array();
 
 		$new_settings['platformly_header'] = array(
-			'title'   => __( 'Platformly Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
-			'section' => 'setup'
+			'section' => 'setup',
 		);
 
 		$new_settings['platformly_key'] = array(
@@ -69,10 +68,10 @@ class WPF_Platformly_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'post_fields' => array( 'platformly_key' )
+			'post_fields' => array( 'platformly_key' ),
 		);
 
-		if( $settings['connection_configured'] == true && wpf_get_option('crm') == 'platformly' ) {
+		if ( $settings['connection_configured'] == true && wpf_get_option( 'crm' ) == 'platformly' ) {
 
 			$new_settings['platformly_project'] = array(
 				'title'   => __( 'Project', 'wp-fusion-lite' ),
@@ -80,7 +79,7 @@ class WPF_Platformly_Admin {
 				'type'    => 'select',
 				'section' => 'setup',
 				'choices' => wpf_get_option( 'available_projects' ),
-				'desc'	  => 'After changing projects you will need to Resynchronize (above) to load the tags and fields for that project.'
+				'desc'    => 'After changing projects you will need to Resynchronize (above) to load the tags and fields for that project.',
 			);
 
 		}
@@ -88,7 +87,6 @@ class WPF_Platformly_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -104,20 +102,17 @@ class WPF_Platformly_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/platformly-fields.php';
+			require_once __DIR__ . '/platformly-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
 				if ( isset( $platformly_fields[ $field ] ) && empty( $options['contact_fields'][ $field ]['crm_field'] ) ) {
 					$options['contact_fields'][ $field ] = array_merge( $options['contact_fields'][ $field ], $platformly_fields[ $field ] );
 				}
-
 			}
-
 		}
 
 		return $options;
-
 	}
 
 
@@ -133,12 +128,11 @@ class WPF_Platformly_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 
-		if( wp_fusion()->crm->slug == 'platformly' ) {
+		if ( wp_fusion()->crm->slug == 'platformly' ) {
 			echo '<style type="text/css">#tab-import { display: none; }</style>';
 		}
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -173,7 +167,5 @@ class WPF_Platformly_Admin {
 		}
 
 		die();
-
 	}
-
 }

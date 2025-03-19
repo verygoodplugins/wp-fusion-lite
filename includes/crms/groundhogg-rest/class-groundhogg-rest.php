@@ -347,7 +347,7 @@ class WPF_Groundhogg_REST {
 		while ( $continue ) {
 
 			$request  = $this->url . '/tags?limit=1000&offset=' . $offset;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -403,7 +403,7 @@ class WPF_Groundhogg_REST {
 		// Then get custom ones
 
 		$request  = $this->url . '/fields?limit=500';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -443,7 +443,7 @@ class WPF_Groundhogg_REST {
 	public function get_contact_id( $email_address ) {
 
 		$request  = $this->url . '/contacts?limit=1&search=' . rawurlencode( $email_address );
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -471,7 +471,7 @@ class WPF_Groundhogg_REST {
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -505,7 +505,7 @@ class WPF_Groundhogg_REST {
 		$params['body'] = wp_json_encode( $tags );
 
 		$request  = $this->url . '/contacts/' . $contact_id . '/tags';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -531,7 +531,7 @@ class WPF_Groundhogg_REST {
 		$params['method'] = 'DELETE';
 
 		$request  = $this->url . '/contacts/' . $contact_id . '/tags';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -580,7 +580,7 @@ class WPF_Groundhogg_REST {
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = $this->url . '/contacts';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -610,7 +610,7 @@ class WPF_Groundhogg_REST {
 		$params['body'] = wp_json_encode( $data );
 		// Add tags only works on v3 of the API.
 		$request  = str_replace( 'v4', 'v3', $this->url ) . '/tags';
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -655,7 +655,7 @@ class WPF_Groundhogg_REST {
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -677,7 +677,7 @@ class WPF_Groundhogg_REST {
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . '/contacts/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -721,7 +721,7 @@ class WPF_Groundhogg_REST {
 
 		while ( $continue ) {
 
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -800,7 +800,7 @@ class WPF_Groundhogg_REST {
 		$params['body']     = wp_json_encode( $body );
 		$params['blocking'] = false;
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			wpf_log( 'error', 0, 'Error tracking event: ' . $response->get_error_message() );

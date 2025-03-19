@@ -550,11 +550,14 @@ class WPF_Dynamics_365 {
 	public function get_contact_id( $email_address ) {
 
 		$lookup_field = wp_fusion()->crm->get_crm_field( 'user_email', 'emailaddress1' );
-
 		$lookup_field = apply_filters( 'wpf_dynamics_365_lookup_field', $lookup_field );
+
+		// Escape single quotes by doubling them
+		$email_address = str_replace( "'", "''", $email_address );
 
 		$request  = $this->url . '/' . $this->object_type . '?$filter=' . $lookup_field . ' eq \'' . $email_address . '\'';
 		$response = wp_safe_remote_get( $request, $this->get_params() );
+
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

@@ -152,14 +152,20 @@ class WPF_Auto_Login {
 			$this->auto_login_user = array();
 		}
 
-		if ( empty( $this->auto_login_user ) && isset( $contact_id ) ) {
+		if ( empty( $this->auto_login_user ) && empty( $contact_id ) ) {
+
+			// Nothing to do.
+			return;
+
+		} elseif ( empty( $this->auto_login_user ) && ! empty( $contact_id ) ) {
 
 			// Do first time autologin.
 
 			$user_id = $this->create_temp_user( $contact_id );
 
 			if ( is_wp_error( $user_id ) ) {
-				wpf_log( 'error', 0, 'Unable to create temporary user for auto-login contact #' . $contact_id . ': ' . $user_id->get_error_message(), array( 'source' => 'auto-login' ) );
+				$url = esc_url( home_url( $_SERVER['REQUEST_URI'] ) );
+				wpf_log( 'error', 0, 'Unable to create temporary user for auto-login contact #' . $contact_id . ' at <a href="' . $url . '" target="_blank">' . $url . '</a>: ' . $user_id->get_error_message(), array( 'source' => 'auto-login' ) );
 				return;
 			}
 
@@ -168,13 +174,13 @@ class WPF_Auto_Login {
 				'user_id'    => $user_id,
 			);
 
-		} elseif ( isset( $this->auto_login_user['user_id'] ) ) {
+		} elseif ( isset( $this->auto_login_user['user_id'] ) && ! empty( $this->auto_login_user['contact_id'] ) ) {
 
 			// If data already exists, make sure the user hasn't expired.
 
 			$contact_id_from_db = get_user_meta( $this->auto_login_user['user_id'], WPF_CONTACT_ID_META_KEY, true );
 
-			if ( empty( $contact_id_from_db ) || $contact_id_from_db != $this->auto_login_user['contact_id'] ) {
+			if ( empty( $contact_id_from_db ) || $contact_id_from_db !== $this->auto_login_user['contact_id'] ) {
 
 				$user_id = $this->create_temp_user( $this->auto_login_user['contact_id'] );
 
@@ -331,7 +337,10 @@ class WPF_Auto_Login {
 			return $user;
 		}
 
-		update_user_meta( $user_id, 'user_email', $user['user_email'] );
+		// This will always be set except during an auto-login session.
+		if ( ! empty( $user['user_email'] ) && is_email( $user['user_email'] ) ) {
+			update_user_meta( $user_id, 'user_email', $user['user_email'] );
+		}
 
 		$contact_data = array(
 			'contact_id' => $contact_id,
@@ -345,16 +354,6 @@ class WPF_Auto_Login {
 
 		// Schedule cleanup after one day.
 		wp_schedule_single_event( time() + 86400, 'clear_auto_login_metadata', array( $user_id ) );
-
-		// If the temp user has a real user account, copy their tags over there as well,
-		// just in case they log in again.
-
-		$existing_user_id = wpf_get_user_id( $contact_id );
-
-		// Make sure it's not a temp user.
-		if ( $existing_user_id ) {
-			wp_fusion()->user->set_tags( $user_tags, $existing_user_id );
-		}
 
 		return $user_id;
 	}
@@ -546,50 +545,50 @@ class WPF_Auto_Login {
 
 		// Set current user enabled?
 
-		echo '* ' . esc_html__( 'Set Current User enabled?' ) . ' ';
+		echo '* ' . esc_html__( 'Set Current User enabled?', 'wp-fusion-lite' ) . ' ';
 
 		if ( ! wpf_get_option( 'auto_login_current_user' ) ) {
-			echo esc_html__( 'No' ) . ' ❌';
+			echo esc_html__( 'No', 'wp-fusion-lite' ) . ' ❌';
 		} else {
-			echo esc_html__( 'Yes' ) . ' ✅';
+			echo esc_html__( 'Yes', 'wp-fusion-lite' ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
 		// URL parameter.
 
-		echo '* ' . esc_html__( 'URL parameter set?' ) . ' ';
+		echo '* ' . esc_html__( 'URL parameter set?', 'wp-fusion-lite' ) . ' ';
 
 		$contact_id = $this->get_contact_id_from_url();
 
 		if ( empty( $contact_id ) ) {
-			echo esc_html__( 'No' );
+			echo esc_html__( 'No', 'wp-fusion-lite' );
 		} else {
-			echo esc_html__( 'Yes' ) . ' - Contact ID ' . esc_html( $contact_id ) . ' ✅';
+			echo esc_html__( 'Yes', 'wp-fusion-lite' ) . ' - Contact ID ' . esc_html( $contact_id ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
 		// Auto-login cookie.
 
-		echo '* ' . esc_html__( 'wpf_contact cookie set?' ) . ' ';
+		echo '* ' . esc_html__( 'wpf_contact cookie set?', 'wp-fusion-lite' ) . ' ';
 
 		if ( empty( $_COOKIE['wpf_contact'] ) ) {
-			echo esc_html__( 'No' ) . ' ❌';
+			echo esc_html__( 'No', 'wp-fusion-lite' ) . ' ❌';
 		} else {
-			echo esc_html__( 'Yes' ) . ' ✅';
+			echo esc_html__( 'Yes', 'wp-fusion-lite' ) . ' ✅';
 		}
 
 		echo PHP_EOL;
 
 		// Auto-login user.
 
-		echo '* ' . esc_html__( 'Auto login user ID set?' ) . ' ';
+		echo '* ' . esc_html__( 'Auto login user ID set?', 'wp-fusion-lite' ) . ' ';
 
 		if ( empty( $this->auto_login_user['user_id'] ) ) {
-			echo esc_html__( 'No' ) . ' ❌';
+			echo esc_html__( 'No', 'wp-fusion-lite' ) . ' ❌';
 		} else {
-			echo esc_html__( 'Yes' ) . ' - User ID ' . $this->auto_login_user['user_id'] . ' ✅';
+			echo esc_html__( 'Yes', 'wp-fusion-lite' ) . ' - User ID ' . intval( $this->auto_login_user['user_id'] ) . ' ✅';
 		}
 
 		echo PHP_EOL;
@@ -598,21 +597,21 @@ class WPF_Auto_Login {
 
 			// Tags.
 
-			echo '* ' . esc_html__( 'Auto login tags: ' ) . PHP_EOL;
+			echo '* ' . esc_html__( 'Auto login tags: ', 'wp-fusion-lite' ) . PHP_EOL;
 
-			echo str_replace( '&gt;', '>', esc_html( wpf_print_r( wp_fusion()->user->get_tags(), true ) ) );
+			echo wp_kses_post( wpf_print_r( wp_fusion()->user->get_tags(), true ) );
 
 			echo PHP_EOL;
 
 			// Fields.
 
-			echo '* ' . esc_html__( 'Auto login usermeta: ' ) . PHP_EOL;
+			echo '* ' . esc_html__( 'Auto login usermeta: ', 'wp-fusion-lite' ) . PHP_EOL;
 
 			$meta = wp_fusion()->user->get_user_meta( wpf_get_current_user_id() );
 
 			unset( $meta[ WPF_TAGS_META_KEY ] ); // we just displayed this above
 
-			echo str_replace( '&gt;', '>', esc_html( wpf_print_r( $meta, true ) ) );
+			echo wp_kses_post( wpf_print_r( $meta, true ) );
 
 			echo PHP_EOL;
 

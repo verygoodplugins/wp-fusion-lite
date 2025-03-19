@@ -1,7 +1,62 @@
 @charset "UTF-8";
 
 /**
+ * Variables
+ **/
+ $wp_fusion_color_primary: #6c2a22;
+ $wp_fusion_color_gutenberg_grey: #f3f3f4;
+ $wp_fusion_color_gutenberg_black: #32373c;
+
+/**
  * Default Styles
  *
  * The default styles for the block frontend.
  */
+
+.wp-block-wp-fusion-secure-block-inner-secure {
+	&__handle {
+		position: relative;
+		background-color: $wp_fusion_color_gutenberg_grey;
+		color: $wp_fusion_color_gutenberg_black;
+		padding: 5px 30px 5px 10px;
+		font-size: 12px;
+	}
+
+	&__tags {
+
+		.tag:after {
+			content: ", ";
+		}
+		.tag:last-of-type:after {
+			content: "";
+		}
+		.tag__name {
+			font-family: monospace;
+			background: white;
+			padding: 2px 4px 2px 4px;
+			opacity: .8;
+		}
+	}
+
+	&__icon {
+		position: absolute !important;
+		top: 8px;
+		right: 8px;
+		opacity: 0.8;
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+
+	&__description {
+		display: block;
+		margin-top: 0;
+		margin-bottom: 0;
+		strong {
+			font-family: monospace;
+			background: white;
+			padding: 2px 4px 2px 4px;
+			opacity: .8;
+			font-weight: normal;
+		}
+	}
+}

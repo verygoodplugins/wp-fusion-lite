@@ -73,6 +73,14 @@ class WPF_Log_Handler {
 	public $user_id = 0;
 
 	/**
+	 * Last HTTP API error.
+	 *
+	 * @since 3.44.23
+	 * @var array
+	 */
+	public $error_last = array();
+
+	/**
 	 * Constructor for the logger.
 	 */
 	public function __construct() {
@@ -104,6 +112,7 @@ class WPF_Log_Handler {
 		// Export & Flush logs.
 		add_action( 'admin_init', array( $this, 'export_logs' ) );
 		add_action( 'admin_init', array( $this, 'flush_logs' ) );
+		add_action( 'admin_init', array( $this, 'retry_api_call' ) );
 
 		// Add log url redirect.
 		add_action( 'load-tools_page_wpf-settings-logs', array( $this, 'log_url_redirect' ) );
@@ -111,8 +120,9 @@ class WPF_Log_Handler {
 		// HTTP API logging.
 		if ( wpf_get_option( 'logging_http_api' ) ) {
 			add_filter( 'http_request_args', array( $this, 'http_request_args' ), 10, 2 );
-			add_action( 'http_api_debug', array( $this, 'http_api_debug' ), 10, 5 );
 		}
+
+		add_action( 'http_api_debug', array( $this, 'http_api_debug' ), 10, 5 );
 
 		// Export & Flush logs.
 		add_action( 'admin_init', array( $this, 'export_logs' ) );
@@ -214,14 +224,15 @@ class WPF_Log_Handler {
 		}
 
 		$message  = '<ul>';
-		$message .= '<li><strong>Request URI:</strong> ' . esc_url_raw( $url ) . '</li>';
+		$message .= '<li><strong>Request URI:</strong> ' . sanitize_text_field( $url ) . '</li>';
 
 		if ( ! is_wp_error( $response ) ) {
 			unset( $response['http_response'] ); // This is redundant, we don't need to log it.
 
-			$response['duration'] = microtime( true ) - $parsed_args['duration']; // Calcluate the duration.
-
-			$message .= '<li><strong>Duration:</strong> ' . round( $response['duration'], 2 ) . ' seconds</li>';
+			if ( isset( $parsed_args['duration'] ) ) {
+				$response['duration'] = microtime( true ) - $parsed_args['duration']; // Calcluate the duration.
+				$message             .= '<li><strong>Duration:</strong> ' . round( $response['duration'], 2 ) . ' seconds</li>';
+			}
 		}
 
 		if ( ! is_array( $parsed_args['body'] ) && ! empty( $parsed_args['body'] ) ) {
@@ -250,7 +261,15 @@ class WPF_Log_Handler {
 
 		$message .= '</ul>';
 
-		$this->handle( 'http', $this->user_id, $message );
+		$this->error_last = array(
+			'message' => $message,
+			'url'     => $url,
+			'args'    => $parsed_args,
+		);
+
+		if ( wpf_get_option( 'logging_http_api' ) ) {
+			$this->handle( 'http', $this->user_id, $message );
+		}
 	}
 
 	/**
@@ -328,14 +347,17 @@ class WPF_Log_Handler {
 	 */
 	public function log_url_redirect() {
 		if ( isset( $_REQUEST['id'] ) && (int) $_REQUEST['id'] !== 0 && ! isset( $_REQUEST['paged'] ) ) {
+
+			$log_id = intval( $_REQUEST['id'] );
+
 			include_once WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php';
 			$log_table_list = new WPF_Log_Table_List();
 
 			global $wpdb;
 			$max_id   = $wpdb->get_var( "SELECT MAX(log_id) FROM `{$wpdb->prefix}wpf_logging`" );
 			$per_page = $log_table_list->get_items_per_page( 'wpf_status_log_items_per_page', 20 );
-			$paged    = ceil( ( (int) $max_id - (int) $_REQUEST['id'] + 1 ) / $per_page );
-			wp_safe_redirect( add_query_arg( array( 'paged' => $paged ), wp_unslash( esc_url_raw( $_SERVER['REQUEST_URI'] ) ) ) );
+			$paged    = ceil( ( (int) $max_id - (int) $log_id + 1 ) / $per_page );
+			wp_safe_redirect( add_query_arg( array( 'paged' => $paged ), wp_unslash( esc_url_raw( $_SERVER['REQUEST_URI'] ) ) ) . '#' . $log_id );
 			exit;
 		}
 	}
@@ -511,6 +533,63 @@ class WPF_Log_Handler {
 		}
 	}
 
+	/**
+	 * Retry a failed API call in the logs.
+	 *
+	 * @since 3.44.25
+	 */
+	public function retry_api_call() {
+
+		if ( ! isset( $_GET['wpf-retry-api-call'] ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'wp-fusion-lite' ) );
+		}
+
+		// Verify nonce
+		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'wpf_retry_log' ) ) {
+			wp_die( esc_html__( 'Security check failed. Please try again.', 'wp-fusion-lite' ) );
+		}
+
+		global $wpdb;
+
+		$log_id = absint( $_GET['wpf-retry-api-call'] );
+		$log    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}wpf_logging WHERE log_id = %d", $log_id ) );
+
+		if ( ! $log ) {
+			wp_die( esc_html__( 'Log entry not found.', 'wp-fusion-lite' ) );
+		}
+
+		$context = maybe_unserialize( $log->context );
+
+		if ( empty( $context['request_uri'] ) || empty( $context['request_args'] ) ) {
+			wp_die( esc_html__( 'No API request data found in log entry.', 'wp-fusion-lite' ) );
+		}
+
+		// Make sure we're using the latest authorization tokens / headers.
+		$params = wp_fusion()->crm->get_params();
+
+		if ( isset( $params['headers'] ) ) {
+			$context['request_args']['headers'] = $params['headers'];
+		}
+
+		// Make the API call
+		$response = wp_remote_request( $context['request_uri'], $context['request_args'] );
+
+		// Log the response
+		if ( is_wp_error( $response ) ) {
+			wpf_log( 'error', $log->user, 'Error retrying API call: ' . $response->get_error_message() );
+		} else {
+			wpf_log( 'notice', $log->user, 'Successfully retried API call to ' . $context['request_uri'] );
+		}
+
+		// Redirect back to logs
+		wp_safe_redirect( admin_url( 'tools.php?page=wpf-settings-logs' ) );
+		exit;
+	}
+
 
 	/**
 	 * Logging tab content
@@ -655,7 +734,7 @@ class WPF_Log_Handler {
 	 */
 	public function handle( $level, $user, $message, $context = array() ) {
 
-		$timestamp = current_time( 'timestamp' );
+		$timestamp = time();
 
 		if ( ! empty( $context['source'] ) ) {
 			$source = $context['source'];
@@ -684,6 +763,8 @@ class WPF_Log_Handler {
 		// Notify or other integrations via wpf_handle_log.
 
 		do_action( 'wpf_handle_log', $timestamp, $level, $user, $message, $context );
+
+		do_action( "wpf_handle_log_{$level}", $timestamp, $user, $message, $context );
 
 		// If logging isn't enabled, nothing more to do.
 
@@ -752,7 +833,7 @@ class WPF_Log_Handler {
 		}
 
 		// Don't log meta data pushes where no enabled fields are being synced.
-		if ( isset( $context['meta_array'] ) && empty( $context['meta_array'] ) ) {
+		if ( 'info' === $level && isset( $context['meta_array'] ) && empty( $context['meta_array'] ) ) {
 			return;
 		}
 
@@ -767,9 +848,22 @@ class WPF_Log_Handler {
 
 		}
 
+		// Save it so it can be retried.
+		if ( 'error' === $level && ! empty( $this->error_last ) ) {
+			$context['request_uri']  = $this->error_last['url'];
+			$context['request_args'] = $this->error_last['args'];
+
+			$message .= '<hr>' . $this->error_last['message'];
+
+			$this->error_last = array();
+
+		}
+
 		do_action( 'wpf_log_handled', $timestamp, $level, $user, $message, $source, $context );
 
-		return $this->add( $timestamp, $level, $user, $message, $source, $context );
+		$result = $this->add( $timestamp, $level, $user, $message, $source, $context );
+
+		return $result;
 	}
 
 	/**
@@ -786,7 +880,7 @@ class WPF_Log_Handler {
 	 *                           database. }.
 	 * @return bool   True if write was successful.
 	 */
-	protected static function add( $timestamp, $level, $user, $message, $source, $context ) {
+	protected static function add( $timestamp, $level, $user, $message, $source, $context = array() ) {
 		global $wpdb;
 
 		$insert = array(
@@ -836,11 +930,49 @@ class WPF_Log_Handler {
 
 		global $wpdb;
 
-		$results = $wpdb->get_results( "SELECT * from {$wpdb->prefix}wpf_logging" );
+		// Build the WHERE clause based on filters.
+		$where_clauses = array();
+		$where_values  = array();
+
+		// Filter by user.
+		if ( ! empty( $_REQUEST['user'] ) ) {
+			$where_clauses[] = 'user = %d';
+			$where_values[]  = absint( $_REQUEST['user'] );
+		}
+
+		// Filter by level.
+		if ( ! empty( $_REQUEST['level'] ) ) {
+			$where_clauses[] = 'level = %d';
+			$where_values[]  = self::get_level_severity( $_REQUEST['level'] );
+		}
+
+		// Filter by source.
+		if ( ! empty( $_REQUEST['source'] ) ) {
+			$where_clauses[] = 'source LIKE %s';
+			$where_values[]  = '%' . $wpdb->esc_like( $_REQUEST['source'] ) . '%';
+		}
+
+		// Filter by date range.
+		if ( ! empty( $_REQUEST['startdate'] ) ) {
+			$where_clauses[] = 'timestamp >= %s';
+			$where_values[]  = $_REQUEST['startdate'] . ' 00:00:00';
+		}
+		if ( ! empty( $_REQUEST['enddate'] ) ) {
+			$where_clauses[] = 'timestamp <= %s';
+			$where_values[]  = $_REQUEST['enddate'] . ' 23:59:59';
+		}
+
+		// Build the final query.
+		$query = "SELECT * FROM {$wpdb->prefix}wpf_logging";
+		if ( ! empty( $where_clauses ) ) {
+			$query .= ' WHERE ' . implode( ' AND ', $where_clauses );
+		}
+		$query .= ' ORDER BY log_id DESC';
+
+		$results = $wpdb->get_results( $wpdb->prepare( $query, $where_values ) );
 
 		if ( ! empty( $results ) ) {
-
-			$filename = 'wp-fusion-activity-logs' . gmdate( 'Y-m-d' ) . '.csv';
+			$filename = 'wp-fusion-activity-logs-' . gmdate( 'Y-m-d' ) . '.csv';
 
 			header( 'Pragma: public' );
 			header( 'Expires: 0' );
@@ -850,10 +982,7 @@ class WPF_Log_Handler {
 			header( 'Content-Disposition: attachment; filename=' . $filename . ';' );
 			header( 'Content-Transfer-Encoding: binary' );
 
-			// Create a file pointer.
 			$output = fopen( 'php://output', 'w' );
-
-			// Set column headers.
 			$fields = array( 'ID', 'Time', 'Level', 'User', 'Source', 'Message', 'Context' );
 			fputcsv( $output, $fields );
 

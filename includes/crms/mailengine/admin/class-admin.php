@@ -34,7 +34,6 @@ class WPF_MailEngine_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -62,7 +61,8 @@ class WPF_MailEngine_Admin {
 		$new_settings = array();
 
 		$new_settings['mailengine_header'] = array(
-			'title'   => __( 'MailEngine Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -107,7 +107,6 @@ class WPF_MailEngine_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -123,7 +122,6 @@ class WPF_MailEngine_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -141,7 +139,6 @@ class WPF_MailEngine_Admin {
 		}
 
 		return $options;
-
 	}
 
 	/**
@@ -157,7 +154,8 @@ class WPF_MailEngine_Admin {
 		$mailengine_main_settings = array();
 
 		$mailengine_main_settings['mailengine_configuration'] = array(
-			'title'   => __( 'MailEngine Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'desc'    => '',
 			'std'     => '',
 			'type'    => 'heading',
@@ -191,7 +189,6 @@ class WPF_MailEngine_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'login_meta_sync', $settings, $mailengine_main_settings );
 
 		return $settings;
-
 	}
 
 
@@ -232,8 +229,5 @@ class WPF_MailEngine_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

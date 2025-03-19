@@ -53,10 +53,9 @@ class WPF_Groundhogg {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Groundhogg_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 
@@ -115,7 +114,6 @@ class WPF_Groundhogg {
 		add_action( 'update_option_gh_contact_custom_properties', array( $this, 'sync_crm_fields' ), 10, 2 );
 
 		add_filter( 'wpf_map_meta_fields', array( $this, 'fix_consent_fields_dates' ), 10, 2 );
-
 	}
 
 	/**
@@ -176,7 +174,6 @@ class WPF_Groundhogg {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -191,7 +188,6 @@ class WPF_Groundhogg {
 
 		unset( $settings['enable_queue'] );
 		return $settings;
-
 	}
 
 
@@ -239,7 +235,7 @@ class WPF_Groundhogg {
 
 			$value = date( 'Y-m-d', $value ); // @codingStandardsIgnoreLine - Groundhogg uses dates in local time.
 
-		} else {
+		} elseif ( is_string( $value ) ) {
 
 			// Maybe fix Countries by converting the name to the ISO 3166-2 code.
 
@@ -251,7 +247,6 @@ class WPF_Groundhogg {
 		}
 
 		return $value;
-
 	}
 
 	/**
@@ -290,7 +285,6 @@ class WPF_Groundhogg {
 		}
 
 		return $tags;
-
 	}
 
 	/**
@@ -306,7 +300,6 @@ class WPF_Groundhogg {
 		$tags = $this->get_tags( $contact_id );
 
 		wp_fusion()->user->set_tags( $tags, $user_id );
-
 	}
 
 
@@ -332,7 +325,6 @@ class WPF_Groundhogg {
 			wp_fusion()->user->get_tags( $user_id, true, false );
 
 		}
-
 	}
 
 
@@ -352,7 +344,6 @@ class WPF_Groundhogg {
 			wp_fusion()->user->get_tags( $user_id, true, false );
 
 		}
-
 	}
 
 	/**
@@ -367,7 +358,6 @@ class WPF_Groundhogg {
 		if ( ! empty( $contact->user ) ) {
 			wp_fusion()->user->pull_user_meta( $contact->user->ID );
 		}
-
 	}
 
 
@@ -389,7 +379,6 @@ class WPF_Groundhogg {
 		if ( ! empty( $contact->user ) ) {
 			wp_fusion()->user->pull_user_meta( $contact->user->ID );
 		}
-
 	}
 
 	/**
@@ -402,7 +391,6 @@ class WPF_Groundhogg {
 	public function tag_created( $id ) {
 
 		$this->sync_tags();
-
 	}
 
 	/**
@@ -415,7 +403,6 @@ class WPF_Groundhogg {
 	public function tag_deleted( $id ) {
 
 		$this->sync_tags();
-
 	}
 
 
@@ -434,7 +421,6 @@ class WPF_Groundhogg {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -458,7 +444,6 @@ class WPF_Groundhogg {
 		}
 
 		return true;
-
 	}
 
 
@@ -495,7 +480,7 @@ class WPF_Groundhogg {
 
 		$crm_fields = array();
 
-		require dirname( __FILE__ ) . '/admin/groundhogg-fields.php';
+		require __DIR__ . '/admin/groundhogg-fields.php';
 
 		foreach ( $groundhogg_fields as $field ) {
 			$crm_fields[ $field['crm_field'] ] = $field['crm_label'];
@@ -564,7 +549,6 @@ class WPF_Groundhogg {
 		}
 
 		return $contact->ID;
-
 	}
 
 	/**
@@ -589,7 +573,6 @@ class WPF_Groundhogg {
 		}
 
 		return $tags;
-
 	}
 
 	/**
@@ -608,7 +591,6 @@ class WPF_Groundhogg {
 		$contact->add_tag( $tags );
 
 		return true;
-
 	}
 
 
@@ -628,7 +610,6 @@ class WPF_Groundhogg {
 		$contact->remove_tag( $tags );
 
 		return true;
-
 	}
 
 
@@ -697,7 +678,6 @@ class WPF_Groundhogg {
 		}
 
 		return $id;
-
 	}
 
 
@@ -787,7 +767,6 @@ class WPF_Groundhogg {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -796,19 +775,33 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
+		// Return all contacts if no tag is provided.
+		if ( empty( $tag ) ) {
+			$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'contacts' )->get_contacts( array( 
+				'fields' => array( 'ID' ), 
+				'select' => 'ID',
+			) );
 
-		$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'tag_relationships' )->get_contacts_by_tag( $tag );
+		} else {
+			$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'tag_relationships' )->get_contacts_by_tag( $tag );
+		}
+
+		if ( empty( $contacts ) ) {
+			return array();
+		}
 
 		$contact_ids = array();
 
 		foreach ( $contacts as $row => $contact_id ) {
-			$contact_ids[] = $contact_id;
+			if ( is_object( $contact_id ) ) {
+				$contact_ids[] = $contact_id->ID;
+			} else {
+				$contact_ids[] = $contact_id;
+			}
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -857,7 +850,4 @@ class WPF_Groundhogg {
 
 		return true;
 	}
-
-
-
 }

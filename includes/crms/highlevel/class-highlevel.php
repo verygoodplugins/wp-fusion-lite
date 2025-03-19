@@ -133,13 +133,13 @@ class WPF_HighLevel {
 
 	public function format_post_data( $post_data ) {
 
-		if ( isset( $post_data['contact_id'] ) ) {
-			return $post_data;
-		}
-
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		$post_data['contact_id'] = absint( $payload->contact_id );
+		$post_data['contact_id'] = sanitize_text_field( $payload->contact_id );
+
+		if ( ! empty( $post_data['tags'] ) ) {
+			$post_data['tags'] = explode( ',', sanitize_text_field( $post_data['tags'] ) );
+		}
 
 		return $post_data;
 	}
@@ -206,7 +206,7 @@ class WPF_HighLevel {
 
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
+		if ( strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
 
 			$response_code = wp_remote_retrieve_response_code( $response );
 
@@ -214,7 +214,7 @@ class WPF_HighLevel {
 
 				return $response; // Success. Nothing more to do
 
-			} elseif ( 500 == $response_code ) {
+			} elseif ( 500 === $response_code ) {
 
 				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
 
@@ -226,17 +226,24 @@ class WPF_HighLevel {
 					$body_json->message = implode( ' ', $body_json->message );
 				}
 
-				if ( 403 === $response_code && isset( $body_json->message ) && 'The token does not have access to this location.' === $body_json->message ) {
+				if ( ( 403 === $response_code || 401 === $response_code ) && isset( $body_json->message ) && false === strpos( $url, 'token' ) ) {
 
-					// We don't know what causes this error, but we don't want it to trigger a refresh.
-					$response = new WP_Error( 'error', __( 'The token does not have access to this location.', 'wp-fusion-lite' ) );
+					if (
+						'The token does not have access to this location.' === $body_json->message ||
+						strpos( $body_json->message, 'access token' ) !== false ||
+						strpos( $body_json->message, 'refresh token' ) !== false ||
+						'Invalid JWT' === $body_json->message ||
+						( isset( $body_json->error_description ) && false !== strpos( $body_json->error_description, 'expired' ) )
+					) {
+						// Try to refresh the access token.
+						$access_token = $this->refresh_token();
+					} else {
+						$access_token = false;
+					}
 
-				} elseif ( 401 === $response_code || 403 === $response_code || ( isset( $body_json->message ) && strpos( $body_json->message, 'access token' ) !== false ) || ( isset( $body_json->error_description ) && strpos( $body_json->error_description, 'expired' ) !== false ) ) {
-
-					$access_token = $this->refresh_token();
-
-					if ( is_wp_error( $access_token ) ) {
-						return new WP_Error( 'error', 'Error refreshing access token: ' . $access_token->get_error_message() );
+					if ( is_wp_error( $access_token ) || empty( $access_token ) ) {
+						// translators: %s is the error message.
+						return new WP_Error( 'error', sprintf( __( 'Error refreshing access token: %s.', 'wp-fusion-lite' ), $body_json->message ) );
 					}
 
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
@@ -263,7 +270,6 @@ class WPF_HighLevel {
 					$response = new WP_Error( 'error', $body_json->error );
 
 				}
-
 			}
 		}
 
@@ -288,6 +294,43 @@ class WPF_HighLevel {
 		}
 	}
 
+	/**
+	 * Get the access token for the current location.
+	 *
+	 * @since 3.44.26
+	 *
+	 * @return string|WP_Error The access token or error.
+	 */
+	public function refresh_location_token() {
+
+		$params = array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 15,
+			'headers'    => array(
+				'Authorization' => 'Bearer ' . wpf_get_option( 'highlevel_token' ),
+				'Content-Type'  => 'application/x-www-form-urlencoded',
+				'Accept'        => 'application/json',
+				'Version'       => '2021-07-28',
+			),
+			'body'       => array(
+				'companyId'  => wpf_get_option( 'highlevel_company_id' ),
+				'locationId' => $this->location_id,
+			),
+		);
+
+		$response = wp_remote_post( 'https://services.leadconnectorhq.com/oauth/locationToken', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		wp_fusion()->settings->set( 'highlevel_token_' . $this->location_id, $response->access_token );
+
+		return $response->access_token;
+
+	}
 
 	/**
 	 * Refresh an access token from a refresh token
@@ -326,12 +369,19 @@ class WPF_HighLevel {
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		$this->get_params( $body_json->access_token );
-
 		wp_fusion()->settings->set( 'highlevel_token', $body_json->access_token );
 		wp_fusion()->settings->set( 'highlevel_refresh_token', $body_json->refresh_token );
 
-		return $body_json->access_token;
+		if ( wpf_get_option( 'highlevel_locations' ) ) {
+			// If we need to refresh the location token, do it now.
+			$access_token = $this->refresh_location_token();
+		} else {
+			$access_token = $body_json->access_token;
+		}
+
+		$this->get_params( $access_token );
+
+		return $access_token;
 	}
 
 
@@ -347,12 +397,28 @@ class WPF_HighLevel {
 
 	public function get_params( $access_token = null ) {
 
-		if ( empty( $access_token ) ) {
-			$access_token = wpf_get_option( 'highlevel_token' );
-		}
-
 		if ( ! $this->is_v2() ) {
+
+			// API key based authorization.
 			$access_token = wpf_get_option( 'highlevel_api_key' );
+
+		} elseif ( empty( $access_token ) && empty( wpf_get_option( 'highlevel_locations' ) ) ) {
+
+			// Single account authorization.
+			$access_token = wpf_get_option( 'highlevel_token' );
+
+		} elseif ( ! empty( wpf_get_option( 'highlevel_locations' ) ) ) {
+
+			// Sub-accounts, make sure we have the right access token.
+			$access_token = wpf_get_option( 'highlevel_token_' . $this->location_id );
+
+			if ( empty( $access_token ) ) {
+				$location_access_token = $this->refresh_location_token();
+
+				if ( ! is_wp_error( $location_access_token ) ) {
+					$access_token = $location_access_token;
+				}
+			}
 		}
 
 		$this->params = array(
@@ -377,6 +443,10 @@ class WPF_HighLevel {
 	 */
 
 	public function connect( $access_token = null, $location_id = null, $test = false ) {
+
+		if ( $location_id ) {
+			$this->location_id = $location_id;
+		}
 
 		$params = $this->get_params( $access_token );
 
@@ -890,3 +960,4 @@ class WPF_HighLevel {
 		return $contact_ids;
 	}
 }
+

@@ -157,9 +157,15 @@ class WPF_HubSpot {
 			if ( ! empty( $value ) && is_numeric( $value ) && $value < 1000000000000 ) {
 
 				if ( $value % DAY_IN_SECONDS !== 0 ) {
-					// If the date is a timestamp, do the timezone offset and then reset it to midnight.
-					$value += (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
-					$value  = strtotime( 'today', $value );
+					// Create DateTime object with UTC timezone
+					$date = new DateTime();
+					$date->setTimestamp( $value );
+					$date->setTimezone( new DateTimeZone( 'UTC' ) );
+
+					// Set to midnight UTC
+					$date->setTime( 0, 0, 0 );
+
+					$value = $date->getTimestamp();
 				}
 
 				// Check if it's within the valid range, otherwise we can get an invalid properties error.
@@ -203,6 +209,48 @@ class WPF_HubSpot {
 
 		if ( ! empty( $payload ) && isset( $payload->vid ) ) {
 			$post_data['contact_id'] = absint( $payload->vid );
+		} elseif ( ! empty( $payload ) && is_array( $payload ) ) {
+
+			// Webhooks via private app.
+
+			if ( 1 === count( $payload ) ) {
+				$post_data['contact_id'] = absint( $payload[0]->{'objectId'} );
+			} else {
+
+				$contact_ids = array_unique( wp_list_pluck( $payload, 'objectId' ) );
+
+				if ( 'add' !== $post_data['wpf_action'] ) {
+
+					// If we're not importing, remove anyone who doesn't have a user record.
+
+					foreach ( $contact_ids as $i => $contact_id ) {
+
+						if ( ! wpf_get_user_id( $contact_id ) ) {
+							unset( $contact_ids[ $i ] );
+						}
+					}
+				}
+
+				wpf_log( 'info', 0, 'Webhook received with <code>' . $post_data['wpf_action'] . '</code>. ' . count( $contact_ids ) . ' contact records detected in payload, creating background process.', array( 'source' => 'api' ) );
+
+				wp_fusion()->batch->includes();
+				wp_fusion()->batch->init();
+
+				// Not needed for batch ops. This will preserve "role" and "send_notification".
+				unset( $post_data['wpf_action'] );
+				unset( $post_data['access_key'] );
+
+				foreach ( $contact_ids as $contact_id ) {
+					wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $post_data ) ) );
+				}
+
+				wp_fusion()->batch->process->save()->dispatch();
+
+				do_action( 'wpf_api_success' );
+
+				wp_die( '<h3>Success</h3> Started background operation for ' . count( $contact_ids ) . ' records.', 'Success', 200 );
+
+			}
 		}
 
 		return $post_data;
@@ -363,21 +411,23 @@ class WPF_HubSpot {
 				}
 
 				$message = $body_json->message;
+				$code    = 'error';
 
 				// Contextual help
 
-				if ( 'resource not found' == $message ) {
+				if ( 'resource not found' === $message || 'contact does not exist' === $message ) {
+					$code     = 'not_found';
 					$message .= '.<br /><br />This error can mean that you\'ve deleted or merged a record in HubSpot, and then tried to update an ID that no longer exists. Clicking Resync Lists on the user\'s admin profile will clear out the cached invalid contact ID.';
-				} elseif ( 'Can not operate manually on a dynamic list' == $message ) {
+				} elseif ( 'Can not operate manually on a dynamic list' === $message ) {
 					$message .= '.<br /><br />' . __( 'This error means you tried to apply an Active list over the API. Only Static lists can be assigned over the API. For an overview of HubSpot lists, see <a href="https://knowledge.hubspot.com/lists/create-active-or-static-lists#types-of-lists" target="_blank">this documentation page</a>.', 'wp-fusion-lite' );
 				} elseif ( isset( $body_json->category ) && 'MISSING_SCOPES' === $body_json->category ) {
 					$message .= '<br /><br />' . __( 'This error means you\'re trying to access a feature that requires additional permissions. You can grant these permissions by clicking Reauthorize with HubSpot on the Setup tab in the WP Fusion settings.', 'wp-fusion-lite' );
 				}
 
-				if ( isset( $body_json->validationResults ) ) {
+				if ( isset( $body_json->{'validationResults'} ) ) {
 
 					$message .= '<ul>';
-					foreach ( $body_json->validationResults as $result ) {
+					foreach ( $body_json->{'validationResults'} as $result ) {
 						$message .= '<li>' . $result->message . '</li>';
 					}
 					$message .= '</ul>';
@@ -386,11 +436,11 @@ class WPF_HubSpot {
 
 				if ( isset( $body_json->errors ) ) {
 
-					$message .= '<pre>' . print_r( $body_json->errors, true ) . '</pre>';
+					$message .= '<pre>' . wpf_print_r( $body_json->errors, true ) . '</pre>';
 
 				}
 
-				$response = new WP_Error( 'error', $message );
+				$response = new WP_Error( $code, $message );
 
 			}
 		}
@@ -734,6 +784,10 @@ class WPF_HubSpot {
 			// No way to append through the API so we get the current tags.
 			$current_tags = $this->get_tags( $contact_id );
 
+			if ( is_wp_error( $current_tags ) ) {
+				return $current_tags;
+			}
+
 			$properties[] = array(
 				'property' => $field,
 				'value'    => implode( ';', array_merge( $tags, $current_tags ) ),
@@ -979,7 +1033,6 @@ class WPF_HubSpot {
 					$offset = $body_json->{'vid-offset'};
 				}
 			}
-
 		} elseif ( 'multiselect' === wpf_get_option( 'hubspot_tag_type' ) ) {
 
 			// Import based on picklist value.

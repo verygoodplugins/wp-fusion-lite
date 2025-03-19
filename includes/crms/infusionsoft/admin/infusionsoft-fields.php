@@ -192,7 +192,7 @@ $infusionsoft_fields['shipping_state'] = array(
 );
 
 $infusionsoft_fields['wpf_leadsource'] = array(
-	'crm_label' => 'Lead Source',
+	'crm_label' => 'Lead Source ID',
 	'crm_field' => 'Leadsource',
 );
 
@@ -215,16 +215,6 @@ $infusionsoft_fields[] = array(
 $infusionsoft_fields[] = array(
 	'crm_label' => 'Anniversary',
 	'crm_field' => 'Anniversary',
-);
-
-$infusionsoft_fields[] = array(
-	'crm_label' => 'Assistant Name',
-	'crm_field' => 'AssistantName',
-);
-
-$infusionsoft_fields[] = array(
-	'crm_label' => 'Assistant Phone',
-	'crm_field' => 'AssistantPhone',
 );
 
 $infusionsoft_fields[] = array(

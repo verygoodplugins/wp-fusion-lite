@@ -51,7 +51,6 @@ class WPF_Constant_Contact_Admin {
 		}
 
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -67,7 +66,6 @@ class WPF_Constant_Contact_Admin {
 		if ( ! wpf_get_option( 'updated_cc_api' ) ) {
 			add_action( 'admin_notices', array( $this, 'update_api_notice' ) );
 		}
-
 	}
 
 	/**
@@ -105,7 +103,6 @@ class WPF_Constant_Contact_Admin {
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
-
 	}
 
 	/**
@@ -169,7 +166,8 @@ class WPF_Constant_Contact_Admin {
 		$new_settings = array();
 
 		$new_settings['constant_contact_header'] = array(
-			'title'   => __( 'Contstant Contact CRM Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -211,7 +209,6 @@ class WPF_Constant_Contact_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -235,7 +232,6 @@ class WPF_Constant_Contact_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -253,7 +249,6 @@ class WPF_Constant_Contact_Admin {
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm === false || $crm !== $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -290,8 +285,5 @@ class WPF_Constant_Contact_Admin {
 		}
 
 		die();
-
 	}
-
-
 }

@@ -1,4 +1,3 @@
-
 //
 // Select4 Fields
 //
@@ -193,9 +192,12 @@ function initializeTagsSelect(target) {
 
 				jQuery(this).on('select4:open', function(e) {
 					let selectField = jQuery(this).data('select4');
-					selectField.$selection.find('input.select4-search__field').attr('placeholder', function() {
-						return jQuery(this).attr('placeholder') + ' ' + wpf_admin.strings.addNewTags;
-					});				
+					let searchField = selectField.$selection.find('input.select4-search__field');
+					let currentPlaceholder = searchField.attr('placeholder') || '';
+					
+					if (!currentPlaceholder.includes(wpf_admin.strings.addNewTags)) {
+						searchField.attr('placeholder', currentPlaceholder + ' ' + wpf_admin.strings.addNewTags);
+					}
 				});
 			}
 
@@ -262,6 +264,14 @@ jQuery(document).ready(function($){
 
 	if( typeof(wpf_admin) !== undefined ) {
 		initializeTagsSelect('#wpbody');
+
+		// Support for EDD 3.0+ sections
+		document.addEventListener('edd_repeatable_row_change', function(e) {
+			console.dir(e);
+			if(e.detail && e.detail.row) {
+				initializeTagsSelect('#' + e.detail.row.attr('id'));
+			}
+		});
 	}
 
 	function setTagLabels( translation, text, domain ) {
@@ -337,7 +347,7 @@ jQuery(document).ready(function($){
 			tags : true,
 			createTag: function (params) {
 
-				var term = $.trim( params.term );
+				var term = params.term.trim();
 			
 				if ( term === '' ) {
 					return null;
@@ -401,8 +411,10 @@ jQuery(document).ready(function($){
 			'fadeIn': 50,
 			'fadeOut': 50,
 			'delay': 200,
+			'edgeOffset': 10, // prevents flickering.
 			'defaultPosition': 'bottom',
 		});
+
 	}
 
 
@@ -443,7 +455,7 @@ jQuery(document).ready(function($){
 
 			function matcher (params, data) {
 				// Always return the object if there is nothing to compare
-				if ($.trim(params.term) === '') {
+				if (!params.term || params.term.trim() === '') {
 					return data;
 				}
 
@@ -498,7 +510,7 @@ jQuery(document).ready(function($){
 					matcher: matcher,
 						createTag: function(params) {
 
-							var term = $.trim(params.term);
+							var term = params.term ? params.term.trim() : '';
 
 							if(term === "") { return null; }
 
@@ -519,6 +531,17 @@ jQuery(document).ready(function($){
 					escapeMarkup: function (markup) {
 						return markup;
 					},
+				});
+
+				// Add placeholder text when field is opened
+				$("select.select4-crm-field").on('select4:open', function(e) {
+					let selectField = $(this).data('select4');
+					let placeholder = selectField.$selection.find('.select4-selection__placeholder');
+					let placeholderText = placeholder.text();
+					
+					if (!placeholderText.includes(wpf_admin.strings.addNewTags)) {
+						placeholder.text(placeholderText + ' ' + wpf_admin.strings.addNewTags);
+					}
 				});
 
 			} else {
@@ -885,7 +908,6 @@ jQuery(document).ready(function($){
 
 	if($('body').hasClass('post-type-download')) {
 
-
 		// Variable pricing
 
 		$( document.body ).on( 'click', '#edd_price_fields button.edd_add_repeatable', function(e) {
@@ -895,6 +917,28 @@ jQuery(document).ready(function($){
 
 		});
 
+		// Support for EDD 3.0+ sections
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				if (mutation.addedNodes.length) {
+					mutation.addedNodes.forEach((node) => {
+						if (node.classList && node.classList.contains('section-content--is-dynamic')) {
+							// Convert DOM node to jQuery selector
+							initializeTagsSelect('#' + node.id);
+						}
+					});
+				}
+			});
+		});
+
+		// Start observing the download editor sections
+		const editorSections = document.querySelector('.edd-download-editor__sections');
+		if (editorSections) {
+			observer.observe(editorSections, {
+				childList: true,
+				subtree: true
+			});
+		}
 
 		// Recurring payments
 

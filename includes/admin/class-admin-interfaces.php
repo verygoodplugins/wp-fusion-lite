@@ -1,5 +1,7 @@
 <?php
 
+use WP_Fusion\Includes\Admin\WPF_Tags_Select_API;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
@@ -206,6 +208,7 @@ class WPF_Admin_Interfaces {
 		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip' ), WP_FUSION_VERSION, true );
 
 		$localize = array(
+			'crm_name'             => wp_fusion()->crm->name,
 			'crm_supports'         => wp_fusion()->crm->supports,
 			'nonce'                => wp_create_nonce( 'wpf_admin_nonce' ),
 			'tag_type'             => wpf_get_option( 'crm_tag_type' ),
@@ -214,6 +217,7 @@ class WPF_Admin_Interfaces {
 			'fieldSelect4'         => false == apply_filters( 'wpf_disable_crm_field_select4', false ) ? true : false,
 			'settings_page'        => esc_url( admin_url( 'options-general.php?page=wpf-settings' ) ),
 			'reserved_events_keys' => ( isset( wp_fusion()->crm->reserved_events_keys ) ? wp_fusion()->crm->reserved_events_keys : '' ),
+			'availableTags'        => WPF_Tags_Select_API::get_formatted_tags_array(),
 			'strings'              => array(
 				'addNew'                => __( 'add new', 'wp-fusion-lite' ),
 				'addNewTags'            => __( '(type to add new)', 'wp-fusion-lite' ),
@@ -240,7 +244,7 @@ class WPF_Admin_Interfaces {
 				'applyTags'             => __( 'Apply Tags', 'wp-fusion-lite' ),
 				'linkWithTag'           => __( 'Link with Tag', 'wp-fusion-lite' ),
 				'connecting'            => __( 'Connecting', 'wp-fusion-lite' ),
-				'reserved_keys_warning' => sprintf( __( '%s prevents the "{key_name}" string to be part of the event key.', 'wp-fusion-event-tracking' ), wp_fusion()->crm->name ),
+				'reserved_keys_warning' => sprintf( __( '%s prevents the "{key_name}" string to be part of the event key.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 		);
 
@@ -324,7 +328,7 @@ class WPF_Admin_Interfaces {
 
 			</select>
 
-			<input id="wpf_tag" class="button" value="<?php esc_html_e( 'Filter' ); ?>" type="submit" />
+			<input id="wpf_tag" class="button" value="<?php esc_html_e( 'Filter', 'wp-fusion-lite' ); ?>" type="submit" />
 
 		</div>
 
@@ -471,7 +475,7 @@ class WPF_Admin_Interfaces {
 				</tr>
 
 				<tr class="form-field">
-					<th scope="row" valign="top"><label for="lock_content"><?php esc_html_e( 'Restrict access to archives', 'wp-fusion-lite' ); ?></label></th>
+					<th scope="row" valign="top"><label for="lock_content"><?php esc_html_e( 'Users must be logged in to access archives', 'wp-fusion-lite' ); ?></label></th>
 					<td>
 						<input class="checkbox" type="checkbox" data-unlock="lock_posts hide_term wpf-settings-allow_tags wpf-settings-allow_tags_all wpf-redirect wpf_redirect_url" id="lock_content" name="wpf-settings[lock_content]" value="1" <?php echo checked( $settings['lock_content'], 1, false ); ?> />
 						<span class="description"><?php esc_html_e( '(Note that to protect archive pages you must specify a redirect below.)', 'wp-fusion-lite' ); ?></span>
@@ -479,7 +483,7 @@ class WPF_Admin_Interfaces {
 				</tr>
 
 				<tr class="form-field">
-					<th scope="row" valign="top"><label for="lock_posts"><?php esc_html_e( 'Restrict access to all posts', 'wp-fusion-lite' ); ?></label></th>
+					<th scope="row" valign="top"><label for="lock_posts"><?php esc_html_e( 'Users must be logged in to access all posts', 'wp-fusion-lite' ); ?></label></th>
 					<td>
 						<input class="checkbox" type="checkbox" 
 						<?php
@@ -844,7 +848,7 @@ class WPF_Admin_Interfaces {
 		}
 
 		if ( ! current_user_can( $ptype->cap->edit_posts ) ) {
-			wp_die( __( 'Sorry, you are not allowed to edit posts.' ) );
+			wp_die( __( 'Sorry, you are not allowed to edit posts.', 'wp-fusion-lite' ) );
 		}
 
 		$post_ids = ( ! empty( $_REQUEST['post'] ) ) ? array_map( 'intval', $_REQUEST['post'] ) : null;
@@ -1115,6 +1119,7 @@ class WPF_Admin_Interfaces {
 	public function restrict_content_checkbox( $post, $settings ) {
 
 		echo '<input class="checkbox wpf-restrict-access-checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <label for="wpf-lock-content" class="wpf-restrict-access">';
+		// translators: %s: singular post type name
 		$message = sprintf( __( 'Users must be logged in to view this %s', 'wp-fusion-lite' ), $post->post_type_singular_name );
 		$message = apply_filters( 'wpf_restrict_content_checkbox_label', $message, $post );
 		echo esc_html( $message );

@@ -46,7 +46,6 @@ class WPF_Engage_Admin {
 		if ( wp_fusion()->settings->get( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -59,7 +58,6 @@ class WPF_Engage_Admin {
 		// Hooks in init() will run on the admin screen when this CRM is active.
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -77,7 +75,8 @@ class WPF_Engage_Admin {
 		$new_settings = array();
 
 		$new_settings['engage_header'] = array(
-			'title'   => __( 'Engage Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'type'    => 'heading',
 			'desc'    => __( 'You can find your API Keys in <a href="https://app.engage.so/settings/account" target="_blank">Settings -> Account</a> on your Engage dashboard.', 'wp-fusion-lite' ),
 			'section' => 'setup',
@@ -95,14 +94,13 @@ class WPF_Engage_Admin {
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',
-			'desc'		  => __( 'Enter the Private Key for your Engage account.', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter the Private Key for your Engage account.', 'wp-fusion-lite' ),
 			'post_fields' => array( 'engage_username', 'engage_password' ),
 		);
 
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -126,7 +124,6 @@ class WPF_Engage_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -144,7 +141,6 @@ class WPF_Engage_Admin {
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm === false || $crm !== $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -183,8 +179,5 @@ class WPF_Engage_Admin {
 			wp_send_json_success();
 
 		}
-
 	}
-
-
 }

@@ -58,7 +58,8 @@ class WPF_Shortcodes {
 		$atts = wpf_shortcode_atts( $atts );
 
 		if ( false !== strpos( $atts['tag'], '“' ) || false !== strpos( $atts['not'], '“' ) ) {
-			return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [wpf] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+			// translators: %s is the name of the shortcode.
+			return '<pre>' . sprintf( __( 'Oops! Curly quotes were found in a shortcode parameter of the %s shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ), '[wpf]' ) . '</pre>';
 		}
 
 		// Hide content for non-logged in users.
@@ -245,7 +246,8 @@ class WPF_Shortcodes {
 		$atts = wpf_shortcode_atts( $atts );
 
 		if ( false !== strpos( $atts['field'], '“' ) || false !== strpos( $atts['format'], '“' ) ) {
-			return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [user_meta] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+			// translators: %s is the name of the shortcode.
+			return '<pre>' . sprintf( __( 'Oops! Curly quotes were found in a shortcode parameter of the %s shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ), '[user_meta]' ) . '</pre>';
 		}
 
 		if ( empty( $atts['field'] ) ) {
@@ -436,7 +438,8 @@ class WPF_Shortcodes {
 		foreach ( $atts as $att ) {
 
 			if ( false !== strpos( $att, '“' ) ) {
-				return '<pre>' . esc_html__( 'Oops! Curly quotes were found in a shortcode parameter of the [usermeta_if] shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ) . '</pre>';
+				// translators: %s is the name of the shortcode.
+				return '<pre>' . sprintf( __( 'Oops! Curly quotes were found in a shortcode parameter of the %s shortcode. Curly quotes do not work with shortcode attributes.', 'wp-fusion-lite' ), '[usermeta_if]' ) . '</pre>';
 			}
 		}
 

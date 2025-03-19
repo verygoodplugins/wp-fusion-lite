@@ -71,12 +71,11 @@ class WPF_Klaviyo {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Klaviyo_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -90,17 +89,20 @@ class WPF_Klaviyo {
 
 		// Slow down the batch processses to get around API limits.
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_phone_numbers' ) );
+		add_filter( 'wpf_user_register', array( $this, 'format_phone_numbers' ) );
 		add_filter( 'wpf_user_update', array( $this, 'format_phone_numbers' ), 5 ); // 5 so it's before WPF_WooCommerce::user_update().
+
 		add_filter( 'wpf_user_tags', array( $this, 'format_tags' ) );
 		add_filter( 'wpf_remove_tags', array( $this, 'format_tags' ) );
-
 	}
 
 	/**
 	 * Slow down batch processses to get around API throttling.
-	 * 
+	 *
 	 * Burst: 3/second
 	 * Steady: 60/minute
 	 *
@@ -111,6 +113,42 @@ class WPF_Klaviyo {
 	 */
 	public function set_sleep_time( $seconds ) {
 		return 2;
+	}
+
+	/**
+	 * Formats POST data received from HTTP Posts into standard format
+	 *
+	 * @since 3.44.14
+	 *
+	 * @param array $post_data The post data.
+	 * @return array The post data.
+	 */
+	public function format_post_data( $post_data ) {
+
+		if ( isset( $post_data['email'] ) ) {
+			$post_data['contact_id'] = $this->get_contact_id( sanitize_email( $post_data['email'] ) );
+		}
+
+		return $post_data;
+	}
+
+	/**
+	 * Formats field values for the Klaviyo API.
+	 *
+	 * @since 3.44.24
+	 *
+	 * @param mixed  $value      The field value.
+	 * @param string $field_type The field type.
+	 * @param array  $field      The field ID in the CRM.
+	 * @return mixed The formatted field value.
+	 */
+	public function format_field_value( $value, $field_type, $field ) {
+
+		if ( 'date' === $field_type ) {
+			$value = wpf_get_iso8601_date( $value );
+		}
+
+		return $value;
 	}
 
 	/**
@@ -144,20 +182,64 @@ class WPF_Klaviyo {
 						// response and update them instead.
 
 						$body           = json_decode( $args['body'] );
+						$url            = str_replace( $body->data->id, $error->meta->duplicate_profile_id, $url );
 						$body->data->id = $error->meta->duplicate_profile_id;
 						$args['body']   = wp_json_encode( $body );
 						$args['method'] = 'PATCH';
 
-						$response = wp_safe_remote_post( $url . '/' . $body->data->id, $args );
+						$response = wp_safe_remote_post( $url, $args );
 
 						if ( is_wp_error( $response ) ) {
 							return $response;
 						} else {
+
+							$user_id = wpf_get_user_id( $body->data->id );
+
+							if ( ! empty( $user_id ) ) {
+								// If it's an update to an existing user, update their ID.
+								update_user_meta( $user_id, WPF_CONTACT_ID_META_KEY, sanitize_text_field( $body->data->id ) );
+							}
+
 							return $args; // return the body so add_contact() can get the ID.
 						}
+					} elseif ( 'invalid' === $error->code && isset( $error->source->pointer ) ) {
 
+						// Convert pointer path to array keys
+						$path = explode( '/', trim( $error->source->pointer, '/' ) );
+
+						// Get the body data
+						$body = json_decode( $args['body'], true );
+
+						// Remove the invalid field by traversing the path
+						$current  = &$body;
+						$last_key = array_pop( $path );
+
+						// Navigate through the path
+						foreach ( $path as $key ) {
+							if ( isset( $current[ $key ] ) ) {
+								$current = &$current[ $key ];
+							}
+						}
+
+						// Remove the invalid field and try again.
+						if ( isset( $current[ $last_key ] ) ) {
+							unset( $current[ $last_key ] );
+
+							// Update the request body
+							$args['body'] = wp_json_encode( $body );
+
+							// Try the request again
+							$response = wp_safe_remote_post( $url, $args );
+
+						}
+
+						return $response;
+
+					} elseif ( 'not_found' === $error->code ) {
+
+						// If the contact ID is not found, return a not_found error to attempt to look it up again.
+						return new WP_Error( 'not_found', $error->detail );
 					}
-
 				}
 
 				$response = new WP_Error( 'error', implode( ' ', wp_list_pluck( $body_json->errors, 'detail' ) ) );
@@ -165,7 +247,6 @@ class WPF_Klaviyo {
 		}
 
 		return $response;
-
 	}
 
 
@@ -189,7 +270,7 @@ class WPF_Klaviyo {
 			'headers'    => array(
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
-				'Revision'      => '2024-02-15',
+				'Revision'      => '2025-01-15',
 				'Authorization' => 'Klaviyo-API-Key ' . $access_key,
 			),
 		);
@@ -247,7 +328,6 @@ class WPF_Klaviyo {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -262,10 +342,20 @@ class WPF_Klaviyo {
 
 		if ( ! empty( $customer_data['billing_phone'] ) ) {
 			$customer_data['billing_phone'] = wpf_phone_number_to_e164( $customer_data['billing_phone'], $customer_data['billing_country'] );
+
+			if ( ! preg_match( '/^\+\d{10,15}$/', $customer_data['billing_phone'] ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Klaviyo phone number is potentially invalid: ' . $customer_data['billing_phone'] );
+				unset( $customer_data['billing_phone'] );
+			}
 		}
 
 		if ( ! empty( $customer_data['shipping_phone'] ) ) {
 			$customer_data['shipping_phone'] = wpf_phone_number_to_e164( $customer_data['shipping_phone'], $customer_data['shipping_country'] );
+
+			if ( ! preg_match( '/^\+\d{10,15}$/', $customer_data['shipping_phone'] ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Klaviyo phone number is potentially invalid: ' . $customer_data['shipping_phone'] );
+				unset( $customer_data['shipping_phone'] );
+			}
 		}
 
 		return $customer_data;
@@ -356,7 +446,7 @@ class WPF_Klaviyo {
 		}
 
 		// Load built in fields first.
-		require dirname( __FILE__ ) . '/admin/klaviyo-fields.php';
+		require __DIR__ . '/admin/klaviyo-fields.php';
 
 		foreach ( $klaviyo_fields as $field ) {
 			$crm_fields['Standard Fields'][ $field['crm_field'] ] = $field['crm_label'];
@@ -384,9 +474,7 @@ class WPF_Klaviyo {
 						}
 					}
 				}
-
 			}
-
 		}
 
 		asort( $crm_fields['Custom Fields'] );
@@ -428,7 +516,6 @@ class WPF_Klaviyo {
 			return false;
 
 		}
-
 	}
 
 
@@ -482,13 +569,6 @@ class WPF_Klaviyo {
 
 		$params = $this->get_params();
 
-		$consented_at = wpf_get_iso8601_date();
-
-		if ( false === strpos( $consented_at, 'Z' ) ) {
-			// For non UTC, remove final colon and change (i.e.) 04:00 to 0400.
-			$consented_at = substr_replace( $consented_at, '', -3, 1 );
-		}
-
 		$optin_data = array(
 			'data' => array(
 				'type'          => 'profile-subscription-bulk-create-job',
@@ -504,8 +584,7 @@ class WPF_Klaviyo {
 									'subscriptions' => array(
 										'email' => array(
 											'marketing' => array(
-												'consent'      => 'SUBSCRIBED',
-												'consented_at' => $consented_at,
+												'consent' => 'SUBSCRIBED',
 											),
 										),
 									),
@@ -604,7 +683,6 @@ class WPF_Klaviyo {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -660,7 +738,6 @@ class WPF_Klaviyo {
 		}
 
 		return $data;
-
 	}
 
 	/**
@@ -692,7 +769,6 @@ class WPF_Klaviyo {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->data->id;
-
 	}
 
 	/**
@@ -787,7 +863,6 @@ class WPF_Klaviyo {
 		}
 
 		return $contact_ids;
-
 	}
 
 
@@ -822,7 +897,7 @@ class WPF_Klaviyo {
 			'attributes' => array(
 				'profile'    => array(
 					'data' => array(
-						'type'  => 'profile',
+						'type'       => 'profile',
 						'attributes' => array(
 							'email' => $email_address,
 						),
@@ -830,7 +905,7 @@ class WPF_Klaviyo {
 				),
 				'metric'     => array(
 					'data' => array(
-						'type'  => 'metric',
+						'type'       => 'metric',
 						'attributes' => array(
 							'name' => $event,
 						),
@@ -859,5 +934,4 @@ class WPF_Klaviyo {
 
 		return true;
 	}
-
 }

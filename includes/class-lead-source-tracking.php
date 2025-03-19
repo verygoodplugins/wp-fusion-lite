@@ -281,7 +281,6 @@ class WPF_Lead_Source_Tracking {
 		$field_groups['leadsource'] = array(
 			'title'  => __( 'Google Analytics and Lead Source Tracking', 'wp-fusion-lite' ),
 			'url'    => 'https://wpfusion.com/documentation/tutorials/lead-source-tracking/',
-			'fields' => array(),
 		);
 
 		return $field_groups;

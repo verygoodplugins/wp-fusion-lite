@@ -32,7 +32,6 @@ class WPF_Loopify_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -45,7 +44,6 @@ class WPF_Loopify_Admin {
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 	/**
@@ -95,7 +93,6 @@ class WPF_Loopify_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -111,7 +108,8 @@ class WPF_Loopify_Admin {
 		$new_settings = array();
 
 		$new_settings['loopify_header'] = array(
-			'title'   => __( 'Loopify Configuration', 'wp-fusion-lite' ),
+			// translators: %s is the name of the CRM.
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
 			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
@@ -137,7 +135,7 @@ class WPF_Loopify_Admin {
 				'type'        => 'api_validate',
 				'section'     => 'setup',
 				'class'       => 'api_key',
-				'desc'        => sprintf( __( 'If your connection with %s is broken you can erase the refresh token and save the settings page to re-authorize with %s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
+				'desc'        => sprintf( __( 'If your connection with %1$s is broken you can erase the refresh token and save the settings page to re-authorize with %2$s.', 'wp-fusion-lite' ), wp_fusion()->crm->name, wp_fusion()->crm->name ),
 				'post_fields' => array( 'loopify_token', 'loopify_refresh_token' ),
 			);
 
@@ -146,7 +144,6 @@ class WPF_Loopify_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -162,7 +159,7 @@ class WPF_Loopify_Admin {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/loopify-fields.php';
+			require_once __DIR__ . '/loopify-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -173,7 +170,6 @@ class WPF_Loopify_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -189,7 +185,6 @@ class WPF_Loopify_Admin {
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -226,8 +221,5 @@ class WPF_Loopify_Admin {
 		}
 
 		die();
-
 	}
-
-
 }
