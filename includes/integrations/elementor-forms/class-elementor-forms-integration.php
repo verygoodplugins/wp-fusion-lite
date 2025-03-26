@@ -55,8 +55,13 @@ class WPF_Lite_Elementor_Forms_Integration extends Integration_Base {
 		$content .= sprintf(
 			'<p>%s</p>',
 			sprintf(
-				esc_html__( 'With the full version of WP Fusion you can apply tags in %s based on form submissions, as well as set up field mapping between fields on your form and fields in %s.', 'wp-fusion-lite' ),
-				esc_html( wp_fusion()->crm->name ),
+				__( 'You are currently running <a href="https://wpfusion.com/tutorials/what-can-you-do-with-the-free-wp-fusion-lite/?utm_source=free-plugin&utm_medium=elementor-forms&utm_campaign=free-plugin">WP Fusion Lite</a>.', 'wp-fusion-lite' )
+			)
+		);
+		$content .= sprintf(
+			'<p>%s</p>',
+			sprintf(
+				__( 'Did you know, the full version of WP Fusion can <a href="https://wpfusion.com/documentation/lead-generation/elementor-forms/?utm_source=free-plugin&utm_medium=elementor-forms&utm_campaign=free-plugin">sync Elementor Forms submissions</a> and apply tags in %s?', 'wp-fusion-lite' ),
 				esc_html( wp_fusion()->crm->name )
 			)
 		);
