@@ -18,6 +18,9 @@ class WPF_Lite_Helper {
 	 */
 	public function __construct() {
 
+		// This action happens before the Wordpress init hook, so we need to put it here.
+		add_action( 'elementor_pro/init', array( $this, 'add_form_actions' ) );
+
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'handle_webhooks' ) );
 	}
@@ -895,6 +898,29 @@ class WPF_Lite_Helper {
 	public function auth_url( $url ) {
 
 		return add_query_arg( 'l', true, $url );
+	}
+
+	/**
+	 * Add Form Actions
+	 * Register the WPF Elementor Forms integration.
+	 * 
+	 * @since x.x.x
+	 * 
+	 * @return void
+	 */
+	public function add_form_actions() {
+
+		if ( apply_filters( 'wp_fusion_hide_upgrade_nags', false ) ) {
+			return;
+		}
+
+		require_once WPF_DIR_PATH . 'includes/integrations/elementor-forms/class-elementor-forms-integration.php';
+
+		if ( version_compare( ELEMENTOR_PRO_VERSION, '3.5.0', '>=' ) ) {
+			\ElementorPro\Plugin::instance()->modules_manager->get_modules( 'forms' )->actions_registrar->register( new WPF_Lite_Elementor_Forms_Integration(), 'wpfusion-lite' );
+		} else {
+			\ElementorPro\Plugin::instance()->modules_manager->get_modules( 'forms' )->add_form_action( 'wpfusion-lite', new WPF_Lite_Elementor_Forms_Integration() );
+		}
 	}
 }
 
