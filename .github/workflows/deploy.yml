@@ -3,6 +3,10 @@ on:
   push:
     tags:
     - "*"
+
+permissions:
+  contents: write
+
 jobs:
   tag:
     name: New tag
