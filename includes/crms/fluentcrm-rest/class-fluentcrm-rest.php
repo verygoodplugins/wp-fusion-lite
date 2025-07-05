@@ -65,7 +65,6 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since 3.37.14
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -91,7 +90,6 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @since 3.37.14
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -105,7 +103,6 @@ class WPF_FluentCRM_REST {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
@@ -166,7 +163,6 @@ class WPF_FluentCRM_REST {
 	 * @param  string $password The application password.
 	 * @return array  $params The API parameters.
 	 */
-
 	public function get_params( $url = null, $username = null, $password = null ) {
 
 		if ( $this->params ) {
@@ -207,7 +203,6 @@ class WPF_FluentCRM_REST {
 	 * @param  string           $url      The HTTP request URL.
 	 * @return WP_HTTP_Response $response The response.
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
@@ -272,7 +267,6 @@ class WPF_FluentCRM_REST {
 	 * @param  bool   $test     Whether to validate the credentials.
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 */
-
 	public function connect( $url = null, $username = null, $password = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -301,7 +295,6 @@ class WPF_FluentCRM_REST {
 	 *
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();

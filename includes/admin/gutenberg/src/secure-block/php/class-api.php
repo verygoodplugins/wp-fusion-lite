@@ -146,7 +146,6 @@ class API {
 	 *
 	 * @return array
 	 */
-
 	public function get_available_tags() {
 		return self::get_formatted_tags_array();
 	}
@@ -170,8 +169,6 @@ class API {
 			if ( is_wp_error( $tag_id ) ) {
 				wp_send_json_error( $tag_id );
 			}
-
-			wp_fusion()->crm->sync_tags();
 
 			wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag <strong>' . $tag . '</strong> with ID <code>' . $tag_id . '</code>' );
 		}

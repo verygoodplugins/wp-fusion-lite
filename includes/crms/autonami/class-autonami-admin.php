@@ -60,7 +60,6 @@ class WPF_Autonami_Admin {
 	 *
 	 * @since 3.37.14
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -100,7 +99,6 @@ class WPF_Autonami_Admin {
 	 *
 	 * @return array $settings The settings.
 	 * @since  3.37.14
-	 *
 	 */
 	public function register_connection_settings( $settings, $options ) {
 
@@ -163,9 +161,7 @@ class WPF_Autonami_Admin {
 	 *
 	 * @return array The options.
 	 * @since  3.37.14
-	 *
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( true == $options['connection_configured'] ) {

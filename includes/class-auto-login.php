@@ -55,7 +55,6 @@ class WPF_Auto_Login {
 	 * @access public
 	 * @return string Contact ID
 	 */
-
 	public function get_contact_id_from_url() {
 
 		$contact_id = false;
@@ -102,7 +101,6 @@ class WPF_Auto_Login {
 	 * @access public
 	 * @return void
 	 */
-
 	public function start_auto_login( $contact_id = false ) {
 
 		if ( wpf_is_user_logged_in() || ( is_admin() && ! wp_doing_ajax() ) ) {
@@ -286,7 +284,6 @@ class WPF_Auto_Login {
 	 * @access public
 	 * @return void
 	 */
-
 	public function maybe_skip( $skip, $contact_data ) {
 
 		$request_uris = apply_filters( 'wpf_skip_auto_login_request_uris', array() );
@@ -390,6 +387,7 @@ class WPF_Auto_Login {
 
 		if ( doing_wpf_auto_login() ) {
 
+			$contact_id = $this->auto_login_user['contact_id'];
 			$this->clear_auto_login_metadata( $this->auto_login_user['user_id'] );
 			$this->auto_login_user = false;
 
@@ -397,7 +395,7 @@ class WPF_Auto_Login {
 
 				// Clear the cookies if headers haven't been sent yet.
 				setcookie( 'wpf_contact', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
-				setcookie( 'wordpress_logged_in_wp_fusion_cachebuster', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
+				setcookie( 'wordpress_logged_in_wpfusioncachebuster', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
 
 				wp_destroy_current_session();
 				wp_clear_auth_cookie();
@@ -405,7 +403,7 @@ class WPF_Auto_Login {
 			} else {
 
 				// If headers have been sent, set a transient to clear the cookie on next load (since 3.36.1 we'll use update_option instead of set_transient).
-				update_option( 'wpf_end_auto_login_' . $contact_data['contact_id'], true );
+				update_option( 'wpf_end_auto_login_' . $contact_id, true );
 
 			}
 		}
@@ -629,7 +627,6 @@ class WPF_Auto_Login {
 	 * @access public
 	 * @return mixed HTML message
 	 */
-
 	public function maybe_doing_it_wrong() {
 
 		if ( is_admin() ) {

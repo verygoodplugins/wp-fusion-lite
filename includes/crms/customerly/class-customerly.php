@@ -44,18 +44,16 @@ class WPF_Customerly {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Customerly_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -64,7 +62,6 @@ class WPF_Customerly {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
@@ -77,10 +74,9 @@ class WPF_Customerly {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
-		if( isset( $post_data['contact_id'] ) ) {
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
 		}
 
@@ -89,7 +85,6 @@ class WPF_Customerly {
 		$post_data['contact_id'] = sanitize_email( $payload->data->user->data->email );
 
 		return $post_data;
-
 	}
 
 	/**
@@ -98,28 +93,25 @@ class WPF_Customerly {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'customerly.io') !== false ) {
+		if ( strpos( $url, 'customerly.io' ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if ( isset( $body_json->error ) ) {
 
 				// Don't treat it as an error during connect
-				if( $body_json->error->message == 'User doesn\'t exist' ) {
+				if ( $body_json->error->message == 'User doesn\'t exist' ) {
 					return $response;
 				}
 
 				$response = new WP_Error( 'error', $body_json->error->message );
 
 			}
-
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -128,7 +120,6 @@ class WPF_Customerly {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_key = null ) {
 
 		// Get saved data from DB
@@ -137,12 +128,12 @@ class WPF_Customerly {
 		}
 
 		$this->params = array(
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'timeout'     => 30,
-			'headers'     => array(
-				'Authentication' 	=> 'AccessToken: ' . $access_key,
-				'Content-Type'		=> 'application/json'
-			)
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
+				'Authentication' => 'AccessToken: ' . $access_key,
+				'Content-Type'   => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -151,13 +142,13 @@ class WPF_Customerly {
 	/**
 	 * Get user edit url
 	 *
-	 * @param string $access_key
-	 * @param string $email
+	 * @param string  $access_key
+	 * @param string  $email
 	 * @param integer $user_id
 	 * @return string
 	 */
-	public function get_user_edit_url($access_key,$email,$user_id){
-		if(empty($email)){
+	public function get_user_edit_url( $access_key, $email, $user_id ) {
+		if ( empty( $email ) ) {
 			return;
 		}
 
@@ -165,21 +156,21 @@ class WPF_Customerly {
 			$this->get_params( $access_key );
 		}
 
-		$edit_url = get_user_meta($user_id,'wpf_customerly_edit_url',true);
-		if(!empty($edit_url)){
+		$edit_url = get_user_meta( $user_id, 'wpf_customerly_edit_url', true );
+		if ( ! empty( $edit_url ) ) {
 			return $edit_url;
 		}
 
-		$request  = 'https://api.customerly.io/v1/users?email='.$email;
+		$request  = 'https://api.customerly.io/v1/users?email=' . $email;
 		$response = wp_safe_remote_get( $request, $this->params );
-		
-		if( is_wp_error( $response ) ) {
+
+		if ( is_wp_error( $response ) ) {
 			return;
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-		$edit_url =  'https://app.customerly.io/apps/'.$body_json->data->app_id.'/contact/'.$body_json->data->crmhero_user_id.'';
-		update_user_meta($user_id,'wpf_customerly_edit_url',$edit_url);
+		$edit_url  = 'https://app.customerly.io/apps/' . $body_json->data->app_id . '/contact/' . $body_json->data->crmhero_user_id . '';
+		update_user_meta( $user_id, 'wpf_customerly_edit_url', $edit_url );
 		return $edit_url;
 	}
 
@@ -189,13 +180,12 @@ class WPF_Customerly {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_key = null, $test = false ) {
 
 		if ( ! $this->params ) {
 			$this->get_params( $access_key );
 		}
-		
+
 		if ( $test == false ) {
 			return true;
 		}
@@ -203,12 +193,11 @@ class WPF_Customerly {
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -218,7 +207,6 @@ class WPF_Customerly {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -229,7 +217,6 @@ class WPF_Customerly {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -239,7 +226,6 @@ class WPF_Customerly {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		// Can't sync list tags with Customerly
@@ -249,7 +235,6 @@ class WPF_Customerly {
 		wpf_get_option( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -259,13 +244,12 @@ class WPF_Customerly {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$crm_fields = wpf_get_option( 'crm_fields', array() );
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/customerly-fields.php';
+		require __DIR__ . '/admin/customerly-fields.php';
 
 		foreach ( $customerly_fields as $index => $data ) {
 			$crm_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -276,7 +260,6 @@ class WPF_Customerly {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -286,13 +269,11 @@ class WPF_Customerly {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		// Customerly uses emails to identify users
 
 		return $email_address;
-
 	}
 
 
@@ -302,7 +283,6 @@ class WPF_Customerly {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		// Customerly doesn't support looking up users by ID
@@ -321,37 +301,35 @@ class WPF_Customerly {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+		$user_id      = wp_fusion()->user->get_user_id( $contact_id );
 		$current_tags = wp_fusion()->user->get_tags( $user_id );
 
 		$update_data = array(
 			'users' => array(
 				array(
-					'email'	=> $contact_id,
-					'tags' 	=> $current_tags
-				)
-			) 
+					'email' => $contact_id,
+					'tags'  => $current_tags,
+				),
+			),
 		);
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -360,37 +338,35 @@ class WPF_Customerly {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+		$user_id      = wp_fusion()->user->get_user_id( $contact_id );
 		$current_tags = wp_fusion()->user->get_tags( $user_id );
 
-		$update_data = array( 
-			'users' => array( 
+		$update_data = array(
+			'users' => array(
 				array(
-					'email'	=> $contact_id,
-					'tags' 	=> $current_tags
-				)
-			) 
+					'email' => $contact_id,
+					'tags'  => $current_tags,
+				),
+			),
 		);
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -400,30 +376,28 @@ class WPF_Customerly {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		require dirname( __FILE__ ) . '/admin/customerly-fields.php';
+		require __DIR__ . '/admin/customerly-fields.php';
 
 		$update_data = array( 'users' => array( array() ) );
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			foreach( $customerly_fields as $key => $field_data ) {
+			foreach ( $customerly_fields as $key => $field_data ) {
 
 				// Built in fields
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 					$update_data['users'][0][ $crm_field ] = $value;
 					continue 2;
 				}
-
 			}
 
-			if( ! isset( $update_data['users'][0]['attributes'] ) ) {
+			if ( ! isset( $update_data['users'][0]['attributes'] ) ) {
 				$update_data['users'][0]['attributes'] = array();
 			}
 
@@ -431,18 +405,17 @@ class WPF_Customerly {
 
 		}
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return $data['email'];
-
 	}
 
 	/**
@@ -451,30 +424,28 @@ class WPF_Customerly {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		require dirname( __FILE__ ) . '/admin/customerly-fields.php';
+		require __DIR__ . '/admin/customerly-fields.php';
 
 		$update_data = array( 'users' => array( array() ) );
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			foreach( $customerly_fields as $key => $field_data ) {
+			foreach ( $customerly_fields as $key => $field_data ) {
 
 				// Built in fields
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 					$update_data['users'][0][ $crm_field ] = $value;
 					continue 2;
 				}
-
 			}
 
-			if( ! isset( $update_data['users'][0]['attributes'] ) ) {
+			if ( ! isset( $update_data['users'][0]['attributes'] ) ) {
 				$update_data['users'][0]['attributes'] = array();
 			}
 
@@ -482,18 +453,17 @@ class WPF_Customerly {
 
 		}
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api.customerly.io/v1/users';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -502,13 +472,11 @@ class WPF_Customerly {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		// Not supported
 
 		return array();
-
 	}
 
 
@@ -518,15 +486,10 @@ class WPF_Customerly {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// Not supported
 
 		return array();
-
-
 	}
-
-
 }

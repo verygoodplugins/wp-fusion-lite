@@ -153,7 +153,4 @@ class AC_Deal extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

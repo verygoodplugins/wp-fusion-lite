@@ -55,7 +55,6 @@ class WPF_NationBuilder {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// OAuth
@@ -64,10 +63,9 @@ class WPF_NationBuilder {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_NationBuilder_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -76,7 +74,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -115,7 +112,6 @@ class WPF_NationBuilder {
 		}
 
 		return $value;
-
 	}
 
 
@@ -125,7 +121,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -141,7 +136,6 @@ class WPF_NationBuilder {
 		$post_data['contact_id'] = absint( $payload->payload->person->id );
 
 		return $post_data;
-
 	}
 
 
@@ -151,7 +145,6 @@ class WPF_NationBuilder {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_token = null, $url_slug = null ) {
 
 		// Get saved data from DB
@@ -181,7 +174,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'nationbuilder' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -206,7 +198,6 @@ class WPF_NationBuilder {
 						$response = new WP_Error( 'error', $body->message );
 
 					}
-
 				} else {
 
 					$response = new WP_Error( 'error', wp_remote_retrieve_response_message( $response ) );
@@ -216,7 +207,6 @@ class WPF_NationBuilder {
 		}
 
 		return $response;
-
 	}
 
 
@@ -227,7 +217,6 @@ class WPF_NationBuilder {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_token = null, $slug = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -246,7 +235,6 @@ class WPF_NationBuilder {
 		}
 
 		return true;
-
 	}
 
 
@@ -256,7 +244,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -267,7 +254,6 @@ class WPF_NationBuilder {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -277,7 +263,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -332,7 +317,6 @@ class WPF_NationBuilder {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -342,7 +326,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -351,7 +334,7 @@ class WPF_NationBuilder {
 
 		// Load built in fields first
 
-		require dirname( __FILE__ ) . '/admin/nationbuilder-fields.php';
+		require __DIR__ . '/admin/nationbuilder-fields.php';
 
 		$built_in_fields = array();
 
@@ -393,7 +376,6 @@ class WPF_NationBuilder {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -403,7 +385,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -424,7 +405,6 @@ class WPF_NationBuilder {
 		}
 
 		return $response->person->id;
-
 	}
 
 
@@ -434,7 +414,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -477,7 +456,6 @@ class WPF_NationBuilder {
 		}
 
 		return $tags;
-
 	}
 
 
@@ -487,7 +465,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -512,7 +489,6 @@ class WPF_NationBuilder {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -521,7 +497,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -546,7 +521,6 @@ class WPF_NationBuilder {
 		}
 
 		return true;
-
 	}
 
 
@@ -556,7 +530,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		// Handle address fields.
@@ -600,7 +573,6 @@ class WPF_NationBuilder {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->person->id;
-
 	}
 
 	/**
@@ -609,7 +581,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		// Handle address fields.
@@ -653,7 +624,6 @@ class WPF_NationBuilder {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -662,7 +632,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -711,7 +680,6 @@ class WPF_NationBuilder {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -721,7 +689,6 @@ class WPF_NationBuilder {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -760,8 +727,5 @@ class WPF_NationBuilder {
 		}
 
 		return $contact_ids;
-
 	}
-
-
 }

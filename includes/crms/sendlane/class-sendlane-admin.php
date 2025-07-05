@@ -44,7 +44,6 @@ class WPF_Sendlane_Admin {
 	 *
 	 * @since   3.24.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();

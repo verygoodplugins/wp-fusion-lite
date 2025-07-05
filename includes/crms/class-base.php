@@ -565,7 +565,7 @@ class WPF_CRM_Base {
 	 *
 	 * @since  3.36.17
 	 *
-	 * @param  string       $contact_id The contact ID.
+	 * @param  string $contact_id The contact ID.
 	 * @return string|false The email address or false.
 	 */
 	public function get_email_from_cid( $contact_id ) {
@@ -632,6 +632,52 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Creates a new tag in the CRM and syncs the tags list.
+	 *
+	 * @since  3.45.8
+	 *
+	 * @param  string $tag_name The tag name to create.
+	 * @return int|WP_Error The tag ID or error if failed.
+	 */
+	public function add_tag( $tag_name ) {
+
+		if ( ! method_exists( $this->crm, 'add_tag' ) ) {
+			return new WP_Error( 'error', 'This CRM does not support creating tags via the API.' );
+		}
+
+		$tag_id = $this->crm->add_tag( $tag_name );
+
+		if ( is_wp_error( $tag_id ) ) {
+			return $tag_id;
+		}
+
+		wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag <strong>' . $tag_name . '</strong> with ID <code>' . $tag_id . '</code>' );
+
+		$available_tags = wpf_get_option( 'available_tags', array() );
+
+		if ( is_array( reset( $available_tags ) ) ) {
+
+			// With categories. Just HubSpot for now.
+
+			$available_tags[ $tag_id ] = array(
+				'label'    => $tag_name,
+				'category' => 'Static Lists',
+			);
+
+		} else {
+
+			$available_tags[ $tag_id ] = $tag_name;
+
+		}
+
+		asort( $available_tags );
+
+		wpf_update_option( 'available_tags', $available_tags );
+
+		return $tag_id;
+	}
+
+	/**
 	 * When resetting the WPF settings page, the old CRM gets loaded before the
 	 * save_options() function runs on the init hook to clear out the settings
 	 * For lack of a better solution, we'll check here to see if the settings
@@ -688,7 +734,6 @@ class WPF_CRM_Base {
 	 * @since   1.0
 	 * @return  array
 	 */
-
 	public function get_crms_for_select() {
 
 		$select_array = array();
@@ -730,7 +775,6 @@ class WPF_CRM_Base {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function ajax_sync() {
 
 		$result = wp_fusion()->crm->sync();
@@ -755,7 +799,6 @@ class WPF_CRM_Base {
 	 * @access public
 	 * @return array
 	 */
-
 	public function map_meta_fields( $user_meta ) {
 
 		if ( ! is_array( $user_meta ) || empty( $user_meta ) ) {
@@ -1131,7 +1174,6 @@ class WPF_CRM_Base {
 	 * @access  private
 	 * @return  void
 	 */
-
 	private function add_to_buffer( $method, $args ) {
 
 		if ( $method == 'apply_tags' || $method == 'remove_tags' ) {

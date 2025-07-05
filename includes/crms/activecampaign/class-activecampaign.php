@@ -55,7 +55,6 @@ class WPF_ActiveCampaign {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		$this->api_url = trailingslashit( wpf_get_option( 'ac_url' ) );
@@ -100,7 +99,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact']['id'] ) ) {
@@ -121,7 +119,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'date' === $field_type && ! empty( $value ) ) {
@@ -156,7 +153,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return array Params
 	 */
-
 	public function get_params( $api_key = false ) {
 
 		$params = array(
@@ -179,7 +175,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( 'WP Fusion; ' . home_url() === $args['user-agent'] && false !== strpos( $url, '.api-' ) ) {
@@ -272,7 +267,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
@@ -308,7 +302,6 @@ class WPF_ActiveCampaign {
 	 * @access  public
 	 * @return  int Tracking ID
 	 */
-
 	public function get_tracking_id() {
 
 		// Get site tracking ID
@@ -332,7 +325,6 @@ class WPF_ActiveCampaign {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_url = null, $api_key = null, $test = false ) {
 
 		if ( isset( $this->app ) && ! $test ) {
@@ -373,7 +365,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -394,7 +385,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function sync_tags() {
 
 		$offset         = 0;
@@ -438,7 +428,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
 
 		$offset          = 0;
@@ -486,7 +475,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		// Load built in fields first
@@ -580,10 +568,9 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
-		$response = wp_safe_remote_get( $this->api_url . 'api/3/contacts?email=' . rawurlencode( $email_address ), $this->params );
+		$response = wp_safe_remote_get( $this->api_url . 'api/3/contacts?email=' . rawurlencode( $email_address ), $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -605,7 +592,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$request = add_query_arg(
@@ -643,7 +629,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$request = add_query_arg(
@@ -695,7 +680,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$request = add_query_arg(
@@ -890,7 +874,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! empty( $data['lists'] ) ) {
@@ -973,7 +956,6 @@ class WPF_ActiveCampaign {
 	 *
 	 * @return array|WP_Error User meta data that was returned or error.
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$response = wp_safe_remote_get( $this->api_url . 'api/3/contacts/' . $contact_id, $this->get_params() );
@@ -1043,7 +1025,6 @@ class WPF_ActiveCampaign {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag_name = false ) {
 
 		$url = $this->api_url . 'api/3/contacts?limit=100';
@@ -1132,7 +1113,6 @@ class WPF_ActiveCampaign {
 	 * @since  3.24.11
 	 * @return int
 	 */
-
 	public function get_connection_id() {
 
 		$connection_id = get_option( 'wpf_ac_connection_id' );
@@ -1219,7 +1199,6 @@ class WPF_ActiveCampaign {
 	 * @since 3.24.11
 	 * @return void
 	 */
-
 	public function delete_connection( $connection_id ) {
 
 		$params = $this->get_params();
@@ -1239,7 +1218,6 @@ class WPF_ActiveCampaign {
 	 * @since 3.24.11
 	 * @return int
 	 */
-
 	public function get_customer_id( $contact_id, $connection_id, $order_id = false ) {
 
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );

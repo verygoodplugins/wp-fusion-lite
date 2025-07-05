@@ -87,7 +87,6 @@ class WPF_Groundhogg_REST {
 	 *
 	 * @since 3.38.10
 	 */
-
 	public function __construct() {
 
 		// Set up admin options.
@@ -145,7 +144,6 @@ class WPF_Groundhogg_REST {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		$payload = json_decode( stripslashes( file_get_contents( 'php://input' ) ) );
@@ -190,7 +188,6 @@ class WPF_Groundhogg_REST {
 	 * @param  string $password The application password.
 	 * @return array  $params The API parameters.
 	 */
-
 	public function get_params( $url = null, $username = null, $password = null ) {
 
 		if ( $this->params ) {
@@ -231,7 +228,6 @@ class WPF_Groundhogg_REST {
 	 * @param  string           $url      The HTTP request URL.
 	 * @return WP_HTTP_Response $response The response.
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
@@ -288,7 +284,6 @@ class WPF_Groundhogg_REST {
 	 * @param  bool   $test     Whether to validate the credentials.
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 */
-
 	public function connect( $url = null, $username = null, $password = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -317,7 +312,6 @@ class WPF_Groundhogg_REST {
 	 *
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -616,8 +610,8 @@ class WPF_Groundhogg_REST {
 			return $response;
 		}
 
-		$response = json_decode( wp_remote_retrieve_body( $response ) );
-		$tag_id   = key( $response->tags );
+		$response = json_decode( wp_remote_retrieve_body( $response ), true );
+		$tag_id   = key( $response['tags'] );
 		return $tag_id;
 	}
 

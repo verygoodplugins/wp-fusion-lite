@@ -90,7 +90,7 @@ class WPF_HighLevel_Admin {
 
 
 	/**
-	 * Hooks to run when this CRM is selected as active
+	 * Completes the OAuth process in the admin.
 	 *
 	 * @access  public
 	 * @since   3.41.11
@@ -101,72 +101,10 @@ class WPF_HighLevel_Admin {
 
 			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
 
-			$body = array(
-				'grant_type'    => 'authorization_code',
-				'code'          => $code,
-				'client_id'     => $this->crm->client_id,
-				'client_secret' => $this->crm->client_secret,
-				'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=highlevel' ),
-			);
-
-			$params = array(
-				'timeout'    => 30,
-				'user-agent' => 'WP Fusion; ' . home_url(),
-				'headers'    => array(
-					'Content-Type' => 'application/x-www-form-urlencoded',
-				),
-				'body'       => $body,
-			);
-
-			$response = wp_safe_remote_post( 'https://services.leadconnectorhq.com/oauth/token', $params );
-
-			if ( is_wp_error( $response ) ) {
-				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
-				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
-				return false;
-			} elseif ( 403 === wp_remote_retrieve_response_code( $response ) ) {
-				wp_fusion()->admin_notices->add_notice( '403 error requesting authorization code: ' . wp_remote_retrieve_body( $response ) );
-				wpf_log( 'error', 0, '403 error requesting authorization code: ' . wp_remote_retrieve_body( $response ) );
-				return false;
-			}
-
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-			wp_fusion()->settings->set( 'highlevel_refresh_token', $response->refresh_token );
-			wp_fusion()->settings->set( 'highlevel_token', $response->access_token );
-			wp_fusion()->settings->set( 'crm', $this->slug );
-
-			if ( isset( $response->{'locationId'} ) ) {
-
-				// Single location.
-				wp_fusion()->settings->set( 'highlevel_location_id', $response->{'locationId'} );
-				wp_fusion()->settings->set( 'highlevel_locations', false );
-
-			} elseif ( 'Company' === $response->{'userType'} ) {
-
-				// Multiple locations.
-
-				$company_id = $response->{'companyId'};
-				$user_id    = $response->{'userId'};
-				$response   = wp_safe_remote_get( "https://services.leadconnectorhq.com/oauth/installedLocations/?companyId={$company_id}&appId=640f1d950acf1dc6569948aa", $this->crm->get_params() );
-				$response   = json_decode( wp_remote_retrieve_body( $response ) );
-
-				$locations = wp_list_pluck( $response->locations, 'name', '_id' );
-
-				wp_fusion()->settings->set( 'highlevel_locations', $locations );
-				wp_fusion()->settings->set( 'highlevel_location_id', $response->locations[0]->{'_id'} );
-				wp_fusion()->settings->set( 'highlevel_company_id', $company_id );
-				wp_fusion()->settings->set( 'highlevel_user_id', $user_id );
-
-				// Get the location access token.
-				$this->crm->location_id = $response->locations[0]->{'_id'};
-				$this->crm->refresh_location_token();
-
-			}
+			$this->crm->authorize( $code );
 
 			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
-
 		}
 	}
 
@@ -304,7 +242,6 @@ class WPF_HighLevel_Admin {
 	 * @param array  $field The field properties
 	 * @return mixed HTML output
 	 */
-
 	public function show_field_highlevel_header_begin( $id, $field ) {
 
 		echo '</table>';

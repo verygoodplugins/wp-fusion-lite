@@ -76,7 +76,4 @@ class AC_Account extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

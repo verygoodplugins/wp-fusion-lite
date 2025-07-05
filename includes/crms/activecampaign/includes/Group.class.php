@@ -55,7 +55,4 @@ class AC_Group extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

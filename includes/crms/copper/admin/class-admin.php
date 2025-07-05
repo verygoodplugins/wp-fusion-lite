@@ -12,7 +12,6 @@ class WPF_Copper_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -37,7 +36,6 @@ class WPF_Copper_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -52,7 +50,6 @@ class WPF_Copper_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -87,13 +84,12 @@ class WPF_Copper_Admin {
 		return $settings;
 	}
 
-		/**
+	/**
 	 * Loads Copper specific settings fields
 	 *
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		if ( wp_fusion()->is_full_version() ) {
@@ -157,7 +153,6 @@ class WPF_Copper_Admin {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function validate_import_trigger( $input, $setting ) {
 
 		$prev_value = wpf_get_option( 'copper_add_tag' );
@@ -209,7 +204,6 @@ class WPF_Copper_Admin {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function validate_update_trigger( $input, $setting ) {
 
 		$prev_value = wpf_get_option( 'copper_update_trigger' );
@@ -261,7 +255,6 @@ class WPF_Copper_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -286,7 +279,6 @@ class WPF_Copper_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_copper_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -301,7 +293,6 @@ class WPF_Copper_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

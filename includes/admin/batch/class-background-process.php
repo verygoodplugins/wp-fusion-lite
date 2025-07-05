@@ -191,7 +191,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * Update queue
 		 *
 		 * @param string $key Key.
-		 * @param array $data Data.
+		 * @param array  $data Data.
 		 *
 		 * @return $this
 		 */
@@ -451,9 +451,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * Update Status
 		 *
 		 * We'll keep track of what's going on in an option key for troubleshooting
-		 *
 		 */
-
 		protected function update_status( $batch, $key, $starttime ) {
 
 			$status = get_site_option( 'wpfb_status_' . $batch->key );
@@ -776,7 +774,6 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 * Cancel Process
 		 *
 		 * Stop processing queue items, clear cronjob and delete batch.
-		 *
 		 */
 		public function cancel_process( $key ) {
 

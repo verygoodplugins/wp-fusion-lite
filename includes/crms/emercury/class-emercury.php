@@ -73,18 +73,16 @@ class WPF_Emercury {
 	 *
 	 * @since 3.37.8
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-emercury-admin.php';
+			require_once __DIR__ . '/class-emercury-admin.php';
 			new WPF_Emercury_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -94,7 +92,6 @@ class WPF_Emercury {
 	 *
 	 * @since 3.37.8
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -103,7 +100,6 @@ class WPF_Emercury {
 
 		// Add tracking code to header.
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
-
 	}
 
 
@@ -115,14 +111,12 @@ class WPF_Emercury {
 	 *
 	 * @link   http://help.emercury.net/en/articles/1783995-emercury-api-xml
 	 *
-	 * @param  int   $seconds The seconds.
+	 * @param  int $seconds The seconds.
 	 * @return int   Sleep time
 	 */
-
 	public function set_sleep_time( $seconds ) {
 
 		return 1;
-
 	}
 
 	/**
@@ -188,7 +182,6 @@ class WPF_Emercury {
 		}
 
 		return $post_data;
-
 	}
 
 
@@ -202,7 +195,6 @@ class WPF_Emercury {
 	 * @param  string $field      The CRM field
 	 * @return mixed  The value.
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'datepicker' == $field_type || 'date' == $field_type ) {
@@ -217,7 +209,6 @@ class WPF_Emercury {
 			return $value;
 
 		}
-
 	}
 
 
@@ -266,7 +257,6 @@ class WPF_Emercury {
 	 * @param  string           $url      The HTTP request URL.
 	 * @return WP_HTTP_Response $response The response.
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
@@ -287,7 +277,6 @@ class WPF_Emercury {
 		}
 
 		return $response;
-
 	}
 
 
@@ -299,9 +288,9 @@ class WPF_Emercury {
 	 *
 	 * @since  3.37.8
 	 *
-	 * @param  string        $api_email The first API credential.
-	 * @param  string        $api_key   The second API credential.
-	 * @param  bool          $test      Whether to validate the credentials.
+	 * @param  string $api_email The first API credential.
+	 * @param  string $api_key   The second API credential.
+	 * @param  bool   $test      Whether to validate the credentials.
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 */
 	public function connect( $api_email = null, $api_key = null, $test = false ) {
@@ -361,7 +350,6 @@ class WPF_Emercury {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -372,7 +360,6 @@ class WPF_Emercury {
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -400,7 +387,6 @@ class WPF_Emercury {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
 
 		$available_lists = array();
@@ -424,7 +410,6 @@ class WPF_Emercury {
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
 		return $available_lists;
-
 	}
 
 
@@ -435,11 +420,10 @@ class WPF_Emercury {
 	 *
 	 * @return array|WP_Error Either the available fields in the CRM, or a WP_Error.
 	 */
-
 	public function sync_crm_fields() {
 
 		// Load built in fields
-		require_once dirname( __FILE__ ) . '/emercury-fields.php';
+		require_once __DIR__ . '/emercury-fields.php';
 
 		$built_in_fields = array();
 
@@ -482,7 +466,6 @@ class WPF_Emercury {
 	 * @param string $email_address The email address to look up.
 	 * @return int|WP_Error The contact ID in the CRM.
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$emercury_list = wpf_get_option( 'emercury_list' );
@@ -494,13 +477,13 @@ class WPF_Emercury {
 		if ( is_wp_error( $this->connect() ) ) {
 			return false;
 		}
-        
-        $email_address = strtolower($email_address);
-        
+
+		$email_address = strtolower( $email_address );
+
 		$response = $this->app->getSubscribers( $emercury_list, $email_address );
 
-		if ( $response['code'] == 'ok' && isset( $response['message']->subscribers->subscriber->email ) && (string) strtolower($response['message']->subscribers->subscriber->email) === $email_address ) {
-			$contact_id = $emercury_list . '_' . strtolower($response['message']->subscribers->subscriber->email);
+		if ( $response['code'] == 'ok' && isset( $response['message']->subscribers->subscriber->email ) && (string) strtolower( $response['message']->subscribers->subscriber->email ) === $email_address ) {
+			$contact_id = $emercury_list . '_' . strtolower( $response['message']->subscribers->subscriber->email );
 		} else {
 			$contact_id = false;
 		}
@@ -519,10 +502,9 @@ class WPF_Emercury {
 	 * @param int $contact_id The contact ID to load the tags for.
 	 * @return array|WP_Error The tags currently applied to the contact in the CRM.
 	 */
-
 	public function get_tags( $contact_id ) {
-	    
-	    $tags = array();
+
+		$tags = array();
 
 		list( $emercury_list, $email_address ) = explode( '_', $contact_id );
 
@@ -560,7 +542,6 @@ class WPF_Emercury {
 	 * @param int   $contact_id The contact ID to apply the tags to.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		list( $emercury_list, $email_address ) = explode( '_', $contact_id );
@@ -591,7 +572,6 @@ class WPF_Emercury {
 	 * @param int   $contact_id The contact ID to remove the tags from.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		list($emercury_list, $email_address) = explode( '_', $contact_id );
@@ -611,7 +591,6 @@ class WPF_Emercury {
 		}
 
 		return true;
-
 	}
 
 
@@ -623,7 +602,6 @@ class WPF_Emercury {
 	 * @param array $contact_data    An associative array of contact fields and field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-
 	public function add_contact( $contact_data ) {
 
 		$emercury_list = wpf_get_option( 'emercury_list' );
@@ -643,12 +621,11 @@ class WPF_Emercury {
 		}
 
 		if ( $response['code'] == 'ok' && isset( $response['message']->subscribers->subscriber->email ) ) {
-			$contact_id = $emercury_list . '_' . strtolower($response['message']->subscribers->subscriber->email);
+			$contact_id = $emercury_list . '_' . strtolower( $response['message']->subscribers->subscriber->email );
 		}
 
 		// Get new contact ID out of response
 		return $contact_id;
-
 	}
 
 	/**
@@ -660,7 +637,6 @@ class WPF_Emercury {
 	 * @param array $contact_data    An associative array of contact fields and field values.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-
 	public function update_contact( $contact_id, $contact_data ) {
 
 		list( $emercury_list ) = explode( '_', $contact_id );
@@ -694,7 +670,6 @@ class WPF_Emercury {
 	 * @param int $contact_id The ID of the contact to load.
 	 * @return array|WP_Error User meta data that was returned.
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		list( $emercury_list, $email_address ) = explode( '_', $contact_id );
@@ -742,7 +717,6 @@ class WPF_Emercury {
 	 * @param string $tag The tag ID or name to search for.
 	 * @return array Contact IDs returned.
 	 */
-
 	public function load_contacts( $tag ) {
 
 		$emercury_list = wpf_get_option( 'emercury_list' );
@@ -768,7 +742,6 @@ class WPF_Emercury {
 		// Iterate over the contacts returned in the response and build an array such that $contact_ids = array(1,3,5,67,890);
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -796,7 +769,6 @@ class WPF_Emercury {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -837,7 +809,5 @@ class WPF_Emercury {
 		echo '</script>';
 
 		echo '<!-- End of Emercury.net Tracking Code via WP Fusion -->';
-
 	}
-
 }

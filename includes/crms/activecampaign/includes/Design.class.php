@@ -27,7 +27,4 @@ class AC_Design extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

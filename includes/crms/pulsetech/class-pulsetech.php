@@ -94,13 +94,12 @@ class WPF_PulseTechnologyCRM {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-pulsetech-admin.php';
+			require_once __DIR__ . '/class-pulsetech-admin.php';
 			new WPF_PulseTechnologyCRM_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -110,7 +109,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @since 3.37.21
 	 */
-
 	public function init() {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -131,7 +129,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return false|mixed|string[]
 	 * @since 3.37.21
-	 *
 	 */
 	public function format_field_value( $value, $field_type, $field ) {
 		if ( 'multiselect' == $field_type ) {
@@ -181,7 +178,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return array $params The API parameters.
 	 * @since 3.37.21
-	 *
 	 */
 	public function get_params( $api_url = null, $client_id = null, $client_secret = null ) {
 		if ( $this->params ) {
@@ -203,15 +199,15 @@ class WPF_PulseTechnologyCRM {
 		$this->client_id     = $client_id;
 		$this->token         = $token;
 
-		$this->params = [
+		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 15,
-		];
+		);
 
 		if ( $token ) {
-			$this->params['headers'] = [
+			$this->params['headers'] = array(
 				'Authorization' => 'Bearer ' . $this->token,
-			];
+			);
 		}
 
 		return $this->params;
@@ -223,7 +219,6 @@ class WPF_PulseTechnologyCRM {
 	 * @access  public
 	 * @return  bool
 	 * @since 3.37.21
-	 *
 	 */
 	public function refresh_token() {
 		$refresh_token = wpf_get_option( 'pulsetech_refresh_token' );
@@ -256,7 +251,6 @@ class WPF_PulseTechnologyCRM {
 		wp_fusion()->settings->set( 'pulsetech_refresh_token', $body_json->refresh_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -300,7 +294,6 @@ class WPF_PulseTechnologyCRM {
 	 * @access  public
 	 * @return  bool
 	 * @since 3.37.21
-	 *
 	 */
 	public function connect( $access_token = null, $test = false ) {
 
@@ -319,7 +312,6 @@ class WPF_PulseTechnologyCRM {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -327,7 +319,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return bool
 	 * @since 3.37.21
-	 *
 	 */
 	public function sync() {
 
@@ -350,7 +341,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return mixed
 	 * @since 3.37.21
-	 *
 	 */
 	private function pulse_api_get( $uri ) {
 		$params  = $this->get_params();
@@ -374,7 +364,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return mixed
 	 * @since 3.37.21
-	 *
 	 */
 	private function pulse_api_post( $uri, $data ) {
 		$params         = $this->get_params();
@@ -388,7 +377,6 @@ class WPF_PulseTechnologyCRM {
 		}
 
 		return json_decode( wp_remote_retrieve_body( $response ) );
-
 	}
 
 	/**
@@ -399,7 +387,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return mixed
 	 * @since 3.37.21
-	 *
 	 */
 	private function pulse_api_put( $uri, $data ) {
 		$params           = $this->get_params();
@@ -422,13 +409,12 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 * @since 3.37.21
-	 *
 	 */
 	public function sync_tags() {
 
 		$page      = 1;
 		$last_page = 1;
-		$tags      = [];
+		$tags      = array();
 
 		while ( $page <= $last_page ) {
 			$uri = 'tags';
@@ -443,7 +429,7 @@ class WPF_PulseTechnologyCRM {
 				return $response;
 			}
 
-			$page ++;
+			++$page;
 			$last_page = $response->meta->last_page;
 
 			if ( isset( $response->data ) && is_array( $response->data ) ) {
@@ -464,7 +450,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return array|WP_Error Either the available fields in the CRM, or a WP_Error.
 	 * @since 3.37.21
-	 *
 	 */
 	public function sync_crm_fields() {
 
@@ -475,12 +460,12 @@ class WPF_PulseTechnologyCRM {
 		}
 
 		$fields     = $response->data;
-		$crm_fields = [];
+		$crm_fields = array();
 
-		$hide_fields = [
+		$hide_fields = array(
 			'lead_source_id',
-			//We can add more fields here to avoid showing them on WPFusion since the api is generic
-		];
+			// We can add more fields here to avoid showing them on WPFusion since the api is generic
+		);
 
 		foreach ( $fields as $key => $field ) {
 			if ( ! in_array( $key, $hide_fields ) ) {
@@ -514,7 +499,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return bool
 	 * @since 3.37.21
-	 *
 	 */
 	private function str_contains( $haystack, $needles ) {
 		foreach ( (array) $needles as $needle ) {
@@ -533,11 +517,10 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return int|WP_Error The contact ID in the CRM.
 	 * @since 3.37.21
-	 *
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$response = $this->pulse_api_post( 'contact/find/', [ 'email' => $email_address ] );
+		$response = $this->pulse_api_post( 'contact/find/', array( 'email' => $email_address ) );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -558,13 +541,12 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return array|WP_Error The tags currently applied to the contact in the CRM.
 	 * @since 3.37.21
-	 *
 	 */
 	public function get_tags( $contact_id ) {
 
 		$page      = 1;
 		$last_page = 1;
-		$tags      = [];
+		$tags      = array();
 
 		while ( $page <= $last_page ) {
 			$uri = "contacts/$contact_id/tags";
@@ -579,7 +561,7 @@ class WPF_PulseTechnologyCRM {
 				return $response;
 			}
 
-			$page ++;
+			++$page;
 			$last_page = $response->meta->last_page;
 
 			if ( isset( $response->data ) && is_array( $response->data ) ) {
@@ -597,15 +579,14 @@ class WPF_PulseTechnologyCRM {
 	 * Applies tags to a contact.
 	 *
 	 * @param array $tags A numeric array of tags to apply to the contact.
-	 * @param int $contact_id The contact ID to apply the tags to.
+	 * @param int   $contact_id The contact ID to apply the tags to.
 	 *
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 * @since 3.37.21
-	 *
 	 */
 	public function apply_tags( $tags, $contact_id ) {
 
-		$response = $this->pulse_api_post( "contacts/$contact_id/tag-apply", [ 'tag_id' => $tags ] );
+		$response = $this->pulse_api_post( "contacts/$contact_id/tag-apply", array( 'tag_id' => $tags ) );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -618,22 +599,20 @@ class WPF_PulseTechnologyCRM {
 	 * Removes tags from a contact.
 	 *
 	 * @param array $tags A numeric array of tags to remove from the contact.
-	 * @param int $contact_id The contact ID to remove the tags from.
+	 * @param int   $contact_id The contact ID to remove the tags from.
 	 *
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 * @since 3.37.21
-	 *
 	 */
 	public function remove_tags( $tags, $contact_id ) {
 
-		$response = $this->pulse_api_post( "contacts/$contact_id/untag", [ 'tag_id' => $tags ] );
+		$response = $this->pulse_api_post( "contacts/$contact_id/untag", array( 'tag_id' => $tags ) );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -643,7 +622,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 * @since 3.37.21
-	 *
 	 */
 	public function add_contact( $contact_data ) {
 
@@ -657,7 +635,6 @@ class WPF_PulseTechnologyCRM {
 
 		// Get new contact ID out of response
 		return $response->id;
-
 	}
 
 	/**
@@ -668,7 +645,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return bool|WP_Error Error if the API call failed.
 	 * @since 3.37.21
-	 *
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
 
@@ -688,7 +664,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return array|WP_Error User meta data that was returned.
 	 * @since 3.37.21
-	 *
 	 */
 	public function load_contact( $contact_id ) {
 
@@ -720,7 +695,6 @@ class WPF_PulseTechnologyCRM {
 	 *
 	 * @return array Contact IDs returned.
 	 * @since 3.37.21
-	 *
 	 */
 	public function load_contacts( $tag ) {
 
@@ -732,7 +706,7 @@ class WPF_PulseTechnologyCRM {
 
 		$page        = 1;
 		$last_page   = 1;
-		$contact_ids = [];
+		$contact_ids = array();
 
 		while ( $page <= $last_page ) {
 			$uri = $url_base;
@@ -747,7 +721,7 @@ class WPF_PulseTechnologyCRM {
 				return $response;
 			}
 
-			$page ++;
+			++$page;
 			$last_page = $response->meta->last_page;
 
 			if ( isset( $response->data ) && is_array( $response->data ) ) {

@@ -12,7 +12,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -37,7 +36,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -55,7 +53,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -94,7 +91,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		// Add site tracking option
@@ -141,7 +137,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -165,7 +160,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access public
 	 * @return bool Input
 	 */
-
 	public function validate_site_tracking( $input, $setting ) {
 
 		$previous = wpf_get_option( 'site_tracking' );
@@ -193,7 +187,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function maybe_get_tracking_id( $options ) {
 
 		if ( isset( $options['site_tracking'] ) && $options['site_tracking'] == true && empty( $options['site_tracking_id'] ) ) {
@@ -220,7 +213,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_activecampaign_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -234,7 +226,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
@@ -270,7 +261,6 @@ class WPF_ActiveCampaign_Admin {
 	 * @access public
 	 * @return void
 	 */
-
 	public function resync_lists( $user_id ) {
 
 		if ( is_wp_error( $this->crm->connect() ) ) {

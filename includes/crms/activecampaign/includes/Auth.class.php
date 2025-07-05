@@ -20,7 +20,4 @@ class AC_Auth extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

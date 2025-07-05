@@ -216,7 +216,6 @@ class WPF_Infusionsoft_App {
 		$response = $this->xmlrpc_request( 'DataService.update', $data );
 
 		return $response;
-
 	}
 
 	/**
@@ -618,7 +617,6 @@ class WPF_Infusionsoft_App {
 	/**
 	 *
 	 * XMLRPC API
-	 *
 	 */
 
 	/**
@@ -654,7 +652,7 @@ class WPF_Infusionsoft_App {
 	 * @since 3.45.0
 	 *
 	 * @param string $method The XML-RPC method.
-	 * @param array $data The data to send.
+	 * @param array  $data The data to send.
 	 * @return bool True if the request was successful, false otherwise.
 	 */
 	private function xmlrpc_request( $method, $data ) {
@@ -684,7 +682,7 @@ class WPF_Infusionsoft_App {
 
 		foreach ( $params as $param ) {
 			$xml .= '<param><value>';
-			
+
 			if ( $param instanceof DateTime ) {
 				$xml .= '<dateTime.iso8601>' . esc_xml( $param->format( 'Ymd\TH:i:s' ) ) . '</dateTime.iso8601>';
 			} elseif ( is_array( $param ) ) {
@@ -715,7 +713,7 @@ class WPF_Infusionsoft_App {
 			} elseif ( is_bool( $param ) ) {
 				$xml .= '<boolean>' . ( $param ? '1' : '0' ) . '</boolean>';
 			}
-			
+
 			$xml .= '</value></param>';
 		}
 

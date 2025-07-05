@@ -12,7 +12,6 @@ class WPF_WP_ERP_Admin {
 	 * @access public
 	 * @since 3.33
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -36,7 +35,6 @@ class WPF_WP_ERP_Admin {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -48,7 +46,6 @@ class WPF_WP_ERP_Admin {
 	 * @access public
 	 * @return array Settings
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -80,7 +77,6 @@ class WPF_WP_ERP_Admin {
 	 * @access public
 	 * @return array Options
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( true == $options['connection_configured'] ) {
@@ -104,7 +100,6 @@ class WPF_WP_ERP_Admin {
 	 * @access public
 	 * @return mixed HTML Output
 	 */
-
 	public function show_field_wp_erp_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -120,7 +115,6 @@ class WPF_WP_ERP_Admin {
 	 * @access public
 	 * @return void
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

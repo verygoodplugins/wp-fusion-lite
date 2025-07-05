@@ -28,15 +28,13 @@ class WPF_Staging {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Staging_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -60,7 +58,6 @@ class WPF_Staging {
 		);
 
 		return false;
-
 	}
 
 
@@ -70,11 +67,9 @@ class WPF_Staging {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public static function connect( $api_url = null, $api_key = null, $test = false ) {
 
 		return true;
-
 	}
 
 
@@ -84,7 +79,6 @@ class WPF_Staging {
 	 * @access public
 	 * @return bool
 	 */
-
 	public static function sync() {
 
 		$this->connect();
@@ -95,7 +89,6 @@ class WPF_Staging {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -105,11 +98,9 @@ class WPF_Staging {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public static function sync_tags() {
 
 		return wpf_get_option( 'available_tags', array() );
-
 	}
 
 
@@ -119,7 +110,6 @@ class WPF_Staging {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public static function sync_crm_fields() {
 
 		$fields = array(
@@ -127,7 +117,6 @@ class WPF_Staging {
 		);
 
 		array_merge( wpf_get_option( 'crm_fields', array() ), $fields );
-
 	}
 
 
@@ -136,7 +125,6 @@ class WPF_Staging {
 	 *
 	 * @return string|bool Contact ID or false.
 	 */
-
 	public static function get_contact_id( $email_address ) {
 
 		$user = get_user_by( 'email', $email_address );
@@ -152,7 +140,6 @@ class WPF_Staging {
 		} else {
 			return false;
 		}
-
 	}
 
 
@@ -162,7 +149,6 @@ class WPF_Staging {
 	 * @access public
 	 * @return void
 	 */
-
 	public static function get_tags( $contact_id ) {
 
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
@@ -174,7 +160,6 @@ class WPF_Staging {
 		} else {
 			return array();
 		}
-
 	}
 
 	/**
@@ -183,11 +168,9 @@ class WPF_Staging {
 	 * @access public
 	 * @return bool
 	 */
-
 	public static function apply_tags( $tags, $contact_id ) {
 
 		return true;
-
 	}
 
 
@@ -197,11 +180,9 @@ class WPF_Staging {
 	 * @access public
 	 * @return bool
 	 */
-
 	public static function remove_tags( $tags, $contact_id ) {
 
 		return true;
-
 	}
 
 
@@ -211,12 +192,10 @@ class WPF_Staging {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public static function add_contact( $data ) {
 
 		// Generate a random contact ID.
 		return 'staging_' . substr( md5( microtime() . wp_rand() ), 0, 10 );
-
 	}
 
 
@@ -226,11 +205,9 @@ class WPF_Staging {
 	 * @access public
 	 * @return bool
 	 */
-
 	public static function update_contact( $contact_id, $data ) {
 
 		return true;
-
 	}
 
 	/**
@@ -239,11 +216,9 @@ class WPF_Staging {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public static function load_contact( $contact_id ) {
 
-		return array();
-
+		return wp_fusion()->user->get_user_meta( $contact_id );
 	}
 
 	/**
@@ -252,11 +227,9 @@ class WPF_Staging {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public static function load_contacts( $tag ) {
 
 		return array();
-
 	}
 
 	/**
@@ -272,10 +245,5 @@ class WPF_Staging {
 	public static function track_event( $event, $event_data = false, $email_address = false ) {
 
 		return true;
-
 	}
-
-
 }
-
-

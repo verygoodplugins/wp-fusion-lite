@@ -59,7 +59,7 @@ jQuery(document).ready(function($){
 			}
 
 		});
-
+		
 		// Integrations checkboxes.
 
 		$( '.wpf-integration input[type="checkbox"]' ).on( 'change', function() {
@@ -324,7 +324,21 @@ jQuery(document).ready(function($){
 
 		}
 
-
+		// Possibily set CRM from URL parameter.
+		var crmParam = GetURLParameter('crm');
+				
+		if (crmParam) {
+			var $crmSelect = $('#wpf-settings select#crm');
+			
+			// Check if the CRM value exists in the dropdown
+			if ($crmSelect.find('option[value="' + crmParam + '"]').length) {
+				// Set the value
+				$crmSelect.val(crmParam);
+				
+				$('#wpf-settings').find('div.crm-active').slideUp().removeClass('crm-active').addClass('hidden');
+				$('#wpf-settings').find('div#' + crmParam).slideDown().addClass('crm-active').removeClass('hidden');
+			}
+		}
 
 		//
 		// Change CRM
@@ -706,8 +720,45 @@ jQuery(document).ready(function($){
 
 	    }
 
+		function handleImportSettings(e) {
+	    	e.preventDefault();
+			
+			var fileInput = $('#wpf-import-settings')[0];
+			if ( fileInput.files.length === 0 ) {
+				alert('Please select a file to import.');
+				return;
+			}
+
+			// Extract the nonce from the button's href attribute
+			var nonceMatch = $(this).attr('href').match(/_wpnonce=([^&]*)/);
+			var nonce = nonceMatch ? nonceMatch[1] : wpf_ajax.nonce;
+
+			var formData = new FormData();
+			formData.append('action', 'wpf_import_settings');
+			formData.append('file', fileInput.files[0]);
+			formData.append('nonce', nonce);
+
+			// File uploads require special AJAX handling
+			$.ajax({
+				url: ajaxurl,
+				type: 'POST',
+				data: formData,
+				processData: false,
+				contentType: false,
+				success: function(response) {
+					if ( response.success ) {
+						alert( response.data );
+						window.location.reload();
+					} else {
+						alert('Error: ' + response.data);
+					}
+				}
+			});
+		};
+
+
+		$('#wpf-import-settings-button').on('click', handleImportSettings);
+
 	} // end WPF settings page listeners
-
-
 
 });

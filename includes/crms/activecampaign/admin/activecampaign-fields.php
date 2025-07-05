@@ -28,8 +28,8 @@ $activecampaign_fields['billing_company'] = array(
 );
 
 // $activecampaign_fields[] = array(
-// 	'crm_label' => 'Job Title',
-// 	'crm_field' => 'jobtitle',
+// 'crm_label' => 'Job Title',
+// 'crm_field' => 'jobtitle',
 // );
 
 // Can't be updated over the API (https://testpublic.ideas.aha.io/ideas/AC-I-13844)

@@ -532,7 +532,7 @@ class Drip_API {
 
 		if ( ! empty( $params ) ) {
 			if ( ( isset( $params['__req'] ) && strtolower( $params['__req'] ) == 'get' )
-				 || $req_method == self::GET
+				|| $req_method == self::GET
 			) {
 				unset( $params['__req'] );
 				$url .= '?' . http_build_query( $params );
@@ -544,7 +544,9 @@ class Drip_API {
 
 		curl_setopt( $ch, CURLOPT_URL, $url );
 		curl_setopt(
-			$ch, CURLOPT_HTTPHEADER, array(
+			$ch,
+			CURLOPT_HTTPHEADER,
+			array(
 				'Accept:application/json, text/javascript, */*; q=0.01',
 				'Content-Type: application/vnd.api+json',
 			)
@@ -630,12 +632,12 @@ class Drip_API {
 
 			// The JSON error response looks like this.
 			/*
-			 {
+			{
 				"errors": [{
-				  "code": "authorization_error",
-				  "message": "You are not authorized to access this resource"
+					"code": "authorization_error",
+					"message": "You are not authorized to access this resource"
 				}]
-			  }
+				}
 			 */
 			if ( ! empty( $json_arr['errors'] ) ) { // JSON
 				$messages = $error_codes = array();
@@ -670,7 +672,6 @@ class Drip_API {
 		}
 
 		return new WP_Error( 'error', $this->error_message );
-
 	}
 
 	// tmp

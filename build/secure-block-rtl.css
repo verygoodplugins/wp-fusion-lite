@@ -1,0 +1,113 @@
+/*!***********************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./includes/admin/gutenberg/src/secure-block/scss/editor.scss ***!
+  \***********************************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * Variables
+ **/
+/**
+ * Default Styles
+ *
+ * The default styles for the block in the editor.
+ */
+.wp-block-wp-fusion-secure-block__footer {
+  background-color: #f3f3f4;
+  color: #32373c;
+  padding: 5px 10px 5px 10px;
+  font-size: 12px;
+  text-align: left;
+  font-style: italic;
+}
+
+/**
+ * Inspector
+ *
+ * Styles for the secure block inspector
+ */
+.secure-block-inspector label.secure-block-inspector__label {
+  max-width: 100%;
+}
+.secure-block-inspector .secure-block-inspector__control {
+  width: 100%;
+}
+.secure-block-inspector .secure-block-inspector__control > div > div {
+  margin-top: 0px;
+}
+.secure-block-inspector .muted {
+  opacity: 0.6;
+}
+/*!************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./includes/admin/gutenberg/src/secure-block-inner-secure/scss/editor.scss ***!
+  \************************************************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * Variables
+ **/
+/**
+ * Default Styles
+ *
+ * The default styles for the block frontend.
+ */
+.wp-block-wp-fusion-secure-block-inner-secure__handle {
+  position: relative;
+  background-color: #f3f3f4;
+  color: #32373c;
+  padding: 5px 10px 5px 30px;
+  font-size: 12px;
+}
+.wp-block-wp-fusion-secure-block-inner-secure__tags .tag:after {
+  content: ", ";
+}
+.wp-block-wp-fusion-secure-block-inner-secure__tags .tag:last-of-type:after {
+  content: "";
+}
+.wp-block-wp-fusion-secure-block-inner-secure__tags .tag__name {
+  font-family: monospace;
+  background: white;
+  padding: 2px 4px 2px 4px;
+  opacity: 0.8;
+}
+.wp-block-wp-fusion-secure-block-inner-secure__icon {
+  position: absolute !important;
+  top: 8px;
+  left: 8px;
+  opacity: 0.8;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.wp-block-wp-fusion-secure-block-inner-secure__description {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.wp-block-wp-fusion-secure-block-inner-secure__description strong {
+  font-family: monospace;
+  background: white;
+  padding: 2px 4px 2px 4px;
+  opacity: 0.8;
+  font-weight: normal;
+}
+/*!**************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./includes/admin/gutenberg/src/secure-block-inner-unsecure/scss/editor.scss ***!
+  \**************************************************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * Variables
+ **/
+/**
+ * Default Styles
+ *
+ * The default styles for the block in the editor.
+ */
+.wp-block-wp-fusion-secure-block-inner-unsecure__handle {
+  position: relative;
+  background-color: #f3f3f4;
+  color: #32373c;
+  padding: 5px 10px 5px 20px;
+  font-size: 12px;
+}
+.wp-block-wp-fusion-secure-block-inner-unsecure__icon {
+  position: absolute !important;
+  top: 8px;
+  left: 8px;
+  opacity: 0.8;
+  margin-top: 0;
+  margin-bottom: 0;
+}

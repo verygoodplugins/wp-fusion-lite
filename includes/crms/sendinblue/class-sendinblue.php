@@ -63,7 +63,6 @@ class WPF_SendinBlue {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -81,7 +80,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -100,7 +98,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -160,7 +157,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		// Categories are stored numerically, like https://share.getcloudapp.com/L1uNjnLA.
@@ -341,7 +337,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'brevo' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -382,7 +377,6 @@ class WPF_SendinBlue {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB.
@@ -409,7 +403,6 @@ class WPF_SendinBlue {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -436,7 +429,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -458,7 +450,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -500,7 +491,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return array|WP_Error CRM Fields or error.
 	 */
-
 	public function sync_crm_fields() {
 
 		$crm_fields = array(
@@ -712,7 +702,6 @@ class WPF_SendinBlue {
 	 * @param array $data Contact data.
 	 * @return int|WP_Error Contact ID on success or error on failure.
 	 */
-
 	public function add_contact( $data ) {
 
 		$post_data = array();
@@ -772,7 +761,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		// Email address changes.
@@ -808,7 +796,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -859,7 +846,6 @@ class WPF_SendinBlue {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {

@@ -57,7 +57,6 @@ class WPF_Ontraport {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -75,7 +74,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_async_allowed_cookies', array( $this, 'allowed_cookies' ) );
@@ -95,7 +93,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return array Cookies
 	 */
-
 	public function allowed_cookies( $cookies ) {
 
 		$cookies[] = 'oprid';
@@ -109,7 +106,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		$options = wpf_get_option( 'ontraport_dropdown_options', array() );
@@ -187,7 +183,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return array Customer Data
 	 */
-
 	public function format_states( $customer_data, $order ) {
 
 		if ( isset( $customer_data['billing_state'] ) ) {
@@ -251,7 +246,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function set_tracking_cookie() {
 
 		if ( wpf_get_option( 'site_tracking' ) == false ) {
@@ -276,7 +270,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
@@ -292,9 +285,8 @@ class WPF_Ontraport {
 	 * Check HTTP Response for errors and return WP_Error if found
 	 *
 	 * @access public
-	 * @return HTTP_Response|WP_Error 
+	 * @return HTTP_Response|WP_Error
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		// Ignore on find by email requests since they'll return a 400 error if no matching email is found
@@ -349,7 +341,6 @@ class WPF_Ontraport {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_url = null, $api_key = null ) {
 
 		// Get saved data from DB
@@ -378,7 +369,6 @@ class WPF_Ontraport {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_url = null, $api_key = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -406,7 +396,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -427,7 +416,6 @@ class WPF_Ontraport {
 	 *
 	 * @return array|WP_Eror The tags, or error.
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -473,7 +461,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -527,7 +514,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -557,7 +543,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -589,7 +574,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -622,7 +606,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -656,7 +639,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return int|WP_Error Contact ID or error.
 	 */
-
 	public function add_contact( $data ) {
 
 		// Referral data.
@@ -706,7 +688,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		// Referral data
@@ -731,7 +712,7 @@ class WPF_Ontraport {
 		$data['background_request'] = true; // Added by OP support, OP ticket #500416. Incoming data will be validated and we'll get a 200 response. OP will continue to process the API call in a background request.
 		$data['use_utm_names']      = true; // @link https://api.ontraport.com/doc/#add-utm-variables-by-name.
 
-		$params = $this->get_params();;
+		$params = $this->get_params();
 
 		$params['method'] = 'PUT';
 		$params['body']   = wp_json_encode( $data );
@@ -752,7 +733,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -801,7 +781,6 @@ class WPF_Ontraport {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag = false ) {
 
 		if ( ! $this->params ) {

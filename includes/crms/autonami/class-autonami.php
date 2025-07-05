@@ -74,7 +74,6 @@ class WPF_Autonami {
 	 *
 	 * @since 3.37.14
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -108,7 +107,6 @@ class WPF_Autonami {
 	 *
 	 * @since 3.37.14
 	 */
-
 	public function init() {
 
 		// Hooks for when Autonami is installed on the same site.
@@ -131,7 +129,6 @@ class WPF_Autonami {
 	 * @return WP_HTTP_Response $response The response.
 	 * @since  3.37.14
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
@@ -195,7 +192,6 @@ class WPF_Autonami {
 	 * @return bool
 	 * @since  3.37.14
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -224,7 +220,6 @@ class WPF_Autonami {
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 * @since  3.37.14
 	 */
-
 	public function connect( $url = null, $username = null, $password = null, $test = false ) {
 
 		$this->get_params( $url, $username, $password );
@@ -257,7 +252,6 @@ class WPF_Autonami {
 	 * @return array  $params The API parameters.
 	 * @since  3.37.14
 	 */
-
 	public function get_params( $url = null, $username = null, $password = null ) {
 
 		if ( $this->params ) {

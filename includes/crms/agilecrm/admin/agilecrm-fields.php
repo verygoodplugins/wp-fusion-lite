@@ -4,41 +4,41 @@ $agilecrm_fields = array();
 
 $agilecrm_fields['first_name'] = array(
 	'crm_label' => 'First Name',
-	'crm_field' => 'first_name'
+	'crm_field' => 'first_name',
 );
 
 $agilecrm_fields['last_name'] = array(
 	'crm_label' => 'Last Name',
-	'crm_field' => 'last_name'
+	'crm_field' => 'last_name',
 );
 
 // Email
 
 $agilecrm_fields['user_email'] = array(
 	'crm_label' => 'Email',
-	'crm_field' => 'email'
+	'crm_field' => 'email',
 );
 
 $agilecrm_fields['billing_email'] = array(
 	'crm_label' => 'Email (Work)',
-	'crm_field' => 'email+work'
+	'crm_field' => 'email+work',
 );
 
 $agilecrm_fields['user_email_personal'] = array(
 	'crm_label' => 'Email (Personal)',
-	'crm_field' => 'email+personal'
+	'crm_field' => 'email+personal',
 );
 
 $agilecrm_fields['company'] = array(
 	'crm_label' => 'Company',
-	'crm_field' => 'company'
+	'crm_field' => 'company',
 );
 
 // Phone
 
 $agilecrm_fields['phone_number'] = array(
 	'crm_label' => 'Phone',
-	'crm_field' => 'phone'
+	'crm_field' => 'phone',
 );
 
 $agilecrm_fields['billing_phone'] = array(
@@ -66,12 +66,12 @@ $agilecrm_fields['phone_number_main'] = array(
 
 $agilecrm_fields['website'] = array(
 	'crm_label' => 'Website',
-	'crm_field' => 'website+URL'
+	'crm_field' => 'website+URL',
 );
 
 $agilecrm_fields['user_url'] = array(
 	'crm_label' => 'Website',
-	'crm_field' => 'website+URL'
+	'crm_field' => 'website+URL',
 );
 
 $agilecrm_fields['facebook'] = array(
@@ -93,26 +93,25 @@ $agilecrm_fields['google_plus'] = array(
 
 $agilecrm_fields['billing_address_1'] = array(
 	'crm_label' => 'Address 1',
-	'crm_field' => 'address+address'
+	'crm_field' => 'address+address',
 );
 
 $agilecrm_fields['billing_city'] = array(
 	'crm_label' => 'City',
-	'crm_field' => 'address+city'
+	'crm_field' => 'address+city',
 );
 
 $agilecrm_fields['billing_state'] = array(
 	'crm_label' => 'State',
-	'crm_field' => 'address+state'
+	'crm_field' => 'address+state',
 );
 
 $agilecrm_fields['billing_postcode'] = array(
 	'crm_label' => 'Zip',
-	'crm_field' => 'address+zip'
+	'crm_field' => 'address+zip',
 );
 
 $agilecrm_fields['billing_country'] = array(
 	'crm_label' => 'Country',
-	'crm_field' => 'address+country'
+	'crm_field' => 'address+country',
 );
-

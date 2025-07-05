@@ -44,15 +44,13 @@ class WPF_Salesflare {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Salesflare_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -61,13 +59,11 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		// add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		// add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 
@@ -77,21 +73,18 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'salesflare') !== false ) {
+		if ( strpos( $url, 'salesflare' ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if ( isset( $body_json->error ) ) {
 				$response = new WP_Error( 'error', $body_json->message );
 			}
-
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -100,21 +93,20 @@ class WPF_Salesflare {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB
-		if ( empty( $api_key )) {
+		if ( empty( $api_key ) ) {
 			$api_key = wpf_get_option( 'salesflare_key' );
 		}
 
 		$this->params = array(
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'timeout'     => 30,
-			'headers'     => array(
-				'Authorization' 	  => 'Bearer ' . $api_key,
-				'Content-Type'  	  => 'application/json'
-			)
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
+				'Authorization' => 'Bearer ' . $api_key,
+				'Content-Type'  => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -127,7 +119,6 @@ class WPF_Salesflare {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -141,7 +132,7 @@ class WPF_Salesflare {
 		$request  = 'https://api.salesflare.com/contacts?limit=1';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -154,7 +145,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -167,7 +157,6 @@ class WPF_Salesflare {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -176,7 +165,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -188,7 +176,7 @@ class WPF_Salesflare {
 		$request  = 'https://api.salesflare.com/tags';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -209,7 +197,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -217,7 +204,7 @@ class WPF_Salesflare {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/salesflare-fields.php';
+		require __DIR__ . '/admin/salesflare-fields.php';
 
 		$built_in_fields = array();
 
@@ -227,10 +214,10 @@ class WPF_Salesflare {
 
 		$custom_fields = array();
 
-		$request    = "https://api.salesflare.com/customfields/contacts";
-		$response   = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api.salesflare.com/customfields/contacts';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -243,12 +230,14 @@ class WPF_Salesflare {
 				$custom_fields[ $field_data['api_field'] ] = $field_data['name'];
 
 			}
-
 		}
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields ); 
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
@@ -261,7 +250,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -272,11 +260,11 @@ class WPF_Salesflare {
 		$request      = 'https://api.salesflare.com/contacts?search=' . urlencode( $email_address );
 		$response     = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json[0]['id'] ) ) {
 			return false;
@@ -291,18 +279,17 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$tags 		= array();
-		$request    = 'https://api.salesflare.com/contacts/' . $contact_id;
-		$response   = wp_safe_remote_get( $request, $this->params );
+		$tags     = array();
+		$request  = 'https://api.salesflare.com/contacts/' . $contact_id;
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -319,8 +306,8 @@ class WPF_Salesflare {
 		// Check if we need to update the available tags list
 		$available_tags = wpf_get_option( 'available_tags', array() );
 
-		foreach( $body_json['tags'] as $row ) {
-			if( !isset( $available_tags[ $row['id'] ] ) ) {
+		foreach ( $body_json['tags'] as $row ) {
+			if ( ! isset( $available_tags[ $row['id'] ] ) ) {
 				$available_tags[ $row['id'] ] = $row['name'];
 			}
 		}
@@ -328,7 +315,6 @@ class WPF_Salesflare {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $tags;
-
 	}
 
 	/**
@@ -337,32 +323,29 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		foreach ($tags as $tag) {
+		foreach ( $tags as $tag ) {
 
-			$tag_name = wp_fusion()->user->get_tag_label($tag);
+			$tag_name = wp_fusion()->user->get_tag_label( $tag );
 
-			$request      		= 'https://api.salesflare.com/contacts/' . $contact_id;
-			$params           	= $this->params;
-			$params['method'] 	= 'PUT';
-			$params['body']  	= wp_json_encode(array('tags' => array(array('name' => $tag_name))));
+			$request          = 'https://api.salesflare.com/contacts/' . $contact_id;
+			$params           = $this->params;
+			$params['method'] = 'PUT';
+			$params['body']   = wp_json_encode( array( 'tags' => array( array( 'name' => $tag_name ) ) ) );
 
 			$response = wp_safe_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
-
 	}
 
 
@@ -372,30 +355,37 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		foreach ($tags as $tag) {
+		foreach ( $tags as $tag ) {
 
-			$request                = 'https://api.salesflare.com/contacts/'.$contact_id;
-			$params           		= $this->params;
-			$params['method'] 		= 'PUT';
-			$params['body']  		= wp_json_encode(array('tags' => array(array('id' => $tag, '_dirty' => true, '_deleted' => true))));
+			$request          = 'https://api.salesflare.com/contacts/' . $contact_id;
+			$params           = $this->params;
+			$params['method'] = 'PUT';
+			$params['body']   = wp_json_encode(
+				array(
+					'tags' => array(
+						array(
+							'id'       => $tag,
+							'_dirty'   => true,
+							'_deleted' => true,
+						),
+					),
+				)
+			);
 
-			$response     		    = wp_safe_remote_post( $request, $params );
+			$response = wp_safe_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
-
 	}
 
 
@@ -405,7 +395,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -415,61 +404,64 @@ class WPF_Salesflare {
 		$update_data = array();
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/salesflare-fields.php';
+		require __DIR__ . '/admin/salesflare-fields.php';
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			foreach( $salesflare_fields as $meta_key => $field_data ) {
+			foreach ( $salesflare_fields as $meta_key => $field_data ) {
 
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 
-					if( strpos($crm_field, '+') == false ) {
+					if ( strpos( $crm_field, '+' ) == false ) {
 
 						// If there is NO "+" sign in the field
-						$update_data[$crm_field] = $value;
+						$update_data[ $crm_field ] = $value;
 
 					} else {
 
 						// This means that we've found that field in salesflare-fields.php, and it's a complex field
 
-						$exploded_field = explode('+', $crm_field);
+						$exploded_field = explode( '+', $crm_field );
 
 						if ( $exploded_field[0] == 'addresses' ) {
 
-							if( ! isset( $update_data['addresses'] ) ) {
+							if ( ! isset( $update_data['addresses'] ) ) {
 
-								$update_data['addresses'] =  array( array('type' => $exploded_field[1], $exploded_field[2] => $value, '_dirty' => true) );
+								$update_data['addresses'] = array(
+									array(
+										'type'             => $exploded_field[1],
+										$exploded_field[2] => $value,
+										'_dirty'           => true,
+									),
+								);
 
 							} else {
 
 								$found_address = false;
-								foreach( $update_data['addresses'] as $i => $address ) {
+								foreach ( $update_data['addresses'] as $i => $address ) {
 
-									if( $address['type'] == $exploded_field[1] ) {
+									if ( $address['type'] == $exploded_field[1] ) {
 
-										$found_address = true;
-										$update_data['addresses'][$i][$exploded_field[2]] = $value;
+										$found_address                                        = true;
+										$update_data['addresses'][ $i ][ $exploded_field[2] ] = $value;
 
 									}
-
 								}
 
-								if( ! $found_address ) {
-	
-									$update_data['addresses'][] = array( 'type' => $exploded_field[1], $exploded_field[2] => $value, '_dirty' => true );
+								if ( ! $found_address ) {
+
+									$update_data['addresses'][] = array(
+										'type'             => $exploded_field[1],
+										$exploded_field[2] => $value,
+										'_dirty'           => true,
+									);
 
 								}
-
 							}
-
 						}
-
 					}
-
 				}
-
 			}
-
 		}
 
 		$url              = 'https://api.salesflare.com/contacts';
@@ -479,14 +471,13 @@ class WPF_Salesflare {
 
 		$response = wp_safe_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
-
 	}
 
 	/**
@@ -495,7 +486,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -505,74 +495,70 @@ class WPF_Salesflare {
 		$update_data = array( '_dirty' => true );
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/salesflare-fields.php';
+		require __DIR__ . '/admin/salesflare-fields.php';
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			foreach( $salesflare_fields as $meta_key => $field_data ) {
+			foreach ( $salesflare_fields as $meta_key => $field_data ) {
 
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 
-					if( strpos($crm_field, '+') == false ) {
+					if ( strpos( $crm_field, '+' ) == false ) {
 
 						// If there is NO "+" sign in the field
-						$update_data[$crm_field] = $value;
+						$update_data[ $crm_field ] = $value;
 
 					} else {
 
 						// This means that we've found that field in salesflare-fields.php, and it's a complex field
 
-						$exploded_field = explode('+', $crm_field);
+						$exploded_field = explode( '+', $crm_field );
 
 						if ( $exploded_field[0] == 'addresses' ) {
 
-							if( ! isset( $update_data['addresses'] ) ) {
+							if ( ! isset( $update_data['addresses'] ) ) {
 
-								$update_data['addresses'] = array( array( 'type' => $exploded_field[1], '_dirty' => true ) );
+								$update_data['addresses'] = array(
+									array(
+										'type'   => $exploded_field[1],
+										'_dirty' => true,
+									),
+								);
 
 							} else {
 
-								foreach( $update_data['addresses'] as $i => $address ) {
+								foreach ( $update_data['addresses'] as $i => $address ) {
 
-									if( $address['type'] == $exploded_field[1] ) {
+									if ( $address['type'] == $exploded_field[1] ) {
 
-										$update_data['addresses'][$i][$exploded_field[2]] = $value;
+										$update_data['addresses'][ $i ][ $exploded_field[2] ] = $value;
 
 									}
-
 								}
-
 							}
-
 						}
-
 					}
-
 				}
-
 			}
-
 		}
 
 		// Custom fields
 		$crm_fields = wpf_get_option( 'crm_fields' );
 
-		if( ! empty( $crm_fields['Custom Fields'] ) ) {
+		if ( ! empty( $crm_fields['Custom Fields'] ) ) {
 
-			foreach( $crm_fields['Custom Fields'] as $key => $label ) {
+			foreach ( $crm_fields['Custom Fields'] as $key => $label ) {
 
-				if( ! empty( $data[ $key ] ) ) {
+				if ( ! empty( $data[ $key ] ) ) {
 
-					if( ! isset( $update_data['custom'] ) ) {
+					if ( ! isset( $update_data['custom'] ) ) {
 						$update_data['custom'] = array();
 					}
 
 					$update_data['custom'][ $key ] = $data[ $key ];
 
 				}
-
 			}
-
 		}
 
 		$url              = 'https://api.salesflare.com/contacts/' . $contact_id;
@@ -582,7 +568,7 @@ class WPF_Salesflare {
 
 		$response = wp_safe_remote_post( $url, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -595,7 +581,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -605,20 +590,19 @@ class WPF_Salesflare {
 		$url      = 'https://api.salesflare.com/contacts/' . $contact_id;
 		$response = wp_safe_remote_get( $url, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-
-		$loaded_meta      = array();
+		$loaded_meta    = array();
 		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		// Base fields
 
-		foreach( $body_json as $prop => $value ) {
+		foreach ( $body_json as $prop => $value ) {
 
-			if( is_array( $value ) ) {
+			if ( is_array( $value ) ) {
 				continue;
 			}
 
@@ -626,25 +610,22 @@ class WPF_Salesflare {
 
 		}
 
-
 		// Address fields
 
-		foreach( $body_json['addresses'] as $address ) {
+		foreach ( $body_json['addresses'] as $address ) {
 
 			$type = $address['type'];
 
-			foreach( $address as $prop => $value ) {
+			foreach ( $address as $prop => $value ) {
 
 				$loaded_meta[ 'addresses+' . $type . '+' . $prop ] = $value;
 
 			}
-
 		}
-
 
 		// Custom fields
 
-		foreach( $body_json['custom'] as $prop => $value ) {
+		foreach ( $body_json['custom'] as $prop => $value ) {
 
 			$loaded_meta[ $prop ] = $value;
 
@@ -659,11 +640,9 @@ class WPF_Salesflare {
 			if ( $field_data['active'] == true && isset( $loaded_meta[ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $loaded_meta[ $field_data['crm_field'] ];
 			}
-
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -673,7 +652,6 @@ class WPF_Salesflare {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -685,7 +663,7 @@ class WPF_Salesflare {
 		$url     = 'https://api.salesflare.com/contacts?tag=' . $tag;
 		$results = wp_safe_remote_get( $url, $this->params );
 
-		if( is_wp_error( $results ) ) {
+		if ( is_wp_error( $results ) ) {
 			return $results;
 		}
 
@@ -696,7 +674,5 @@ class WPF_Salesflare {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

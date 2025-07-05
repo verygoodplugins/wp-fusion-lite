@@ -34,7 +34,6 @@ class WPF_Emercury_Admin {
 	 *
 	 * @since 3.37.8
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -57,7 +56,6 @@ class WPF_Emercury_Admin {
 	 *
 	 * @since 3.37.8
 	 */
-
 	public function init() {
 
 		// Hooks in init() will run on the admin screen when this CRM is active
@@ -76,7 +74,6 @@ class WPF_Emercury_Admin {
 	 * @param array $options  The options saved in the database.
 	 * @return array $settings The settings.
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -115,7 +112,6 @@ class WPF_Emercury_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		if ( ! isset( $options['available_lists'] ) ) {
@@ -209,7 +205,6 @@ class WPF_Emercury_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -237,7 +232,6 @@ class WPF_Emercury_Admin {
 	 * @param array  $field The field properties.
 	 * @return mixed HTML output.
 	 */
-
 	public function show_field_emercury_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -253,7 +247,6 @@ class WPF_Emercury_Admin {
 	 *
 	 * @return mixed JSON response.
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

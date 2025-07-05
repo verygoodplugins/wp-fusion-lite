@@ -694,7 +694,7 @@ class WPF_Infusionsoft_iSDK {
 	 *
 	 * @since  3.38.42
 	 *
-	 * @param  string       $tag_name The tag name.
+	 * @param  string $tag_name The tag name.
 	 * @return int|WP_Error The tag ID or error.
 	 */
 	public function add_tag( $tag_name ) {
@@ -788,8 +788,8 @@ class WPF_Infusionsoft_iSDK {
 	 * @since 1.0.0
 	 * @since 3.44.0 Updated to use REST API.
 	 *
-	 * @param array  $tags       A numeric array of tags to apply to the contact.
-	 * @param int    $contact_id The contact ID to apply the tags to.
+	 * @param array $tags       A numeric array of tags to apply to the contact.
+	 * @param int   $contact_id The contact ID to apply the tags to.
 	 * @return bool|WP_Error True on success, error on failure.
 	 */
 	public function apply_tags( $tags, $contact_id ) {
@@ -815,8 +815,8 @@ class WPF_Infusionsoft_iSDK {
 	 * @since 1.0.0
 	 * @since 3.44.0 Updated to use REST API.
 	 *
-	 * @param array  $tags       A numeric array of tags to remove from the contact.
-	 * @param int    $contact_id The contact ID to remove the tags from.
+	 * @param array $tags       A numeric array of tags to remove from the contact.
+	 * @param int   $contact_id The contact ID to remove the tags from.
 	 * @return bool|WP_Error True on success, error on failure.
 	 */
 	public function remove_tags( $tags, $contact_id ) {
@@ -1392,7 +1392,7 @@ class WPF_Infusionsoft_iSDK {
 	 *
 	 * @since 3.44.1.1
 	 *
-	 * @param int    $contact_id The contact ID.
+	 * @param int $contact_id The contact ID.
 	 * @return string|WP_Error Notes on success, error on failure.
 	 */
 	public function get_person_notes( $contact_id ) {

@@ -660,4 +660,3 @@ $nationbuilder_ignore_fields = array(
 	'warnings_count',
 	'work_address',
 );
-

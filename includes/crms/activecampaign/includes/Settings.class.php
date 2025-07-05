@@ -20,7 +20,4 @@ class AC_Settings extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

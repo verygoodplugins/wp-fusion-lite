@@ -51,22 +51,20 @@ class WPF_Drift {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// OAuth
-		$this->client_id 		= '1UuW7nNmGLUYhdoNLp5b2VXaoRxyDOqI';
-		$this->client_secret 	= 'NuHGdNQNIpbWitAwYjpgwaFdZIzZhvlX';
+		$this->client_id     = '1UuW7nNmGLUYhdoNLp5b2VXaoRxyDOqI';
+		$this->client_secret = 'NuHGdNQNIpbWitAwYjpgwaFdZIzZhvlX';
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Drift_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 
@@ -76,13 +74,11 @@ class WPF_Drift {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		// Webhooks not currently supported with Drift
 
 		return $post_data;
-
 	}
 
 
@@ -92,7 +88,6 @@ class WPF_Drift {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_token = null ) {
 
 		// Get saved data from DB
@@ -101,12 +96,12 @@ class WPF_Drift {
 		}
 
 		$this->params = array(
-			'timeout'     => 60,
-			'user-agent'  => 'WP Fusion; ' . home_url(),
-			'headers'     => array(
+			'timeout'    => 60,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
 				'Authorization' => 'Bearer ' . $access_token,
-				'Content-type'	=> 'application/json'
-			)
+				'Content-type'  => 'application/json',
+			),
 		);
 
 		return $this->params;
@@ -118,32 +113,31 @@ class WPF_Drift {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function refresh_token() {
 
 		$refresh_token = wpf_get_option( 'drift_refresh_token' );
 
 		$params = array(
-			'headers'	=> array(
-				'Content-type' => 'application/x-www-form-urlencoded'
+			'headers' => array(
+				'Content-type' => 'application/x-www-form-urlencoded',
 			),
-			'body'		=> array(
-				'client_id'		=> $this->client_id,
-				'client_secret'	=> $this->client_secret,
-				'refresh_token'	=> $refresh_token,
-				'grant_type'	=> 'refresh_token'
-			)
+			'body'    => array(
+				'client_id'     => $this->client_id,
+				'client_secret' => $this->client_secret,
+				'refresh_token' => $refresh_token,
+				'grant_type'    => 'refresh_token',
+			),
 		);
 
 		$response = wp_safe_remote_post( 'https://driftapi.com/oauth2/token', $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $body_json->error ) ) {
+		if ( isset( $body_json->error ) ) {
 			return new WP_Error( 'error', $body_json->error->message );
 		}
 
@@ -151,7 +145,6 @@ class WPF_Drift {
 		wp_fusion()->settings->set( 'drift_refresh_token', $body_json->refresh_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -160,18 +153,17 @@ class WPF_Drift {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'driftapi') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
+		if ( strpos( $url, 'driftapi' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( wp_remote_retrieve_response_code( $response ) == 401 ) {
+			if ( wp_remote_retrieve_response_code( $response ) == 401 ) {
 
 				$access_token = $this->refresh_token();
 
-				if( is_wp_error( $access_token ) ) {
+				if ( is_wp_error( $access_token ) ) {
 					return $access_token;
 				}
 
@@ -179,28 +171,26 @@ class WPF_Drift {
 
 				$response = wp_safe_remote_request( $url, $args );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 404 ) {
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 404 ) {
 
 				$response = new WP_Error( 'error', 'The requested resource was not found.' );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 400 ) {
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 400 ) {
 
 				$response = new WP_Error( 'error', 'Validation error: One or more fields are invalid.' );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 500 ) {
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 500 ) {
 
 				$response = new WP_Error( 'error', 'Unexpected Drift server error.' );
 
-			} elseif( wp_remote_retrieve_response_code( $response ) == 429 ) {
+			} elseif ( wp_remote_retrieve_response_code( $response ) == 429 ) {
 
 				$response = new WP_Error( 'error', 'You have maxed your number of API calls for the provided time window.' );
 
 			}
-
 		}
 
 		return $response;
-
 	}
 
 
@@ -211,7 +201,6 @@ class WPF_Drift {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_token = null, $refresh_token = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -225,12 +214,11 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts/attributes';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -240,7 +228,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -251,7 +238,6 @@ class WPF_Drift {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -261,7 +247,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -273,7 +258,6 @@ class WPF_Drift {
 		$available_tags = array();
 
 		return $available_tags;
-
 	}
 
 
@@ -283,7 +267,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -293,7 +276,7 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts/attributes';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -301,7 +284,7 @@ class WPF_Drift {
 
 		$fields = array();
 
-		foreach( $response->data->properties as $field ) {
+		foreach ( $response->data->properties as $field ) {
 
 			$fields[ $field->name ] = $field->displayName;
 
@@ -312,7 +295,6 @@ class WPF_Drift {
 		wp_fusion()->settings->set( 'crm_fields', $fields );
 
 		return $fields;
-
 	}
 
 
@@ -322,7 +304,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -332,18 +313,17 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts/?email=' . urlencode( $email_address );
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $response ) || empty( $response->data ) ) {
+		if ( empty( $response ) || empty( $response->data ) ) {
 			return false;
 		}
 
 		return $response->data[0]->id;
-
 	}
 
 
@@ -353,7 +333,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -363,7 +342,7 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -371,25 +350,24 @@ class WPF_Drift {
 
 		$tags = array();
 
-		if( empty( $response->data->attributes->tags ) ) {
+		if ( empty( $response->data->attributes->tags ) ) {
 			return $tags;
 		}
 
 		$available_tags = wpf_get_option( 'available_tags', array() );
-		$needs_update = false;
+		$needs_update   = false;
 
-		foreach( $response->data->attributes->tags as $tag ) {
+		foreach ( $response->data->attributes->tags as $tag ) {
 
 			$tags[] = $tag->name;
 
-			if( ! in_array( $tag->name, $available_tags ) ) {
-				$available_tags[$tag->name] = $tag->name;
-				$needs_update = true;
+			if ( ! in_array( $tag->name, $available_tags ) ) {
+				$available_tags[ $tag->name ] = $tag->name;
+				$needs_update                 = true;
 			}
-
 		}
 
-		if( $needs_update ) {
+		if ( $needs_update ) {
 
 			asort( $available_tags );
 			wp_fusion()->settings->set( 'available_tags', $available_tags );
@@ -406,7 +384,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -415,22 +392,21 @@ class WPF_Drift {
 
 		$body = array();
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 			$body[] = array( 'name' => $tag );
 		}
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $body );
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id . '/tags';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -439,25 +415,23 @@ class WPF_Drift {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $tags );
 
 		$request  = 'https://driftapi.com/contacts/' . $contact_id . '/tags/delete/_bulk';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -467,7 +441,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$params         = $this->get_params();
@@ -476,14 +449,13 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->data->id;
-
 	}
 
 	/**
@@ -492,7 +464,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$params           = $this->get_params();
@@ -502,7 +473,7 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
 		$response = wp_safe_remote_request( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -515,7 +486,6 @@ class WPF_Drift {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -525,15 +495,15 @@ class WPF_Drift {
 		$request  = 'https://driftapi.com/contacts/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$user_meta      = array();
 		$contact_fields = wpf_get_option( 'contact_fields' );
-		$response      	= json_decode( wp_remote_retrieve_body( $response ) );
+		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $response->data ) ) {
+		if ( empty( $response->data ) ) {
 			return new WP_Error( 'error', 'Unable to find contact ID ' . $contact_id . ' in Drift.' );
 		}
 
@@ -542,11 +512,9 @@ class WPF_Drift {
 			if ( $field_data['active'] == true && ! empty( $response->data->attributes->{ $field_data['crm_field'] } ) ) {
 				$user_meta[ $field_id ] = $response->data->attributes->{ $field_data['crm_field'] };
 			}
-
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -556,12 +524,8 @@ class WPF_Drift {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// Not currently available with Drift
-
 	}
-
-
 }

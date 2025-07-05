@@ -51,15 +51,13 @@ class WPF_Capsule {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Capsule_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -68,7 +66,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -79,7 +76,6 @@ class WPF_Capsule {
 		if ( ! empty( $subdomain ) ) {
 			$this->edit_url = 'https://' . $subdomain . '.capsulecrm.com/party/%d';
 		}
-
 	}
 
 	/**
@@ -88,7 +84,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
@@ -108,7 +103,6 @@ class WPF_Capsule {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -117,7 +111,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'capsulecrm' ) !== false ) {
@@ -141,7 +134,6 @@ class WPF_Capsule {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -150,7 +142,6 @@ class WPF_Capsule {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB
@@ -177,7 +168,6 @@ class WPF_Capsule {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -214,7 +204,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -227,7 +216,6 @@ class WPF_Capsule {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -237,7 +225,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -270,7 +257,7 @@ class WPF_Capsule {
 			if ( count( $body_json['tags'] ) < 100 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
@@ -286,7 +273,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -294,7 +280,7 @@ class WPF_Capsule {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/capsule-fields.php';
+		require __DIR__ . '/admin/capsule-fields.php';
 
 		$built_in_fields = array();
 
@@ -341,7 +327,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -372,7 +357,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -417,7 +401,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -456,7 +439,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -496,7 +478,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -518,7 +499,7 @@ class WPF_Capsule {
 		);
 
 		// Load built in fields to get field types and subtypes.
-		require dirname( __FILE__ ) . '/admin/capsule-fields.php';
+		require __DIR__ . '/admin/capsule-fields.php';
 
 		foreach ( $data as $crm_field => $value ) {
 
@@ -630,7 +611,6 @@ class WPF_Capsule {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->party->id;
-
 	}
 
 	/**
@@ -639,7 +619,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -704,7 +683,7 @@ class WPF_Capsule {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/capsule-fields.php';
+		require __DIR__ . '/admin/capsule-fields.php';
 
 		foreach ( $data as $crm_field => $value ) {
 
@@ -870,7 +849,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -1005,7 +983,6 @@ class WPF_Capsule {
 		}
 
 		return $loaded_meta;
-
 	}
 
 
@@ -1015,7 +992,6 @@ class WPF_Capsule {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -1059,7 +1035,7 @@ class WPF_Capsule {
 				$contact_ids[] = $contact['id'];
 			}
 
-			$page++;
+			++$page;
 
 			if ( count( $body_json['parties'] ) < 100 ) {
 				$proceed = false;
@@ -1067,7 +1043,5 @@ class WPF_Capsule {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

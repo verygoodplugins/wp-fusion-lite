@@ -169,7 +169,6 @@ class WPF_Log_Handler {
 	 *
 	 * @param string $source The source.
 	 */
-
 	public function add_source( $source ) {
 
 		if ( ! in_array( $source, $this->event_sources, true ) ) {
@@ -216,7 +215,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
-
 	public function http_api_debug( $response, $context, $class, $parsed_args, $url ) {
 
 		if ( 'WP Fusion; ' . home_url() !== $parsed_args['user-agent'] ) {
@@ -278,7 +276,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
-
 	public function register_logger_subpage() {
 
 		if ( ! wpf_get_option( 'connection_configured' ) ) {
@@ -368,7 +365,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
-
 	public function enqueue_scripts() {
 
 		if ( 'tools_page_wpf-settings-logs' !== get_current_screen()->id ) {
@@ -386,7 +382,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
-
 	public function add_screen_options() {
 
 		$args = array(
@@ -404,7 +399,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return int Value
 	 */
-
 	public function set_screen_option( $status, $option, $value ) {
 
 		if ( 'wpf_status_log_items_per_page' === $option ) {
@@ -420,7 +414,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return array Page
 	 */
-
 	public function configure_sections( $page, $options ) {
 
 		$title = __( 'Logs', 'wp-fusion-lite' );
@@ -457,7 +450,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
-
 	public function create_update_table() {
 
 		global $wpdb;
@@ -597,7 +589,6 @@ class WPF_Log_Handler {
 	 * @access public
 	 * @return void
 	 */
-
 	public function show_logs_section() {
 
 		include_once WPF_DIR_PATH . 'includes/admin/logging/class-log-table-list.php';
@@ -1071,7 +1062,6 @@ class WPF_Log_Handler {
 	 *
 	 * @return string Text to use as log source. "" (empty string) if none is found.
 	 */
-
 	public function get_log_source() {
 
 		// Get the available files that are valid as a log source.

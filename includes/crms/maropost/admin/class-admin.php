@@ -12,7 +12,6 @@ class WPF_Maropost_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -36,11 +35,10 @@ class WPF_Maropost_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		//add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		// add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
 	}
 
 
@@ -50,7 +48,6 @@ class WPF_Maropost_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$is_config = array();
@@ -74,7 +71,7 @@ class WPF_Maropost_Admin {
 
 			$is_config['mp_list'] = array(
 				'title'   => __( 'Maropost Default List', 'wp-fusion-lite' ),
-				'desc'    => __( 'Select a list in Maropost to use with WP Fusion.', 'wp-fusion-lite' ),
+				'desc'    => __( 'Select a list in Maropost to use for new contacts.', 'wp-fusion-lite' ),
 				'std'     => 'Personal',
 				'type'    => 'select',
 				'section' => 'setup',
@@ -103,7 +100,6 @@ class WPF_Maropost_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -128,7 +124,6 @@ class WPF_Maropost_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_maropost_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -147,7 +142,6 @@ class WPF_Maropost_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

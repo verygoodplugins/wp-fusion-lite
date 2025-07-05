@@ -74,7 +74,7 @@ class WPF_EmailOctopus {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-emailoctopus-admin.php';
+			require_once __DIR__ . '/admin/class-emailoctopus-admin.php';
 			new WPF_EmailOctopus_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -83,7 +83,6 @@ class WPF_EmailOctopus {
 
 		$this->api_key      = wpf_get_option( 'emailoctopus_api_key' );
 		$this->default_list = wpf_get_option( 'eo_default_list' );
-
 	}
 
 	/**
@@ -123,7 +122,6 @@ class WPF_EmailOctopus {
 		} else {
 			return $value;
 		}
-
 	}
 
 	/**
@@ -150,7 +148,6 @@ class WPF_EmailOctopus {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -207,7 +204,6 @@ class WPF_EmailOctopus {
 		}
 
 		return $response;
-
 	}
 
 
@@ -253,7 +249,6 @@ class WPF_EmailOctopus {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -301,7 +296,6 @@ class WPF_EmailOctopus {
 		}
 
 		return $available_lists;
-
 	}
 
 	/**
@@ -339,7 +333,6 @@ class WPF_EmailOctopus {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
@@ -352,7 +345,7 @@ class WPF_EmailOctopus {
 	public function sync_crm_fields() {
 
 		// Load built in fields first.
-		require dirname( __FILE__ ) . '/admin/emailoctopus-fields.php';
+		require __DIR__ . '/admin/emailoctopus-fields.php';
 
 		foreach ( $emailoctopus_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -522,7 +515,6 @@ class WPF_EmailOctopus {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -561,7 +553,6 @@ class WPF_EmailOctopus {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
-
 	}
 
 	/**
@@ -670,5 +661,4 @@ class WPF_EmailOctopus {
 
 		return $contact_ids;
 	}
-
 }

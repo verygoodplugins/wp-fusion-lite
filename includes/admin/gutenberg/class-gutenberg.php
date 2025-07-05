@@ -27,7 +27,6 @@ class Main {
 	 *
 	 * @since 1.0.0
 	 */
-
 	public function __construct() {
 
 		if ( ! wpf_get_option( 'restrict_content', true ) ) {
@@ -42,7 +41,6 @@ class Main {
 
 		// Load Classes
 		add_action( 'init', array( $this, 'includes' ) );
-
 	}
 
 	/**
@@ -54,7 +52,6 @@ class Main {
 	 *
 	 * @return void
 	 */
-
 	public function editor_assets() {
 		// Enqueue editor JS.
 		wp_enqueue_script(
@@ -81,7 +78,6 @@ class Main {
 	 * @access public
 	 * @return void
 	 */
-
 	public function admin_assets() {
 		_deprecated_function( __METHOD__, '3.44.25', 'Main::editor_assets()' );
 	}
@@ -92,16 +88,13 @@ class Main {
 	 * @access public
 	 * @return void
 	 */
-
 	public function includes() {
 
 		// Load Classes
 		require_once plugin_dir_path( __FILE__ ) . 'src/secure-block/php/class-secure-block.php';
 		$secure_block = new Secure_Block();
 		$secure_block->run();
-
 	}
-
 }
 
 $main = new Main();

@@ -56,15 +56,13 @@ class WPF_AgileCRM {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_AgileCRM_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -73,7 +71,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_pre_send_contact_data', array( $this, 'format_contact_api_payload' ) );
@@ -91,7 +88,6 @@ class WPF_AgileCRM {
 		if ( ! empty( $domain ) ) {
 			$this->edit_url = 'https://' . $domain . '.agilecrm.com/#contact/%d';
 		}
-
 	}
 
 
@@ -101,7 +97,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		if ( wpf_get_option( 'site_tracking' ) == false ) {
@@ -137,7 +132,6 @@ class WPF_AgileCRM {
 		echo '};';
 
 		echo '</script>';
-
 	}
 
 
@@ -147,7 +141,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -178,7 +171,6 @@ class WPF_AgileCRM {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -187,11 +179,9 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array
 	 */
-
 	public function api_success( $user_id, $method ) {
 
 		wp_send_json_success();
-
 	}
 
 
@@ -201,7 +191,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
@@ -238,7 +227,6 @@ class WPF_AgileCRM {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -247,11 +235,10 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_contact_api_payload( $data ) {
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/agilecrm-fields.php';
+		require __DIR__ . '/admin/agilecrm-fields.php';
 
 		$contact_data = array( 'properties' => array() );
 		$address_data = array();
@@ -322,7 +309,6 @@ class WPF_AgileCRM {
 		}
 
 		return $contact_data;
-
 	}
 
 	/**
@@ -331,7 +317,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'agilecrm' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -347,7 +332,6 @@ class WPF_AgileCRM {
 		}
 
 		return $response;
-
 	}
 
 
@@ -357,7 +341,6 @@ class WPF_AgileCRM {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function get_params( $agile_domain = null, $user_email = null, $api_key = null ) {
 
 		// Get saved data from DB
@@ -391,7 +374,6 @@ class WPF_AgileCRM {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $agile_domain = null, $user_email = null, $api_key = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -426,7 +408,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -439,7 +420,6 @@ class WPF_AgileCRM {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -449,7 +429,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -483,7 +462,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -491,7 +469,7 @@ class WPF_AgileCRM {
 		}
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/agilecrm-fields.php';
+		require __DIR__ . '/admin/agilecrm-fields.php';
 
 		$built_in_fields = array();
 
@@ -541,7 +519,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -578,7 +555,6 @@ class WPF_AgileCRM {
 		}
 
 		return $body_json->id;
-
 	}
 
 
@@ -588,7 +564,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -625,7 +600,6 @@ class WPF_AgileCRM {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $body_json->tags;
-
 	}
 
 	/**
@@ -634,7 +608,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -681,7 +654,6 @@ class WPF_AgileCRM {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -690,7 +662,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -715,7 +686,6 @@ class WPF_AgileCRM {
 		}
 
 		return true;
-
 	}
 
 
@@ -725,7 +695,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -748,7 +717,6 @@ class WPF_AgileCRM {
 		$body_json = json_decode( $body_json );
 
 		return $body_json->id;
-
 	}
 
 	/**
@@ -757,7 +725,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -791,7 +758,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -872,7 +838,6 @@ class WPF_AgileCRM {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -938,7 +903,5 @@ class WPF_AgileCRM {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

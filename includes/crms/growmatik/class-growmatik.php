@@ -47,6 +47,7 @@ class WPF_Growmatik {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * No edit page for contacts.
+	 *
 	 * @var string
 	 */
 
@@ -57,7 +58,6 @@ class WPF_Growmatik {
 	 *
 	 * @since 3.36.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -76,7 +76,6 @@ class WPF_Growmatik {
 	 *
 	 * @since 3.36.0
 	 */
-
 	public function init() {}
 
 	/**
@@ -89,7 +88,6 @@ class WPF_Growmatik {
 	 * @param string $url      The HTTP request URL
 	 * @return object $response The response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() == $args['user-agent'] ) {
@@ -254,7 +252,6 @@ class WPF_Growmatik {
 	 *
 	 * @return array $params The API params.
 	 */
-
 	public function get_params( $get = true, $api_secret = null, $api_key = null ) {
 
 		// Get saved data from DB
@@ -287,7 +284,6 @@ class WPF_Growmatik {
 	 * @access  public
 	 * @return  bool|object true or WP_Error object with custom error message if connection fails.
 	 */
-
 	public function connect( $api_secret = null, $api_key = null ) {
 
 		$params  = $this->get_params( false, $api_secret, $api_key );
@@ -316,7 +312,6 @@ class WPF_Growmatik {
 	 *
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -339,7 +334,6 @@ class WPF_Growmatik {
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 */
-
 	public function sync_tags() {
 
 		$params   = $this->get_params();
@@ -372,7 +366,6 @@ class WPF_Growmatik {
 	 *
 	 * @return array|WP_Error Either the available fields in the CRM, or a WP_Error.
 	 */
-
 	public function sync_crm_fields() {
 
 		// Load built in fields first
@@ -430,7 +423,6 @@ class WPF_Growmatik {
 	 * @param string $email_address The email address to look up.
 	 * @return int|WP_Error The contact ID in the CRM.
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$params = $this->get_params();
@@ -464,7 +456,6 @@ class WPF_Growmatik {
 	 * @param int $contact_id The contact ID to load the tags for.
 	 * @return array|WP_Error The tags currently applied to the contact in the CRM.
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$params = $this->get_params();
@@ -500,7 +491,6 @@ class WPF_Growmatik {
 	 * @param int   $contact_id The contact ID to apply the tags to.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 		$request = $this->url . '/contact/tags/id';
 		$params  = $this->get_params( false );
@@ -527,7 +517,6 @@ class WPF_Growmatik {
 	 * @param int   $contact_id The contact ID to remove the tags from.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$params  = $this->get_params( false );
@@ -556,7 +545,6 @@ class WPF_Growmatik {
 	 * @param array $contact_data    An associative array of contact fields and field values.
 	 * @return int|WP_Error Contact ID on success, or WP Error.
 	 */
-
 	public function add_contact( $contact_data ) {
 
 		$params  = $this->get_params( false );
@@ -609,7 +597,6 @@ class WPF_Growmatik {
 	 * @param array $contact_data    An associative array of contact fields and field values.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
-
 	public function update_contact( $contact_id, $contact_data ) {
 
 		$attributes = $this->get_user_attributes();
@@ -644,7 +631,6 @@ class WPF_Growmatik {
 	 * @param int $contact_id The ID of the contact to load.
 	 * @return array|WP_Error User meta data that was returned.
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$params  = $this->get_params();
@@ -680,7 +666,6 @@ class WPF_Growmatik {
 	 * @param string $tag The tag ID or name to search for.
 	 * @return array Contact IDs returned.
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// Not currently supported by Growmatik

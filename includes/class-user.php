@@ -33,7 +33,7 @@ class WPF_User {
 		add_action( 'user_register', array( $this, 'user_register' ), 20 ); // 20 so usermeta added by other plugins is saved.
 		add_action( 'user_register', array( $this, 'clear_inserting_user_flag' ), 21 );
 		add_action( 'profile_update', array( $this, 'profile_update' ), 10, 3 );
-		add_action( 'rest_after_insert_user', array( $this, 'rest_after_insert_user' ), 10, 3 ); // Add REST API support
+		add_action( 'rest_after_insert_user', array( $this, 'rest_after_insert_user' ), 10, 3 ); // Add REST API support.
 		add_action( 'add_user_to_blog', array( $this, 'add_user_to_blog' ) );
 		add_filter( 'wpf_user_register', array( $this, 'maybe_set_first_last_name' ), 100, 2 ); // 100 so it runs after everything else
 
@@ -240,7 +240,7 @@ class WPF_User {
 
 				foreach ( $post_data as $key => $value ) {
 
-					if ( false !== strpos( $key, $partial ) && ! empty( $value ) ) {
+					if ( false !== strpos( $key, $partial ) && ! empty( $value ) && ! is_numeric( $value ) ) {
 						$post_data['first_name'] = $value;
 						break 2;
 					}
@@ -256,7 +256,7 @@ class WPF_User {
 
 				foreach ( $post_data as $key => $value ) {
 
-					if ( false !== strpos( $key, $partial ) && ! empty( $value ) ) {
+					if ( false !== strpos( $key, $partial ) && ! empty( $value ) && ! is_numeric( $value ) ) {
 						$post_data['last_name'] = $value;
 						break 2;
 					}
@@ -313,7 +313,7 @@ class WPF_User {
 		do_action( 'wpf_user_register_start', $user_id, $post_data );
 
 		// Get posted data from the registration form.
-		if ( empty( $post_data ) && ! empty( $_POST ) && is_array( $_POST ) ) {
+		if ( empty( $post_data ) && ! empty( $_POST ) ) {
 			$post_data = (array) wpf_clean( wp_unslash( $_POST ) );
 		} elseif ( empty( $post_data ) ) {
 			$post_data = array();
@@ -563,10 +563,21 @@ class WPF_User {
 	public function rest_after_insert_user( $user, $request, $creating ) {
 
 		if ( $creating ) {
-			return; // user_register will handle this
+			return; // user_register already handled this.
 		}
 
+		wp_fusion()->logger->add_source( 'rest-api' );
+
 		$user_data = $request->get_params();
+
+		if ( isset( $user_data['email'] ) ) {
+			$user_data['user_email'] = $user_data['email'];
+		}
+
+		if ( ! empty( $user_data['meta'] ) ) {
+			$user_data = array_merge( $user_data['meta'], $user_data );
+			unset( $user_data['meta'] );
+		}
 
 		$this->push_user_meta( $user->ID, $user_data );
 	}
@@ -697,6 +708,7 @@ class WPF_User {
 
 		// If no user email set, don't bother with an API call.
 		if ( ! is_email( $email_address ) ) {
+			wpf_log( 'error', $user_id, 'Contact ID lookup failed. Invalid email address: ' . $email_address );
 			return false;
 		}
 
@@ -741,10 +753,6 @@ class WPF_User {
 
 		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
-		}
-
-		if ( doing_wpf_auto_login() ) {
-			return $this->get_user_meta( $user_id );
 		}
 
 		$contact_id = $this->get_contact_id( $user_id );
@@ -1318,12 +1326,31 @@ class WPF_User {
 	public function apply_tags( $tags, $user_id = false ) {
 
 		if ( empty( $tags ) || ! is_array( $tags ) ) {
-			return;
+			return false;
 		}
 
 		// Sanitize!
+		$cleaned_tags = wpf_clean_tags( $tags );
 
-		$tags = wpf_clean_tags( $tags );
+		// Check for unknown tags.
+		if ( count( $cleaned_tags ) !== count( $tags ) ) {
+
+			$unknown_tags = array();
+
+			foreach ( $tags as $tag ) {
+				if ( ! $this->get_tag_id( $tag ) ) {
+					$unknown_tags[] = $tag;
+				}
+			}
+
+			wpf_log( 'notice', $user_id, 'Some tags were not applied because they were invalid or unknown.', array( 'tag_array' => $unknown_tags ) );
+		}
+
+		if ( empty( $cleaned_tags ) ) {
+			return false;
+		}
+
+		$tags = $cleaned_tags;
 
 		if ( false === $user_id ) {
 			$user_id = $this->get_current_user_id();
@@ -1349,13 +1376,18 @@ class WPF_User {
 
 		$contact_id = $this->get_contact_id( $user_id );
 
-		// If no contact ID, don't try applying tags.
+		// If no contact ID, double check in the CRM.
 
 		if ( empty( $contact_id ) ) {
 
-			wpf_log( 'notice', $user_id, __( 'No contact ID for user. Failed to apply tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
-			return false;
+			$contact_id = $this->get_contact_id( $user_id, true );
 
+			if ( empty( $contact_id ) ) {
+
+				wpf_log( 'notice', $user_id, __( 'No contact ID for user. Failed to apply tag(s)', 'wp-fusion-lite' ) . ': ', array( 'tag_array' => $tags ) );
+				return false;
+
+			}
 		}
 
 		$user_tags = $this->get_tags( $user_id );
@@ -1987,7 +2019,7 @@ class WPF_User {
 			return $tag_name;
 		}
 
-		$available_tags = wpf_get_option( 'available_tags', array() );
+		$available_tags = wp_fusion()->settings->get_available_tags_flat( true, false );
 
 		// If it's already an ID and exists.
 
@@ -1995,22 +2027,16 @@ class WPF_User {
 			return $tag_name;
 		}
 
+		// Search for a tag with the ID.
 		$tag_name = strval( $tag_name );
 
-		foreach ( $available_tags as $id => $data ) {
+		$tag_id = array_search( $tag_name, $available_tags, true );
 
-			if ( isset( $data['label'] ) && $data['label'] === $tag_name ) {
-
-				return $id;
-
-			} elseif ( is_string( $data ) && trim( $data ) === $tag_name ) {
-
-				return $id;
-
-			}
+		if ( false !== $tag_id ) {
+			return $tag_id;
 		}
 
-		// If no match found, and CRM supports add_tags, return the label
+		// If no match found, and CRM supports add_tags, return the label.
 		if ( ! empty( wp_fusion()->crm ) && wp_fusion()->crm->supports( 'add_tags' ) ) {
 			return $tag_name;
 		}
@@ -2098,7 +2124,7 @@ class WPF_User {
 	 * @access public
 	 * @return bool|WP_Error True if successful, false or WP_Error if not.
 	 */
-	public function push_user_meta( $user_id, $user_meta = false ) {
+	public function push_user_meta( $user_id, $user_meta = array() ) {
 
 		if ( ! wpf_get_option( 'push' ) || ! wp_fusion()->crm ) {
 			return false;
@@ -2108,7 +2134,7 @@ class WPF_User {
 
 		// If nothing's been supplied, get the latest from the DB.
 
-		if ( false === $user_meta ) {
+		if ( empty( $user_meta ) ) {
 			$user_meta = $this->get_user_meta( $user_id );
 		}
 

@@ -45,7 +45,6 @@ class WPF_PulseTechnologyCRM_Admin {
 	 *
 	 * @since 1.0.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -65,7 +64,6 @@ class WPF_PulseTechnologyCRM_Admin {
 
 		// OAuth
 		add_action( 'admin_init', array( $this, 'maybe_oauth_complete' ) );
-
 	}
 
 	/**
@@ -73,7 +71,6 @@ class WPF_PulseTechnologyCRM_Admin {
 	 *
 	 * @since 1.0.0
 	 */
-
 	public function init() {
 
 		// Hooks in init() will run on the admin screen when this CRM is active
@@ -85,7 +82,6 @@ class WPF_PulseTechnologyCRM_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function maybe_oauth_complete() {
 		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && 'pulsetech' == $_GET['crm'] ) {
 
@@ -128,7 +124,6 @@ class WPF_PulseTechnologyCRM_Admin {
 			exit;
 
 		}
-
 	}
 
 
@@ -140,9 +135,7 @@ class WPF_PulseTechnologyCRM_Admin {
 	 *
 	 * @return array $settings The settings.
 	 * @since 1.0.0
-	 *
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -178,13 +171,13 @@ class WPF_PulseTechnologyCRM_Admin {
 		if ( ! empty( $options['pulsetech_client_id'] ) && ! empty( $options['pulsetech_secret'] ) ) {
 			if ( empty( $options['pulsetech_refresh_token'] ) ) {
 				$query = http_build_query(
-					[
+					array(
 						'client_id'     => $options['pulsetech_client_id'],
 						'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=pulsetech' ),
 						'response_type' => 'code',
 						'scope'         => '',
 						'state'         => '123',
-					]
+					)
 				);
 
 				$button_url = $options['pulsetech_url'];
@@ -239,39 +232,33 @@ class WPF_PulseTechnologyCRM_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
 	 * Puts a div around the CRM configuration section so it can be toggled
 	 *
 	 * @param string $id The ID of the field.
-	 * @param array $field The field properties.
+	 * @param array  $field The field properties.
 	 *
 	 * @return mixed HTML output.
 	 * @since 1.0.0
-	 *
 	 */
-
 	public function show_field_pulsetech_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
 	 * Puts a div after the CRM configuration section so it can be toggled
 	 *
 	 * @param string $id The ID of the field.
-	 * @param array $field The field properties.
+	 * @param array  $field The field properties.
 	 *
 	 * @return mixed HTML output.
 	 * @since 1.0.0
-	 *
 	 */
-
 	public function show_field_pulsetech_footer_end( $id, $field ) {
 		echo '</table>';
 		echo '</div>';
@@ -282,9 +269,7 @@ class WPF_PulseTechnologyCRM_Admin {
 	 *
 	 * @return mixed JSON response.
 	 * @since 1.0.0
-	 *
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

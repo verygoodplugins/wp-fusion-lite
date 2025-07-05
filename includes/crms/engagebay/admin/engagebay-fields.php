@@ -123,25 +123,25 @@ $engagebay_fields['youtube'] = array(
 
 $engagebay_fields['billing_address_1'] = array(
 	'crm_label' => 'Address 1',
-	'crm_field' => 'address+address'
+	'crm_field' => 'address+address',
 );
 
 $engagebay_fields['billing_city'] = array(
 	'crm_label' => 'City',
-	'crm_field' => 'address+city'
+	'crm_field' => 'address+city',
 );
 
 $engagebay_fields['billing_state'] = array(
 	'crm_label' => 'State',
-	'crm_field' => 'address+state'
+	'crm_field' => 'address+state',
 );
 
 $engagebay_fields['billing_postcode'] = array(
 	'crm_label' => 'Zip',
-	'crm_field' => 'address+zip'
+	'crm_field' => 'address+zip',
 );
 
 $engagebay_fields['billing_country'] = array(
 	'crm_label' => 'Country',
-	'crm_field' => 'address+country'
+	'crm_field' => 'address+country',
 );

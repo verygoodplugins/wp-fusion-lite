@@ -4,42 +4,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-/**
- * Handle a log entry.
- *
- * @param int $timestamp Log timestamp.
- * @param string $level emergency|alert|critical|error|warning|notice|info|debug
- * @param string $message Log message.
- * @param array $context {
- *     Additional information for log handlers.
- *
- *     @type string $source Optional. Source will be available in log table.
- *                  If no source is provided, attempt to provide sensible default.
- * }
- *
- * @see WPF_Log_Handler::get_log_source() for default source.
- *
- * @return bool False if value was not handled and true if value was handled.
- */
 
 if ( ! function_exists( 'wpf_log' ) ) {
 
+	/**
+	 * Handle a log entry.
+	 *
+	 * @since unknown
+	 *
+	 * @param string $level   The log level.
+	 * @param int    $user    The user ID.
+	 * @param string $message The log message.
+	 * @param array  $context {
+	 *      Additional information for log handlers.
+	 *
+	 *     @type string $source Optional. Source will be available in log table.
+	 *                  If no source is provided, attempt to provide sensible default.
+	 * }
+	 *
+	 * @see WPF_Log_Handler::get_log_source() for default source.
+	 *
+	 * @return bool False if value was not handled and true if value was handled.
+	 */
 	function wpf_log( $level, $user, $message, $context = array() ) {
 
 		return wp_fusion()->logger->handle( $level, $user, $message, $context );
 	}
 }
 
-/**
- * Checks to see if a user has a given tag
- *
- * @return bool
- */
-
 if ( ! function_exists( 'wpf_has_tag' ) ) {
 
+	/**
+	 * Checks to see if a user has a given tag
+	 *
+	 * @since unknown
+	 *
+	 * @param array|string $tags The tag or tags to check.
+	 * @param int          $user_id The user ID.
+	 * @return bool Whether the user has the tag.
+	 */
 	function wpf_has_tag( $tags, $user_id = false ) {
-
 		return wp_fusion()->user->has_tag( $tags, $user_id );
 	}
 }
@@ -123,6 +127,27 @@ function wpf_get_current_user_email() {
 }
 
 /**
+ * Gets the WordPress user ID from an email address.
+ *
+ * @since 3.45.7
+ *
+ * @param string $email The email address to search by.
+ * @return int The user ID, or 0 if not found.
+ */
+function wpf_get_user_id_by_email( $email ) {
+
+	$user = get_user_by( 'email', $email );
+
+	if ( $user ) {
+		$user_id = $user->ID;
+	} else {
+		$user_id = 0;
+	}
+
+	return $user_id;
+}
+
+/**
  * Gets the WordPress user ID from a contact ID.
  *
  * @since 3.35.17
@@ -130,7 +155,6 @@ function wpf_get_current_user_email() {
  * @param string $contact_id The contact ID to search by.
  * @return int|bool The user ID, or false if not found.
  */
-
 function wpf_get_user_id( $contact_id ) {
 
 	return wp_fusion()->user->get_user_id( $contact_id );
@@ -144,7 +168,6 @@ function wpf_get_user_id( $contact_id ) {
  * @param int $user_id The user ID to search by.
  * @return string|bool The contact ID, or false if not found,
  */
-
 function wpf_get_contact_id( $user_id = false, $force_update = false ) {
 
 	return wp_fusion()->user->get_contact_id( $user_id, $force_update );
@@ -276,7 +299,6 @@ if ( ! function_exists( 'wpf_get_tag_label' ) ) {
  * @param string|bool $default  The default value to return if no CRM key is found
  * @return string|bool The CRM field
  */
-
 function wpf_get_crm_field( $meta_key, $default = false ) {
 
 	return wp_fusion()->crm->get_crm_field( $meta_key, $default );
@@ -290,7 +312,6 @@ function wpf_get_crm_field( $meta_key, $default = false ) {
  * @param string|array $meta_key The meta key or array of meta keys to look up.
  * @return bool Whether or not the field is active
  */
-
 function wpf_is_field_active( $meta_key ) {
 
 	return wp_fusion()->crm->is_field_active( $meta_key );
@@ -305,7 +326,6 @@ function wpf_is_field_active( $meta_key ) {
  * @param string $default  The default value to return if no type is found
  * @return string The field type
  */
-
 function wpf_get_field_type( $meta_key, $default = 'text' ) {
 
 	return wp_fusion()->crm->get_field_type( $meta_key, $default );
@@ -321,7 +341,6 @@ function wpf_get_field_type( $meta_key, $default = 'text' ) {
  * @param string $default   The default value to return if no type is found.
  * @return string The field type.
  */
-
 function wpf_get_remote_field_type( $field_id, $default = 'text' ) {
 
 	return wp_fusion()->crm->get_remote_field_type( $field_id, $default );
@@ -336,7 +355,6 @@ function wpf_get_remote_field_type( $field_id, $default = 'text' ) {
  * @param string $field_id The CRM field ID.
  * @return string|bool The value or false if not found.
  */
-
 function wpf_get_remote_option_value( $value, $field_id ) {
 
 	return wp_fusion()->crm->get_remote_option_value( $value, $field_id );
@@ -350,7 +368,6 @@ function wpf_get_remote_option_value( $value, $field_id ) {
  * @param string $meta_key The meta key to look up
  * @return bool Whether or not the field is a pseudo field
  */
-
 function wpf_is_pseudo_field( $meta_key ) {
 
 	return wp_fusion()->crm->is_pseudo_field( $meta_key );
@@ -364,7 +381,6 @@ function wpf_is_pseudo_field( $meta_key ) {
  *
  * @return string The field name in the CRM.
  */
-
 function wpf_get_lookup_field() {
 
 	return wp_fusion()->crm->get_lookup_field();
@@ -418,7 +434,6 @@ function wpf_is_staging_mode() {
  *
  * @return bool
  */
-
 function doing_wpf_auto_login() {
 
 	if ( is_object( wp_fusion()->auto_login ) && ! empty( wp_fusion()->auto_login->auto_login_user ) ) {
@@ -433,10 +448,9 @@ function doing_wpf_auto_login() {
  *
  * @return bool
  */
-
 function doing_wpf_webhook() {
 
-	if ( defined( 'DOING_WPF_WEBHOOK' ) && true == DOING_WPF_WEBHOOK ) {
+	if ( defined( 'WPF_DOING_WEBHOOK' ) && true === WPF_DOING_WEBHOOK ) {
 		return true;
 	} else {
 		return false;
@@ -569,6 +583,19 @@ function wpf_get_option( $key, $default = false ) {
 }
 
 /**
+ * Updates an option in the WP Fusion settings.
+ *
+ * @since 3.44.12
+ *
+ * @param string $key   The settings key.
+ * @param mixed  $value The value to update.
+ * @return bool Whether the option was updated.
+ */
+function wpf_update_option( $key, $value ) {
+	return wp_fusion()->settings->set( $key, $value );
+}
+
+/**
  * Clean variables using sanitize_text_field. Arrays are cleaned
  * recursively. Non-scalar values are ignored.
  *
@@ -640,7 +667,7 @@ function wpf_clean_tags( $tags ) {
 		$tags = array_map( 'wpf_get_tag_id', $tags );
 	}
 
-	return $tags;
+	return array_filter( $tags );
 }
 
 /**
@@ -759,9 +786,10 @@ function wpf_get_iso8601_date( $timestamp = null, $convert_to_gmt = false ) {
 
 	try {
 
-		// If no timestamp is provided, use the current time
 		if ( empty( $timestamp ) ) {
-			$timestamp = gmdate( 'U' );
+			$timestamp = gmdate( 'U' ); // If no timestamp is provided, use the current time.
+		} else {
+			$timestamp = intval( $timestamp ); // Ensure the timestamp is an integer.
 		}
 
 		$offset = get_option( 'gmt_offset' );
@@ -773,7 +801,7 @@ function wpf_get_iso8601_date( $timestamp = null, $convert_to_gmt = false ) {
 
 		$datetime = new DateTime( gmdate( 'c', $timestamp ) );
 
-		// DateTimeZone throws an error with 0 as the timezone
+		// DateTimeZone throws an error with 0 as the timezone.
 		if ( $offset >= 0 ) {
 			$offset = '+' . $offset;
 		}
@@ -814,10 +842,10 @@ function wpf_get_name_from_full_name( $full_name ) {
 
 	$parts = explode( ' ', $full_name );
 
-	// First name is always the first part
+	// First name is always the first part.
 	$first_name = array_shift( $parts );
 
-	// Last name is everything else joined together
+	// Last name is everything else joined together.
 	$last_name = implode( ' ', $parts );
 
 	return array(

@@ -86,7 +86,6 @@ class WPF_HighLevel {
 	 *
 	 * @since 3.36.0
 	 */
-
 	public function __construct() {
 
 		if ( ! $this->is_v2() ) {
@@ -111,7 +110,6 @@ class WPF_HighLevel {
 	 *
 	 * @since 3.36.0
 	 */
-
 	public function init() {
 
 		$this->edit_url = 'https://app.gohighlevel.com/v2/location/' . $this->location_id . '/contacts/detail/%s';
@@ -130,7 +128,6 @@ class WPF_HighLevel {
 	 * @param  array $post_data  The post data
 	 * @return array The post data
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
@@ -203,7 +200,6 @@ class WPF_HighLevel {
 	 * @param string $url      The HTTP request URL.
 	 * @return WP_HTTP_Response|WP_Error The response, or error.
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
@@ -212,7 +208,7 @@ class WPF_HighLevel {
 
 			if ( 200 === $response_code || 201 === $response_code ) {
 
-				return $response; // Success. Nothing more to do
+				return $response; // Success. Nothing more to do.
 
 			} elseif ( 500 === $response_code ) {
 
@@ -222,11 +218,39 @@ class WPF_HighLevel {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-				if ( isset( $body_json->message ) && is_array( $body_json->message ) ) {
-					$body_json->message = implode( ' ', $body_json->message );
-				}
+				if ( 400 === $response_code && isset( $body_json->error ) && 0 === strpos( $body_json->error, 'Contact with id' ) ) {
 
-				if ( ( 403 === $response_code || 401 === $response_code ) && isset( $body_json->message ) && false === strpos( $url, 'token' ) ) {
+					// Try to look up the contact again by email address.
+					$response = new WP_Error( 'not_found', $body_json->error );
+
+				} elseif ( 400 === $response_code && isset( $body_json->message ) && 'This location does not allow duplicated contacts.' === $body_json->message && 'email' === $body_json->meta->{'matchingField'} ) {
+
+					// If a contact already exists with that email, update the existing contact instead of creating a new one.
+					$contact_id     = sanitize_text_field( $body_json->meta->{'contactId'} );
+					$args['method'] = 'PUT';
+
+					$contact_data = json_decode( $args['body'], true );
+
+					if ( isset( $contact_data['locationId'] ) ) {
+						unset( $contact_data['locationId'] ); // this will cause an error when updating the contact.
+					}
+
+					wpf_log(
+						'notice',
+						wpf_get_user_id_by_email( $contact_data['email'] ),
+						sprintf(
+							'Duplicate email address "%s" found for contact #%s. Updating existing contact instead of creating a new one.',
+							$contact_data['email'],
+							$contact_id
+						)
+					);
+
+					$args['body'] = wp_json_encode( $contact_data );
+
+					$request  = $this->url . 'contacts/' . $contact_id;
+					$response = wp_remote_request( $request, $args );
+
+				} elseif ( ( 403 === $response_code || 401 === $response_code ) && isset( $body_json->message ) && false === strpos( $url, 'token' ) ) {
 
 					if (
 						'The token does not have access to this location.' === $body_json->message ||
@@ -248,13 +272,17 @@ class WPF_HighLevel {
 
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
-					$response = wp_safe_remote_request( $url, $args );
+					$response = wp_remote_request( $url, $args );
 
 				} elseif ( isset( $body_json->error_description ) ) {
 
 					$response = new WP_Error( 'error', $body_json->error_description );
 
 				} elseif ( isset( $body_json->message ) ) {
+
+					if ( is_array( $body_json->message ) ) {
+						$body_json->message = implode( ' ', $body_json->message );
+					}
 
 					// Maybe append the metadata.
 
@@ -295,6 +323,128 @@ class WPF_HighLevel {
 	}
 
 	/**
+	 * Authorize the application and generate access and refresh tokens.
+	 *
+	 * @since 3.45.9.1
+	 *
+	 * @param string $code The authorization code.
+	 * @return bool|string The access token or false if error.
+	 */
+	public function authorize( $code ) {
+
+		$body = array(
+			'grant_type'    => 'authorization_code',
+			'code'          => $code,
+			'client_id'     => $this->client_id,
+			'client_secret' => $this->client_secret,
+			'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=highlevel' ),
+		);
+
+		$params = array(
+			'timeout'    => 30,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'headers'    => array(
+				'Content-Type' => 'application/x-www-form-urlencoded',
+			),
+			'body'       => $body,
+		);
+
+		$response = wp_safe_remote_post( 'https://services.leadconnectorhq.com/oauth/token', $params );
+
+		if ( is_wp_error( $response ) ) {
+			wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
+			wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
+			return false;
+		} elseif ( 403 === wp_remote_retrieve_response_code( $response ) ) {
+			wp_fusion()->admin_notices->add_notice( '403 error requesting authorization code: ' . wp_remote_retrieve_body( $response ) );
+			wpf_log( 'error', 0, '403 error requesting authorization code: ' . wp_remote_retrieve_body( $response ) );
+			return false;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		wp_fusion()->settings->set( 'highlevel_refresh_token', $response->refresh_token );
+		wp_fusion()->settings->set( 'highlevel_token', $response->access_token );
+		wp_fusion()->settings->set( 'crm', $this->slug );
+
+		if ( isset( $response->{'locationId'} ) ) {
+
+			// Single location.
+			wp_fusion()->settings->set( 'highlevel_location_id', $response->{'locationId'} );
+			wp_fusion()->settings->set( 'highlevel_locations', false );
+
+		} elseif ( 'Company' === $response->{'userType'} ) {
+
+			// Multiple locations.
+
+			$company_id = $response->{'companyId'};
+			$user_id    = $response->{'userId'};
+			$response   = wp_safe_remote_get( "https://services.leadconnectorhq.com/oauth/installedLocations/?companyId={$company_id}&appId=640f1d950acf1dc6569948aa", $this->get_params() );
+			$response   = json_decode( wp_remote_retrieve_body( $response ) );
+
+			$locations = wp_list_pluck( $response->locations, 'name', '_id' );
+
+			wp_fusion()->settings->set( 'highlevel_locations', $locations );
+			wp_fusion()->settings->set( 'highlevel_location_id', $response->locations[0]->{'_id'} );
+			wp_fusion()->settings->set( 'highlevel_company_id', $company_id );
+			wp_fusion()->settings->set( 'highlevel_user_id', $user_id );
+
+			// Get the location access token.
+			$this->location_id = $response->locations[0]->{'_id'};
+			$this->refresh_location_token();
+
+		}
+
+		return $response->refresh_token;
+	}
+
+	/**
+	 * Calls the HighLevel Reconnect API to get a new authorization code.
+	 *
+	 * @since 3.45.9.1
+	 * @return string|WP_Error The authorization code or WP_Error.
+	 */
+	public function reconnect_api() {
+
+		$company_id  = wpf_get_option( 'highlevel_company_id' );
+		$location_id = $this->location_id;
+
+		$body = array(
+			'clientKey'    => $this->client_id,
+			'clientSecret' => $this->client_secret,
+		);
+
+		if ( ! empty( $company_id ) ) {
+			$body['companyId'] = $company_id;
+		} elseif ( ! empty( $location_id ) ) {
+			$body['locationId'] = $location_id;
+		} else {
+			return new WP_Error( 'error', 'Missing companyId or locationId for HighLevel reconnect.' );
+		}
+
+		$response = wp_remote_post(
+			'https://services.leadconnectorhq.com/oauth/reconnect',
+			array(
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'body'    => wp_json_encode( $body ),
+				'timeout' => 15,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$data = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $data->{'authorizationCode'} ) ) {
+			return new WP_Error( 'error', 'Failed to get authorization code from HighLevel reconnect.' );
+		}
+
+		return $data->{'authorizationCode'};
+	}
+
+	/**
 	 * Get the access token for the current location.
 	 *
 	 * @since 3.44.26
@@ -329,7 +479,6 @@ class WPF_HighLevel {
 		wp_fusion()->settings->set( 'highlevel_token_' . $this->location_id, $response->access_token );
 
 		return $response->access_token;
-
 	}
 
 	/**
@@ -347,6 +496,19 @@ class WPF_HighLevel {
 			return new WP_Error( 'error', 'Authorization failed and no refresh token found.' );
 		}
 
+		// Handles API incident from May 7 2025 where the refresh token was returned as an object.
+		if ( ! is_string( $refresh_token ) ) {
+
+			$auth_code = $this->reconnect_api();
+
+			if ( is_wp_error( $auth_code ) ) {
+				return $auth_code;
+			}
+
+			$refresh_token = $this->authorize( $auth_code );
+
+		}
+
 		$params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'headers'    => array(
@@ -361,13 +523,17 @@ class WPF_HighLevel {
 			),
 		);
 
-		$response = wp_safe_remote_post( $this->url . 'oauth/token', $params );
+		$response = wp_remote_post( $this->url . 'oauth/token', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( ! is_string( $body_json->refresh_token ) ) {
+			return new WP_Error( 'error', 'Unexpected response from HighLevel while refreshing access token. Please try again.' );
+		}
 
 		wp_fusion()->settings->set( 'highlevel_token', $body_json->access_token );
 		wp_fusion()->settings->set( 'highlevel_refresh_token', $body_json->refresh_token );
@@ -394,7 +560,6 @@ class WPF_HighLevel {
 	 *
 	 * @return array $params The API params.
 	 */
-
 	public function get_params( $access_token = null ) {
 
 		if ( ! $this->is_v2() ) {
@@ -441,7 +606,6 @@ class WPF_HighLevel {
 	 * @access  public
 	 * @return  bool|object true or WP_Error object with custom error message if connection fails.
 	 */
-
 	public function connect( $access_token = null, $location_id = null, $test = false ) {
 
 		if ( $location_id ) {
@@ -454,7 +618,7 @@ class WPF_HighLevel {
 			return true;
 		}
 
-		$response = wp_safe_remote_get( $this->url . 'contacts/?locationId=' . $location_id, $params );
+		$response = wp_remote_get( $this->url . 'contacts/?locationId=' . $location_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -471,7 +635,6 @@ class WPF_HighLevel {
 	 *
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -494,12 +657,11 @@ class WPF_HighLevel {
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
 	 */
-
 	public function sync_tags() {
 		if ( $this->is_v2() ) {
-			$response = wp_safe_remote_get( $this->url . 'locations/' . $this->location_id . '/tags/', $this->get_params() );
+			$response = wp_remote_get( $this->url . 'locations/' . $this->location_id . '/tags/', $this->get_params() );
 		} else {
-			$response = wp_safe_remote_get( $this->url . 'tags/', $this->get_params() );
+			$response = wp_remote_get( $this->url . 'tags/', $this->get_params() );
 		}
 
 		if ( is_wp_error( $response ) ) {
@@ -528,7 +690,6 @@ class WPF_HighLevel {
 	 *
 	 * @return array|WP_Error Either the available fields in the CRM, or a WP_Error.
 	 */
-
 	public function sync_crm_fields() {
 		// Load built in fields first
 		require __DIR__ . '/admin/highlevel-fields.php';
@@ -543,9 +704,9 @@ class WPF_HighLevel {
 
 		// Custom fields
 		if ( $this->is_v2() ) {
-			$response = wp_safe_remote_get( $this->url . 'locations/' . $this->location_id . '/customFields', $this->get_params() );
+			$response = wp_remote_get( $this->url . 'locations/' . $this->location_id . '/customFields', $this->get_params() );
 		} else {
-			$response = wp_safe_remote_get( $this->url . 'custom-fields/', $this->get_params() );
+			$response = wp_remote_get( $this->url . 'custom-fields/', $this->get_params() );
 		}
 
 		if ( is_wp_error( $response ) ) {
@@ -586,7 +747,6 @@ class WPF_HighLevel {
 	 * @param string $email_address The email address to look up.
 	 * @return int|WP_Error The contact ID in the CRM.
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( $this->is_v2() ) {
@@ -595,7 +755,7 @@ class WPF_HighLevel {
 			$request = $this->url . 'contacts/lookup?email=' . urlencode( $email_address );
 		}
 
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -619,11 +779,10 @@ class WPF_HighLevel {
 	 * @param int $contact_id The contact ID to load the tags for.
 	 * @return array|WP_Error The tags currently applied to the contact in the CRM.
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$request  = $this->url . 'contacts/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -662,7 +821,6 @@ class WPF_HighLevel {
 	 * @param int   $contact_id The contact ID to apply the tags to.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$params = $this->get_params();
@@ -681,7 +839,7 @@ class WPF_HighLevel {
 			$params['body']   = wp_json_encode( $data );
 
 			$request  = $this->url . 'contacts/' . $contact_id;
-			$response = wp_safe_remote_request( $request, $params );
+			$response = wp_remote_request( $request, $params );
 
 		} else {
 
@@ -691,7 +849,7 @@ class WPF_HighLevel {
 		}
 
 		$params['body'] = wp_json_encode( $data );
-		$response       = wp_safe_remote_post( $request, $params );
+		$response       = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -710,7 +868,6 @@ class WPF_HighLevel {
 	 * @param int   $contact_id The contact ID to remove the tags from.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$params = $this->get_params();
@@ -752,7 +909,7 @@ class WPF_HighLevel {
 			$params['method'] = 'DELETE';
 		}
 
-		$response = wp_safe_remote_request( $request, $params );
+		$response = wp_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -819,7 +976,7 @@ class WPF_HighLevel {
 		$params                     = $this->get_params();
 		$params['body']             = wp_json_encode( $contact_data );
 
-		$response = wp_safe_remote_post( $this->url . 'contacts/', $params );
+		$response = wp_remote_post( $this->url . 'contacts/', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -849,7 +1006,7 @@ class WPF_HighLevel {
 		$params['body']   = wp_json_encode( $contact_data );
 
 		$request  = $this->url . 'contacts/' . $contact_id;
-		$response = wp_safe_remote_request( $request, $params );
+		$response = wp_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -866,11 +1023,10 @@ class WPF_HighLevel {
 	 * @param int $contact_id The ID of the contact to load.
 	 * @return array|WP_Error User meta data that was returned.
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . 'contacts/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -918,7 +1074,6 @@ class WPF_HighLevel {
 	 * @param string $tag The tag ID or name to search for.
 	 * @return array Contact IDs returned.
 	 */
-
 	public function load_contacts( $tag = false ) {
 
 		$page        = 1;
@@ -939,7 +1094,7 @@ class WPF_HighLevel {
 		while ( $proceed ) {
 			$url = add_query_arg( 'page', $page, $url );
 
-			$response = wp_safe_remote_get( $url, $this->get_params() );
+			$response = wp_remote_get( $url, $this->get_params() );
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
@@ -960,4 +1115,3 @@ class WPF_HighLevel {
 		return $contact_ids;
 	}
 }
-

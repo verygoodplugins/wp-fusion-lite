@@ -16,7 +16,6 @@ class WPF_Growmatik_Admin {
 	 * @param object $crm  The CRM object
 	 * @return void
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -41,7 +40,6 @@ class WPF_Growmatik_Admin {
 	 *
 	 * @return void
 	 */
-
 	public function init() {
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 	}
@@ -56,7 +54,6 @@ class WPF_Growmatik_Admin {
 	 * @param array $options  The options saved in the database.
 	 * @return array $settings The settings.
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -99,7 +96,6 @@ class WPF_Growmatik_Admin {
 	 * @param array $options The options saved in the database
 	 * @return array $options The options saved in the database
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -127,7 +123,6 @@ class WPF_Growmatik_Admin {
 	 * @param array  $field The field properties
 	 * @return mixed HTML output
 	 */
-
 	public function show_field_growmatik_header_begin( $id, $field ) {
 
 		echo '</table>';

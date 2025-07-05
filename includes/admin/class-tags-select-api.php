@@ -254,8 +254,6 @@ if ( ! class_exists( 'WPF_Tags_Select_API' ) ) {
 					wp_send_json_error( $tag_id );
 				}
 
-				wp_fusion()->crm->sync_tags();
-
 				wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag <strong>' . $tag . '</strong> with ID <code>' . $tag_id . '</code>' );
 			}
 

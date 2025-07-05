@@ -22,7 +22,6 @@ class WPF_Emercury_API {
 			</request>';
 
 		return $this->sendRequest( $xml );
-
 	}
 
 	public function getSubscribersByTag( $tag, $audience_id ) {
@@ -38,7 +37,6 @@ class WPF_Emercury_API {
 			</request>';
 
 		return $this->sendRequest( $xml );
-
 	}
 
 	public function getSubscriberTags( $email ) {
@@ -55,7 +53,6 @@ class WPF_Emercury_API {
 			</request>';
 
 		return $this->sendRequest( $xml );
-
 	}
 
 	public function addSubscriberTag( $tags, $email ) {
@@ -73,7 +70,6 @@ class WPF_Emercury_API {
 			</request>';
 
 		return $this->sendRequest( $xml );
-
 	}
 	public function deleteSubscriberTag( $tags, $email ) {
 		$this->checkApiParameters();
@@ -90,7 +86,6 @@ class WPF_Emercury_API {
 			</request>';
 
 		return $this->sendRequest( $xml );
-
 	}
 
 	public function addAudience( $name ) {
@@ -215,7 +210,7 @@ class WPF_Emercury_API {
 	}
 
 	public function parameters( $request ) {
-		$body            = [];
+		$body            = array();
 		$body['request'] = $request;
 
 		$xml = simplexml_load_string( $request );
@@ -243,27 +238,27 @@ class WPF_Emercury_API {
 	}
 
 	/**
-	* @return array
-	*/
+	 * @return array
+	 */
 	private function sendRequest( $xml ) {
 		$res = wp_safe_remote_request(
 			self::API_URL,
 			$this->parameters( $xml )
 		);
 
-		$output = [];
+		$output = array();
 		if ( is_wp_error( $res ) ) {
-			$output = [
+			$output = array(
 				'code'    => 'error',
 				'message' => $res->get_error_message(),
-			];
+			);
 			wpf_log( 'error', 0, $res->get_error_message() );
 		} else {
 			$res    = $res['body'];
-			$output = [
+			$output = array(
 				'code'    => 'ok',
 				'message' => ( is_string( $res ) ) ? simplexml_load_string( $res ) : $res,
-			];
+			);
 		}
 		return $output;
 	}

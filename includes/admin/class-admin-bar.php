@@ -9,7 +9,6 @@ class WPF_Admin_Bar {
 	public function __construct() {
 
 		add_action( 'init', array( $this, 'init' ) );
-
 	}
 
 	/**
@@ -19,7 +18,6 @@ class WPF_Admin_Bar {
 	 * @since   1.0
 	 * @return  void
 	 */
-
 	public function init() {
 
 		if ( ! wpf_is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
@@ -33,7 +31,6 @@ class WPF_Admin_Bar {
 
 		add_filter( 'wpf_user_tags', array( $this, 'user_tags' ), 10, 2 );
 		add_filter( 'wpf_user_can_access', array( $this, 'admin_bar_overrides' ), 10, 3 );
-
 	}
 
 	/**
@@ -42,12 +39,10 @@ class WPF_Admin_Bar {
 	 * @access public
 	 * @return void
 	 */
-
 	public function admin_bar_style() {
 
 		wp_enqueue_style( 'wpf-admin-bar', WPF_DIR_URL . 'assets/css/wpf-admin-bar.css', array(), WP_FUSION_VERSION );
 		wp_enqueue_script( 'wpf-admin-bar', WPF_DIR_URL . 'assets/js/wpf-admin-bar.js', array( 'jquery' ), WP_FUSION_VERSION, true );
-
 	}
 
 
@@ -57,7 +52,6 @@ class WPF_Admin_Bar {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function user_tags( $user_tags, $user_id ) {
 
 		if ( ! empty( $_GET['wpf_tag'] ) ) {
@@ -65,7 +59,6 @@ class WPF_Admin_Bar {
 		}
 
 		return $user_tags;
-
 	}
 
 
@@ -75,7 +68,6 @@ class WPF_Admin_Bar {
 	 * @access public
 	 * @return bool Can Access
 	 */
-
 	public function admin_bar_overrides( $can_access, $user_id, $post_id ) {
 
 		if ( empty( $_GET['wpf_tag'] ) ) {
@@ -91,7 +83,6 @@ class WPF_Admin_Bar {
 		}
 
 		return $can_access;
-
 	}
 
 
@@ -101,7 +92,6 @@ class WPF_Admin_Bar {
 	 * @access public
 	 * @return bool Value
 	 */
-
 	public function bypass_exclude_admins( $value ) {
 
 		if ( ! empty( $_GET['wpf_tag'] ) ) {
@@ -109,7 +99,6 @@ class WPF_Admin_Bar {
 		}
 
 		return $value;
-
 	}
 
 	/**
@@ -118,7 +107,6 @@ class WPF_Admin_Bar {
 	 * @access public
 	 * @return void
 	 */
-
 	public function subval_sort( $a, $subkey ) {
 		foreach ( $a as $k => $v ) {
 			$b[ $k ] = strtolower( $v[ $subkey ] );
@@ -137,7 +125,6 @@ class WPF_Admin_Bar {
 	 * @access public
 	 * @return void
 	 */
-
 	public function render_admin_bar() {
 
 		if ( isset( $_GET['wpf_tag'] ) ) {
@@ -302,10 +289,7 @@ class WPF_Admin_Bar {
 
 			}
 		}
-
 	}
-
-
 }
 
 new WPF_Admin_Bar();

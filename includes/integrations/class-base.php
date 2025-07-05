@@ -28,14 +28,14 @@ abstract class WPF_Integrations_Base {
 
 	public function __construct() {
 
-		if ( $this->is_integration_active() ) {
-			$this->init();
-		}
-
 		// Make the object globally available.
 
 		if ( $this->slug ) {
 			wp_fusion()->integrations->{$this->slug} = $this;
+		}
+
+		if ( $this->is_integration_active() ) {
+			$this->init();
 		}
 
 		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
@@ -50,7 +50,6 @@ abstract class WPF_Integrations_Base {
 	 * @since   1.0
 	 * @return  void
 	 */
-
 	abstract protected function init();
 
 	/**
@@ -93,7 +92,6 @@ abstract class WPF_Integrations_Base {
 	 * @since   3.0
 	 * @return  array Meta Fields
 	 */
-
 	protected function map_meta_fields( $meta_fields, $field_map ) {
 
 		foreach ( $field_map as $key => $field ) {
@@ -135,7 +133,6 @@ abstract class WPF_Integrations_Base {
 	 * @since   3.32.2
 	 * @return  array Tags
 	 */
-
 	public function get_dynamic_tags( $update_data ) {
 
 		$apply_tags = array();
@@ -179,7 +176,6 @@ abstract class WPF_Integrations_Base {
 	 *
 	 * @return string|bool Contact ID on success or false in case of error.
 	 */
-
 	public function guest_registration( $email_address, $update_data ) {
 
 		$contact_id = wp_fusion()->crm->get_contact_id( $email_address );

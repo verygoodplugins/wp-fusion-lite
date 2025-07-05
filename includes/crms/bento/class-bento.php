@@ -72,13 +72,12 @@ class WPF_Bento {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-bento-admin.php';
+			require_once __DIR__ . '/class-bento-admin.php';
 			new WPF_Bento_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -104,7 +103,6 @@ class WPF_Bento {
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
 		add_filter( 'wpf_event_tracking_replace_tags', array( $this, 'event_tracking_replace_tags' ), 10, 2 );
-
 	}
 
 	/**
@@ -138,11 +136,9 @@ class WPF_Bento {
 				// Visitor." - Jesse.
 				$post_data['contact_id'] = wpf_get_contact_id( $user->ID );
 			}
-
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -157,7 +153,6 @@ class WPF_Bento {
 	public function set_sleep_time( $seconds ) {
 
 		return 4;
-
 	}
 
 	/**
@@ -177,7 +172,6 @@ class WPF_Bento {
 		);
 
 		wp_enqueue_script( 'bento', 'https://app.bentonow.com/' . wpf_get_option( 'site_uuid' ) . '.js', array(), WP_FUSION_VERSION, $args );
-
 	}
 
 	/**
@@ -202,9 +196,9 @@ class WPF_Bento {
 			if (typeof(bento$) != 'undefined') {
 				bento$(function() {";
 
-				if ( $email ) {
-					echo "bento.identify('" . esc_js( strtolower( $email ) ) . "');";
-				}
+		if ( $email ) {
+			echo "bento.identify('" . esc_js( strtolower( $email ) ) . "');";
+		}
 
 				echo '
 					bento.view();
@@ -213,7 +207,6 @@ class WPF_Bento {
 		});
 		</script>';
 		echo '<!-- end Bento -->';
-
 	}
 
 	/**
@@ -231,7 +224,6 @@ class WPF_Bento {
 		}
 
 		setcookie( 'wpf_guest', $email, time() + HOUR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 
@@ -269,7 +261,6 @@ class WPF_Bento {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -345,7 +336,6 @@ class WPF_Bento {
 		}
 
 		return $response;
-
 	}
 
 
@@ -404,7 +394,6 @@ class WPF_Bento {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -467,7 +456,7 @@ class WPF_Bento {
 		}
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/bento-fields.php';
+		require __DIR__ . '/bento-fields.php';
 
 		$built_in_fields = array();
 
@@ -669,7 +658,6 @@ class WPF_Bento {
 		}
 
 		return true;
-
 	}
 
 
@@ -727,7 +715,6 @@ class WPF_Bento {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -925,8 +912,5 @@ class WPF_Bento {
 		}
 
 		return $event;
-
 	}
-
-
 }

@@ -84,7 +84,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -120,7 +119,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return int Sleep time
 	 */
-
 	public function set_sleep_time( $seconds ) {
 
 		return 2;
@@ -198,7 +196,7 @@ class WPF_MailerLite {
 				// Verify the tag.
 				$tag = wpf_get_option( 'mailerlite_add_tag' );
 
-				if ( intval( $payload->group->id ) === intval( $tag[0] ) ) {
+				if ( strval( $payload->group->id ) === strval( $tag[0] ) ) {
 
 					$contact_ids[] = $payload->subscriber->id;
 
@@ -321,7 +319,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
@@ -344,7 +341,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return string Contact ID
 	 */
-
 	public function auto_login_contact_id( $contact_id ) {
 
 		if ( is_email( urldecode( $contact_id ) ) ) {
@@ -360,7 +356,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'mailerlite' ) !== false ) {
@@ -391,7 +386,6 @@ class WPF_MailerLite {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB
@@ -419,7 +413,6 @@ class WPF_MailerLite {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -450,7 +443,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_tags();
@@ -467,7 +459,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -513,7 +504,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -548,7 +538,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -585,7 +574,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$tags     = array();
@@ -626,7 +614,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( $this->is_v2() ) {
@@ -682,7 +669,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$params           = $this->get_params();
@@ -837,7 +823,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$data = $this->format_subscriber_data( $data );
@@ -867,11 +852,10 @@ class WPF_MailerLite {
 	 * @since 3.10.0
 	 *
 	 * @param string $contact_id The contact ID.
-	 * @param array $data The data to update.
+	 * @param array  $data The data to update.
 	 *
 	 * @return string|WP_Error The contact ID or an error.
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
@@ -947,7 +931,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$url      = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
@@ -995,7 +978,6 @@ class WPF_MailerLite {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {

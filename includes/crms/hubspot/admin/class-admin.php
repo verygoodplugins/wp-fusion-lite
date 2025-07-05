@@ -12,7 +12,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -40,7 +39,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
@@ -55,7 +53,6 @@ class WPF_HubSpot_Admin {
 	 * @access public
 	 * @return array Notices
 	 */
-
 	public function compatibility_notices( $notices ) {
 
 		if ( is_plugin_active( 'leadin/leadin.php' ) ) {
@@ -75,7 +72,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function maybe_oauth_complete() {
 
 		if ( isset( $_GET['code'] ) && isset( $_GET['crm'] ) && $_GET['crm'] == 'hubspot' ) {
@@ -128,7 +124,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -212,7 +207,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @return  array Settings
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		// Add site tracking option.
@@ -249,7 +243,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -274,7 +267,6 @@ class WPF_HubSpot_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_hubspot_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -289,7 +281,6 @@ class WPF_HubSpot_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

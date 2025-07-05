@@ -91,13 +91,12 @@ class WPF_Constant_Contact {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Constant_Contact_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -113,7 +112,6 @@ class WPF_Constant_Contact {
 
 		// Slow down the batch processses to get around the 4 requests per second limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
-
 	}
 
 
@@ -151,7 +149,6 @@ class WPF_Constant_Contact {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -236,7 +233,6 @@ class WPF_Constant_Contact {
 		wp_fusion()->settings->set( "{$this->slug}_token", $body_json->access_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -326,7 +322,6 @@ class WPF_Constant_Contact {
 		);
 
 		return $fields;
-
 	}
 
 
@@ -385,7 +380,6 @@ class WPF_Constant_Contact {
 		}
 
 		return $response;
-
 	}
 
 
@@ -442,7 +436,6 @@ class WPF_Constant_Contact {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -453,7 +446,6 @@ class WPF_Constant_Contact {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
 
 		$available_lists = array();
@@ -477,7 +469,6 @@ class WPF_Constant_Contact {
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
 		return $available_lists;
-
 	}
 
 
@@ -563,7 +554,6 @@ class WPF_Constant_Contact {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -709,7 +699,6 @@ class WPF_Constant_Contact {
 		}
 
 		return true;
-
 	}
 
 
@@ -798,7 +787,6 @@ class WPF_Constant_Contact {
 
 		// Get new contact ID out of response.
 		return $body->contact_id;
-
 	}
 
 	/**
@@ -973,7 +961,5 @@ class WPF_Constant_Contact {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

@@ -51,17 +51,15 @@ class WPF_UserEngage {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_UserEngage_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -70,7 +68,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -91,7 +88,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -107,7 +103,6 @@ class WPF_UserEngage {
 		$post_data['contact_id'] = absint( $payload->user->id );
 
 		return $post_data;
-
 	}
 
 	/**
@@ -116,7 +111,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
@@ -131,7 +125,6 @@ class WPF_UserEngage {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -140,7 +133,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'userengage' ) !== false ) {
@@ -163,7 +155,6 @@ class WPF_UserEngage {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -172,7 +163,6 @@ class WPF_UserEngage {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $domain = null, $api_key = null ) {
 
 		// Get saved data from DB
@@ -205,7 +195,6 @@ class WPF_UserEngage {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $domain = null, $api_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -232,7 +221,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -245,7 +233,6 @@ class WPF_UserEngage {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -254,7 +241,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -288,7 +274,6 @@ class WPF_UserEngage {
 		 * @access public
 		 * @return array CRM Fields
 		 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -296,7 +281,7 @@ class WPF_UserEngage {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/userengage-fields.php';
+		require __DIR__ . '/admin/userengage-fields.php';
 
 		$built_in_fields = array();
 
@@ -344,7 +329,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -366,7 +350,6 @@ class WPF_UserEngage {
 		}
 
 		return $body_json['id'];
-
 	}
 
 	/**
@@ -375,7 +358,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -407,7 +389,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -428,7 +409,6 @@ class WPF_UserEngage {
 		}
 
 		return true;
-
 	}
 
 
@@ -438,7 +418,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -459,7 +438,6 @@ class WPF_UserEngage {
 		}
 
 		return true;
-
 	}
 
 
@@ -469,7 +447,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$params         = $this->get_params();
@@ -510,7 +487,6 @@ class WPF_UserEngage {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
-
 	}
 
 
@@ -520,7 +496,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$crm_fields = wpf_get_option( 'crm_fields' );
@@ -573,7 +548,6 @@ class WPF_UserEngage {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -582,7 +556,6 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -623,7 +596,6 @@ class WPF_UserEngage {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -632,11 +604,8 @@ class WPF_UserEngage {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// not possible
 	}
-
-
 }

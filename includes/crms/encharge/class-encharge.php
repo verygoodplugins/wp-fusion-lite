@@ -174,11 +174,10 @@ class WPF_Encharge {
 	 *
 	 * @since 3.43.11
 	 *
-	 * @param int $user_id The user ID.
+	 * @param int    $user_id The user ID.
 	 * @param string $method The method that was called.
 	 * @return mixed JSON success message.
 	 */
-
 	public function api_success( $user_id, $method ) {
 
 		wp_send_json_success(

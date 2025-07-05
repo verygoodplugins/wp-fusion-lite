@@ -70,17 +70,15 @@ class WPF_Vtiger {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Vtiger_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -89,22 +87,19 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		add_action( 'init', array( $this, 'test' ) );
-
 	}
 
 	public function test() {
 
-		if( isset( $_GET['vtreg'] ) ) {
+		if ( isset( $_GET['vtreg'] ) ) {
 			$this->load_contact( '12x8663' );
 		}
-
 	}
 
 
@@ -114,11 +109,11 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		if ( isset( $post_data['email'] ) ) {
 
@@ -127,19 +122,16 @@ class WPF_Vtiger {
 			if ( $user != false ) {
 				$post_data['contact_id'] = get_user_meta( $user->ID, 'vtiger_contact_id', true );
 			}
-
 		} else {
 
 			$payload = json_decode( file_get_contents( 'php://input' ) );
 
-			if(is_object($payload)) {
+			if ( is_object( $payload ) ) {
 				$post_data['contact_id'] = $payload->eventData->id;
 			}
-
 		}
 
 		return $post_data;
-
 	}
 
 
@@ -149,32 +141,29 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( "m/d/Y", $value );
+			$date = date( 'm/d/Y', $value );
 
 			return $date;
 
 		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
 			if ( empty( $value ) ) {
-				//If checkbox is unselected
+				// If checkbox is unselected
 				return 'off';
 			} else {
 				// If checkbox is selected
 				return 'on';
 			}
-
 		} else {
 
 			return $value;
 
 		}
-
 	}
 
 
@@ -184,24 +173,21 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( ! empty( $this->domain ) && strpos($url, $this->domain) !== false ) {
+		if ( ! empty( $this->domain ) && strpos( $url, $this->domain ) !== false ) {
 
-			$response_code = wp_remote_retrieve_response_code( $response );
+			$response_code    = wp_remote_retrieve_response_code( $response );
 			$response_message = wp_remote_retrieve_response_message( $response );
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body->error ) ) {
+			if ( isset( $body->error ) ) {
 				$response = new WP_Error( 'error', $body->error->message );
 			}
-
 		}
 
 		return $response;
-
 	}
 
 
@@ -211,12 +197,11 @@ class WPF_Vtiger {
 	 * @access  public
 	 * @return  str Session ID
 	 */
-
 	public function login() {
 
 		$response = wp_safe_remote_get( $this->domain . '?operation=getchallenge&username=' . $this->username );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -225,14 +210,14 @@ class WPF_Vtiger {
 		$params = $this->params;
 
 		$params['body'] = array(
-			'operation'	=> 'login',
-			'username' 	=> $this->username,
-			'accessKey' => md5( $body->result->token . $this->api_key )
+			'operation' => 'login',
+			'username'  => $this->username,
+			'accessKey' => md5( $body->result->token . $this->api_key ),
 		);
 
 		$response = wp_safe_remote_post( $this->domain, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -242,7 +227,6 @@ class WPF_Vtiger {
 		wp_fusion()->settings->set( 'vtiger_session', $body->result->sessionName );
 
 		return $body->result->sessionName;
-
 	}
 
 	/**
@@ -251,39 +235,37 @@ class WPF_Vtiger {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function get_params( $domain = null, $username = null, $api_key = null ) {
 
 		// Get saved data from DB
 		if ( empty( $domain ) || empty( $username ) || empty( $api_key ) ) {
 
-			$this->domain 		= trailingslashit( wpf_get_option( 'vtiger_domain' ) ) . 'webservice.php';
-			$this->username   	= wpf_get_option( 'vtiger_username' );
-			$this->api_key      = wpf_get_option( 'vtiger_key' );
-			$this->session      = wpf_get_option( 'vtiger_session' );
-			
+			$this->domain   = trailingslashit( wpf_get_option( 'vtiger_domain' ) ) . 'webservice.php';
+			$this->username = wpf_get_option( 'vtiger_username' );
+			$this->api_key  = wpf_get_option( 'vtiger_key' );
+			$this->session  = wpf_get_option( 'vtiger_session' );
+
 		} else {
 
-			$this->domain 	= trailingslashit( $domain ) . 'webservice.php';
+			$this->domain   = trailingslashit( $domain ) . 'webservice.php';
 			$this->username = $username;
 			$this->api_key  = $api_key;
 
 		}
 
-		$this->element_type = 'Contacts';
+		$this->element_type     = 'Contacts';
 		$this->assigned_user_id = '19x22';
 
 		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 30,
 			'headers'    => array(
-				'Content-Type' 	=> 'application/x-www-form-urlencoded',
-				'Accept' 		=> 'application/json',
-			)
+				'Content-Type' => 'application/x-www-form-urlencoded',
+				'Accept'       => 'application/json',
+			),
 		);
 
 		return $this->params;
-
 	}
 
 
@@ -293,7 +275,6 @@ class WPF_Vtiger {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $domain = null, $username = null, $api_key = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -306,7 +287,7 @@ class WPF_Vtiger {
 
 		$result = $this->login( $domain, $username, $api_key );
 
-		if( is_wp_error( $result ) ) {
+		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
@@ -320,7 +301,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -333,7 +313,6 @@ class WPF_Vtiger {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -343,7 +322,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		// Not supported
@@ -359,7 +337,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -367,21 +344,21 @@ class WPF_Vtiger {
 		}
 
 		$args = array(
-			'operation'		=> 'describe',
-			'sessionName'	=> $this->session,
-			'elementType'	=> $this->element_type
+			'operation'   => 'describe',
+			'sessionName' => $this->session,
+			'elementType' => $this->element_type,
 		);
 
 		$response = wp_safe_remote_get( add_query_arg( $args, $this->domain ) );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+		$body       = json_decode( wp_remote_retrieve_body( $response ) );
 		$crm_fields = array();
 
-		foreach( $body->result->fields as $field ) {
+		foreach ( $body->result->fields as $field ) {
 
 			$crm_fields[ $field->name ] = $field->label;
 
@@ -401,7 +378,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -409,25 +385,24 @@ class WPF_Vtiger {
 		}
 
 		$args = array(
-			'operation'		=> 'query',
-			'sessionName'	=> $this->session,
-			'query'			=> urlencode("SELECT id FROM Contacts WHERE email='" . $email_address . "';")
+			'operation'   => 'query',
+			'sessionName' => $this->session,
+			'query'       => urlencode( "SELECT id FROM Contacts WHERE email='" . $email_address . "';" ),
 		);
 
 		$response = wp_safe_remote_get( add_query_arg( $args, $this->domain ) );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $body->result ) ) {
+		if ( empty( $body->result ) ) {
 			return false;
 		}
 
 		return $body->result[0]->id;
-
 	}
 
 
@@ -437,7 +412,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -445,7 +419,6 @@ class WPF_Vtiger {
 		}
 
 		return false;
-
 	}
 
 	/**
@@ -454,11 +427,9 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		return true;
-
 	}
 
 	/**
@@ -467,11 +438,9 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		return true;
-
 	}
 
 
@@ -481,7 +450,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -494,22 +462,21 @@ class WPF_Vtiger {
 		$params = $this->params;
 
 		$params['body'] = array(
-			'operation'		=> 'create',
-			'sessionName'	=> $this->session,
-			'element'		=> wp_json_encode( $data ),
-			'elementType'	=> $this->element_type
+			'operation'   => 'create',
+			'sessionName' => $this->session,
+			'element'     => wp_json_encode( $data ),
+			'elementType' => $this->element_type,
 		);
 
 		$response = wp_safe_remote_post( $this->domain, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->result->id;
-
 	}
 
 	/**
@@ -518,27 +485,26 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$data['id'] 				= $contact_id;
-		$data['assigned_user_id'] 	= $this->assigned_user_id;
+		$data['id']               = $contact_id;
+		$data['assigned_user_id'] = $this->assigned_user_id;
 
 		$params = $this->params;
 
 		$params['body'] = array(
-			'operation'		=> 'update',
-			'sessionName'	=> $this->session,
-			'element'		=> wp_json_encode( $data ),
+			'operation'   => 'update',
+			'sessionName' => $this->session,
+			'element'     => wp_json_encode( $data ),
 		);
 
 		$response = wp_safe_remote_post( $this->domain, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -551,7 +517,6 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -559,14 +524,14 @@ class WPF_Vtiger {
 		}
 
 		$args = array(
-			'operation'		=> 'retrieve',
-			'sessionName'	=> $this->session,
-			'id'			=> $contact_id
+			'operation'   => 'retrieve',
+			'sessionName' => $this->session,
+			'id'          => $contact_id,
 		);
 
 		$response = wp_safe_remote_get( add_query_arg( $args, $this->domain ) );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -581,16 +546,13 @@ class WPF_Vtiger {
 
 			foreach ( $contact_fields as $meta_key => $field_data ) {
 
-				if ( isset($field_data['crm_field']) && $field_data['crm_field'] == $field_name && $field_data['active'] == true ) {
+				if ( isset( $field_data['crm_field'] ) && $field_data['crm_field'] == $field_name && $field_data['active'] == true ) {
 					$user_meta[ $meta_key ] = $value;
 				}
-
 			}
-
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -600,11 +562,8 @@ class WPF_Vtiger {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		return array();
-
 	}
-
 }

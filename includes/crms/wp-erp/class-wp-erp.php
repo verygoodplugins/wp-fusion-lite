@@ -37,15 +37,13 @@ class WPF_WP_ERP {
 	 * @access  public
 	 * @since   3.33
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_WP_ERP_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 
@@ -55,7 +53,6 @@ class WPF_WP_ERP {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function init() {
 
 		$this->edit_url = admin_url( 'admin.php?page=erp-crm&section=contact&sub-section=contacts&action=view&id=%d' );
@@ -67,7 +64,6 @@ class WPF_WP_ERP {
 
 		add_action( 'added_term_relationship', array( $this, 'tag_added_removed' ), 10, 3 );
 		add_action( 'deleted_term_relationships', array( $this, 'tag_added_removed' ), 10, 3 );
-
 	}
 
 
@@ -77,7 +73,6 @@ class WPF_WP_ERP {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function tag_added_removed( $contact_id, $tag_id, $taxonomy ) {
 
 		if ( 'erp_crm_tag' === $taxonomy ) {
@@ -90,7 +85,6 @@ class WPF_WP_ERP {
 
 			}
 		}
-
 	}
 
 
@@ -100,7 +94,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_tags();
@@ -109,7 +102,6 @@ class WPF_WP_ERP {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -119,7 +111,6 @@ class WPF_WP_ERP {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $test = false ) {
 
 		if ( false === $test ) {
@@ -133,7 +124,6 @@ class WPF_WP_ERP {
 		}
 
 		return true;
-
 	}
 
 
@@ -143,7 +133,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -175,12 +164,11 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$built_in_fields = array();
 
-		require dirname( __FILE__ ) . '/admin/wp-erp-fields.php';
+		require __DIR__ . '/admin/wp-erp-fields.php';
 
 		foreach ( $fields as $field ) {
 			$built_in_fields[ $field['crm_field'] ] = $field['crm_label'];
@@ -220,7 +208,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$contact = erp_get_people_by( 'email', $email_address );
@@ -230,7 +217,6 @@ class WPF_WP_ERP {
 		}
 
 		return $contact->id;
-
 	}
 
 	/**
@@ -239,7 +225,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$contact_tags = array();
@@ -251,7 +236,6 @@ class WPF_WP_ERP {
 		}
 
 		return $contact_tags;
-
 	}
 
 	/**
@@ -260,7 +244,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$tags = array_map( 'intval', $tags );
@@ -269,7 +252,6 @@ class WPF_WP_ERP {
 		remove_action( 'added_term_relationship', array( $this, 'tag_added_removed' ), 10, 3 );
 
 		return wp_set_object_terms( $contact_id, $tags, 'erp_crm_tag', true );
-
 	}
 
 
@@ -279,7 +261,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$tags = array_map( 'intval', $tags );
@@ -288,7 +269,6 @@ class WPF_WP_ERP {
 		remove_action( 'deleted_term_relationships', array( $this, 'tag_added_removed' ), 10, 3 );
 
 		return wp_remove_object_terms( $contact_id, $tags, 'erp_crm_tag' );
-
 	}
 
 
@@ -298,7 +278,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$data['type'] = 'contact';
@@ -310,7 +289,6 @@ class WPF_WP_ERP {
 		}
 
 		return $result;
-
 	}
 
 	/**
@@ -319,7 +297,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$data['id']   = $contact_id;
@@ -332,7 +309,6 @@ class WPF_WP_ERP {
 		}
 
 		return $result;
-
 	}
 
 	/**
@@ -341,7 +317,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$user_meta      = array();
@@ -359,7 +334,6 @@ class WPF_WP_ERP {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -368,7 +342,6 @@ class WPF_WP_ERP {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		global $wpdb;
@@ -383,7 +356,5 @@ class WPF_WP_ERP {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

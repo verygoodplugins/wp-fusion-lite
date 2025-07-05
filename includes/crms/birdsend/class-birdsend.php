@@ -55,7 +55,6 @@ class WPF_BirdSend {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// OAuth
@@ -64,10 +63,9 @@ class WPF_BirdSend {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_BirdSend_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -76,7 +74,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		// Error handling
@@ -90,7 +87,6 @@ class WPF_BirdSend {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_token = null ) {
 
 		// Get saved data from DB
@@ -117,7 +113,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'birdsend' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -135,7 +130,6 @@ class WPF_BirdSend {
 						$message .= ' ' . implode( '. ', $error );
 
 					}
-
 				}
 
 				$response = new WP_Error( 'error', $message );
@@ -144,7 +138,6 @@ class WPF_BirdSend {
 		}
 
 		return $response;
-
 	}
 
 
@@ -155,7 +148,6 @@ class WPF_BirdSend {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_token = null, $refresh_token = false, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -174,7 +166,6 @@ class WPF_BirdSend {
 		}
 
 		return true;
-
 	}
 
 
@@ -184,7 +175,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -195,7 +185,6 @@ class WPF_BirdSend {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -205,7 +194,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -240,13 +228,11 @@ class WPF_BirdSend {
 			if ( count( $response->data ) < 100 ) {
 				$proceed = false;
 			}
-
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -256,7 +242,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -288,7 +273,6 @@ class WPF_BirdSend {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -298,7 +282,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -319,7 +302,6 @@ class WPF_BirdSend {
 		}
 
 		return $response->data[0]->contact_id;
-
 	}
 
 
@@ -329,7 +311,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -356,7 +337,6 @@ class WPF_BirdSend {
 		}
 
 		return $tags;
-
 	}
 
 
@@ -366,7 +346,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -380,8 +359,8 @@ class WPF_BirdSend {
 
 		$body = array( 'tags' => $tags );
 
-		$params           = $this->params;
-		$params['body']   = wp_json_encode( $body );
+		$params         = $this->params;
+		$params['body'] = wp_json_encode( $body );
 
 		$request  = 'https://api.birdsend.co/v1/contacts/' . $contact_id . '/tags';
 		$response = wp_safe_remote_post( $request, $params );
@@ -391,7 +370,6 @@ class WPF_BirdSend {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -400,7 +378,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -421,7 +398,6 @@ class WPF_BirdSend {
 		}
 
 		return true;
-
 	}
 
 
@@ -431,7 +407,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -458,7 +433,6 @@ class WPF_BirdSend {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->contact_id;
-
 	}
 
 	/**
@@ -467,7 +441,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -500,7 +473,6 @@ class WPF_BirdSend {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -509,7 +481,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -538,7 +509,6 @@ class WPF_BirdSend {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -548,7 +518,6 @@ class WPF_BirdSend {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -579,14 +548,10 @@ class WPF_BirdSend {
 			if ( count( $response->data ) < 100 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
-
 		}
 
 		return $contact_ids;
-
 	}
-
-
 }

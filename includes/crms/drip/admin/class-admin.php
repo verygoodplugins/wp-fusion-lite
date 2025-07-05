@@ -12,7 +12,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -36,7 +35,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_action( 'wpf_user_profile_after_contact_id', array( $this, 'show_inactive_badge' ) );
@@ -54,7 +52,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   3.33.12
 	 */
-
 	public function show_inactive_badge( $user_id ) {
 
 		if ( ! empty( get_user_meta( $user_id, 'drip_inactive', true ) ) ) {
@@ -68,7 +65,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   3.33.12
 	 */
-
 	public function filter_options( $options ) {
 
 		$options['inactive'] = __( '(Inactive in Drip)', 'wp-fusion-lite' );
@@ -82,7 +78,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   3.33.12
 	 */
-
 	public function users_list_meta_query( $meta_query, $filter ) {
 
 		if ( 'inactive' == $filter ) {
@@ -104,7 +99,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -144,7 +138,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -169,7 +162,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		// Add site tracking option
@@ -210,7 +202,6 @@ class WPF_Drip_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_drip_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -225,7 +216,6 @@ class WPF_Drip_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

@@ -117,7 +117,7 @@ class WPF_KlickTipp {
 	 *
 	 * @since  3.44.26
 	 *
-	 * @param  array  $data   The data to send.
+	 * @param  array $data   The data to send.
 	 * @return array  The arguments.
 	 */
 	private function get_params( $data = array() ) {
@@ -237,7 +237,6 @@ class WPF_KlickTipp {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -342,7 +341,7 @@ class WPF_KlickTipp {
 			return $response;
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+		$body      = json_decode( wp_remote_retrieve_body( $response ) );
 		$processes = array();
 
 		if ( ! empty( $body ) ) {
@@ -371,9 +370,11 @@ class WPF_KlickTipp {
 			return new WP_Error( 'error', __( 'Unable to connect to KlickTipp.', 'wp-fusion-lite' ) );
 		}
 
-		$params = $this->get_params( array(
-			'email' => $email_address,
-		) );
+		$params = $this->get_params(
+			array(
+				'email' => $email_address,
+			)
+		);
 
 		$response = wp_remote_post( $this->base_url . '/subscriber/search', $params );
 

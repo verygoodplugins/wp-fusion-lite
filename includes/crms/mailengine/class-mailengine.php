@@ -46,12 +46,11 @@ class WPF_MailEngine {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_MailEngine_Admin( $this->slug, $this->name, $this );
 		}
 	}
@@ -62,7 +61,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 		remove_all_filters( 'wpf_format_field_value' ); // removes the base filtering in WPF_CRM_Base.
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -75,7 +73,6 @@ class WPF_MailEngine {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $wsdl_url = null, $client_id = null, $subscribe_id = null ) {
 
 		// Get saved data from DB
@@ -87,11 +84,12 @@ class WPF_MailEngine {
 		}
 
 		$this->subscribe_service = new \SoapClient(
-			$wsdl_url, [
+			$wsdl_url,
+			array(
 				'cache_wsdl'  => WSDL_CACHE_NONE,
 				'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP | 9,
 				'exceptions'  => false,
-			]
+			)
 		);
 
 		$this->params = array(
@@ -111,7 +109,6 @@ class WPF_MailEngine {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $wsdl_url = null, $client_id = null, $subscribe_id = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -147,7 +144,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -160,7 +156,6 @@ class WPF_MailEngine {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -170,7 +165,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -207,7 +201,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -255,7 +248,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -288,7 +280,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -339,7 +330,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -374,7 +364,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -415,7 +404,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		$crm_fields_multiselect_mapping = wpf_get_option( 'crm_fields_multiselect_mapping' );
@@ -451,13 +439,11 @@ class WPF_MailEngine {
 						$new_value[ $i ] = $val;
 					}
 				}
-			} else {
-				if ( isset( $crm_fields_multiselect_mapping[ $field ][ mb_strtolower( $value ) ] ) ) {
+			} elseif ( isset( $crm_fields_multiselect_mapping[ $field ][ mb_strtolower( $value ) ] ) ) {
 					$new_value = $crm_fields_multiselect_mapping[ $field ][ mb_strtolower( $value ) ];
-				} else {
-					wpf_log( 'warning', 0, 'Multiselect value mapping for CRM field <strong>' . $field . '</strong> value <strong>"' . $value . '"</strong> is missing a mapping.' );
-					$new_value = $value;
-				}
+			} else {
+				wpf_log( 'warning', 0, 'Multiselect value mapping for CRM field <strong>' . $field . '</strong> value <strong>"' . $value . '"</strong> is missing a mapping.' );
+				$new_value = $value;
 			}
 
 			return $new_value;
@@ -490,7 +476,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $contact_data ) {
 
 		if ( ! $this->params ) {
@@ -526,7 +511,6 @@ class WPF_MailEngine {
 		} else {
 			return new WP_Error( $result, "SOAP warning! The Soap request was done, but returned with the following error: {$result}" );
 		}
-
 	}
 
 	/**
@@ -535,7 +519,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $contact_data, $tags = array() ) {
 
 		if ( ! $this->params ) {
@@ -575,7 +558,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -627,7 +609,6 @@ class WPF_MailEngine {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -685,5 +666,4 @@ class WPF_MailEngine {
 			return new WP_Error( $result, "SOAP warning! The Soap request was done, but returned with the following error: {$result}" );
 		}
 	}
-
 }

@@ -44,18 +44,16 @@ class WPF_Copper {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Copper_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -64,13 +62,12 @@ class WPF_Copper {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_action( 'init', array( $this, 'get_actions' ), 5 );
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
-		//add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		// add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 		$account_id = wpf_get_option( 'account_id' );
@@ -87,7 +84,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_actions() {
 		if ( ! empty( file_get_contents( 'php://input' ) ) ) {
 
@@ -103,7 +99,6 @@ class WPF_Copper {
 				}
 			}
 		}
-
 	}
 
 
@@ -113,7 +108,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'date' === $field_type ) {
@@ -133,7 +127,6 @@ class WPF_Copper {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -142,7 +135,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -178,7 +170,6 @@ class WPF_Copper {
 				}
 			}
 		}
-
 	}
 
 	/**
@@ -187,7 +178,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'copper.com' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -206,7 +196,6 @@ class WPF_Copper {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -215,7 +204,6 @@ class WPF_Copper {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $user_email = null, $access_key = null ) {
 
 		// Get saved data from DB
@@ -246,7 +234,6 @@ class WPF_Copper {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $email = null, $access_key = null, $test = false ) {
 		if ( ! $this->params ) {
 			$this->get_params( $email, $access_key );
@@ -274,7 +261,6 @@ class WPF_Copper {
 		wp_fusion()->settings->set( 'account_id', $response->id );
 
 		return true;
-
 	}
 
 
@@ -284,7 +270,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -295,7 +280,6 @@ class WPF_Copper {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -305,7 +289,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -334,7 +317,7 @@ class WPF_Copper {
 			}
 		}
 
-		//fix keys later
+		// fix keys later
 		$tags = array_unique( $tags );
 
 		// Check if we need to update the available tags list
@@ -355,7 +338,6 @@ class WPF_Copper {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $tags;
-
 	}
 
 
@@ -365,7 +347,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -373,7 +354,7 @@ class WPF_Copper {
 		}
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/copper-fields.php';
+		require __DIR__ . '/admin/copper-fields.php';
 
 		$built_in_fields = array();
 
@@ -425,7 +406,6 @@ class WPF_Copper {
 		}
 
 		return $crm_fields;
-
 	}
 
 
@@ -435,7 +415,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -463,7 +442,6 @@ class WPF_Copper {
 		}
 
 		return $response->id;
-
 	}
 
 
@@ -473,7 +451,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -514,7 +491,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -550,7 +526,6 @@ class WPF_Copper {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return true;
-
 	}
 
 	/**
@@ -559,7 +534,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -595,7 +569,6 @@ class WPF_Copper {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return true;
-
 	}
 
 	/**
@@ -686,7 +659,6 @@ class WPF_Copper {
 		$update_data['name'] = $update_data['first_name'] . ' ' . $update_data['last_name']; // Copper requires a name.
 
 		return $update_data;
-
 	}
 
 
@@ -696,7 +668,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -718,7 +689,6 @@ class WPF_Copper {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->id;
-
 	}
 
 	/**
@@ -727,7 +697,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -750,7 +719,6 @@ class WPF_Copper {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return true;
-
 	}
 
 	/**
@@ -759,7 +727,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -851,7 +818,6 @@ class WPF_Copper {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -861,7 +827,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -884,15 +849,15 @@ class WPF_Copper {
 
 		$body_json = json_decode( $results['body'], true );
 
-		//Does not work because no way of telling how many contacts have a certain tag
+		// Does not work because no way of telling how many contacts have a certain tag
 
 		// if (isset($body_json[199])) {
-		// 	$tag = array('tags' => $tag, 'page_size' => 200, 'page_number' => $page_number);
-		// 	$params = $this->params;
-		//  $params['body'] = wp_json_encode( $tag );
+		// $tag = array('tags' => $tag, 'page_size' => 200, 'page_number' => $page_number);
+		// $params = $this->params;
+		// $params['body'] = wp_json_encode( $tag );
 
-		// 	$url     = 'https://api.copper.com/developer_api/v1/people/search'];
-		// 	$results = wp_safe_remote_get( $url, $this->params );
+		// $url     = 'https://api.copper.com/developer_api/v1/people/search'];
+		// $results = wp_safe_remote_get( $url, $this->params );
 		// }
 
 		foreach ( $body_json as $row => $contact ) {
@@ -900,16 +865,14 @@ class WPF_Copper {
 		}
 
 		return $contact_ids;
-
 	}
 
 		/**
-	 * Sets up hooks specific to this CRM
-	 *
-	 * @access public
-	 * @return int Rule ID
-	 */
-
+		 * Sets up hooks specific to this CRM
+		 *
+		 * @access public
+		 * @return int Rule ID
+		 */
 	public function register_webhook( $type ) {
 
 		if ( ! $this->params ) {
@@ -946,7 +909,6 @@ class WPF_Copper {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -955,7 +917,6 @@ class WPF_Copper {
 	 * @access public
 	 * @return void
 	 */
-
 	public function destroy_webhook( $rule_id ) {
 
 		if ( ! $this->params ) {
@@ -973,8 +934,5 @@ class WPF_Copper {
 		}
 
 		return true;
-
 	}
-
-
 }

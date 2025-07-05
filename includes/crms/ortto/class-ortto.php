@@ -59,13 +59,12 @@ class WPF_Ortto {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-ortto-admin.php';
+			require_once __DIR__ . '/class-ortto-admin.php';
 			new WPF_Ortto_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -83,7 +82,6 @@ class WPF_Ortto {
 		$region    = wpf_get_option( 'ortto_region' );
 		$region    = 'rest' === $region ? '' : $region . '.';
 		$this->url = 'https://api.' . $region . 'ap3api.com';
-
 	}
 
 	/**
@@ -116,7 +114,7 @@ class WPF_Ortto {
 
 		} elseif ( 'phn::phone' === $field ) {
 
-			$phone_codes = include dirname( __FILE__ ) . '/phone_codes.php';
+			$phone_codes = include __DIR__ . '/phone_codes.php';
 			$value       = strpos( $value, '+' ) === false ? '+' . $value : $value;
 			foreach ( $phone_codes as $code ) {
 				if ( ! is_array( $value ) && ( substr( $value, 0, strlen( $code['dial_code'] ) ) == $code['dial_code'] ) ) {
@@ -137,7 +135,6 @@ class WPF_Ortto {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -157,7 +154,6 @@ class WPF_Ortto {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -217,7 +213,6 @@ class WPF_Ortto {
 		}
 
 		return $response;
-
 	}
 
 
@@ -240,11 +235,12 @@ class WPF_Ortto {
 			return true;
 		}
 
-		$region  = 'rest' === $region ? '' : $region . '.';
-		$request = 'https://api.' . $region . 'ap3api.com/v1/person/get';
+		$region    = 'rest' === $region ? '' : $region . '.';
+		$this->url = 'https://api.' . $region . 'ap3api.com';
+		$request   = $this->url . '/v1/person/get';
 
 		$params         = $this->get_params( $api_key );
-		$params['body'] = '{}';
+		$params['body'] = '{"limit": 1,"fields": ["str::first"]}';
 		$response       = wp_safe_remote_post( $request, $params );
 
 		// Validate the connection.
@@ -270,7 +266,6 @@ class WPF_Ortto {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -307,7 +302,6 @@ class WPF_Ortto {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
@@ -320,7 +314,7 @@ class WPF_Ortto {
 	public function sync_crm_fields() {
 
 		// Load built in fields first.
-		require dirname( __FILE__ ) . '/ortto-fields.php';
+		require __DIR__ . '/ortto-fields.php';
 
 		foreach ( $ortto_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -381,6 +375,7 @@ class WPF_Ortto {
 					'value'    => $email_address,
 				),
 			),
+			'fields' => array( 'str::id' ),
 		);
 
 		$params['body'] = wp_json_encode( $data );
@@ -527,7 +522,6 @@ class WPF_Ortto {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -560,7 +554,6 @@ class WPF_Ortto {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->people[0]->person_id;
-
 	}
 
 	/**
@@ -574,19 +567,24 @@ class WPF_Ortto {
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
 
-		$params         = $this->get_params();
-		$request        = $this->url . '/v1/person/merge';
-		$data           = array(
-			'people' => array(
+		$contact_data['str::person_id'] = $contact_id;
+
+		$params  = $this->get_params();
+		$request = $this->url . '/v1/person/merge';
+
+		$data = array(
+			'async'    => true,
+			'merge_by' => array( 'str::person_id' ),
+			'people'   => array(
 				array(
 					'fields' => $contact_data,
 				),
 			),
 		);
+
 		$params['body'] = wp_json_encode( $data );
 
 		$response = wp_safe_remote_post( $request, $params );
-		update_option( 'test', array( $params, $response ) );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -676,5 +674,4 @@ class WPF_Ortto {
 	public function load_contacts( $tag ) {
 		return array();
 	}
-
 }

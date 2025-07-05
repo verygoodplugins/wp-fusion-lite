@@ -25,59 +25,29 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return void
 	 */
-
 	public function __construct() {
 
 		$this->options = get_option( 'wpf_options', array() ); // load the options into memory.
 
 		if ( is_admin() ) {
-
-			$this->init();
+			add_action( 'init', array( $this, 'init' ) );
 			add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_item' ), 100 );
-
 		}
+
+		// Validate the site for installation from Klaviyo and Pipedrive marketplaces.
+		add_action( 'wp_ajax_nopriv_wpf_validate_marketplace_install', array( $this, 'validate_marketplace_install' ) );
 
 		// Default settings.
 		add_filter( 'wpf_get_setting_license_key', array( $this, 'get_license_key' ) );
 		add_filter( 'wpf_get_setting_multisite_prefix_keys', array( $this, 'get_multisite_prefix_keys' ) );
 		add_filter( 'wpf_get_setting_contact_fields', array( $this, 'get_contact_fields' ) );
 
-		// Check the license status once per week.ch
+		// Check the license status once per week.
 		add_action( 'admin_init', array( $this, 'edd_check_license' ) );
+
+		add_action( 'wp_ajax_wpf_export_settings', array( $this, 'handle_settings_export' ) );
+		add_action( 'wp_ajax_wpf_import_settings', array( $this, 'handle_settings_import' ) );
 	}
-
-	/**
-	 * Add WP Fusion in admin bar.
-	 *
-	 * @since 3.40.31
-	 * @param WP_Admin_Bar $wp_admin_bar The admin bar.
-	 */
-	public function add_admin_bar_item( WP_Admin_Bar $wp_admin_bar ) {
-
-		if ( ! current_user_can( 'manage_options' ) || ! wpf_get_option( 'enable_admin_bar' ) ) {
-			return;
-		}
-
-		$wp_admin_bar->add_menu(
-			array(
-				'id'     => 'wpfusion',
-				'parent' => null,
-				'href'   => admin_url( 'options-general.php?page=wpf-settings' ),
-				'title'  => __( 'WP Fusion', 'wp-fusion-lite' ),
-			)
-		);
-
-		$wp_admin_bar->add_menu(
-			array(
-				'parent' => 'wpfusion',
-				'title'  => __( 'Refresh Available Tags & Fields', 'wp-fusion-lite' ),
-				'id'     => 'wpfusion-refresh-tags',
-				'href'   => '#',
-			)
-		);
-	}
-
-
 
 	/**
 	 * Fires up settings in admin
@@ -85,8 +55,7 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return void
 	 */
-
-	private function init() {
+	public function init() {
 
 		$this->includes();
 
@@ -106,6 +75,8 @@ class WPF_Settings {
 		add_action( 'show_field_test_webhooks', array( $this, 'show_field_test_webhooks' ), 10, 2 );
 		add_action( 'show_field_crm_field', array( $this, 'show_field_crm_field' ), 10, 2 );
 		add_action( 'show_field_webhook_url', array( $this, 'show_field_webhook_url' ), 10, 2 );
+		add_action( 'show_field_export_settings', array( $this, 'show_field_export_settings' ), 10, 2 );
+		add_action( 'show_field_import_settings', array( $this, 'show_field_import_settings' ), 10, 2 );
 
 		// CRM setup layouts.
 		add_action( 'show_field_api_validate', array( $this, 'show_field_api_validate' ), 10, 2 );
@@ -178,7 +149,6 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return void
 	 */
-
 	private function includes() {
 
 		require_once WPF_DIR_PATH . 'includes/admin/options/class-options.php';
@@ -270,12 +240,6 @@ class WPF_Settings {
 			if ( isset( $value['crm_field'] ) ) {
 				$value = $value['crm_field'];
 			}
-		} elseif ( is_string( $value ) && preg_match( '/^[0-9]+$/', $value ) ) {
-
-			// Can't use is_numeric() because 183e3486 matches and is converted to 0.
-
-			$value = intval( $value ); // make sure numbers are returned as numbers.
-
 		}
 
 		return apply_filters( 'wpf_get_setting_' . $key, $value );
@@ -297,11 +261,7 @@ class WPF_Settings {
 		$value = apply_filters( 'wpf_set_setting_' . $key, $value );
 
 		// Sanitize.
-		if ( is_numeric( $value ) ) {
-			$value = absint( $value );
-		} else {
-			$value = wpf_clean( $value );
-		}
+		$value = wpf_clean( $value );
 
 		$this->options[ $key ] = $value;
 		$options_to_save       = $this->options;
@@ -379,6 +339,53 @@ class WPF_Settings {
 		_deprecated_function( 'set_all', '3.38.0', 'set_multiple' );
 
 		$this->set_multiple( $options );
+	}
+
+	/**
+	 * Add WP Fusion in admin bar.
+	 *
+	 * @since 3.40.31
+	 * @param WP_Admin_Bar $wp_admin_bar The admin bar.
+	 */
+	public function add_admin_bar_item( WP_Admin_Bar $wp_admin_bar ) {
+
+		if ( ! current_user_can( 'manage_options' ) || ! wpf_get_option( 'enable_admin_bar' ) ) {
+			return;
+		}
+
+		$wp_admin_bar->add_menu(
+			array(
+				'id'     => 'wpfusion',
+				'parent' => null,
+				'href'   => admin_url( 'options-general.php?page=wpf-settings' ),
+				'title'  => __( 'WP Fusion', 'wp-fusion-lite' ),
+			)
+		);
+
+		$wp_admin_bar->add_menu(
+			array(
+				'parent' => 'wpfusion',
+				'title'  => __( 'Refresh Available Tags & Fields', 'wp-fusion-lite' ),
+				'id'     => 'wpfusion-refresh-tags',
+				'href'   => '#',
+			)
+		);
+	}
+
+	/**
+	 * Validate the site for installation from Klaviyo and Pipedrive marketplaces.
+	 *
+	 * @since 3.46.2
+	 */
+	public function validate_marketplace_install() {
+
+		$response = array(
+			'version'    => WP_FUSION_VERSION,
+			'is_lite'    => ! wp_fusion()->is_full_version(),
+			'configured' => wpf_get_option( 'connection_configured' ),
+		);
+
+		wp_send_json_success( $response );
 	}
 
 	/**
@@ -500,7 +507,6 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return array
 	 */
-
 	public function insert_setting_before( $key, array $array, $new_key, $new_value = null ) {
 
 		if ( isset( $array[ $key ] ) ) {
@@ -562,7 +568,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return array Links
 	 */
-
 	public function add_action_links( $links ) {
 
 		if ( ! is_array( $links ) ) {
@@ -601,7 +606,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return void
 	 */
-
 	public function enqueue_scripts() {
 
 		// Style.
@@ -679,7 +683,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return void
 	 */
-
 	public function save_tag_labels() {
 
 		if ( isset( wp_fusion()->crm->tag_type ) ) {
@@ -693,7 +696,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return string Text
 	 */
-
 	public function set_tag_labels( $translation, $text, $domain ) {
 
 		if ( $domain && 0 === strpos( $domain, 'wp-fusion-lite' ) ) {
@@ -728,7 +730,6 @@ class WPF_Settings {
 	 * @since 1.0
 	 * @return array
 	 */
-
 	public function add_meta_fields( $meta_fields ) {
 
 		// Load the reference of standard WP field names and types.
@@ -845,29 +846,6 @@ class WPF_Settings {
 			wp_send_json_error( $tag_id );
 		}
 
-		wpf_log( 'info', wpf_get_current_user_id(), 'Created new tag <strong>' . $tag_name . '</strong> with ID <code>' . $tag_id . '</code>' );
-
-		$available_tags = $this->get( 'available_tags', array() );
-
-		if ( is_array( reset( $available_tags ) ) ) {
-
-			// With categories. Just HubSpot for now.
-
-			$available_tags[ $tag_id ] = array(
-				'label'    => $tag_name,
-				'category' => 'Static Lists',
-			);
-
-		} else {
-
-			$available_tags[ $tag_id ] = $tag_name;
-
-		}
-
-		asort( $available_tags );
-
-		$this->set( 'available_tags', $available_tags );
-
 		wp_send_json_success(
 			array(
 				'tag_name' => $tag_name,
@@ -883,7 +861,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return array New tags loaded from CRM
 	 */
-
 	public function sync_tags() {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
@@ -1265,7 +1242,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function edd_deactivate() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
@@ -1442,7 +1418,6 @@ class WPF_Settings {
 	 * @access private
 	 * @return void
 	 */
-
 	public function get_settings( $settings, $options ) {
 
 		$settings = array();
@@ -2187,6 +2162,18 @@ class WPF_Settings {
 			'section' => 'advanced',
 		);
 
+		$settings['import_export_header'] = array(
+			'title'   => __( 'Import / Export Settings', 'wp-fusion-lite' ),
+			'type'    => 'heading',
+			'section' => 'advanced',
+		);
+
+		$settings['export_settings'] = array(
+			'title'   => __( 'Export Settings', 'wp-fusion-lite' ),
+			'type'    => 'export_settings',
+			'section' => 'advanced',
+		);
+
 		return $settings;
 	}
 
@@ -2281,7 +2268,6 @@ class WPF_Settings {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_api_validate( $id, $field ) {
 
 		if ( isset( $field['password'] ) ) {
@@ -2290,7 +2276,18 @@ class WPF_Settings {
 			$type = 'text';
 		}
 
-		echo '<input id="' . esc_attr( $id ) . '" ' . disabled( $field['input_disabled'], true, false ) . ' class="form-control api_key ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $this->{ $id } ) . '">';
+		$value = $this->{ $id };
+
+		if ( ! is_scalar( $value ) ) {
+			// Handle cases where somehow the refresh token or key got saved as an object.
+			echo '<strong>' . esc_html__( 'Error: The API key is not a string. Please reauthorize the connection.', 'wp-fusion-lite' ) . '</strong>';
+			echo '<pre>';
+			print_r( $value );
+			echo '</pre>';
+			$value = '';
+		}
+
+		echo '<input id="' . esc_attr( $id ) . '" ' . disabled( $field['input_disabled'], true, false ) . ' class="form-control api_key ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $value ) . '">';
 
 		if ( $this->connection_configured ) {
 
@@ -2334,7 +2331,6 @@ class WPF_Settings {
 
 		echo '</table><div id="connection-output"></div>';
 		echo '</div>'; // close CRM div.
-		// echo '<table class="form-table">';
 	}
 
 	/**
@@ -2379,7 +2375,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_edd_license_begin( $id, $field ) {
 		echo '<tr valign="top">';
 		echo '<th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( $field['title'] ) . '</label></th>';
@@ -2393,7 +2388,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_edd_license( $id, $field ) {
 
 		if ( 'valid' === $this->license_status ) {
@@ -2419,7 +2413,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_import_users( $id, $field ) {
 
 		if ( empty( $this->options[ $id ] ) ) {
@@ -2504,7 +2497,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return array Input
 	 */
-
 	public function validate_field_assign_tags( $input, $setting, $options ) {
 
 		if ( ! empty( $input ) ) {
@@ -2521,7 +2513,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_crm_field( $id, $field ) {
 
 		$setting = $this->get( $id );
@@ -2547,7 +2538,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_contact_fields_begin( $id, $field ) {
 
 		if ( ! isset( $field['disabled'] ) ) {
@@ -2565,7 +2555,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_contact_fields( $id, $field ) {
 
 		// Lets group contact fields by integration if we can
@@ -2579,13 +2568,13 @@ class WPF_Settings {
 		$field_groups = apply_filters( 'wpf_meta_field_groups', $field_groups );
 
 		$field_groups['custom'] = array(
-			'title'  => __( 'Custom Field Keys (Added Manually)', 'wp-fusion-lite' ),
+			'title' => __( 'Custom Field Keys (Added Manually)', 'wp-fusion-lite' ),
 		);
 
 		// Append ungrouped fields.
 		$field_groups['extra'] = array(
-			'title'  => __( 'Additional <code>wp_usermeta</code> Table Fields (For Developers)', 'wp-fusion-lite' ),
-			'url'    => 'https://wpfusion.com/documentation/getting-started/syncing-contact-fields/#additional-fields',
+			'title' => __( 'Additional <code>wp_usermeta</code> Table Fields (For Developers)', 'wp-fusion-lite' ),
+			'url'   => 'https://wpfusion.com/documentation/getting-started/syncing-contact-fields/#additional-fields',
 		);
 
 		/**
@@ -2668,7 +2657,7 @@ class WPF_Settings {
 			$this->options['contact_fields']['user_email']['active'] = true;
 		}
 
-		$field_types = array( 'text', 'date', 'multiselect', 'checkbox', 'state', 'country', 'int', 'raw', 'tel' );
+		$field_types = array( 'text', 'date', 'multiselect', 'multiselect (values)', 'checkbox', 'state', 'country', 'int', 'raw', 'tel' );
 
 		$field_types = apply_filters( 'wpf_meta_field_types', $field_types );
 
@@ -2931,7 +2920,6 @@ class WPF_Settings {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_import_groups( $id, $field ) {
 
 		if ( ! class_exists( 'WPF_User' ) ) {
@@ -2996,14 +2984,12 @@ class WPF_Settings {
 		echo '</table>';
 	}
 
-
 	/**
 	 * Displays export options
 	 *
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function show_field_export_options( $id, $field ) {
 
 		$options = wp_fusion()->batch->get_export_options();
@@ -3230,5 +3216,135 @@ class WPF_Settings {
 		$input = apply_filters( 'wpf_contact_fields_save', $input );
 
 		return wpf_clean( $input );
+	}
+
+	/**
+	 * Show export settings field
+	 *
+	 * @since 3.45.8
+	 *
+	 * @param string $id    Field ID.
+	 * @param array  $field Field settings.
+	 */
+	public function show_field_export_settings( $id, $field ) {
+		echo '<a id="wpf-export-settings" class="button" href="' . esc_url( admin_url( 'admin-ajax.php' ) . '?action=wpf_export_settings&_wpnonce=' . wp_create_nonce( 'wpf_settings_export' ) ) . '">' . esc_html__( 'Export Settings', 'wp-fusion-lite' ) . '</a>';
+	}
+
+	/**
+	 * Show import settings field
+	 *
+	 * @since 3.45.8
+	 *
+	 * @param string $id    Field ID.
+	 * @param array  $field Field settings.
+	 */
+	public function show_field_import_settings( $id, $field ) {
+		echo '<input type="file" id="wpf-import-settings" name="wpf_import_file" accept=".csv" />';
+		echo '<a id="wpf-import-settings-button" class="button" href="' . esc_url( admin_url( 'admin-ajax.php' ) . '?action=wpf_import_settings&_wpnonce=' . wp_create_nonce( 'wpf_settings_import' ) ) . '">' . esc_html__( 'Import Settings', 'wp-fusion-lite' ) . '</a>';
+	}
+
+	/**
+	 * Handle Settings Export
+	 * Export WPF settings to a CSV file.
+	 *
+	 * @since 3.45.8
+	 */
+	public function handle_settings_export() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'wpf_settings_export' ) ) {
+			return;
+		}
+
+		$settings = get_option( 'wpf_options' );
+
+		// Add the additional options.
+		$settings['crm_fields'] = get_option( 'wpf_crm_fields' );
+
+		// Remove API credentials if using OAuth.
+		if ( wp_fusion()->crm->supports( 'refresh_token' ) ) {
+			unset( $settings['crm'] );
+			unset( $settings['connection_configured'] );
+
+			// Remove any API keys or tokens.
+			foreach ( $settings as $key => $value ) {
+				if ( strpos( $key, 'api_' ) === 0 || strpos( $key, 'token' ) === 0 ) {
+					unset( $settings[ $key ] );
+				}
+			}
+		}
+
+		// Generate CSV.
+		$csv = '';
+		foreach ( $settings as $key => $value ) {
+			// Properly escape and enclose the values.
+			$escaped_key   = str_replace( '"', '""', $key );
+			$escaped_value = str_replace( '"', '""', maybe_serialize( $value ) );
+			$csv          .= '"' . $escaped_key . '","' . $escaped_value . "\"\n";
+		}
+
+		// Output headers.
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename=wpf-settings-' . date( 'Y-m-d' ) . '.csv' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		echo $csv;
+		exit;
+	}
+
+	/**
+	 * Handle Settings Import
+	 * Import WPF settings from a CSV file.
+	 *
+	 * @since 3.45.8
+	 */
+	public function handle_settings_import() {
+
+		check_ajax_referer( 'wpf_settings_import', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'You do not have permission to perform this action.', 'wp-fusion-lite' ) );
+		}
+
+		if ( ! isset( $_FILES['file'] ) ) {
+			wp_send_json_error( __( 'No file provided.', 'wp-fusion-lite' ) );
+		}
+
+		$file = $_FILES['file'];
+
+		$file_types = array(
+			'text/csv',
+			'application/vnd.ms-excel',
+		);
+
+		if ( ! in_array( $file['type'], $file_types ) ) {
+			wp_send_json_error( __( 'Invalid file type. Please upload a CSV file.', 'wp-fusion-lite' ) );
+		}
+
+		$settings = array();
+		$handle   = fopen( $file['tmp_name'], 'r' );
+
+		// Set enclosure to double quotes and escape character to handle multi-line fields.
+		while ( ( $data = fgetcsv( $handle, 0, ',', '"', '\\' ) ) !== false ) {
+			if ( isset( $data[0] ) && isset( $data[1] ) ) {
+				$settings[ trim( $data[0] ) ] = maybe_unserialize( trim( $data[1] ) );
+			}
+		}
+
+		fclose( $handle );
+
+		// Handle special options.
+		if ( isset( $settings['crm_fields'] ) ) {
+			update_option( 'wpf_crm_fields', $settings['crm_fields'] );
+			unset( $settings['crm_fields'] );
+		}
+
+		// Update the main settings.
+		$this->set_multiple( $settings );
+
+		wp_send_json_success( __( 'Settings imported successfully.', 'wp-fusion-lite' ) );
 	}
 }

@@ -17,4 +17,3 @@ $emercury_fields['last_name'] = array(
 	'crm_field'   => 'last_name',
 	'crm_field_2' => 'user_field_2',
 );
-

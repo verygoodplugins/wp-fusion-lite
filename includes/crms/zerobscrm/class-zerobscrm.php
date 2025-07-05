@@ -31,15 +31,13 @@ class WPF_ZeroBSCRM {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_ZeroBSCRM_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 
@@ -49,7 +47,6 @@ class WPF_ZeroBSCRM {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
@@ -66,7 +63,6 @@ class WPF_ZeroBSCRM {
 		add_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) );
 
 		$this->edit_url = admin_url( 'admin.php?page=zbs-add-edit&action=view&zbstype=contact&zbsid=%s' );
-
 	}
 
 	/**
@@ -78,7 +74,6 @@ class WPF_ZeroBSCRM {
 	 *
 	 * @return bool|WP_Error
 	 */
-
 	public function preflight_check( $check ) {
 
 		if ( ! class_exists( 'ZeroBSCRM' ) ) {
@@ -86,20 +81,18 @@ class WPF_ZeroBSCRM {
 		}
 
 		return true;
-
 	}
 
 	/**
 	 * Formats user entered data to match ZBS field formats.
 	 *
 	 * @since 3.42.2
-	 * 
+	 *
 	 * @param mixed  $value      The value to format.
 	 * @param string $field_type The field type.
 	 * @param string $field      The CRM field name.
 	 * @return mixed The formatted value.
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( is_array( $value ) ) {
@@ -116,7 +109,6 @@ class WPF_ZeroBSCRM {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function tag_added_removed( $tag_id, $object_type, $object_id ) {
 
 		if ( ZBS_TYPE_CONTACT === $object_type ) {
@@ -142,7 +134,6 @@ class WPF_ZeroBSCRM {
 				}
 			}
 		}
-
 	}
 
 	/**
@@ -165,7 +156,6 @@ class WPF_ZeroBSCRM {
 		}
 
 		remove_action( 'zbs_edit_customer', array( $this, 'edit_customer' ) ); // this runs twice for some reason, we only need it once
-
 	}
 
 	/**
@@ -174,7 +164,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_tags();
@@ -183,7 +172,6 @@ class WPF_ZeroBSCRM {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -193,7 +181,6 @@ class WPF_ZeroBSCRM {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $test = false ) {
 
 		if ( false === $test ) {
@@ -207,7 +194,6 @@ class WPF_ZeroBSCRM {
 		}
 
 		return true;
-
 	}
 
 
@@ -217,7 +203,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -239,12 +224,11 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$crm_fields = array();
 
-		require dirname( __FILE__ ) . '/admin/zerobscrm-fields.php';
+		require __DIR__ . '/admin/zerobscrm-fields.php';
 
 		foreach ( $zerobscrm_fields as $field ) {
 			$crm_fields[ $field['crm_field'] ] = $field['crm_label'];
@@ -273,7 +257,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		global $zbs;
@@ -285,7 +268,6 @@ class WPF_ZeroBSCRM {
 		}
 
 		return $contact['id'];
-
 	}
 
 	/**
@@ -294,7 +276,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$contact_tags = array();
@@ -312,7 +293,6 @@ class WPF_ZeroBSCRM {
 		}
 
 		return $contact_tags;
-
 	}
 
 	/**
@@ -321,7 +301,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		// Prevent looping
@@ -337,7 +316,6 @@ class WPF_ZeroBSCRM {
 		$result = $zbs->DAL->contacts->addUpdateContactTags( $args );
 
 		return true;
-
 	}
 
 
@@ -347,7 +325,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		// Prevent looping
@@ -364,7 +341,6 @@ class WPF_ZeroBSCRM {
 		$result = $zbs->DAL->contacts->addUpdateContactTags( $args );
 
 		return true;
-
 	}
 
 
@@ -374,7 +350,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		global $zbs;
@@ -386,7 +361,6 @@ class WPF_ZeroBSCRM {
 		$result = $zbs->DAL->contacts->addUpdateContact( $args );
 
 		return $result;
-
 	}
 
 	/**
@@ -395,7 +369,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		global $zbs;
@@ -437,7 +410,6 @@ class WPF_ZeroBSCRM {
 		$result = $zbs->DAL->contacts->addUpdateContact( $args );
 
 		return true;
-
 	}
 
 	/**
@@ -446,7 +418,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		global $zbs;
@@ -466,7 +437,6 @@ class WPF_ZeroBSCRM {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -475,7 +445,6 @@ class WPF_ZeroBSCRM {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// Need the tag ID for this search
@@ -502,7 +471,5 @@ class WPF_ZeroBSCRM {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

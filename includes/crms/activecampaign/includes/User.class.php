@@ -58,19 +58,16 @@ class AC_User extends ActiveCampaign {
 
 	function view( $params ) {
 		// can be a user ID, email, or username
-		if ( preg_match( "/^email=/", $params ) ) {
-			$action = "user_view_email";
-		} elseif ( preg_match( "/^username=/", $params ) ) {
-			$action = "user_view_username";
-		} elseif ( preg_match( "/^id=/", $params ) ) {
-			$action = "user_view";
+		if ( preg_match( '/^email=/', $params ) ) {
+			$action = 'user_view_email';
+		} elseif ( preg_match( '/^username=/', $params ) ) {
+			$action = 'user_view_username';
+		} elseif ( preg_match( '/^id=/', $params ) ) {
+			$action = 'user_view';
 		}
 		$request_url = "{$this->url}&api_action={$action}&api_output={$this->output}&{$params}";
 		$response    = $this->curl( $request_url );
 
 		return $response;
 	}
-
 }
-
-?>

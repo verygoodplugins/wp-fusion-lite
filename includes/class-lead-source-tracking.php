@@ -9,7 +9,6 @@ class WPF_Lead_Source_Tracking {
 	/**
 	 * WPF_Lead_Source_Tracking constructor.
 	 */
-
 	public function __construct() {
 
 		// Lead source tracking
@@ -95,7 +94,6 @@ class WPF_Lead_Source_Tracking {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function set_lead_source() {
 
 		if ( headers_sent() ) {
@@ -259,7 +257,6 @@ class WPF_Lead_Source_Tracking {
 	 * @access  public
 	 * @return  array Cookies
 	 */
-
 	public function allowed_cookies( $cookies ) {
 
 		$cookies[] = $this->get_leadsource_cookie_name();
@@ -279,8 +276,8 @@ class WPF_Lead_Source_Tracking {
 	public function add_meta_field_group( $field_groups ) {
 
 		$field_groups['leadsource'] = array(
-			'title'  => __( 'Google Analytics and Lead Source Tracking', 'wp-fusion-lite' ),
-			'url'    => 'https://wpfusion.com/documentation/tutorials/lead-source-tracking/',
+			'title' => __( 'Google Analytics and Lead Source Tracking', 'wp-fusion-lite' ),
+			'url'   => 'https://wpfusion.com/documentation/tutorials/lead-source-tracking/',
 		);
 
 		return $field_groups;
@@ -294,7 +291,6 @@ class WPF_Lead_Source_Tracking {
 	 * @param array $meta_fields The meta fields.
 	 * @return array The meta fields.
 	 */
-
 	public function add_meta_fields( $meta_fields ) {
 
 		$meta_fields['leadsource'] = array(

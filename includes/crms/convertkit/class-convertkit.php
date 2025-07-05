@@ -22,6 +22,7 @@ class WPF_ConvertKit {
 
 	/**
 	 * Contains API secret
+	 *
 	 * @var string
 	 */
 	public $api_secret;
@@ -66,17 +67,15 @@ class WPF_ConvertKit {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		$this->api_secret = wpf_get_option( 'ck_secret' );
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_ConvertKit_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -85,7 +84,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -95,7 +93,6 @@ class WPF_ConvertKit {
 
 		// Slow down the batch processses to get around the 120 requests per minute limit
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
-
 	}
 
 	/**
@@ -104,11 +101,9 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return int Sleep time
 	 */
-
 	public function set_sleep_time( $seconds ) {
 
 		return 1;
-
 	}
 
 	/**
@@ -117,7 +112,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -153,7 +147,6 @@ class WPF_ConvertKit {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -162,7 +155,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return void
 	 */
-
 	public function process_unsubscribe() {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
@@ -185,7 +177,6 @@ class WPF_ConvertKit {
 		}
 
 		wp_die( 'Success', 'Success', 200 );
-
 	}
 
 	/**
@@ -194,7 +185,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'date' === $field_type && ! empty( $value ) ) {
@@ -210,13 +200,11 @@ class WPF_ConvertKit {
 				return gmdate( get_option( 'date_format' ), $value );
 
 			}
-
 		} else {
 
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -225,7 +213,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'convertkit' ) !== false ) {
@@ -244,7 +231,6 @@ class WPF_ConvertKit {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -283,7 +269,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return int Rule ID
 	 */
-
 	public function register_webhook( $type, $tag ) {
 
 		$access_key = wpf_get_option( 'access_key' );
@@ -310,7 +295,8 @@ class WPF_ConvertKit {
 		}
 
 		$response = wp_safe_remote_post(
-			'https://api.convertkit.com/v3/automations/hooks', array(
+			'https://api.convertkit.com/v3/automations/hooks',
+			array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => wp_json_encode( $data ),
 				'method'  => 'POST',
@@ -328,7 +314,6 @@ class WPF_ConvertKit {
 		} else {
 			return 0;
 		}
-
 	}
 
 	/**
@@ -337,7 +322,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return void
 	 */
-
 	public function destroy_webhook( $rule_id ) {
 
 		$data = array(
@@ -345,13 +329,13 @@ class WPF_ConvertKit {
 		);
 
 		$result = wp_safe_remote_request(
-			'https://api.convertkit.com/v3/automations/hooks/' . $rule_id, array(
+			'https://api.convertkit.com/v3/automations/hooks/' . $rule_id,
+			array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => wp_json_encode( $data ),
 				'method'  => 'DELETE',
 			)
 		);
-
 	}
 
 	/**
@@ -360,7 +344,6 @@ class WPF_ConvertKit {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_secret = null, $test = false ) {
 
 		if ( false == $test ) {
@@ -396,7 +379,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_tags();
@@ -405,7 +387,6 @@ class WPF_ConvertKit {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -415,7 +396,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/tags?api_secret=' . $this->api_secret, $this->get_params() );
@@ -467,7 +447,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$crm_fields = array(
@@ -502,7 +481,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers?api_secret=' . $this->api_secret . '&email_address=' . urlencode( $email_address ) . '&status=all', $this->get_params() );
@@ -520,7 +498,6 @@ class WPF_ConvertKit {
 		}
 
 		return $result->subscribers[0]->id;
-
 	}
 
 
@@ -530,7 +507,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$contact_tags = array();
@@ -574,7 +550,6 @@ class WPF_ConvertKit {
 		}
 
 		return $contact_tags;
-
 	}
 
 	/**
@@ -583,7 +558,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		// Let's see if we're dealing with a form.
@@ -641,7 +615,6 @@ class WPF_ConvertKit {
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
@@ -653,7 +626,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		foreach ( $tags as $tag_id ) {
@@ -672,7 +644,6 @@ class WPF_ConvertKit {
 		}
 
 		return true;
-
 	}
 
 
@@ -682,7 +653,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( empty( $data['email_address'] ) ) {
@@ -738,7 +708,6 @@ class WPF_ConvertKit {
 		}
 
 		return $result->subscription->subscriber->id;
-
 	}
 
 	/**
@@ -747,7 +716,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$post_data = array( 'api_secret' => $this->api_secret );
@@ -786,7 +754,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$response = wp_safe_remote_get( 'https://api.convertkit.com/v3/subscribers/' . $contact_id . '?api_secret=' . $this->api_secret . '&status=all', $this->get_params() );
@@ -832,7 +799,6 @@ class WPF_ConvertKit {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		$contact_ids = array();
@@ -858,7 +824,7 @@ class WPF_ConvertKit {
 				if ( $result->total_pages == $page ) {
 					$proceed = false;
 				} else {
-					$page++;
+					++$page;
 				}
 			} else {
 				$proceed = false;
@@ -866,7 +832,5 @@ class WPF_ConvertKit {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

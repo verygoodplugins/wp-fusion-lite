@@ -91,7 +91,6 @@ class WPF_Salesforce {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Figure out what kinds of tags we're using.
@@ -121,7 +120,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -144,7 +142,6 @@ class WPF_Salesforce {
 	 *
 	 * @return array|bool
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -251,7 +248,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return mixed SOAP message
 	 */
-
 	public function api_success( $user_id, $method ) {
 
 		if ( doing_wpf_webhook() ) {
@@ -281,7 +277,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( in_array( $field, wpf_get_option( 'read_only_fields', array() ) ) ) {
@@ -389,7 +384,7 @@ class WPF_Salesforce {
 			// Prevent the error handling looping on itself.
 			remove_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-			$response = wp_safe_remote_post( $this->auth_url, $params );
+			$response = wp_remote_post( $this->auth_url, $params );
 
 			add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
@@ -429,7 +424,7 @@ class WPF_Salesforce {
 			);
 
 			$auth_url = add_query_arg( $auth_args, $this->auth_url );
-			$response = wp_safe_remote_post( $auth_url );
+			$response = wp_remote_post( $auth_url );
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -454,7 +449,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'salesforce' ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
@@ -476,13 +470,12 @@ class WPF_Salesforce {
 
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
-					$response = wp_safe_remote_request( $url, $args );
+					$response = wp_remote_request( $url, $args );
 
 				} else {
 					// For example: "This session is not valid for use with the REST API".
 					$response = new WP_Error( 403, 'Invalid API credentials: ' . $body[0]->message );
 				}
-
 			} elseif ( 'Not Found' === $response_message && 'GET' !== $args['method'] ) {
 
 				// For updates to deleted or merged contacts, this will trigger a re-lookup by email address.
@@ -531,7 +524,6 @@ class WPF_Salesforce {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_token = null ) {
 
 		// Get saved data from DB.
@@ -576,7 +568,7 @@ class WPF_Salesforce {
 			return true;
 		}
 
-		$response = wp_safe_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/search/', $this->params );
+		$response = wp_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/search/', $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -592,7 +584,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -618,7 +609,7 @@ class WPF_Salesforce {
 	 */
 	public function sync_objects() {
 
-		$response = wp_safe_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/', $this->get_params() );
+		$response = wp_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -646,7 +637,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -666,7 +656,7 @@ class WPF_Salesforce {
 			while ( $continue ) {
 
 				$request  = add_query_arg( $query_args, $url );
-				$response = wp_safe_remote_get( $request, $this->params );
+				$response = wp_remote_get( $request, $this->params );
 
 				if ( is_wp_error( $response ) ) {
 
@@ -696,7 +686,7 @@ class WPF_Salesforce {
 		} elseif ( 'Picklist' === $tag_type ) {
 
 			$request  = $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/describe/';
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -725,7 +715,7 @@ class WPF_Salesforce {
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 
@@ -759,7 +749,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -772,7 +761,7 @@ class WPF_Salesforce {
 		$required_fields  = array();
 
 		$request  = $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/describe/';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -829,7 +818,7 @@ class WPF_Salesforce {
 		$record_types = array();
 
 		$request  = $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/describe/';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -857,7 +846,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -878,7 +866,7 @@ class WPF_Salesforce {
 
 		$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -897,10 +885,9 @@ class WPF_Salesforce {
 	/**
 	 * Gets all tags currently applied to the user, also update the list of available tags
 	 *
-	 * @access public
-	 * @return void
+	 * @param string $contact_id Salesforce contact ID.
+	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -918,7 +905,7 @@ class WPF_Salesforce {
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -941,7 +928,7 @@ class WPF_Salesforce {
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -962,7 +949,7 @@ class WPF_Salesforce {
 
 			$tags_field = wpf_get_option( 'sf_tag_picklist' );
 
-			$response = wp_safe_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
+			$response = wp_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -984,7 +971,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$params = $this->get_params();
@@ -1002,7 +988,7 @@ class WPF_Salesforce {
 
 				$params['body'] = wp_json_encode( $body );
 
-				$response = wp_safe_remote_post( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/TopicAssignment/', $params );
+				$response = wp_remote_post( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/TopicAssignment/', $params );
 
 			}
 		} elseif ( 'Picklist' === $tag_type ) {
@@ -1013,7 +999,16 @@ class WPF_Salesforce {
 				$current_tags = array(); // if loading them failed for some reason.
 			}
 
-			$tags  = array_merge( $current_tags, $tags );
+			// Filter out tags that already exist on the contact.
+			$tags_to_apply = array_diff( $tags, $current_tags );
+
+			// If no new tags to apply, return early.
+			if ( empty( $tags_to_apply ) ) {
+				return true;
+			}
+
+			// Merge current tags with new tags.
+			$tags  = array_merge( $current_tags, $tags_to_apply );
 			$tags  = implode( ';', array_filter( $tags ) );
 			$field = wpf_get_option( 'sf_tag_picklist' );
 
@@ -1022,7 +1017,7 @@ class WPF_Salesforce {
 			$params['body']   = wp_json_encode( $data );
 			$params['method'] = 'PATCH';
 
-			$response = wp_safe_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $params );
+			$response = wp_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $params );
 
 		} else {
 
@@ -1038,7 +1033,7 @@ class WPF_Salesforce {
 
 				$params['body'] = wp_json_encode( $body );
 
-				$response = wp_safe_remote_post( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/ContactTag/', $params );
+				$response = wp_remote_post( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/ContactTag/', $params );
 
 			}
 		}
@@ -1056,7 +1051,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$params               = $this->get_params();
@@ -1070,7 +1064,7 @@ class WPF_Salesforce {
 			$query_args = array( 'q' => "SELECT Id, TopicId from TopicAssignment WHERE EntityId = '" . $contact_id . "'" );
 			$request    = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -1095,7 +1089,7 @@ class WPF_Salesforce {
 
 				foreach ( $sf_tag_ids_to_remove as $tag_id ) {
 
-					$response = wp_safe_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/TopicAssignment/' . $tag_id, $params );
+					$response = wp_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/TopicAssignment/' . $tag_id, $params );
 
 					if ( is_wp_error( $response ) ) {
 						return $response;
@@ -1117,13 +1111,13 @@ class WPF_Salesforce {
 			$params['body']   = wp_json_encode( $data );
 			$params['method'] = 'PATCH';
 
-			$response = wp_safe_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $params );
+			$response = wp_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $params );
 		} else {
 
 			$query_args = array( 'q' => "SELECT Id, TagDefinitionId from ContactTag WHERE ItemId = '" . $contact_id . "'" );
 			$request    = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -1148,7 +1142,7 @@ class WPF_Salesforce {
 
 				foreach ( $sf_tag_ids_to_remove as $tag_id ) {
 
-					$response = wp_safe_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/ContactTag/' . $tag_id, $params );
+					$response = wp_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/ContactTag/' . $tag_id, $params );
 
 					if ( is_wp_error( $response ) ) {
 						return $response;
@@ -1167,21 +1161,20 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$params = $this->get_params();
 
-		// LastName is required to create a new contact.
-		if ( $this->object_type === 'Contact' && ! isset( $data['LastName'] ) ) {
-			$data['LastName'] = 'unknown';
-		}
+		// LastName and RecordType are required to create a new contact.
+		if ( 'Contact' === $this->object_type ) {
 
-		// Add record type if specified
-		$record_type_id = wpf_get_option( 'sf_record_type' );
+			if ( ! isset( $data['LastName'] ) ) {
+				$data['LastName'] = 'unknown';
+			}
 
-		if ( ! empty( $record_type_id ) ) {
-			$data['RecordTypeId'] = $record_type_id;
+			if ( ! isset( $data['RecordTypeId'] ) && wpf_get_option( 'sf_record_type' ) ) {
+				$data['RecordTypeId'] = wpf_get_option( 'sf_record_type' );
+			}
 		}
 
 		// Since 3.41.45 we support checking against all required fields.
@@ -1205,7 +1198,7 @@ class WPF_Salesforce {
 		$data = array_filter( $data );
 
 		$params['body'] = wp_json_encode( $data );
-		$response       = wp_safe_remote_post( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/', $params );
+		$response       = wp_remote_post( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1222,7 +1215,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$params = $this->get_params();
@@ -1242,7 +1234,7 @@ class WPF_Salesforce {
 		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PATCH';
 
-		$response = wp_safe_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $params );
+		$response = wp_remote_request( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1257,14 +1249,13 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$response = wp_safe_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
+		$response = wp_remote_get( $this->instance_url . '/services/data/v' . $this->api_version . '/sobjects/' . $this->object_type . '/' . $contact_id, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1298,7 +1289,6 @@ class WPF_Salesforce {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag = false ) {
 
 		if ( ! $this->params ) {
@@ -1321,7 +1311,7 @@ class WPF_Salesforce {
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -1346,7 +1336,7 @@ class WPF_Salesforce {
 
 			$request = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
 
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
@@ -1372,7 +1362,7 @@ class WPF_Salesforce {
 			$query_args = apply_filters( 'wpf_salesforce_query_args', $query_args, 'load_contacts', $tag );
 
 			$request  = add_query_arg( $query_args, $this->instance_url . '/services/data/v' . $this->api_version . '/query' );
-			$response = wp_safe_remote_get( $request, $this->params );
+			$response = wp_remote_get( $request, $this->params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;

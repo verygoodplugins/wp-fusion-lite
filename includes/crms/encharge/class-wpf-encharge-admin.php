@@ -102,7 +102,6 @@ class WPF_Encharge_Admin {
 	 * @access  public
 	 * @since 3.43.10
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		// Add site tracking option

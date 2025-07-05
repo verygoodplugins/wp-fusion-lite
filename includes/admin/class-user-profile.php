@@ -348,10 +348,9 @@ class WPF_User_Profile {
 	 * @param int        $user_id   The user ID.
 	 * @return array|null Registration data or null if we're bypassing the registration process.
 	 */
-
 	public function filter_form_fields( $post_data, $user_id ) {
 
-		if ( ! function_exists( 'get_current_screen' ) ) {
+		if ( ! function_exists( 'get_current_screen' ) || is_null( $post_data ) ) {
 			return $post_data;
 		}
 
@@ -409,7 +408,6 @@ class WPF_User_Profile {
 	 * @access public
 	 * @return void
 	 */
-
 	public function user_profile( $user ) {
 
 		if ( ! current_user_can( 'edit_users' ) ) {
@@ -533,5 +531,3 @@ class WPF_User_Profile {
 		<?php
 	}
 }
-
-

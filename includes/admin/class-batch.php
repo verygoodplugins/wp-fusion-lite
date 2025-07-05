@@ -21,7 +21,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function __construct() {
 
 		// Status monitor.
@@ -113,7 +112,6 @@ class WPF_Batch {
 	 * @since 3.33.16
 	 * @return array Options.
 	 */
-
 	public function get_export_options() {
 
 		$options = array(
@@ -163,7 +161,6 @@ class WPF_Batch {
 	 * @since 3.35.7
 	 * @return string Name of the batch operation
 	 */
-
 	public function get_operation_title( $id ) {
 
 		$operations = $this->get_export_options();
@@ -181,7 +178,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function includes() {
 
 		require_once WPF_DIR_PATH . 'includes/admin/batch/class-async-request.php';
@@ -194,7 +190,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function init() {
 
 		$this->process = new WPF_Background_Process();
@@ -207,7 +202,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return mixed
 	 */
-
 	public function batch_status_bar() {
 
 		$active = false;
@@ -281,7 +275,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return int Count
 	 */
-
 	public function batch_init( $hook = false, $args = array() ) {
 
 		if ( wp_doing_ajax() ) {
@@ -514,7 +507,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return array Contact IDs
 	 */
-
 	public function import_users_init( $args ) {
 
 		if ( 'false' === $args['tag'] ) {
@@ -546,7 +538,6 @@ class WPF_Batch {
 
 				}
 			}
-
 		}
 
 		// Logging
@@ -601,7 +592,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function import_users_step( $contact_id, $args = array() ) {
 
 		if ( ! isset( $args['notify'] ) || $args['notify'] === 'false' ) {
@@ -644,7 +634,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function users_cid_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_contact_id( $user_id, true );
@@ -656,7 +645,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function users_tags_sync_step( $user_id ) {
 
 		wp_fusion()->user->get_tags( $user_id, true, false );
@@ -668,7 +656,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return array Users
 	 */
-
 	public function users_sync_init() {
 
 		$args = array(
@@ -685,7 +672,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function users_sync_step( $user_id ) {
 
 		// In case they've reset the CRM while the sync was running.
@@ -700,7 +686,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return array Users
 	 */
-
 	public function users_register_init() {
 
 		$args = array(
@@ -727,7 +712,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function users_register_step( $user_id ) {
 
 		wp_fusion()->user->user_register( $user_id );
@@ -741,7 +725,6 @@ class WPF_Batch {
 	 * @param $user_id The ID of the user to process
 	 * @return void
 	 */
-
 	public function users_register_tags_step( $user_id ) {
 
 		$assign_tags = wpf_get_option( 'assign_tags' );
@@ -757,7 +740,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function users_meta_step( $user_id ) {
 
 		wp_fusion()->user->push_user_meta( $user_id );
@@ -769,7 +751,6 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-
 	public function pull_users_meta_step( $user_id ) {
 
 		wp_fusion()->user->pull_user_meta( $user_id );

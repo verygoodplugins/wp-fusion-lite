@@ -44,18 +44,16 @@ class WPF_Autopilot {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Autopilot_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -64,7 +62,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
@@ -75,7 +72,6 @@ class WPF_Autopilot {
 		add_action( 'wp_footer', array( $this, 'identify' ), 100 );
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_forms' ), 10, 2 );
 		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_forms' ), 10, 2 );
-
 	}
 
 	/**
@@ -84,13 +80,11 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return void
 	 */
-
 	public function maybe_clear_tracking_cookie() {
 
 		if ( wpf_is_user_logged_in() && ! empty( $_COOKIE['autopilot_id'] ) ) {
 			setcookie( 'autopilot_id', false, time() - ( 15 * 60 ), COOKIEPATH, COOKIE_DOMAIN );
 		}
-
 	}
 
 	/**
@@ -99,7 +93,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return void
 	 */
-
 	public function identify() {
 
 		if ( is_admin() ) {
@@ -118,7 +111,6 @@ class WPF_Autopilot {
 				$email = $user->user_email;
 
 			}
-
 		} elseif ( ! empty( $_COOKIE['autopilot_id'] ) ) {
 
 			$email = sanitize_email( wp_unslash( $_COOKIE['autopilot_id'] ) );
@@ -139,7 +131,6 @@ class WPF_Autopilot {
 			</script>';
 
 		}
-
 	}
 
 	/**
@@ -148,11 +139,9 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return void
 	 */
-
 	public function set_tracking_cookie_forms( $contact_id, $email_address ) {
 
 		setcookie( 'autopilot_id', $email_address, time() + DAY_IN_SECONDS * 180, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 	/**
@@ -161,36 +150,34 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( !is_object( $payload ) ) {
+		if ( ! is_object( $payload ) ) {
 			return false;
 		}
 
-		if( $post_data['wpf_action'] == 'update' ) {
+		if ( $post_data['wpf_action'] == 'update' ) {
 
 			$post_data['contact_id'] = sanitize_key( $payload->contact_id );
 			return $post_data;
 
-		} elseif( $post_data['wpf_action'] == 'add' ) {
+		} elseif ( $post_data['wpf_action'] == 'add' ) {
 
-			$tag = wpf_get_option('autopilot_add_tag');
+			$tag = wpf_get_option( 'autopilot_add_tag' );
 
-			if( $payload->list_id == $tag[0] ) {
+			if ( $payload->list_id == $tag[0] ) {
 				$post_data['contact_id'] = sanitize_key( $payload->contact_id );
 				return $post_data;
 			} else {
 				return false;
 			}
-
 		}
-
 	}
 
 	/**
@@ -199,23 +186,20 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'autopilothq') !== false && $args['user-agent'] == 'WP Fusion; ' . home_url()  ) {
+		if ( strpos( $url, 'autopilothq' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) && $body_json->message !== 'Contact could not be found.' ) {
+			if ( isset( $body_json->error ) && $body_json->message !== 'Contact could not be found.' ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
 			}
-
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -224,7 +208,6 @@ class WPF_Autopilot {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_key = null ) {
 
 		// Get saved data from DB
@@ -251,7 +234,6 @@ class WPF_Autopilot {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_key = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -264,13 +246,12 @@ class WPF_Autopilot {
 
 		$request  = 'https://api2.autopilothq.com/v1/contacts';
 		$response = wp_safe_remote_get( $request, $this->params );
-		
-		if( is_wp_error( $response ) ) {
+
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -280,7 +261,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -291,7 +271,6 @@ class WPF_Autopilot {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -301,7 +280,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -310,10 +288,10 @@ class WPF_Autopilot {
 
 		$available_tags = array();
 
-		$request    = 'https://api2.autopilothq.com/v1/lists';
-		$response   = wp_safe_remote_get( $request, $this->params );
+		$request  = 'https://api2.autopilothq.com/v1/lists';
+		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -332,7 +310,6 @@ class WPF_Autopilot {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -342,7 +319,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -350,7 +326,7 @@ class WPF_Autopilot {
 		}
 
 		// Load built in fields first
-		require dirname( __FILE__ ) . '/admin/autopilot-fields.php';
+		require __DIR__ . '/admin/autopilot-fields.php';
 
 		$built_in_fields = array();
 
@@ -361,7 +337,7 @@ class WPF_Autopilot {
 		$request  = 'https://api2.autopilothq.com/v1/contacts/custom_fields';
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -369,7 +345,7 @@ class WPF_Autopilot {
 
 		$custom_fields = array();
 
-		foreach( $response as $field ) {
+		foreach ( $response as $field ) {
 
 			$custom_fields[ $field->name ] = ucwords( str_replace( '_', ' ', $field->name ) );
 
@@ -377,12 +353,14 @@ class WPF_Autopilot {
 
 		asort( $custom_fields );
 
-		$crm_fields = array( 'Standard Fields' => $built_in_fields, 'Custom Fields' => $custom_fields );
+		$crm_fields = array(
+			'Standard Fields' => $built_in_fields,
+			'Custom Fields'   => $custom_fields,
+		);
 
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -392,7 +370,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -402,18 +379,17 @@ class WPF_Autopilot {
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . urlencode( $email_address );
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( empty( $response ) || empty( $response->contact_id ) ) {
+		if ( empty( $response ) || empty( $response->contact_id ) ) {
 			return false;
 		}
 
 		return $response->contact_id;
-
 	}
 
 
@@ -423,7 +399,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -433,7 +408,7 @@ class WPF_Autopilot {
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . $contact_id;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -441,11 +416,11 @@ class WPF_Autopilot {
 
 		$tags = array();
 
-		if( empty( $response->lists ) ) {
+		if ( empty( $response->lists ) ) {
 			return false;
 		}
 
-		foreach( $response->lists as $tag_id ) {
+		foreach ( $response->lists as $tag_id ) {
 			$tags[] = $tag_id;
 		}
 
@@ -459,28 +434,25 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
-			$params = $this->params;;
+			$params = $this->params;
 
 			$request  = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contact/' . $contact_id;
 			$response = wp_safe_remote_post( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -489,29 +461,26 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		foreach( $tags as $tag ) {
+		foreach ( $tags as $tag ) {
 
-			$params = $this->params;
+			$params           = $this->params;
 			$params['method'] = 'DELETE';
 
 			$request  = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contact/' . $contact_id;
 			$response = wp_safe_remote_request( $request, $params );
 
-			if( is_wp_error( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 				return $response;
 			}
-
 		}
 
 		return true;
-
 	}
 
 
@@ -521,72 +490,68 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
+		require __DIR__ . '/admin/autopilot-fields.php';
 
-		require dirname( __FILE__ ) . '/admin/autopilot-fields.php';
+		$update_data = array( 'contact' => array( 'custom' => array() ) );
 
-		$update_data = array('contact' => array('custom' => array()));
+		foreach ( $data as $crm_field => $value ) {
 
-		foreach( $data as $crm_field => $value ) {
+			$date = date_parse( $value );
 
-			$date = date_parse($value);
+			foreach ( $autopilot_fields as $meta_key => $field_data ) {
 
-			foreach( $autopilot_fields as $meta_key => $field_data ) {
-
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 
 					// If it's a built in field
-					$update_data['contact'][$crm_field] = $value;
+					$update_data['contact'][ $crm_field ] = $value;
 
 					continue 2;
 
 				}
-
 			}
 
 			// Custom fields (for different field types as)
 
-			$update_data['contact']['custom'][ 'string--' . str_replace(' ','--', $crm_field)] = $value;
+			$update_data['contact']['custom'][ 'string--' . str_replace( ' ', '--', $crm_field ) ] = $value;
 
 			// if (is_string($value)) {
-			// 	$update_data['contact']['custom'][ 'string--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'string--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 			// elseif (is_float($value)) {
-			// 	$update_data['contact']['custom'][ 'float--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'float--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
-			
+
 			// elseif (is_bool($value)) {
-			// 	$update_data['contact']['custom'][ 'boolean--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'boolean--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 			// //janky solution to find make sure value is a date
 			// elseif ( $date !== false && checkdate($date["month"], $date["day"], $date["year"])) {
-			// 	$update_data['contact']['custom'][ 'date--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'date--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 		}
 
-		$params = $this->params;
+		$params         = $this->params;
 		$params['body'] = wp_json_encode( $update_data );
 
 		$request  = 'https://api2.autopilothq.com/v1/contact';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->contact_id;
-
 	}
 
 	/**
@@ -595,7 +560,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -603,7 +567,7 @@ class WPF_Autopilot {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/autopilot-fields.php';
+		require __DIR__ . '/admin/autopilot-fields.php';
 
 		$update_data = array(
 			'contact' => array(
@@ -611,42 +575,41 @@ class WPF_Autopilot {
 			),
 		);
 
-		foreach( $data as $crm_field => $value ) {
+		foreach ( $data as $crm_field => $value ) {
 
-			$date = date_parse($value);
+			$date = date_parse( $value );
 
-			foreach( $autopilot_fields as $meta_key => $field_data ) {
+			foreach ( $autopilot_fields as $meta_key => $field_data ) {
 
-				if( $crm_field == $field_data['crm_field'] ) {
+				if ( $crm_field == $field_data['crm_field'] ) {
 
 					// If it's a built in field
-					$update_data['contact'][$crm_field] = $value;
+					$update_data['contact'][ $crm_field ] = $value;
 
 					continue 2;
 
 				}
-
 			}
 
 			// Custom fields (for different field types aswell)
 
-			$update_data['contact']['custom'][ 'string--' . str_replace(' ','--', $crm_field)] = $value;
+			$update_data['contact']['custom'][ 'string--' . str_replace( ' ', '--', $crm_field ) ] = $value;
 
 			// if (is_string($value)) {
-			// 	$update_data['contact']['custom'][ 'string--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'string--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 			// elseif (is_float($value)) {
-			// 	$update_data['contact']['custom'][ 'float--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'float--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 			// elseif (is_bool($value)) {
-			// 	$update_data['contact']['custom'][ 'boolean--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'boolean--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 			// //janky solution to find make sure value is a date
 			// elseif ( $date !== false && checkdate($date["month"], $date["day"], $date["year"])) {
-			// 	$update_data['contact']['custom'][ 'date--' . str_replace(' ','--', $crm_field)] = $value;
+			// $update_data['contact']['custom'][ 'date--' . str_replace(' ','--', $crm_field)] = $value;
 			// }
 
 		}
@@ -665,12 +628,11 @@ class WPF_Autopilot {
 		$request  = 'https://api2.autopilothq.com/v1/contact';
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -679,7 +641,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$request  = 'https://api2.autopilothq.com/v1/contact/' . $contact_id;
@@ -715,7 +676,6 @@ class WPF_Autopilot {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -725,7 +685,6 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -734,17 +693,17 @@ class WPF_Autopilot {
 
 		$contact_ids = array();
 
-		$url     = 'https://api2.autopilothq.com/v1/list/'. $tag . '/contacts';
+		$url     = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contacts';
 		$results = wp_safe_remote_get( $url, $this->params );
 
-		if( is_wp_error( $results ) ) {
+		if ( is_wp_error( $results ) ) {
 			return $results;
 		}
 
 		$body_json = json_decode( $results['body'], true );
 
-		if ($body_json['total_contacts'] == 100) {
-			$url     = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contacts/'. $body_json['contacts'][100]['contact_id'];
+		if ( $body_json['total_contacts'] == 100 ) {
+			$url     = 'https://api2.autopilothq.com/v1/list/' . $tag . '/contacts/' . $body_json['contacts'][100]['contact_id'];
 			$results = wp_safe_remote_get( $url, $this->params );
 		}
 
@@ -753,8 +712,6 @@ class WPF_Autopilot {
 		}
 
 		return $contact_ids;
-
-
 	}
 
 	/**
@@ -763,45 +720,43 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return int Rule ID
 	 */
-
 	public function register_webhook( $type ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		if( $type == 'add' ) {
+		if ( $type == 'add' ) {
 			$event_type = 'added_to_list';
-		}	elseif( $type == 'update' ) {
+		} elseif ( $type == 'update' ) {
 			$event_type = 'updated';
 		}
 
-		$access_key = wpf_get_option('access_key');
+		$access_key = wpf_get_option( 'access_key' );
 
 		$data = array(
-			'target_url'    => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
-			'event' 		=> 'contact_'. $event_type
+			'target_url' => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ),
+			'event'      => 'contact_' . $event_type,
 		);
 
-		$request      		= 'https://api2.autopilothq.com/v1/hook';
-		$params           	= $this->params;
-		$params['method'] 	= 'POST';
-		$params['body']  	= wp_json_encode($data,JSON_UNESCAPED_SLASHES);
+		$request          = 'https://api2.autopilothq.com/v1/hook';
+		$params           = $this->params;
+		$params['method'] = 'POST';
+		$params['body']   = wp_json_encode( $data, JSON_UNESCAPED_SLASHES );
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$result = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if(is_object($result)) {
+		if ( is_object( $result ) ) {
 			return $result->hook_id;
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
@@ -810,26 +765,22 @@ class WPF_Autopilot {
 	 * @access public
 	 * @return void
 	 */
-
 	public function destroy_webhook( $rule_id ) {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		$request                = 'https://api2.autopilothq.com/v1/hook/' . $rule_id;
-		$params           		= $this->params;
-		$params['method'] 		= 'DELETE';
+		$request          = 'https://api2.autopilothq.com/v1/hook/' . $rule_id;
+		$params           = $this->params;
+		$params['method'] = 'DELETE';
 
-		$response     		    = wp_safe_remote_post( $request, $params );
+		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
-
-
 }

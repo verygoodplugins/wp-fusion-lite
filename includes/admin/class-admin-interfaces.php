@@ -128,7 +128,6 @@ class WPF_Admin_Interfaces {
 	 * @access private
 	 * @return void
 	 */
-
 	private function includes() {
 
 		require_once WPF_DIR_PATH . 'includes/admin/class-user-profile.php';
@@ -142,7 +141,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return array Settings
 	 */
-
 	public function sanitize_meta_box( $settings ) {
 
 		if ( ! isset( $settings['lock_content'] ) ) {
@@ -196,7 +194,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function admin_scripts() {
 
 		wp_enqueue_style( 'select4', WPF_DIR_URL . 'includes/admin/options/lib/select2/select4.min.css', array(), '4.0.1' );
@@ -244,6 +241,7 @@ class WPF_Admin_Interfaces {
 				'applyTags'             => __( 'Apply Tags', 'wp-fusion-lite' ),
 				'linkWithTag'           => __( 'Link with Tag', 'wp-fusion-lite' ),
 				'connecting'            => __( 'Connecting', 'wp-fusion-lite' ),
+				'addingTagLoader'       => __( 'Adding a new tag...', 'wp-fusion-lite' ),
 				'reserved_keys_warning' => sprintf( __( '%s prevents the "{key_name}" string to be part of the event key.', 'wp-fusion-lite' ), wp_fusion()->crm->name ),
 			),
 		);
@@ -257,7 +255,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function restrict_manage_users() {
 
 		if ( isset( $_REQUEST['wpf_filter_tag'] ) && ! empty( $_REQUEST['wpf_filter_tag'] ) ) {
@@ -342,7 +339,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return object Query
 	 */
-
 	public function custom_users_filter( $query ) {
 
 		global $pagenow;
@@ -414,7 +410,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function register_taxonomy_form_fields() {
 
 		$registered_taxonomies = get_taxonomies();
@@ -431,7 +426,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return mixed HTML Output
 	 */
-
 	public function taxonomy_form_fields( $term ) {
 
 		$t_id = $term->term_id;
@@ -580,7 +574,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function save_taxonomy_form_fields( $term_id ) {
 
 		$taxonomy_rules = get_option( 'wpf_taxonomy_rules', array() );
@@ -627,7 +620,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return array Post States
 	 */
-
 	public function admin_table_post_states( $post_states, $post ) {
 
 		if ( ! is_object( $post ) ) {
@@ -701,7 +693,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return array Columns
 	 */
-
 	public function bulk_edit_columns( $columns, $post_type = null ) {
 
 		$columns['wpf_settings'] = false;
@@ -715,7 +706,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return array Columns
 	 */
-
 	public function manage_users_columns( $columns ) {
 
 		$columns['wpf_tags'] = sprintf( esc_html__( '%s Tags', 'wp-fusion-lite' ), wp_fusion()->crm->name );
@@ -729,7 +719,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return array Columns
 	 */
-
 	public function manage_users_custom_column( $val, $column_name, $user_id ) {
 
 		if ( 'wpf_tags' === $column_name ) {
@@ -784,7 +773,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function bulk_edit_box( $column_name, $post_type ) {
 
 		if ( 'wpf_settings' !== $column_name ) {
@@ -832,7 +820,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function bulk_edit_save() {
 
 		if ( ! isset( $_REQUEST['bulk_edit'] ) ) {
@@ -911,7 +898,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function admin_menu_fields( $item_id, $item, $depth, $args, $id = false ) {
 
 		if ( ! wpf_get_option( 'enable_menu_items', true ) ) {
@@ -1047,7 +1033,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function admin_menu_save( $menu_id, $menu_item_db_id ) {
 
 		// Verify this came from our screen and with proper authorization.
@@ -1082,7 +1067,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function add_meta_box() {
 
 		if ( wpf_get_option( 'admin_permissions' ) && ! current_user_can( 'manage_options' ) ) {
@@ -1115,7 +1099,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function restrict_content_checkbox( $post, $settings ) {
 
 		echo '<input class="checkbox wpf-restrict-access-checkbox" type="checkbox" data-unlock="wpf-settings-allow_tags wpf-settings-allow_tags_all" id="wpf-lock-content" name="wpf-settings[lock_content]" value="1" ' . checked( $settings['lock_content'], 1, false ) . ' /> <label for="wpf-lock-content" class="wpf-restrict-access">';
@@ -1132,7 +1115,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function required_tags_select( $post, $settings ) {
 
 		if ( $settings['lock_content'] ) {
@@ -1200,7 +1182,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function page_redirect_select( $post, $settings, $disabled = false ) {
 
 		echo '<p class="wpf-page-redirect-select"><label for="wpf-redirect"><small>' . esc_html__( 'Redirect if access is denied (page or URL):', 'wp-fusion-lite' ) . '</small>';
@@ -1263,7 +1244,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function apply_tags_select( $post, $settings ) {
 
 		echo '<p class="wpf-apply-tags-select"><label for="wpf-apply-tags"><small>' . __( 'Apply tags on view', 'wp-fusion-lite' ) . ':</small></label>';
@@ -1306,7 +1286,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function apply_to_children( $post, $settings ) {
 
 		$children = get_pages(
@@ -1494,7 +1473,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function save_changes_to_children( $post_id, $data ) {
 
 		if ( ! isset( $_POST['post_type'] ) ) {
@@ -1528,7 +1506,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function meta_box_callback( $post ) {
 
 		// Add an nonce field so we can check for it later.
@@ -1575,7 +1552,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function restricted_content_message_callback( $post ) {
 
 		$settings = array(
@@ -1597,7 +1573,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function save_meta_box_data( $post_id ) {
 
 		if ( isset( $_POST['post_ID'] ) && $_POST['post_ID'] != $post_id ) {
@@ -1636,7 +1611,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function widget_form( $widget, $return, $instance ) {
 
 		if ( ! isset( $instance['wpf_conditional'] ) ) {
@@ -1703,7 +1677,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return array Instance
 	 */
-
 	public function widget_form_update( $instance, $new_instance, $old_instance, $widget ) {
 
 		if ( isset( $new_instance['wpf_conditional'] ) ) {
@@ -1746,7 +1719,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return void
 	 */
-
 	public function add_debug_meta_box() {
 
 		if ( isset( $_GET['wpf-debug-meta'] ) ) {
@@ -1767,7 +1739,6 @@ class WPF_Admin_Interfaces {
 	 * @access public
 	 * @return mixed Debug output
 	 */
-
 	public function debug_meta_box( $post ) {
 
 		echo '<pre>';

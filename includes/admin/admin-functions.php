@@ -10,7 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @access public
  * @return mixed HTML field
  */
-
 function wpf_render_tag_multiselect( $args = array() ) {
 
 	$defaults = array(
@@ -186,7 +185,7 @@ function wpf_render_tag_multiselect( $args = array() ) {
 		foreach ( $available_tags as $id => $tag ) {
 
 			// Fix for empty tags created by spaces etc.
-			if ( empty( $tag ) ) {
+			if ( empty( $tag ) || ! is_string( $tag ) ) {
 				continue;
 			}
 
@@ -240,7 +239,6 @@ function wpf_render_tag_multiselect( $args = array() ) {
  * @access public
  * @return mixed HTML field
  */
-
 function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $field_sub_id = false ) {
 
 	if ( doing_action( 'show_field_crm_field' ) ) {
@@ -380,7 +378,7 @@ function wpf_render_crm_field_select( $setting, $meta_name, $field_id = false, $
  *
  * @since  3.37.13
  *
- * @param  int  $width  The width in px.
+ * @param  int $width  The width in px.
  * @return string The logo.
  */
 function wpf_logo_svg( $width = 24 ) {

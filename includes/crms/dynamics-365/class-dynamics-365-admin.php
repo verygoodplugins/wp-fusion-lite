@@ -60,7 +60,6 @@ class WPF_Dynamics_365_Admin {
 	 *
 	 * @since 3.38.43
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );

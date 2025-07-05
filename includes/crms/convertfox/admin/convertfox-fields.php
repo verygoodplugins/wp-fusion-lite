@@ -4,32 +4,32 @@ $convertfox_fields = array();
 
 $convertfox_fields[] = array(
 	'crm_label' => 'Full Name',
-	'crm_field' => 'name'
+	'crm_field' => 'name',
 );
 
 $convertfox_fields['first_name'] = array(
 	'crm_label' => 'First Name',
-	'crm_field' => 'first_name'
+	'crm_field' => 'first_name',
 );
 
 $convertfox_fields['last_name'] = array(
 	'crm_label' => 'Last Name',
-	'crm_field' => 'last_name'
+	'crm_field' => 'last_name',
 );
 
 $convertfox_fields['user_email'] = array(
 	'crm_label' => 'Email',
-	'crm_field' => 'email'
+	'crm_field' => 'email',
 );
 
 $convertfox_fields['billing_phone'] = array(
 	'crm_label' => 'Phone',
-	'crm_field' => 'phone'
+	'crm_field' => 'phone',
 );
 
 $convertfox_fields['phone'] = array(
 	'crm_label' => 'Phone',
-	'crm_field' => 'phone'
+	'crm_field' => 'phone',
 );
 
 $convertfox_fields['user_url'] = array(
@@ -54,23 +54,23 @@ $convertfox_fields['original_ref'] = array(
 // Location data is read only
 
 // $convertfox_fields['billing_city'] = array(
-// 	'crm_label' => 'City',
-// 	'crm_field' => 'location+city_name',
+// 'crm_label' => 'City',
+// 'crm_field' => 'location+city_name',
 // );
 
 // $convertfox_fields['billing_state'] = array(
-// 	'crm_label' => 'State',
-// 	'crm_field' => 'location+region_name',
+// 'crm_label' => 'State',
+// 'crm_field' => 'location+region_name',
 // );
 
 // $convertfox_fields['billing_country'] = array(
-// 	'crm_label' => 'Country',
-// 	'crm_field' => 'location+country_code',
+// 'crm_label' => 'Country',
+// 'crm_field' => 'location+country_code',
 // );
 
 // $convertfox_fields['billing_postcode'] = array(
-// 	'crm_label' => 'Postcode',
-// 	'crm_field' => 'location+postal_code',
+// 'crm_label' => 'Postcode',
+// 'crm_field' => 'location+postal_code',
 // );
 
 // Misc.
@@ -129,4 +129,3 @@ $convertfox_fields[] = array(
 	'crm_label' => 'Fax Number',
 	'crm_field' => 'fax_number',
 );
-

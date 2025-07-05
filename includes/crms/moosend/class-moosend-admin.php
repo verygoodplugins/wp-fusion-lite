@@ -123,7 +123,6 @@ class WPF_MooSend_Admin {
 	 * @return array The options.
 	 * @since 3.38.42
 	 */
-
 	public function add_default_fields( $options ) {
 
 		require __DIR__ . '/moosend-fields.php';

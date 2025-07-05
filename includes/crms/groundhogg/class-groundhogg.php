@@ -48,7 +48,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -65,7 +64,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
@@ -80,11 +78,10 @@ class WPF_Groundhogg {
 			return;
 		}
 
-		// Contact edit URL on the admin profile
+		// Contact edit URL on the admin profile.
 		$this->edit_url = admin_url( 'admin.php?page=gh_contacts&action=edit&contact=%d' );
 
-		// Disable the API queue
-
+		// Disable the API queue.
 		add_filter( 'wpf_get_setting_enable_queue', '__return_false' );
 		add_filter( 'wpf_configure_settings', array( $this, 'hide_api_queue_setting' ) );
 
@@ -100,6 +97,9 @@ class WPF_Groundhogg {
 
 		// Syncs GH tags with the WP User.
 		add_action( 'wpf_user_created', array( $this, 'user_registered' ), 10, 2 );
+
+		// Don't sync users back to GH if they were created by GH.
+		add_action( 'wpf_user_register', array( $this, 'user_register' ), 10, 2 );
 
 		add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
 		add_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
@@ -166,7 +166,6 @@ class WPF_Groundhogg {
 	 *
 	 * @return bool|WP_Error
 	 */
-
 	public function preflight_check( $check ) {
 
 		if ( ! class_exists( '\Groundhogg\Contact' ) ) {
@@ -197,7 +196,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'optin_status' === $field && 'checkbox' === $field_type ) {
@@ -255,7 +253,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function create_new_tags( $tags ) {
 
 		foreach ( $tags as $i => $tag ) {
@@ -302,7 +299,26 @@ class WPF_Groundhogg {
 		wp_fusion()->user->set_tags( $tags, $user_id );
 	}
 
+	/**
+	 * Don't sync users back to GH if they were created by GH.
+	 *
+	 * @since 3.41.16
+	 *
+	 * @param array $post_data The user data.
+	 * @param int   $user_id   The user ID.
+	 */
+	public function user_register( $post_data, $user_id ) {
 
+		$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );
+
+		if ( $contact_id ) {
+			wp_fusion()->logger->add_source( 'groundhogg' );
+			$this->user_registered( $user_id, $contact_id );
+			return null;
+		}
+
+		return $post_data;
+	}
 	/**
 	 * Update WPF tags when tags applied in Groundhogg
 	 *
@@ -334,7 +350,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function tag_removed( $contact, $tag_id ) {
 
 		$user_id = $contact->get_user_id();
@@ -352,7 +367,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function contact_post_update( $contact_id, $contact ) {
 
 		if ( ! empty( $contact->user ) ) {
@@ -367,7 +381,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function contact_post_update_fallback( $contact_id, $meta_key, $meta_value, $prev_value ) {
 
 		if ( ! defined( 'REST_REQUEST' ) ) {
@@ -387,7 +400,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function tag_created( $id ) {
 
 		$this->sync_tags();
@@ -399,7 +411,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function tag_deleted( $id ) {
 
 		$this->sync_tags();
@@ -412,7 +423,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_tags();
@@ -430,7 +440,6 @@ class WPF_Groundhogg {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $test = false ) {
 
 		if ( false == $test ) {
@@ -453,7 +462,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -475,7 +483,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields( $old_value = false, $value = false ) {
 
 		$crm_fields = array();
@@ -539,7 +546,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$contact = \Groundhogg\Plugin::$instance->dbs->get_db( 'contacts' )->get_contact_by( 'email', $email_address );
@@ -557,7 +563,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$data = new \Groundhogg\Contact( $contact_id );
@@ -581,7 +586,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		remove_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
@@ -600,7 +604,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		remove_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
@@ -619,7 +622,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		// Make sure we have an email.
@@ -707,7 +709,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		remove_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
@@ -744,7 +745,6 @@ class WPF_Groundhogg {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$contact = new \Groundhogg\Contact( $contact_id );
@@ -778,10 +778,12 @@ class WPF_Groundhogg {
 	public function load_contacts( $tag ) {
 		// Return all contacts if no tag is provided.
 		if ( empty( $tag ) ) {
-			$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'contacts' )->get_contacts( array( 
-				'fields' => array( 'ID' ), 
-				'select' => 'ID',
-			) );
+			$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'contacts' )->get_contacts(
+				array(
+					'fields' => array( 'ID' ),
+					'select' => 'ID',
+				)
+			);
 
 		} else {
 			$contacts = \Groundhogg\Plugin::$instance->dbs->get_db( 'tag_relationships' )->get_contacts_by_tag( $tag );

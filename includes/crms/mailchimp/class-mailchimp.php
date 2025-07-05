@@ -59,7 +59,6 @@ class WPF_MailChimp {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options.
@@ -89,7 +88,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -103,7 +101,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -132,7 +129,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return string Contact ID
 	 */
-
 	public function auto_login_contact_id( $contact_id ) {
 
 		if ( is_email( $contact_id ) ) {
@@ -148,7 +144,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		// Fix for country.
@@ -176,7 +171,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'mailchimp' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -226,7 +220,6 @@ class WPF_MailChimp {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $dc = null, $api_key = null ) {
 
 		// Get saved data from DB
@@ -251,7 +244,7 @@ class WPF_MailChimp {
 		);
 
 		$this->dc   = $dc;
-		$this->list = wpf_get_option( 'mc_default_list', false );
+		$this->list = (string) wpf_get_option( 'mc_default_list', false );
 
 		return $this->params;
 	}
@@ -263,7 +256,6 @@ class WPF_MailChimp {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $dc = null, $api_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -291,7 +283,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -312,7 +303,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
 
 		if ( ! $this->params ) {
@@ -322,7 +312,7 @@ class WPF_MailChimp {
 		$available_lists = array();
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/?count=1000';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -358,13 +348,12 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/segments/?count=1000&type=static';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -400,7 +389,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		// Load built in fields to get field types and subtypes
@@ -413,7 +401,7 @@ class WPF_MailChimp {
 		}
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/merge-fields/?count=100';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -469,11 +457,10 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . md5( strtolower( $email_address ) );
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 
@@ -503,12 +490,11 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$tags     = array();
 		$request  = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/?count=1000';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -538,7 +524,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! in_array( 'add_tags', $this->supports, true ) ) {
@@ -555,11 +540,12 @@ class WPF_MailChimp {
 			);
 		}
 
-		$request        = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
+		$request = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/tags/';
+
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -575,7 +561,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! in_array( 'add_tags', $this->supports, true ) ) {
@@ -595,7 +580,7 @@ class WPF_MailChimp {
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -611,7 +596,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		// Put address fields in their places.
@@ -662,7 +646,7 @@ class WPF_MailChimp {
 		$params['method'] = 'PUT';
 		$params['body']   = wp_json_encode( $payload );
 
-		$response = wp_safe_remote_request( $url, $params );
+		$response = wp_remote_request( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -686,7 +670,6 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		// Put address fields in their places
@@ -734,7 +717,7 @@ class WPF_MailChimp {
 			)
 		);
 
-		$response = wp_safe_remote_post( $url, $params );
+		$response = wp_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -759,11 +742,10 @@ class WPF_MailChimp {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
-		$response = wp_safe_remote_get( $url, $this->get_params() );
+		$response = wp_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -814,7 +796,7 @@ class WPF_MailChimp {
 		if ( false !== $tag && ! is_numeric( $tag ) ) {
 
 			$url      = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/tag-search/?name=' . rawurlencode( $tag );
-			$response = wp_safe_remote_get( $url, $this->get_params() );
+			$response = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -844,7 +826,7 @@ class WPF_MailChimp {
 		do {
 			$url = add_query_arg( 'offset', $offset, $url );
 
-			$response = wp_safe_remote_get( $url, $this->get_params() );
+			$response = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -911,7 +893,7 @@ class WPF_MailChimp {
 		$params['body']     = wp_json_encode( $body );
 		$params['blocking'] = false;
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

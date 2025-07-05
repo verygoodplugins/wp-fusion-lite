@@ -87,13 +87,12 @@ class WPF_Pipedrive {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-pipedrive-admin.php';
+			require_once __DIR__ . '/class-pipedrive-admin.php';
 			new WPF_Pipedrive_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -115,7 +114,6 @@ class WPF_Pipedrive {
 		if ( ! empty( $api_domain ) ) {
 			$this->edit_url = $api_domain . '/person/%d#/';
 		}
-
 	}
 
 
@@ -153,7 +151,6 @@ class WPF_Pipedrive {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -179,7 +176,6 @@ class WPF_Pipedrive {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -253,7 +249,6 @@ class WPF_Pipedrive {
 		wp_fusion()->settings->set( "{$this->slug}_refresh_token", $body_json->refresh_token );
 
 		return $body_json->access_token;
-
 	}
 
 	/**
@@ -284,7 +279,6 @@ class WPF_Pipedrive {
 			),
 
 		);
-
 	}
 
 
@@ -331,7 +325,6 @@ class WPF_Pipedrive {
 		}
 
 		return $response;
-
 	}
 
 
@@ -384,7 +377,6 @@ class WPF_Pipedrive {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -437,7 +429,6 @@ class WPF_Pipedrive {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
@@ -450,7 +441,7 @@ class WPF_Pipedrive {
 	public function sync_crm_fields() {
 
 		// Load built in fields first.
-		require dirname( __FILE__ ) . '/pipedrive-fields.php';
+		require __DIR__ . '/pipedrive-fields.php';
 
 		foreach ( $pipedrive_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -488,7 +479,6 @@ class WPF_Pipedrive {
 				if ( 'tags' === strtolower( $field->name ) && empty( wpf_get_option( 'pipedrive_tag' ) ) ) {
 					wp_fusion()->settings->set( 'pipedrive_tag', $field->key );
 				}
-
 			}
 		}
 
@@ -663,7 +653,6 @@ class WPF_Pipedrive {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -703,7 +692,6 @@ class WPF_Pipedrive {
 		}
 
 		return $contact_data;
-
 	}
 
 	/**
@@ -732,7 +720,6 @@ class WPF_Pipedrive {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->data->id;
-
 	}
 
 	/**
@@ -791,7 +778,6 @@ class WPF_Pipedrive {
 					$response['data'][ $field . '+' . $data['label'] ] = $data['value'];
 				}
 			}
-
 		}
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -851,5 +837,4 @@ class WPF_Pipedrive {
 
 		return $contact_ids;
 	}
-
 }

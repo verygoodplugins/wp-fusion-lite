@@ -62,7 +62,6 @@ class WPF_Mautic {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		$this->client_id     = wpf_get_option( 'mautic_client_id' );
@@ -81,7 +80,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -110,7 +108,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		if ( false == wpf_get_option( 'site_tracking' ) || true == wpf_get_option( 'staging_mode' ) ) {
@@ -152,7 +149,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return void
 	 */
-
 	public function set_tracking_cookie() {
 
 		if ( is_admin() || ! wpf_is_user_logged_in() || headers_sent() ) {
@@ -178,7 +174,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return void
 	 */
-
 	public function set_tracking_cookie_guest( $contact_id, $email_address ) {
 
 		setcookie( 'mtc_id', $contact_id, time() + DAY_IN_SECONDS * 730, COOKIEPATH, COOKIE_DOMAIN );
@@ -190,7 +185,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -254,7 +248,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
@@ -318,7 +311,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 		if ( ! empty( $this->url ) && strpos( $url, $this->url ) !== false ) {
 
@@ -398,7 +390,6 @@ class WPF_Mautic {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $mautic_url = null, $mautic_username = null, $mautic_password = null, $mautic_token = null ) {
 
 		// Get saved data from DB
@@ -439,7 +430,6 @@ class WPF_Mautic {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $mautic_url = null, $mautic_username = null, $mautic_password = null, $mautic_token = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -493,7 +483,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -515,7 +504,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -554,7 +542,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -590,7 +577,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -642,7 +628,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -692,7 +677,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -719,7 +703,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -752,7 +735,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -793,7 +775,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -851,7 +832,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function combined_update( $contact_id, $update_data ) {
 
 		if ( ! $this->params ) {
@@ -888,7 +868,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -925,7 +904,6 @@ class WPF_Mautic {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {

@@ -146,7 +146,4 @@ class AC_Campaign extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

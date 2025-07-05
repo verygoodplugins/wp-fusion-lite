@@ -4,11 +4,10 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.45.2.2
+ * Version: 3.46.3
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
- *
  */
 
 /**
@@ -29,7 +28,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.45.2.2' );
+define( 'WP_FUSION_VERSION', '3.46.3' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -48,7 +47,7 @@ final class WP_Fusion_Lite {
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
+	 * @var WP_Fusion The one true WP_Fusion
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -190,7 +189,6 @@ final class WP_Fusion_Lite {
 	 * @static var array $instance
 	 * @return WP_Fusion_Lite The one true WP_Fusion_Lite
 	 */
-
 	public static function instance() {
 
 		if ( ! isset( self::$instance ) && ! ( self::$instance instanceof WP_Fusion_Lite ) ) {
@@ -264,7 +262,6 @@ final class WP_Fusion_Lite {
 	 * @access protected
 	 * @return void
 	 */
-
 	public function __clone() {
 		// Cloning instances of the class is forbidden
 		_doing_it_wrong( __FUNCTION__, esc_html__( 'Cheatin&#8217; huh?', 'wp-fusion-lite' ), esc_html( WP_FUSION_VERSION ) );
@@ -276,7 +273,6 @@ final class WP_Fusion_Lite {
 	 * @access protected
 	 * @return void
 	 */
-
 	public function __wakeup() {
 		// Unserializing instances of the class is forbidden
 		_doing_it_wrong( __FUNCTION__, esc_html__( 'Cheatin&#8217; huh?', 'wp-fusion-lite' ), esc_html( WP_FUSION_VERSION ) );
@@ -288,7 +284,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return void
 	 */
-
 	private function setup_constants() {
 
 		if ( ! defined( 'WPF_MIN_WP_VERSION' ) ) {
@@ -340,7 +335,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return bool
 	 */
-
 	private function check_install() {
 
 		if ( ! version_compare( phpversion(), WPF_MIN_PHP_VERSION, '>=' ) ) {
@@ -368,7 +362,6 @@ final class WP_Fusion_Lite {
 	 * @access public
 	 * @return array Integrations
 	 */
-
 	public function get_integrations() {
 
 		return apply_filters(
@@ -383,18 +376,11 @@ final class WP_Fusion_Lite {
 	 * @access public
 	 * @return array Integrations
 	 */
-
 	public function get_integrations_theme() {
 
 		return apply_filters(
 			'wpf_integrations_theme',
-			array(
-				'divi'                  => 'et_setup_theme',
-				'memberoni'             => 'memberoni_llms_theme_support',
-				'acf'                   => 'acf', // For ACF bundled with Memberoni or other themes.
-				'bricks'                => 'Bricks\Theme',
-				'thrive-api-connection' => 'Thrive_Dash_List_Manager',
-			)
+			array()
 		);
 	}
 
@@ -404,7 +390,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return array CRMS
 	 */
-
 	public function get_crms() {
 
 		return apply_filters(
@@ -475,6 +460,7 @@ final class WP_Fusion_Lite {
 				'customer-io'      => 'WPF_Customer_IO',
 				'omnisend'         => 'WPF_Omnisend',
 				'encharge'         => 'WPF_Encharge',
+				'sender'           => 'WPF_Sender',
 			)
 		);
 	}
@@ -485,7 +471,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return void
 	 */
-
 	private function init_includes() {
 
 		// Functions.
@@ -524,7 +509,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return void
 	 */
-
 	private function includes() {
 
 		require_once WPF_DIR_PATH . 'includes/class-user.php';
@@ -616,7 +600,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return void
 	 */
-
 	public function integrations_includes() {
 
 		// Integrations base.
@@ -645,7 +628,6 @@ final class WP_Fusion_Lite {
 	 * @access private
 	 * @return void
 	 */
-
 	public function integrations_includes_theme() {
 
 		// Integrations base.
@@ -671,7 +653,6 @@ final class WP_Fusion_Lite {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function is_full_version() {
 
 		if ( class_exists( 'WP_Fusion' ) ) {
@@ -681,13 +662,13 @@ final class WP_Fusion_Lite {
 		}
 	}
 
+
 	/**
 	 * Returns error message and deactivates plugin when error returned.
 	 *
 	 * @access public
 	 * @return mixed error message.
 	 */
-
 	public function php_version_notice() {
 
 		echo '<div class="notice notice-error">';

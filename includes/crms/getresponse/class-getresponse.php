@@ -1,11 +1,25 @@
 <?php
+/**
+ * WP Fusion GetResponse Integration.
+ *
+ * Contains the GetResponse API integration class.
+ *
+ * @package WP Fusion
+ * @since   3.24.8
+ */
 
+/**
+ * GetResponse API integration class.
+ *
+ * @since 3.24.8
+ */
 class WPF_GetResponse {
 
 	/**
 	 * The CRM slug.
 	 *
 	 * @var string
+	 * @since 3.24.8
 	 */
 	public $slug = 'getresponse';
 
@@ -13,72 +27,70 @@ class WPF_GetResponse {
 	 * The CRM name.
 	 *
 	 * @var string
+	 * @since 3.24.8
 	 */
 	public $name = 'GetResponse';
 
 	/**
-	 * Contains API params
+	 * Contains API params.
+	 *
+	 * @var array
+	 * @since 3.24.8
 	 */
-
 	public $params;
 
-
 	/**
-	 * Lets pluggable functions know which features are supported by the CRM
+	 * Lets pluggable functions know which features are supported by the CRM.
+	 *
+	 * @var array
+	 * @since 3.24.8
 	 */
-
 	public $supports = array();
-
 
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * The edit page id is not available to get through the API.
 	 *
 	 * @var string
+	 * @since 3.24.8
 	 */
-
 	public $edit_url = '';
 
 	/**
-	 * Get things started
+	 * Get things started.
 	 *
-	 * @access  public
-	 * @since   2.0
+	 * @since  3.24.8
 	 */
-
 	public function __construct() {
 
-		// Set up admin options
+		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_GetResponse_Admin( $this->slug, $this->name, $this );
 		}
 
+		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 	}
 
 	/**
-	 * Sets up hooks specific to this CRM
+	 * Sets up hooks specific to this CRM.
 	 *
-	 * @access public
-	 * @return void
+	 * @since  3.24.8
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 	}
 
-
-
 	/**
-	 * Formats POST data received from HTTP Posts into standard format
+	 * Formats POST data received from HTTP Posts into standard format.
 	 *
-	 * @access public
-	 * @return array
+	 * @since  3.24.8
+	 *
+	 * @param  array $post_data The post data.
+	 * @return array|bool The formatted post data or false if invalid.
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -94,22 +106,24 @@ class WPF_GetResponse {
 		$post_data['contact_id'] = absint( $payload->user->id );
 
 		return $post_data;
-
 	}
 
 	/**
-	 * Formats user entered data to match Getresponse field formats
+	 * Formats user entered data to match Getresponse field formats.
 	 *
-	 * @access public
-	 * @return mixed
+	 * @since  3.24.8
+	 *
+	 * @param  mixed  $value      The value to format.
+	 * @param  string $field_type The field type.
+	 * @param  string $field      The field name.
+	 * @return mixed The formatted value.
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'date' === $field_type ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			// Adjust formatting for date fields.
+			$date = gmdate( 'm/d/Y', $value );
 
 			return $date;
 
@@ -118,27 +132,29 @@ class WPF_GetResponse {
 			return $value;
 
 		}
-
 	}
 
 	/**
-	 * Check HTTP Response for errors and return WP_Error if found
+	 * Check HTTP Response for errors and return WP_Error if found.
 	 *
-	 * @access public
-	 * @return HTTP Response
+	 * @since  3.24.8
+	 *
+	 * @param  array  $response The HTTP response.
+	 * @param  array  $args     The HTTP request arguments.
+	 * @param  string $url      The HTTP request URL.
+	 * @return array|WP_Error The response or WP_Error if error is found.
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'getresponse') !== false ) {
+		if ( false !== strpos( $url, 'getresponse' ) ) {
 
 			$code = wp_remote_retrieve_response_code( $response );
 
-			if( $code == 401 ) {
+			if ( 401 === $code ) {
 
 				$response = new WP_Error( 'error', 'Invalid API key' );
 
-			} elseif( $code > 200 ) {
+			} elseif ( $code > 200 ) {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -147,43 +163,29 @@ class WPF_GetResponse {
 					$message = $body_json->message;
 
 					if ( ! empty( $body_json->context ) ) {
-
-						$message .= '. <strong>Context</strong>: ';
-
-						foreach ( $body_json->context as $context ) {
-
-							if ( is_object( $context ) ) {
-
-								$message .= $context->fieldName . ': ' . $context->errorDescription . '. ';
-
-							} else {
-
-								$message .= $context;
-
-							}
-						}
-
+						$message .= '<pre>';
+						$message .= print_r( $body_json->context, true );
+						$message .= '</pre>';
 					}
 
 					$response = new WP_Error( 'error', $message );
 				}
-
-
 			}
-
 		}
 		return $response;
 	}
-	/**
-	 * Gets params for API calls
-	 *
-	 * @access  public
-	 * @return  array Params
-	 */
 
+	/**
+	 * Gets params for API calls.
+	 *
+	 * @since  3.24.8
+	 *
+	 * @param  string|null $api_key The API key to use.
+	 * @return array The API parameters.
+	 */
 	public function get_params( $api_key = null ) {
 
-		// Get saved data from DB
+		// Get saved data from DB.
 		if ( empty( $api_key ) ) {
 			$api_key = wpf_get_option( 'getresponse_key' );
 		}
@@ -200,17 +202,18 @@ class WPF_GetResponse {
 		return $this->params;
 	}
 
-
 	/**
-	 * Initialize connection
+	 * Initialize connection.
 	 *
-	 * @access  public
-	 * @return  bool
+	 * @since  3.24.8
+	 *
+	 * @param  string|null $api_key The API key to use.
+	 * @param  bool        $test    Whether this is a connection test.
+	 * @return bool|WP_Error True if successful, WP_Error if failed.
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
-		if ( $test == false ) {
+		if ( ! $test ) {
 			return true;
 		}
 
@@ -219,24 +222,22 @@ class WPF_GetResponse {
 		}
 
 		$request  = 'https://api.getresponse.com/v3/accounts';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
-
 			return $response;
-
 		}
 
 		return true;
 	}
 
 	/**
-	 * Performs initial sync once connection is configured
+	 * Performs initial sync once connection is configured.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since  3.24.8
+	 *
+	 * @return bool|WP_Error True if successful, WP_Error if failed.
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -250,16 +251,15 @@ class WPF_GetResponse {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
-	 * Gets all available tags and saves them to options
+	 * Gets all available tags and saves them to options.
 	 *
-	 * @access public
-	 * @return array Lists
+	 * @since  3.24.8
+	 *
+	 * @return array|WP_Error The available tags or WP_Error if API call failed.
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -269,7 +269,7 @@ class WPF_GetResponse {
 		$available_tags = array();
 
 		$request  = 'http://api.getresponse.com/v3/tags';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -284,24 +284,19 @@ class WPF_GetResponse {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 	/**
-	 * Loads all Campaigns lists
+	 * Loads all Campaigns lists.
 	 *
-	 * @access public
-	 * @return array Campaign lists
+	 * @since  3.24.8
+	 *
+	 * @return array|WP_Error The available lists or WP_Error if API call failed.
 	 */
-
 	public function sync_lists() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = 'https://api.getresponse.com/v3/campaigns';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -313,42 +308,45 @@ class WPF_GetResponse {
 
 		foreach ( $body_json as $list ) {
 			if ( is_object( $list ) ) {
-				$available_lists[ $list->campaignId ] = $list->name;
+				$available_lists[ $list->{'campaignId'} ] = $list->name;
 			}
 		}
 
 		wp_fusion()->settings->set( 'available_lists', $available_lists );
 
-		return $available_lists;
+		if ( empty( wpf_get_option( 'getresponse_list' ) ) ) {
+			// Set the first list as the default.
+			wp_fusion()->settings->set( 'getresponse_list', array_keys( $available_lists )[0] );
+		}
 
+		return $available_lists;
 	}
 
-
 	/**
-	 * Loads all custom fields from CRM and merges with local list
+	 * Loads all custom fields from CRM and merges with local list.
 	 *
-	 * @access public
-	 * @return array CRM Fields
+	 * @since  3.24.8
+	 *
+	 * @return array|WP_Error The CRM fields or WP_Error if API call failed.
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
 			$this->get_params();
 		}
 
-		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/getresponse-fields.php';
+		// Load built in fields to get field types and subtypes.
+		require __DIR__ . '/admin/getresponse-fields.php';
 
 		$built_in_fields = array();
 
-		foreach ( $getresponse_fields as $index => $data ) {
+		foreach ( $getresponse_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
 		$custom_fields = array();
 		$request       = 'http://api.getresponse.com/v3/custom-fields/';
-		$response      = wp_safe_remote_get( $request, $this->params );
+		$response      = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -373,16 +371,17 @@ class WPF_GetResponse {
 	}
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @since  3.24.8
+	 *
+	 * @param  string $email_address The email address to look up.
+	 * @return string|bool|WP_Error The contact ID if found, false if not found, or WP_Error if API call failed.
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$request  = 'https://api.getresponse.com/v3/contacts?query%5Bemail%5D=' . $email_address;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -398,12 +397,13 @@ class WPF_GetResponse {
 	}
 
 	/**
-	 * Gets all tags currently applied to the user, also update the list of available tags
+	 * Gets all tags currently applied to the user.
 	 *
-	 * @access public
-	 * @return array Tags.
+	 * @since  3.24.8
+	 *
+	 * @param  string $contact_id The contact ID.
+	 * @return array|bool|WP_Error The tags if found, false if none found, or WP_Error if API call failed.
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -412,7 +412,7 @@ class WPF_GetResponse {
 
 		$tags     = array();
 		$request  = 'http://api.getresponse.com/v3/contacts/' . $contact_id . '?fields=tags';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -432,12 +432,14 @@ class WPF_GetResponse {
 	}
 
 	/**
-	 * Applies tags to a contact
+	 * Applies tags to a contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since  3.24.8
+	 *
+	 * @param  array  $tags       The tags to apply.
+	 * @param  string $contact_id The contact ID.
+	 * @return bool|WP_Error True if successful, or WP_Error if API call failed.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -454,28 +456,26 @@ class WPF_GetResponse {
 		$params         = $this->params;
 		$params['body'] = wp_json_encode( $apply_tags );
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
-
-
 	/**
-	 * Removes tags.
-	 * 
+	 * Removes tags from a contact.
+	 *
 	 * At the moment the only way to do this is to load the current tags, intersect
 	 * with the tags to remove, and then patch the contact with the remaining tags.
 	 *
-	 * @since 3.41.19
+	 * @since  3.41.19
 	 *
-	 * @param array  $tags       The tags.
-	 * @param string $contact_id The contact ID.
+	 * @param  array  $tags       The tags to remove.
+	 * @param  string $contact_id The contact ID.
+	 * @return bool|WP_Error True if successful, or WP_Error if API call failed.
 	 */
 	public function remove_tags( $tags, $contact_id ) {
 
@@ -494,63 +494,35 @@ class WPF_GetResponse {
 		);
 
 		return $this->update_contact( $contact_id, $data );
-
 	}
-
 
 	/**
 	 * Adds a new contact.
-	 * 
-	 * @since 3.24.8
-	 * 
-	 * @link https://apireference.getresponse.com/#operation/createContact
 	 *
-	 * @param array $data Contact data.
-	 * @return string Contact ID.
+	 * @since  3.24.8
+	 *
+	 * @link   https://apireference.getresponse.com/#operation/createContact
+	 *
+	 * @param  array $data The contact data.
+	 * @return string|WP_Error The contact ID if successful, or WP_Error if API call failed.
 	 */
-
 	public function add_contact( $data ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
+		// All contacts need to be added to a list.
 		$list = wpf_get_option( 'getresponse_list' );
 
-		// Allow filtering
-		$list = apply_filters( 'wpf_add_contact_lists', $list );
+		if ( empty( $list ) ) {
+			// get the first list from the available lists.
+			$list = array_keys( wpf_get_option( 'available_lists' ) )[0];
+		}
 
 		$contact_data = array(
 			'dayOfCycle' => 0, // Add to the beginning of the autoresponder cycle.
 			'ipAddress'  => wp_fusion()->user->get_ip(),
-		);
-
-		if ( ! empty( $list ) ) {
-
-			$contact_data['campaign'] = array(
+			'campaign'   => array(
 				'campaignId' => $list,
-			);
-
-		} else {
-
-			// Get the first list
-			$request   = 'https://api.getresponse.com/v3/campaigns';
-			$response  = wp_safe_remote_get( $request, $this->params );
-			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-
-			foreach ( $body_json as $list ) {
-				if ( is_object( $list ) && $list->isDefault == 'true' ) {
-					$first_list = $list->campaignId;
-				}
-			}
-
-			$contact_data['campaign'] = array(
-				'campaignId' => $first_list,
-			);
-
-			wp_fusion()->settings->set( 'getresponse_list', $first_list );
-
-		}
+			),
+		);
 
 		if ( isset( $data['name'] ) ) {
 			$contact_data['name'] = $data['name'];
@@ -572,39 +544,34 @@ class WPF_GetResponse {
 					'customFieldId' => $key,
 					'value'         => array( $value ),
 				);
-
 			}
 		}
 
 		$url            = 'https://api.getresponse.com/v3/contacts';
-		$params         = $this->params;
+		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $contact_data );
 
-		$response = wp_safe_remote_post( $url, $params );
+		$response = wp_remote_post( $url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		// GetResponse just gives us a 202 message, no contact ID, so we look it up
-
+		// GetResponse just gives us a 202 message, no contact ID, so we look it up.
 		$contact_id = $this->get_contact_id( $contact_data['email'] );
 
 		return $contact_id;
-
 	}
 
-
-
-
-
 	/**
-	 * Update contact
+	 * Update contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * @since  3.24.8
+	 *
+	 * @param  string $contact_id The contact ID.
+	 * @param  array  $data       The contact data.
+	 * @return bool|WP_Error True if successful, or WP_Error if API call failed.
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( empty( $data ) ) {
@@ -620,105 +587,155 @@ class WPF_GetResponse {
 		);
 
 		// Core fields.
-
-		foreach( $core_fields as $field ) {
+		foreach ( $core_fields as $field ) {
 			if ( isset( $data[ $field ] ) ) {
 				$contact_data[ $field ] = $data[ $field ];
 				unset( $data[ $field ] );
 			}
 		}
 
-		// Custom fields.
+		$params = $this->get_params();
 
+		if ( ! empty( $contact_data ) ) {
+
+			// Update core fields.
+			$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
+			$params['body'] = wp_json_encode( $contact_data );
+
+			$response = wp_remote_post( $url, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+		}
+
+		// Custom fields (upsert so they don't erase previous values).
 		if ( ! empty( $data ) ) {
 
-			$contact_data['customFieldValues'] = array();
+			$contact_data = array(
+				'customFieldValues' => array(),
+			);
 
 			foreach ( $data as $key => $value ) {
 
 				$contact_data['customFieldValues'][] = array(
 					'customFieldId' => $key,
-					'value'         => array( $value ),
+					'value'         => (array) $value,
 				);
+			}
 
+			$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id . '/custom-fields';
+			$params['body'] = wp_json_encode( $contact_data );
+
+			$response = wp_remote_post( $url, $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
 			}
 		}
 
-		$url            = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
-		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( $contact_data );
-
-		$response = wp_safe_remote_post( $url, $params );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
 		return true;
-
 	}
 
 	/**
-	 * Loads a contact and updates local user meta
+	 * Loads a contact and updates local user meta.
 	 *
-	 * @access public
-	 * @return array User meta data that was returned
+	 * @since  3.24.8
+	 *
+	 * @param  string $contact_id The contact ID.
+	 * @return array|WP_Error The user meta data that was returned.
 	 */
-
 	public function load_contact( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
-		$url      = 'https://app.getresponse.com/api/public/users/' . $contact_id;
-		$response = wp_safe_remote_get( $url, $this->params );
+		$url      = 'https://api.getresponse.com/v3/contacts/' . $contact_id;
+		$response = wp_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$user_meta      = array();
 		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
-		$name                    = $body_json['name'];
-		$exploded_name           = explode( ' ', $name );
-		$body_json['first_name'] = $exploded_name[0];
-		unset( $exploded_name[0] );
-		$body_json['last_name'] = implode( ' ', $exploded_name );
+		$user_meta = wpf_get_name_from_full_name( $body_json['name'] );
+
+		// Move custom fields to the top of the user meta array.
+		foreach ( $body_json['customFieldValues'] as $custom_field ) {
+			if ( 'multi_select' === $custom_field['fieldType'] ) {
+				$body_json[ $custom_field['customFieldId'] ] = $custom_field['value'];
+			} else {
+				$body_json[ $custom_field['customFieldId'] ] = $custom_field['value'][0];
+			}
+		}
 
 		foreach ( $body_json as $key => $field ) {
 			foreach ( $contact_fields as $field_id => $field_data ) {
-				if ( $field_data['active'] == true && $key == $field_data['crm_field'] ) {
+				if ( true === $field_data['active'] && $key === $field_data['crm_field'] ) {
 					$user_meta[ $field_id ] = $field;
 				}
 			}
 		}
 
-		foreach ( $body_json['attributes'] as $attribute ) {
-			foreach ( $contact_fields as $field_id => $field_data ) {
-				if ( $field_data['active'] == true && $attribute['name_std'] == $field_data['crm_field'] ) {
-					$user_meta[ $field_id ] = $attribute['value'];
-				}
-			}
-		}
-
 		return $user_meta;
-
 	}
 
 	/**
-	 * Gets a list of contact IDs based on tag
+	 * Gets a list of contact IDs based on tag.
 	 *
-	 * @access public
-	 * @return array Contact IDs returned
+	 * @since  3.24.8
+	 *
+	 * @param  string $tag The tag ID or null to get all contacts.
+	 * @return array|WP_Error The contact IDs or WP_Error if API call failed.
 	 */
-
 	public function load_contacts( $tag ) {
 
-		// not possible
+		$contact_ids      = array();
+		$url              = 'https://api.getresponse.com/v3/search-contacts/contacts';
+		$params           = $this->params;
+		$params['method'] = 'POST';
+
+		$search_data = array(
+			'subscribersType'      => array( 'subscribed', 'unconfirmed' ),
+			'sectionLogicOperator' => 'or',
+			'section'              => array(
+				array(
+					'campaignIdsList'  => array_keys( wpf_get_option( 'available_lists' ) ),
+					'logicOperator'    => 'and',
+					'subscriberCycle'  => array( 'receiving_autoresponder', 'not_receiving_autoresponder' ),
+					'conditions'       => array(),
+					'subscriptionDate' => 'all_time',
+				),
+			),
+		);
+
+		if ( ! empty( $tag ) ) {
+			$search_data['section'][0]['conditions'][] = array(
+				'conditionType' => 'tag',
+				'operatorType'  => 'exists',
+				'operator'      => 'exists',
+				'value'         => $tag,
+			);
+		}
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $search_data );
+
+		$response = wp_remote_post( $url, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $body_json ) ) {
+			return array();
+		}
+
+		foreach ( $body_json as $contact ) {
+			$contact_ids[] = $contact->{'contactId'};
+		}
+
+		return $contact_ids;
 	}
-
-
 }

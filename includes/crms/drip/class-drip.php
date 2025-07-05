@@ -61,7 +61,6 @@ class WPF_Drip {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -77,7 +76,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -120,7 +118,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return int Sleep time
 	 */
-
 	public function set_sleep_time( $seconds ) {
 
 		return 2;
@@ -133,7 +130,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
@@ -158,7 +154,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array Params
 	 */
-
 	public function get_params() {
 
 		$api_token = wpf_get_option( 'drip_token' );
@@ -181,7 +176,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'api.getdrip.com' ) !== false ) {
@@ -208,7 +202,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -319,7 +312,6 @@ class WPF_Drip {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_token = null, $account_id = null, $test = false ) {
 
 		// If app is already running, don't try and restart it.
@@ -374,7 +366,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -396,7 +387,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -432,7 +422,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -491,7 +480,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$this->connect();
@@ -539,7 +527,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$this->connect();
@@ -584,7 +571,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
@@ -624,7 +610,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
@@ -655,7 +640,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$this->connect();
@@ -696,7 +680,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$this->connect();
@@ -808,7 +791,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$this->connect();
@@ -861,7 +843,6 @@ class WPF_Drip {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag = false ) {
 
 		$this->connect();
@@ -913,7 +894,7 @@ class WPF_Drip {
 	 *
 	 * @param  string       $event      The event title.
 	 * @param  string|array $event_data The event data.
-	 * @param  bool|string $email_address The user email address.
+	 * @param  bool|string  $email_address The user email address.
 	 * @return bool|WP_Error True if success, WP_Error if failed.
 	 */
 	public function track_event( $event, $event_data = '', $email_address = false ) {

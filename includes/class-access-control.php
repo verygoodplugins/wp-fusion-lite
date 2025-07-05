@@ -54,7 +54,6 @@ class WPF_Access_Control {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Apply tags on view scripts
@@ -308,7 +307,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return bool Whether or not a user can access specified content.
 	 */
-
 	public function user_can_access_archive( $term_id, $user_id = false ) {
 
 		if ( $term_id == null ) {
@@ -430,7 +428,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return bool Whether or not a user can access specified content.
 	 */
-
 	public function user_can_access_post_type( $post_type, $user_id = false ) {
 
 		if ( false == $user_id ) {
@@ -469,7 +466,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function get_redirect( $post_id ) {
 
 		// Get settings.
@@ -487,7 +483,7 @@ class WPF_Access_Control {
 
 		$redirect = wpf_get_option( 'default_not_logged_in_redirect' );
 
-		if ( ! wpf_is_user_logged_in() && ! empty( $redirect ) ) {
+		if ( ! wpf_is_user_logged_in() && ! empty( $redirect ) && ! doing_action( 'wp_login' ) ) {
 			return $redirect;
 		}
 
@@ -533,7 +529,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function get_redirect_term( $post_id ) {
 
 		$taxonomy_rules = $this->get_taxonomy_rules();
@@ -575,13 +570,15 @@ class WPF_Access_Control {
 
 
 	/**
-	 * Handles redirects for locked content
+	 * Handles redirects for locked content.
 	 *
-	 * @access public
+	 * @since 1.0.0
+	 *
+	 * @param int|false $post_id The post ID to check. If false, the current post will be used.
+	 *
 	 * @return bool
 	 */
-
-	public function template_redirect() {
+	public function template_redirect( $post_id = false ) {
 
 		// Allow bypassing redirect.
 
@@ -681,7 +678,12 @@ class WPF_Access_Control {
 		} else {
 
 			// Single post redirects.
-			global $post;
+
+			if ( ! empty( $post_id ) ) {
+				$post = get_post( $post_id );
+			} else {
+				global $post;
+			}
 
 			if ( empty( $post ) || ! is_a( $post, 'WP_Post' ) ) {
 				return true;
@@ -740,7 +742,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return void
 	 */
-
 	public function set_return_after_login( $post_id ) {
 
 		if ( wpf_is_user_logged_in() || ! wpf_get_option( 'return_after_login' ) || empty( $post_id ) ) {
@@ -777,7 +778,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function restricted_content_filter( $content ) {
 
 		// Remove the filter so the call to do_shortcode() doesn't run another content filter (Reusable Blocks for Gutenberg).
@@ -797,7 +797,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function get_restricted_content_message( $post_id = false ) {
 
 		if ( empty( $post_id ) ) {
@@ -841,7 +840,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return void
 	 */
-
 	public function maybe_do_lockout() {
 
 		// If the user is an admin and exclude admins is enabled, return.
@@ -938,7 +936,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function verify_bot() {
 
 		$agent = 'no-agent-found';
@@ -1001,7 +998,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function seo_content_filter( $content ) {
 
 		$length = wpf_get_option( 'seo_excerpt_length', 55 );
@@ -1024,7 +1020,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return array Menu items
 	 */
-
 	public function hide_menu_items( $items, $menu, $args ) {
 
 		if ( is_admin() ) {
@@ -1098,7 +1093,6 @@ class WPF_Access_Control {
 	 * @access  public
 	 * @return  array Args
 	 */
-
 	public function get_terms_args( $args, $taxonomies ) {
 
 		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
@@ -1465,7 +1459,6 @@ class WPF_Access_Control {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function filter_queries( $query ) {
 
 		if ( $this->should_filter_query( $query ) ) {
@@ -1550,7 +1543,6 @@ class WPF_Access_Control {
 	 * @access  public
 	 * @return  array Posts
 	 */
-
 	public function exclude_restricted_posts( $posts, $query ) {
 
 		if ( ! is_array( $posts ) ) {
@@ -1608,7 +1600,6 @@ class WPF_Access_Control {
 	 * @access  public
 	 * @return  int Post ID
 	 */
-
 	public function protect_blog_index( $post_id ) {
 
 		if ( is_home() && ! is_front_page() ) {
@@ -1624,7 +1615,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return array Access Meta
 	 */
-
 	public function check_post_type( $access_meta, $post_id ) {
 
 		$settings = wpf_get_option( 'post_type_rules', array() );
@@ -1706,7 +1696,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return void
 	 */
-
 	public function return_after_login( $user_login ) {
 
 		if ( wp_doing_ajax() ) {
@@ -1724,6 +1713,8 @@ class WPF_Access_Control {
 				setcookie( 'wpf_return_to_override', '', time() - ( 15 * 60 ) );
 				setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
 
+				$url = apply_filters( 'wpf_return_after_login_url', $url, $post_id, $user );
+
 				wp_safe_redirect( $url, 302, 'WP Fusion; Return after login' );
 				exit();
 
@@ -1732,13 +1723,25 @@ class WPF_Access_Control {
 
 		if ( isset( $_COOKIE['wpf_return_to'] ) ) {
 
-			$user    = get_user_by( 'login', $user_login ); // Since WordPress 6.0 wp_get_current_user() no longer works at this point.
+			$user = get_user_by( 'login', $user_login ); // Since WordPress 6.0 wp_get_current_user() no longer works at this point.
+
+			if ( ! $user ) {
+				return;
+			}
+
 			$post_id = absint( $_COOKIE['wpf_return_to'] );
-			$url     = get_permalink( $post_id );
 
-			setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
+			if ( $this->user_can_access( $post_id, $user->ID ) ) {
+				$url = get_permalink( $post_id );
+			} else {
+				$url = $this->get_redirect( $post_id );
+			}
 
-			if ( $user && ! empty( $url ) && $this->user_can_access( $post_id, $user->ID ) ) {
+			if ( ! empty( $url ) ) {
+
+				setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
+
+				$url = apply_filters( 'wpf_return_after_login_url', $url, $post_id, $user );
 
 				wp_safe_redirect( $url, 302, 'WP Fusion; Return after login' );
 				exit();
@@ -1786,7 +1789,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return array Widget Instance
 	 */
-
 	public function hide_restricted_widgets( $instance, $widget, $args ) {
 
 		if ( empty( $instance['wpf_conditional'] ) ) {
@@ -1865,7 +1867,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return void
 	 */
-
 	public function apply_tags_on_view() {
 
 		// We used to check for wpf_is_logged_in() here as well, but we're not going to anymore
@@ -2062,7 +2063,6 @@ class WPF_Access_Control {
 	 * @access public
 	 * @return string URL of permalink
 	 */
-
 	public function rewrite_permalinks( $url, $post, $leavename ) {
 
 		// Don't run on admin.

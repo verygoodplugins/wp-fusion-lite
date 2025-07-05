@@ -55,17 +55,15 @@ class WPF_Flexie {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Flexie_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -74,12 +72,10 @@ class WPF_Flexie {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
-
 	}
 
 	/**
@@ -88,20 +84,19 @@ class WPF_Flexie {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
-		if(isset($post_data['contact_id']))
+		if ( isset( $post_data['contact_id'] ) ) {
 			return $post_data;
+		}
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if( isset( $payload->{'flexie.lead_post_save_update'} ) ) {
+		if ( isset( $payload->{'flexie.lead_post_save_update'} ) ) {
 			$post_data['contact_id'] = absint( $payload->{'flexie.lead_post_save_update'}[0]->lead->id );
 		}
 
-		return $post_data; 
-
+		return $post_data;
 	}
 
 	/**
@@ -110,13 +105,12 @@ class WPF_Flexie {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
 
 			// Adjust formatting for date fields
-			$date = date( "Y-m-d", $value );
+			$date = date( 'Y-m-d', $value );
 
 			return $date;
 
@@ -125,7 +119,6 @@ class WPF_Flexie {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -134,23 +127,20 @@ class WPF_Flexie {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
-		if( strpos($url, 'flexie.io') !== false ) {
+		if ( strpos( $url, 'flexie.io' ) !== false ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-			if( isset( $body_json->error ) ) {
+			if ( isset( $body_json->error ) ) {
 
 				$response = new WP_Error( 'error', $body_json->error );
 
 			}
-
 		}
-	
-		return $response;
 
+		return $response;
 	}
 
 
@@ -160,16 +150,15 @@ class WPF_Flexie {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $flexie_url = null, $api_key = null, $test = false ) {
 
 		// Get saved data from DB
-		if ( empty( $flexie_url ) || empty($api_key) ) {
+		if ( empty( $flexie_url ) || empty( $api_key ) ) {
 			$flexie_url = wpf_get_option( 'flexie_url' );
-			$api_key = wpf_get_option( 'flexie_key' );
+			$api_key    = wpf_get_option( 'flexie_key' );
 		}
 
-		$this->url = trailingslashit( $flexie_url );
+		$this->url     = trailingslashit( $flexie_url );
 		$this->api_key = $api_key;
 
 		if ( $test == false ) {
@@ -178,8 +167,8 @@ class WPF_Flexie {
 
 		$request  = $this->url . 'api/contacts?apikey=' . $this->api_key;
 		$response = wp_safe_remote_get( $request );
-		
-		if( is_wp_error( $response ) ) {
+
+		if ( is_wp_error( $response ) ) {
 
 			return $response;
 		}
@@ -196,7 +185,6 @@ class WPF_Flexie {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -209,7 +197,6 @@ class WPF_Flexie {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -219,7 +206,6 @@ class WPF_Flexie {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$this->connect();
@@ -229,14 +215,14 @@ class WPF_Flexie {
 		$request  = $this->url . 'api/contact/lists?apikey=' . $this->api_key;
 		$response = wp_safe_remote_get( $request, $this->params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach ($body_json['lists'] as $list) {
-			$avaliable_lists[$list['id']] = $list['name'];
+		foreach ( $body_json['lists'] as $list ) {
+			$avaliable_lists[ $list['id'] ] = $list['name'];
 		}
 
 		wp_fusion()->settings->set( 'available_tags', $avaliable_lists );
@@ -251,23 +237,22 @@ class WPF_Flexie {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$this->connect();
 
 		$crm_fields = array();
-		$request  = $this->url . 'api/contacts/list/fields?apikey=' . $this->api_key;
-		$response = wp_safe_remote_get( $request );
+		$request    = $this->url . 'api/contacts/list/fields?apikey=' . $this->api_key;
+		$response   = wp_safe_remote_get( $request );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body_json = json_decode( $response['body'], true );
 
-		foreach ($body_json as $field) {
-			$crm_fields[$field['alias']] = $field['label'];
+		foreach ( $body_json as $field ) {
+			$crm_fields[ $field['alias'] ] = $field['label'];
 
 		}
 
@@ -283,47 +268,45 @@ class WPF_Flexie {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$this->connect();
 
 		$contact_info = array();
 		$request      = $this->url . 'api/contacts?apikey=' . $this->api_key;
-		$filters 	  = array('filters' => array(
+		$filters      = array(
+			'filters' => array(
 				array(
-					'type'	=> 'boolean',
-					'alias'	=> 'email',
-					'value'	=> array(
-						'input'		=> $email_address,
-						'operator'	=> 'eq',
-						'label'		=> false
+					'type'   => 'boolean',
+					'alias'  => 'email',
+					'value'  => array(
+						'input'    => $email_address,
+						'operator' => 'eq',
+						'label'    => false,
 					),
-					'strict'	=> true
+					'strict' => true,
 				),
-			)
+			),
 		);
 
 		$params = array(
-			'body' => 	json_encode( $filters ),
-			'headers' => array( 'Content-Type' => 'application/json' )
+			'body'    => json_encode( $filters ),
+			'headers' => array( 'Content-Type' => 'application/json' ),
 		);
-
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json    = json_decode( $response['body'], true );
+		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['contacts'] ) ) {
 			return false;
 		}
 
 		$contact = array_shift( $body_json['contacts'] );
-
 
 		return $contact['id'];
 	}
@@ -335,7 +318,6 @@ class WPF_Flexie {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$this->connect();
@@ -344,7 +326,7 @@ class WPF_Flexie {
 		$request      = $this->url . 'api/contacts/' . $contact_id . '/lists?apikey=' . $this->api_key;
 		$response     = wp_safe_remote_get( $request );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -356,12 +338,9 @@ class WPF_Flexie {
 			return false;
 		}
 
-
-		foreach ($body_json['lists'] as $tag) {
-			$contact_tags[$tag['id']] = $tag['name'];
+		foreach ( $body_json['lists'] as $tag ) {
+			$contact_tags[ $tag['id'] ] = $tag['name'];
 		}
-
-
 
 		return $contact_tags;
 	}
@@ -372,36 +351,32 @@ class WPF_Flexie {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$this->connect();
 
 		$lists = wpf_get_option( 'avaliable_lists' );
 
-		foreach ($tags as $tag_key => $tag) {
+		foreach ( $tags as $tag_key => $tag ) {
 
-			foreach ($lists as $list_key => $list) {
+			foreach ( $lists as $list_key => $list ) {
 
-				if( $tag == $list ){
+				if ( $tag == $list ) {
 
 					$tags = $list_key;
 
-					$request      		= $this->url . 'api/contact/lists/' . $tags . '/add/' . $contact_id . '?apikey=' . $this->api_key;
-					$response = wp_safe_remote_post( $request );
+					$request   = $this->url . 'api/contact/lists/' . $tags . '/add/' . $contact_id . '?apikey=' . $this->api_key;
+					$response  = wp_safe_remote_post( $request );
 					$body_json = json_decode( $response['body'] );
 
-					if( is_wp_error( $response ) ) {
+					if ( is_wp_error( $response ) ) {
 						return $response;
 					}
 				}
-
 			}
-
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -410,36 +385,32 @@ class WPF_Flexie {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$this->connect();
 
 			$lists = wpf_get_option( 'avaliable_lists' );
 
-			foreach ($tags as $tag_key => $tag) {
+		foreach ( $tags as $tag_key => $tag ) {
 
-				foreach ($lists as $list_key => $list) {
+			foreach ( $lists as $list_key => $list ) {
 
-					if( $tag == $list ){
-						$tags = $list_key;
+				if ( $tag == $list ) {
+					$tags = $list_key;
 
-						$request      		= $this->url . 'api/contact/lists/' . $tags . '/remove/' . $contact_id . '?apikey=' . $this->api_key;
-						
-						$response = wp_safe_remote_post( $request );
-						$body_json = json_decode( $response['body'] );
+					$request = $this->url . 'api/contact/lists/' . $tags . '/remove/' . $contact_id . '?apikey=' . $this->api_key;
 
-						if( is_wp_error( $response ) ) {
-							return $response;
-						}
+					$response  = wp_safe_remote_post( $request );
+					$body_json = json_decode( $response['body'] );
+
+					if ( is_wp_error( $response ) ) {
+						return $response;
 					}
-
 				}
-
 			}
+		}
 
 		return true;
-
 	}
 
 
@@ -449,34 +420,29 @@ class WPF_Flexie {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
-
 	public function add_contact( $data ) {
 
 		$this->connect();
 
-		$request 		= $this->url . 'api/contacts/new?apikey=' . $this->api_key;
-		$params = array(
-			'body' => 	json_encode( $data ),
-			'headers' => array( 'Content-Type' => 'application/json' )
+		$request = $this->url . 'api/contacts/new?apikey=' . $this->api_key;
+		$params  = array(
+			'body'    => json_encode( $data ),
+			'headers' => array( 'Content-Type' => 'application/json' ),
 		);
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
-		
 
-
-		if( isset( $body->errors ) ) {
+		if ( isset( $body->errors ) ) {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
 
 		return $body->contact->id;
-
 	}
 
 
@@ -487,31 +453,28 @@ class WPF_Flexie {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$this->connect();
 
-		$request      		= $this->url . 'api/contacts/' . $contact_id . '?apikey=' . $this->api_key;
-		$params = array(
-			'body' => 	json_encode( $data ),
+		$request = $this->url . 'api/contacts/' . $contact_id . '?apikey=' . $this->api_key;
+		$params  = array(
+			'body'    => json_encode( $data ),
 			'headers' => array( 'Content-Type' => 'application/json' ),
-			'method' => 'PUT'
+			'method'  => 'PUT',
 		);
-		
 
 		$response = wp_safe_remote_post( $request, $params );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if( isset( $body->errors ) ) {
+		if ( isset( $body->errors ) ) {
 			return new WP_Error( 'error', $body->errors[0]->message );
 		}
-
 
 		return true;
 	}
@@ -522,7 +485,6 @@ class WPF_Flexie {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$this->connect();
@@ -530,7 +492,7 @@ class WPF_Flexie {
 		$url      = $this->url . 'api/contacts/' . $contact_id . '?apikey=' . $this->api_key;
 		$response = wp_safe_remote_get( $url );
 
-		if( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
@@ -539,12 +501,10 @@ class WPF_Flexie {
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
-			if ( $field_data['active'] == true && isset( $body_json['contact'][ $field_data['crm_field'] ] )) {
+			if ( $field_data['active'] == true && isset( $body_json['contact'][ $field_data['crm_field'] ] ) ) {
 				$user_meta[ $field_id ] = $body_json['contact'][ $field_data['crm_field'] ];
 			}
-
 		}
-
 
 		return $user_meta;
 	}
@@ -556,26 +516,25 @@ class WPF_Flexie {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		$this->connect();
 
 		$contact_ids = array();
-		$proceed = true;
+		$proceed     = true;
 
 		$lists = wpf_get_option( 'avaliable_lists' );
 
-		foreach($lists as $list => $value){
+		foreach ( $lists as $list => $value ) {
 			$tag = $list;
 		}
 
-		if( $proceed == true ) {
+		if ( $proceed == true ) {
 
-			$url     = $this->url . "/api/contacts?apikey=" . $this->api_key . "&entityList=" . $tag;
+			$url     = $this->url . '/api/contacts?apikey=' . $this->api_key . '&entityList=' . $tag;
 			$results = wp_safe_remote_get( $url );
 
-			if( is_wp_error( $results ) ) {
+			if ( is_wp_error( $results ) ) {
 				return $results;
 			}
 
@@ -586,13 +545,10 @@ class WPF_Flexie {
 			}
 		}
 
-
-		if(count($body_json['contacts']) < 50) {
+		if ( count( $body_json['contacts'] ) < 50 ) {
 				$proceed = false;
 		}
 
 		return $contact_ids;
-
 	}
-
 }

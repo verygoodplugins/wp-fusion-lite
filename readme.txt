@@ -2,9 +2,9 @@
 Contributors: verygoodplugins
 Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
-Requires PHP: 5.6
-Tested up to: 6.8.0
-Stable tag: 3.45.2
+Requires PHP: 7.4
+Tested up to: 6.8.2
+Stable tag: 3.46.3
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -129,6 +129,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * [Salesflare](https://wpfusion.com/documentation/installation-guides/how-to-connect-salesflare-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Salesforce](https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [SendFox](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendfox-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Sender.net](https://wpfusion.com/documentation/installation-guides/how-to-connect-sender-net-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [SendinBlue](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendinblue-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Sendlane](https://wpfusion.com/documentation/installation-guides/how-to-connect-sendlane-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Tubular](https://wpfusion.com/documentation/installation-guides/how-to-connect-tubular-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
@@ -211,6 +212,89 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.46.3 - 7/5/2025 =
+* Added dynamic tagging support to Zoho (type new tags into WP Fusion, generate tags based on product names and order statuses)
+* Fixed applying and removing tags with Zoho failing with error "Invalid Data error: body" since 3.46.1
+
+= 3.46.2 - 7/1/2025 =
+* Added support for importing all contacts from Zoho using the import tool (not just by tag)
+* Added support for validating the site for initiating the API connection directly from the Klaviyo and Pipedrive marketplaces
+* Added support for revoking Klaviyo OAuth tokens (requirement for the Klaviyo marketplace)
+* Fixed initial connection test with Zoho failing since 3.46.1
+* Fixed Zoho access token refreshes failing since 3.46.1
+* Fixed duplicate tags being applied to Salesforce contacts when applying tags via a multiselect field to guests
+* Developers: the `DOING_WPF_WEBHOOK` constant was renamed to `WPF_DOING_WEBHOOK` to meet WordPress.org standards regarding plugin prefixes
+
+= 3.46.1 - 6/24/2025 =
+* Improved - The Zoho integration has been updated to use the latest API version (v8) to support the new custom field types
+* Improved - When adding a new tag to a HubSpot multiselect field, the tag will now only be added if it doesn't already exist
+* Fixed the Return After Login feature not respecting the "Redirect to" setting if the user does not have access to the requested page after logging in
+* Fixed fatal error when creating a new WordPress user via a Groundhogg flow (same site)
+
+= 3.46.0 - 6/16/2025 =
+* Added support for Klaviyo OAuth 2.0 authorization
+* Improved logging for missing or invalid email addresses during user registration
+* Developers: Added `wpf_hubspot_add_engagement` filter to allow modifying the HubSpot engagement body before it is sent
+* Developers: Updated the HubSpot engagements API to use the new v3 API
+* Developers: `wp_fusion()->access->template_redirect()` now accepts an optional `$post_id` parameter to allow redirecting based on a specific post ID
+* Developers: Added `wpf_return_after_login_url` filter to allow modifying the URL a user is redirected to after logging in, using the Return After Login feature
+
+= 3.45.12 - 6/3/2025 =
+* Improved - Added support for creating new custom fields in the CRM field select dropdowns even if there's an existing field with a partially matching name
+
+= 3.45.11 - 5/28/2025 =
+* Added logging when unknown tag names or IDs are passed to `wp_fusion()->user->apply_tags()`
+* Fixed WP Fusion syncing empty user meta back to Groundhogg when a new user was created via a Groundhogg flow (same site)
+* Fixed PHP warning `Calling key() on an object is deprecated` when creating a new tag with Groundhogg (REST API)
+
+= 3.45.10 - 5/19/2025 =
+* Fixed numeric strings being converted to integers when saving the WP Fusion settings, which removed leading zeros from numeric values
+* Fixed Salesforce integration the default Record Type ID when creating objects (like Leads) that don't have a Record Type
+* Developers: switched to using `wp_remote_request()` for Salesforce API calls, rather than `wp_safe_remote_request()`, to make debugging malformed URLs easier
+
+= 3.45.9.1 - 5/8/2025 =
+* Fixed "A valid URL was not provided" error with Zoho when using auto login links
+
+= 3.45.9 - 5/7/2025 =
+* Added a [Sender.net CRM integration](https://wpfusion.com/crm/sender/)
+* Added `$gclid` field for sync with Zoho
+* Improved - The Maropost integration can now load tags from contacts on any list in the account
+
+= 3.45.8 - 4/29/2025 =
+* Added ability to export and import the WP Fusion settings as a .csv file
+* Added view in CRM links to the Maropost integration
+* Fixed HTTP API logging not working with all Maropost API calls
+* Fixed notices "Function _load_textdomain_just_in_time was called incorrectly" when loading the WP Fusion settings page in the admin since WordPress 6.8
+* Fixed JavaScript error "that is not defined" when adding a new tag in the WP Fusion settings page
+* Fixed users' first names being synced as 1 if no name was provided at registration and there was a boolean field in the POSTed data that contained "first"
+* Developers: Calling `wp_fusion()->crm->add_tag()` will now add the tag and update the local cache of available tags
+* Developers: Added function `wpf_update_option()` for updating options in the WP Fusion settings page
+
+= 3.45.7 - 4/14/2025 =
+* Improved - The initial HighLevel authorization flow has been updated to use the gray-labelled LeadConnectorHQ Marketplace
+* Improved - If a contact is deleted or merged in HighLevel, WP Fusion will attempt to look up the contact by email address and retry the API call if a match is found
+* Improved - If a contact is created or updated in HighLevel, and a "Duplicate Email Address" error is encountered, the existing contact will be updated
+* Fixed `get_contact_id()` method with ActiveCampaign returning 403 / unauthorized if called before the `init` hook
+* Fixed "Invalid URL provided" error when handling webhooks with Maropost
+* Developers: Added `wpf_get_user_id_by_email()` function for getting a WordPress user ID from an email address
+
+= 3.45.6 - 4/8/2025 =
+* Added support for typing new segment names into the "Select List(s)" dropdown when [using a multiselect field for segmentation with HubSpot](https://wpfusion.com/documentation/crm-specific-docs/how-lists-work-with-hubspot/#using-a-multiselect-for-segmentation)
+* Fixed email address not being synced from the REST API when updating a user
+* Fixed custom fields not being synced from the REST API when updating a user
+
+= 3.45.5 - 3/31/2025 =
+* Added support for importing contacts with GetResponse
+* Added support for syncing multiselect fields to GetResponse
+* Fixed `wordpress_logged_in_wpfusioncachebuster` cookie not being cleared on auto-login logout
+* Fixed GetResponse integration not validating the API key during setup
+* Fixed loading contacts and pull user meta operations not working with GetResponse
+
+= 3.45.4 - 3/24/2025 =
+* Fixed Maropost integration not loading more than 200 available tags or custom fields
+* Fixed error querying contact IDs or tags with Ortto, "incorrect size 0 of fields, minimum 1 and maximum 100 is required"
+* Updated the `WPFSelect` React component to version 1.1.6
 
 = 3.45.2 - 3/10/2025 =
 * Improved - All custom fields sections in the Contact Fields list now link to their respective documentation pages

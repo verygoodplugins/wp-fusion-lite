@@ -71,7 +71,6 @@ class WPF_Bento_Admin {
 	 * @access  public
 	 * @since 3.37.31
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		// Add site tracking option
@@ -147,7 +146,6 @@ class WPF_Bento_Admin {
 	 * @return array The options.
 	 * @since  3.37.14
 	 */
-
 	public function add_default_fields( $options ) {
 
 		require __DIR__ . '/bento-fields.php';

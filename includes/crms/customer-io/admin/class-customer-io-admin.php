@@ -126,7 +126,6 @@ class WPF_Customer_IO_Admin {
 	 * @access  public
 	 * @since 3.42.2
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		// Add site tracking option

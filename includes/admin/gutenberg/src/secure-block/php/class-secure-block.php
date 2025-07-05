@@ -51,9 +51,12 @@ class Secure_Block {
 		}
 
 		// Hook server side rendering into render callback
-		register_block_type( 'wp-fusion/secure-block', [
-			'render_callback' => 'wp_fusion\secure_blocks_for_gutenberg\wp_fusion_secure_blocks_for_gutenberg_render',
-		] );
+		register_block_type(
+			'wp-fusion/secure-block',
+			array(
+				'render_callback' => 'wp_fusion\secure_blocks_for_gutenberg\wp_fusion_secure_blocks_for_gutenberg_render',
+			)
+		);
 	}
 
 	/**
@@ -65,9 +68,7 @@ class Secure_Block {
 		require_once 'class-api.php';
 		$api = new API();
 		$api->run();
-
 	}
-
 }
 
 function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
@@ -84,32 +85,27 @@ function wp_fusion_secure_blocks_for_gutenberg_render( $attributes, $content ) {
 
 		$can_access = true;
 
-	} else {
-
-		if ( isset( $attributes['tag'] ) ) {
+	} elseif ( isset( $attributes['tag'] ) ) {
 
 			$user_tags = wp_fusion()->user->get_tags();
 
 			$decoded_tags = json_decode( $attributes['tag'] );
 
-			if ( ! empty( $decoded_tags ) ) {
+		if ( ! empty( $decoded_tags ) ) {
 
-				foreach ( $decoded_tags as $tag ) {
-					$restricted_tags[] = $tag->value;
-				}
-
-				$result = array_intersect( $restricted_tags, $user_tags );
-
-				if( ! empty( $result ) ) {
-					$can_access = true;
-				}
+			foreach ( $decoded_tags as $tag ) {
+				$restricted_tags[] = $tag->value;
 			}
-		} elseif ( wpf_is_user_logged_in() ) {
 
-			$can_access = true;
+			$result = array_intersect( $restricted_tags, $user_tags );
 
+			if ( ! empty( $result ) ) {
+				$can_access = true;
+			}
 		}
+	} elseif ( wpf_is_user_logged_in() ) {
 
+		$can_access = true;
 	}
 
 	$dom = new \DomDocument();

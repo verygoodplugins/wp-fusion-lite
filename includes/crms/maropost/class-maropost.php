@@ -29,14 +29,15 @@ class WPF_Maropost {
 	/**
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
-	public $supports = array( 'add_tags' );
+	public $supports = array();
 
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * Each contact has a unique id other than his account id.
+	 *
 	 * @var string
 	 */
-	public $edit_url = false;
+	public $edit_url = '';
 
 	/**
 	 * The API URL.
@@ -58,17 +59,15 @@ class WPF_Maropost {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Maropost_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 100, 3 );
-
 	}
 
 	/**
@@ -77,12 +76,15 @@ class WPF_Maropost {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		$this->get_params(); // initialize the API URL and key.
+
+		// Link to the contact edit page.
+		$this->edit_url = str_replace( 'api', 'app', $this->api_url ) . 'lists/' . $this->list_id . '/contacts/%d';
 	}
 
 
@@ -92,7 +94,6 @@ class WPF_Maropost {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -104,7 +105,6 @@ class WPF_Maropost {
 		$post_data['contact_id'] = sanitize_text_field( $maropost_payload->contact->id );
 
 		return $post_data;
-
 	}
 
 	/**
@@ -113,7 +113,6 @@ class WPF_Maropost {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
@@ -128,7 +127,6 @@ class WPF_Maropost {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -137,7 +135,6 @@ class WPF_Maropost {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'maropost' ) !== false ) {
@@ -167,12 +164,10 @@ class WPF_Maropost {
 				} else {
 					$response = new WP_Error( 'error', 'Unprocessable entity.' );
 				}
-
 			}
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -181,7 +176,6 @@ class WPF_Maropost {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $account_id = null, $api_key = null ) {
 
 		// Get saved data from DB.
@@ -229,7 +223,6 @@ class WPF_Maropost {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $account_id = null, $api_key = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -241,7 +234,7 @@ class WPF_Maropost {
 		}
 
 		$request  = $this->api_url . 'lists.json?auth_token=' . $this->api_key;
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 
@@ -258,7 +251,6 @@ class WPF_Maropost {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -272,7 +264,6 @@ class WPF_Maropost {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -282,17 +273,12 @@ class WPF_Maropost {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$available_tags = array();
 
-		$request  = $this->api_url . 'tags.json?auth_token=' . $this->api_key;
-		$response = wp_safe_remote_get( $request, $this->params );
+		$request  = $this->api_url . 'tags.json?per=5000&auth_token=' . $this->api_key;
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -317,15 +303,10 @@ class WPF_Maropost {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/maropost-fields.php';
+		require __DIR__ . '/admin/maropost-fields.php';
 
 		$built_in_fields = array();
 
@@ -334,8 +315,8 @@ class WPF_Maropost {
 		}
 
 		$custom_fields = array();
-		$request       = $this->api_url . 'custom_fields.json?auth_token=' . $this->api_key;
-		$response      = wp_safe_remote_get( $request );
+		$request       = $this->api_url . 'custom_fields.json?per=5000&auth_token=' . $this->api_key;
+		$response      = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -374,17 +355,12 @@ class WPF_Maropost {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$mp_lists = array();
 
 		$request  = $this->api_url . 'lists.json?auth_token=' . $this->api_key;
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -404,7 +380,6 @@ class WPF_Maropost {
 		wp_fusion()->settings->set( 'maropost_lists', $mp_lists );
 
 		return $mp_lists;
-
 	}
 
 	/**
@@ -413,15 +388,10 @@ class WPF_Maropost {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = $this->api_url . 'contacts/email.json?contact%5Bemail%5D=' . rawurlencode( $email_address ) . '&auth_token=' . $this->api_key;
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -445,17 +415,12 @@ class WPF_Maropost {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
+		$tags = array();
 
-		$tags    = array();
-		$request = $this->api_url . 'lists/' . $this->list_id . '/contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
-
-		$response = wp_safe_remote_get( $request );
+		$request  = $this->api_url . 'contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -467,9 +432,7 @@ class WPF_Maropost {
 			return $tags;
 		}
 
-		foreach ( $body_json['tags'] as $tag ) {
-			$tags[] = $tag['name'];
-		}
+		$tags = wp_list_pluck( $body_json['tags'], 'name' );
 
 		return $tags;
 	}
@@ -480,18 +443,13 @@ class WPF_Maropost {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
-		$request                           = $this->api_url . 'add_remove_tags.json?auth_token=' . $this->api_key;
-		$params['headers']['Content-Type'] = 'application/json';
-		$params['body']                    = wp_json_encode(
+		$request          = $this->api_url . 'add_remove_tags.json?auth_token=' . $this->api_key;
+		$params           = $this->get_params();
+		$params['body']   = wp_json_encode(
 			array(
 				'tags' => array(
 					'email'    => $email,
@@ -499,16 +457,15 @@ class WPF_Maropost {
 				),
 			)
 		);
-		$params['method']                  = 'PUT';
+		$params['method'] = 'PUT';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -518,17 +475,13 @@ class WPF_Maropost {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
 
-		$request                           = $this->api_url . 'add_remove_tags.json?auth_token=' . $this->api_key;
-		$params['body']                    = wp_json_encode(
+		$request          = $this->api_url . 'add_remove_tags.json?auth_token=' . $this->api_key;
+		$params           = $this->get_params();
+		$params['body']   = wp_json_encode(
 			array(
 				'tags' => array(
 					'email'       => $email,
@@ -536,17 +489,15 @@ class WPF_Maropost {
 				),
 			)
 		);
-		$params['headers']['Content-Type'] = 'application/json';
-		$params['method']                  = 'PUT';
+		$params['method'] = 'PUT';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
-
 	}
 
 
@@ -556,12 +507,7 @@ class WPF_Maropost {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
-
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
 
 		$crm_fields = wpf_get_option( 'crm_fields', array() );
 
@@ -576,10 +522,10 @@ class WPF_Maropost {
 		}
 
 		$url            = $this->api_url . 'lists/' . $this->list_id . '/contacts.json?auth_token=' . $this->api_key;
-		$params         = $this->params;
+		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $field_data );
 
-		$response = wp_safe_remote_post( $url, $params );
+		$response = wp_remote_post( $url, $params );
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -588,7 +534,6 @@ class WPF_Maropost {
 		}
 
 		return $body->id;
-
 	}
 
 
@@ -599,7 +544,6 @@ class WPF_Maropost {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$crm_fields = wpf_get_option( 'crm_fields' );
@@ -635,7 +579,7 @@ class WPF_Maropost {
 			$params['body']   = wp_json_encode( $field_data );
 			$params['method'] = 'PUT';
 
-			$response = wp_safe_remote_post( $url, $params );
+			$response = wp_remote_post( $url, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -643,7 +587,6 @@ class WPF_Maropost {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -652,11 +595,10 @@ class WPF_Maropost {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$url      = $this->api_url . 'contacts/' . $contact_id . '.json?auth_token=' . $this->api_key;
-		$response = wp_safe_remote_get( $url, $this->get_params() );
+		$response = wp_remote_get( $url, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -679,7 +621,6 @@ class WPF_Maropost {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -689,16 +630,15 @@ class WPF_Maropost {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		$contact_ids = array();
 		$proceed     = true;
 
-		while ( true == $proceed ) {
+		while ( $proceed ) {
 
 			$url     = $this->api_url . 'lists/' . $this->list_id . '/contacts.json?auth_token=' . $this->api_key;
-			$results = wp_safe_remote_get( $url, $this->get_params() );
+			$results = wp_remote_get( $url, $this->get_params() );
 
 			if ( is_wp_error( $results ) ) {
 				return $results;
@@ -713,11 +653,8 @@ class WPF_Maropost {
 			if ( count( $body_json ) < 50 ) {
 				$proceed = false;
 			}
-
 		}
 
 		return $contact_ids;
-
 	}
-
 }

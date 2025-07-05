@@ -16,7 +16,6 @@ class WPF_AJAX {
 		add_action( 'wp_ajax_remove_tags', array( $this, 'remove_tags' ) );
 		add_action( 'wp_ajax_nopriv_remove_tags', array( $this, 'remove_tags' ) ); // needed for applying tags via auto-login.
 		add_action( 'wp_ajax_update_user', array( $this, 'update_user' ) );
-
 	}
 
 	/**
@@ -25,7 +24,6 @@ class WPF_AJAX {
 	 * @access public
 	 * @return void
 	 */
-
 	public function apply_tags() {
 
 		$tags = array();
@@ -57,9 +55,19 @@ class WPF_AJAX {
 
 			if ( false === $tag_id ) {
 
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Unable to determine tag ID from tag with name <strong>' . $tag . '</strong>. Tag will not be applied. Please make sure this tag exists in ' . wp_fusion()->crm->name . '. If you\'ve just added a new tag, click Resync Available Tags in the WP Fusion settings.' );
-				continue;
+				if ( wp_fusion()->crm->supports( 'add_tags_api' ) ) {
 
+					// Create it if possible.
+					$tag_id = wp_fusion()->crm->add_tag( $tag );
+
+					if ( is_wp_error( $tag_id ) ) {
+						wpf_log( 'notice', wpf_get_current_user_id(), sprintf( 'Unable to add tag with name <strong>%1$s</strong> to %2$s. Tag will not be applied.', $tag, wp_fusion()->crm->name ) );
+						continue;
+					}
+				} else {
+					wpf_log( 'notice', wpf_get_current_user_id(), 'Unable to determine tag ID from tag with name <strong>' . $tag . '</strong>. Tag will not be applied. Please make sure this tag exists in ' . wp_fusion()->crm->name . '. If you\'ve just added a new tag, click Resync Available Tags in the WP Fusion settings.' );
+					continue;
+				}
 			}
 
 			$tags_to_apply[] = $tag_id;
@@ -72,7 +80,6 @@ class WPF_AJAX {
 		}
 
 		wp_send_json_success();
-
 	}
 
 	/**
@@ -81,7 +88,6 @@ class WPF_AJAX {
 	 * @access public
 	 * @return void
 	 */
-
 	public function remove_tags() {
 
 		if ( ! isset( $_POST['tags'] ) ) {
@@ -117,7 +123,6 @@ class WPF_AJAX {
 		}
 
 		die();
-
 	}
 
 	/**
@@ -126,7 +131,6 @@ class WPF_AJAX {
 	 * @access public
 	 * @return void
 	 */
-
 	public function update_user() {
 
 		if ( ! isset( $_POST['data'] ) ) {
@@ -178,7 +182,6 @@ class WPF_AJAX {
 		}
 
 		wp_die();
-
 	}
 
 	/**
@@ -200,7 +203,5 @@ class WPF_AJAX {
 			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', $localize_data );
 
 		}
-
 	}
-
 }

@@ -12,7 +12,6 @@ class WPF_GetResponse_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -21,9 +20,8 @@ class WPF_GetResponse_Admin {
 
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_getresponse_header_begin', array( $this, 'show_field_getresponse_header_begin' ), 10, 2 );
-		add_action( 'show_field_getresponse_key_end', array( $this, 'show_field_getresponse_key_end' ), 10, 2 );
 
-		// AJAX
+		// AJAX.
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
@@ -37,7 +35,6 @@ class WPF_GetResponse_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -50,39 +47,25 @@ class WPF_GetResponse_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
-
-		$new_settings = array();
-
-		if ( ! isset( $options['available_lists'] ) ) {
-			$options['available_lists'] = array();
-		}
-
-		$new_settings['getresponse_list'] = array(
-			'title'       => __( 'List', 'wp-fusion-lite' ),
-			'desc'        => __( 'New users will be automatically added to the selected list.', 'wp-fusion-lite' ),
-			'type'        => 'select',
-			'placeholder' => 'Select list',
-			'section'     => 'main',
-			'choices'     => $options['available_lists'],
-		);
-
-		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
-
-		if ( ! isset( $settings['create_users']['unlock']['getresponse_list'] ) ) {
-			$settings['create_users']['unlock'][] = 'getresponse_list';
-		}
-
-		$settings['getresponse_list']['disabled'] = ( wpf_get_option( 'create_users' ) == 0 ? true : false );
 
 		$new_settings['getresponse_header'] = array(
 			// translators: %s is the name of the CRM.
 			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
-			'std'     => 0,
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
+
+		if ( wpf_get_option( 'connection_configured' ) ) {
+			$new_settings['getresponse_list'] = array(
+				'title'       => __( 'List', 'wp-fusion-lite' ),
+				'desc'        => __( 'You must select a list to create new contacts.', 'wp-fusion-lite' ),
+				'type'        => 'select',
+				'placeholder' => __( 'Select list', 'wp-fusion-lite' ),
+				'section'     => 'setup',
+				'choices'     => isset( $options['available_lists'] ) ? $options['available_lists'] : array(),
+			);
+		}
 
 		$new_settings['getresponse_key'] = array(
 			'title'       => __( 'API Key', 'wp-fusion-lite' ),
@@ -104,7 +87,6 @@ class WPF_GetResponse_Admin {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function validate_import_trigger( $input, $setting ) {
 
 		$prev_value = wpf_get_option( 'getresponse_add_tag' );
@@ -156,7 +138,6 @@ class WPF_GetResponse_Admin {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function validate_update_trigger( $input, $setting ) {
 
 		$prev_value = wpf_get_option( 'getresponse_update_trigger' );
@@ -209,7 +190,6 @@ class WPF_GetResponse_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -234,7 +214,6 @@ class WPF_GetResponse_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_getresponse_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -243,36 +222,11 @@ class WPF_GetResponse_Admin {
 	}
 
 	/**
-	 * Close out getresponse section
-	 *
-	 * @access  public
-	 * @since   1.0
-	 */
-
-
-	public function show_field_getresponse_key_end( $id, $field ) {
-
-		if ( $field['desc'] != '' ) {
-			echo '<span class="description">' . esc_html( $field['desc'] ) . '</span>';
-		}
-		echo '</td>';
-		echo '</tr>';
-
-		echo '</table><div id="connection-output"></div>';
-		if ( wp_fusion()->crm->slug == 'getresponse' ) {
-			echo '<style type="text/css">#tab-import { display: none; }</style>';
-		}
-		echo '</div>'; // close #GetResponse div
-		echo '<table class="form-table">';
-	}
-
-	/**
 	 * Verify connection credentials
 	 *
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

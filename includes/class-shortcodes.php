@@ -37,7 +37,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function shortcodes( $atts, $content = '' ) {
 
 		if ( ( is_array( $atts ) && in_array( 'logged_out', $atts ) ) || $atts == 'logged_out' ) {
@@ -197,7 +196,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return null
 	 */
-
 	public function shortcode_update_tags() {
 
 		if ( wpf_is_user_logged_in() && ! is_admin() ) {
@@ -213,7 +211,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return null
 	 */
-
 	public function shortcode_update_meta() {
 
 		if ( wpf_is_user_logged_in() && ! is_admin() ) {
@@ -229,7 +226,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return string
 	 */
-
 	public function shortcode_user_meta( $atts, $content = null ) {
 
 		$atts = shortcode_atts(
@@ -332,7 +328,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function shortcode_user_can_access( $atts, $content = '' ) {
 
 		$defaults = array(
@@ -384,7 +379,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return string Content
 	 */
-
 	public function shortcode_loggedin( $atts, $content = null ) {
 
 		if ( ( wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {
@@ -399,7 +393,6 @@ class WPF_Shortcodes {
 	 * @access public
 	 * @return string Content
 	 */
-
 	public function shortcode_loggedout( $atts, $content = null ) {
 
 		if ( ( ! wpf_is_user_logged_in() && ! is_null( $content ) ) || is_feed() ) {

@@ -12,7 +12,6 @@ class WPF_KlickTipp_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -29,7 +28,6 @@ class WPF_KlickTipp_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -38,12 +36,10 @@ class WPF_KlickTipp_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-
 	}
 
 
@@ -53,7 +49,6 @@ class WPF_KlickTipp_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -86,7 +81,6 @@ class WPF_KlickTipp_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -115,7 +109,6 @@ class WPF_KlickTipp_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'assign_tags', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 	/**
@@ -124,12 +117,11 @@ class WPF_KlickTipp_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/klick-tipp-fields.php';
+			require_once __DIR__ . '/klick-tipp-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -140,7 +132,6 @@ class WPF_KlickTipp_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -151,13 +142,11 @@ class WPF_KlickTipp_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_klicktipp_header_begin( $id, $field ) {
 
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 
@@ -167,7 +156,6 @@ class WPF_KlickTipp_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
@@ -195,7 +183,5 @@ class WPF_KlickTipp_Admin {
 		}
 
 		die();
-
 	}
-
 }

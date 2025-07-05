@@ -23,6 +23,23 @@ class WPF_Klaviyo {
 	public $key;
 
 	/**
+	 * Client ID for OAuth.
+	 *
+	 * @var string
+	 * @since  3.46.0
+	 */
+	public $client_id = '052edb27-d8a1-45c9-874a-8644b7739336';
+
+	/**
+	 * Client secret for OAuth.
+	 *
+	 * @var string
+	 * @since  3.46.0
+	 */
+	public $client_secret = 'UVBHL5jnTf5bVxj19Emvaxaqxc8wQ7LwMpiXBUNnzzm0UUlKS83QxBBhU9EroXcNmbsjSyd6yRiZii6E_1v7lg';
+
+
+	/**
 	 * Contains API params
 	 */
 
@@ -56,7 +73,6 @@ class WPF_Klaviyo {
 	 * @since 3.43.19
 	 *
 	 * @var string The source name.
-	 *
 	 */
 	public $last_source = '';
 
@@ -66,7 +82,6 @@ class WPF_Klaviyo {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -84,7 +99,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		// Slow down the batch processses to get around API limits.
@@ -157,12 +171,36 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return array|WP_Error
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( false !== strpos( $url, 'klaviyo' ) && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
 
-			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+			$response_code = wp_remote_retrieve_response_code( $response );
+			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
+
+			// Handle successful responses
+			if ( 200 === $response_code || 201 === $response_code || 202 === $response_code ) {
+				return $response;
+			}
+
+			// Handle authorization errors and try to refresh token
+			if ( ( 401 === $response_code || 403 === $response_code ) && false === strpos( $url, 'oauth/token' ) ) {
+
+				if ( isset( $body_json->errors[0]->detail ) && false !== strpos( $body_json->errors[0]->detail, 'authentication' ) ) {
+					// Try to refresh the access token.
+					$access_token = $this->refresh_token();
+
+					if ( is_wp_error( $access_token ) ) {
+						return new WP_Error( 'error', sprintf( __( 'Error refreshing access token: %s', 'wp-fusion-lite' ), $access_token->get_error_message() ) );
+					}
+
+					// Update the authorization header and retry the request.
+					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
+					$response                         = wp_safe_remote_request( $url, $args );
+
+					return $response;
+				}
+			}
 
 			if ( isset( $body_json->message ) ) {
 
@@ -256,30 +294,236 @@ class WPF_Klaviyo {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_key = null ) {
 
 		// Get saved data from DB
 		if ( empty( $access_key ) ) {
-			$access_key = wpf_get_option( 'klaviyo_key' );
+			$access_key = wpf_get_option( 'klaviyo_token' );
+			if ( empty( $access_key ) ) {
+				$access_key = wpf_get_option( 'klaviyo_key' );
+			}
 		}
 
 		$this->params = array(
 			'timeout'    => 30,
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'headers'    => array(
-				'Accept'        => 'application/json',
-				'Content-Type'  => 'application/json',
-				'Revision'      => '2025-01-15',
-				'Authorization' => 'Klaviyo-API-Key ' . $access_key,
+				'Accept'       => 'application/json',
+				'Content-Type' => 'application/json',
+				'Revision'     => '2025-01-15',
 			),
 		);
+
+		if ( wpf_get_option( 'klaviyo_token' ) ) {
+			$this->params['headers']['Authorization'] = 'Bearer ' . $access_key;
+		} else {
+			$this->params['headers']['Authorization'] = 'Klaviyo-API-Key ' . $access_key;
+		}
 
 		$this->key = $access_key;
 
 		return $this->params;
 	}
 
+	/**
+	 * Authorize the application and generate access and refresh tokens.
+	 *
+	 * @since 3.46.0
+	 *
+	 * @param string $code The authorization code.
+	 * @param string $code_verifier The PKCE code verifier.
+	 * @return bool|string The access token or false if error.
+	 */
+	public function authorize( $code, $code_verifier ) {
+
+		// Format the request as form data (not JSON) as required by Klaviyo.
+		$form_data = array(
+			'grant_type'    => 'authorization_code',
+			'code'          => $code,
+			'redirect_uri'  => "https://wpfusion.com/oauth/?action=wpf_get_{$this->slug}_token",
+			'code_verifier' => $code_verifier,
+		);
+
+		$body = http_build_query( $form_data );
+
+		$params = array(
+			'timeout'    => 30,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'body'       => $body,
+			'headers'    => array(
+				'Authorization' => 'Basic ' . base64_encode( $this->client_id . ':' . $this->client_secret ),
+				'Content-Type'  => 'application/x-www-form-urlencoded',
+			),
+		);
+
+		$response = wp_safe_remote_post( 'https://a.klaviyo.com/oauth/token', $params );
+
+		if ( is_wp_error( $response ) ) {
+			wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
+			wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
+			return false;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+		$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( 200 !== $response_code ) {
+			$error_message = 'Unknown error';
+			if ( $body_json && isset( $body_json->error_description ) ) {
+				$error_message = $body_json->error_description;
+			} elseif ( $body_json && isset( $body_json->error ) ) {
+				$error_message = $body_json->error;
+			}
+
+			wp_fusion()->admin_notices->add_notice( 'Error requesting authorization: ' . $error_message );
+			wpf_log( 'error', 0, 'Error requesting authorization: ' . $error_message );
+			return false;
+		}
+
+		if ( ! $body_json || ! isset( $body_json->access_token ) ) {
+			wp_fusion()->admin_notices->add_notice( 'Invalid response from Klaviyo during authorization.' );
+			wpf_log( 'error', 0, 'Invalid response from Klaviyo during authorization.' );
+			return false;
+		}
+
+		wp_fusion()->settings->set( 'klaviyo_refresh_token', $body_json->refresh_token );
+		wp_fusion()->settings->set( 'klaviyo_token', $body_json->access_token );
+		wp_fusion()->settings->set( 'crm', $this->slug );
+
+		return $body_json->access_token;
+	}
+
+	/**
+	 * Refresh an access token from a refresh token.
+	 *
+	 * @since 3.46.0
+	 *
+	 * @return string|WP_Error The access token, or error.
+	 */
+	public function refresh_token() {
+
+		$refresh_token = wpf_get_option( 'klaviyo_refresh_token' );
+
+		if ( empty( $refresh_token ) ) {
+			return new WP_Error( 'error', 'Authorization failed and no refresh token found.' );
+		}
+
+		// Format the request as form data (not JSON) as required by Klaviyo.
+		$form_data = array(
+			'grant_type'    => 'refresh_token',
+			'refresh_token' => $refresh_token,
+		);
+
+		$body = http_build_query( $form_data );
+
+		$params = array(
+			'timeout'    => 30,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'body'       => $body,
+			'headers'    => array(
+				'Authorization' => 'Basic ' . base64_encode( $this->client_id . ':' . $this->client_secret ),
+				'Content-Type'  => 'application/x-www-form-urlencoded',
+			),
+		);
+
+		$response = wp_safe_remote_post( 'https://a.klaviyo.com/oauth/token', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+		$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( 200 !== $response_code ) {
+			$error_message = 'Unknown error';
+			if ( $body_json && isset( $body_json->error_description ) ) {
+				$error_message = $body_json->error_description;
+			} elseif ( $body_json && isset( $body_json->error ) ) {
+				$error_message = $body_json->error;
+			}
+
+			return new WP_Error( 'error', 'Error refreshing access token: ' . $error_message );
+		}
+
+		if ( ! $body_json || ! isset( $body_json->access_token ) ) {
+			return new WP_Error( 'error', 'Invalid response from Klaviyo while refreshing access token.' );
+		}
+
+		wp_fusion()->settings->set( 'klaviyo_token', $body_json->access_token );
+		wp_fusion()->settings->set( 'klaviyo_refresh_token', $body_json->refresh_token );
+
+		$this->get_params( $body_json->access_token );
+
+		return $body_json->access_token;
+	}
+
+	/**
+	 * Revoke access and refresh tokens.
+	 *
+	 * @since 3.46.2
+	 *
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	public function revoke_token() {
+
+		$refresh_token = wpf_get_option( 'klaviyo_refresh_token' );
+
+		if ( empty( $refresh_token ) ) {
+			return new WP_Error( 'error', 'No refresh token found to revoke.' );
+		}
+
+		// Format the request as form data (not JSON) as required by Klaviyo.
+		$form_data = array(
+			'token_type_hint' => 'refresh_token',
+			'token'           => $refresh_token,
+		);
+
+		$body = http_build_query( $form_data );
+
+		$params = array(
+			'timeout'    => 30,
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'body'       => $body,
+			'headers'    => array(
+				'Authorization' => 'Basic ' . base64_encode( $this->client_id . ':' . $this->client_secret ),
+				'Content-Type'  => 'application/x-www-form-urlencoded',
+			),
+		);
+
+		$response = wp_safe_remote_post( 'https://a.klaviyo.com/oauth/revoke', $params );
+
+		if ( is_wp_error( $response ) ) {
+			wpf_log( 'error', 0, 'Error revoking Klaviyo token: ' . $response->get_error_message() );
+			return $response;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+
+		// Klaviyo returns 200 for successful revocation.
+		if ( 200 !== $response_code ) {
+			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
+			$error_message = 'Unknown error';
+
+			if ( $body_json && isset( $body_json->error_description ) ) {
+				$error_message = $body_json->error_description;
+			} elseif ( $body_json && isset( $body_json->error ) ) {
+				$error_message = $body_json->error;
+			}
+
+			wpf_log( 'error', 0, 'Error revoking Klaviyo token: ' . $error_message );
+			return new WP_Error( 'error', 'Error revoking token: ' . $error_message );
+		}
+
+		// Clear stored tokens from database
+		wp_fusion()->settings->set( 'klaviyo_token', '' );
+		wp_fusion()->settings->set( 'klaviyo_refresh_token', '' );
+		wp_fusion()->settings->set( 'connection_configured', false );
+
+		wpf_log( 'notice', 0, 'Klaviyo OAuth tokens successfully revoked.' );
+
+		return true;
+	}
 
 	/**
 	 * Initialize connection
@@ -287,7 +531,6 @@ class WPF_Klaviyo {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_key = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -315,7 +558,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -430,7 +672,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$crm_fields = array(
@@ -491,7 +732,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -525,7 +765,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -564,7 +803,6 @@ class WPF_Klaviyo {
 	 *
 	 * @return bool|WP_Error True on success, error on failure.
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$params = $this->get_params();
@@ -651,7 +889,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return bool|WP_Error
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$params = $this->get_params();
@@ -746,7 +983,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$data = $this->format_contact_payload( $data );
@@ -777,7 +1013,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$data = $this->format_contact_payload( $data );
@@ -808,7 +1043,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return array|WP_Error User meta data that was returned or WP_Error.
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$request  = 'https://a.klaviyo.com/api/profiles/' . $contact_id;
@@ -841,7 +1075,6 @@ class WPF_Klaviyo {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		$contact_ids = array();
@@ -876,7 +1109,7 @@ class WPF_Klaviyo {
 	 *
 	 * @param  string       $event      The event title.
 	 * @param  string|array $event_data The event description.
-	 * @param  bool|string $email_address The user email address.
+	 * @param  bool|string  $email_address The user email address.
 	 * @return bool|WP_Error True if success, WP_Error if failed.
 	 */
 	public function track_event( $event, $event_data = '', $email_address = false ) {

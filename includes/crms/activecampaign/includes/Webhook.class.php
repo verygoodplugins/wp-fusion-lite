@@ -67,27 +67,23 @@ class AC_Webhook extends ActiveCampaign {
 		// process an incoming webhook payload (from ActiveCampaign), and format it (or do something with it)
 
 		$r = array();
-		if ( $_SERVER["REQUEST_METHOD"] != "POST" ) {
+		if ( $_SERVER['REQUEST_METHOD'] != 'POST' ) {
 			return $r;
 		}
 
-		$params_array = explode( "&", $params );
+		$params_array = explode( '&', $params );
 		$params_      = array();
 		foreach ( $params_array as $expression ) {
 			// IE: css=1
-			list( $var, $val ) = explode( "=", $expression );
-			$params_[ $var ] = $val;
+			list( $var, $val ) = explode( '=', $expression );
+			$params_[ $var ]   = $val;
 		}
 
-		$event  = $params_["event"];
-		$format = $params_["output"];
+		$event  = $params_['event'];
+		$format = $params_['output'];
 
-		if ( $format == "json" ) {
+		if ( $format == 'json' ) {
 			return wp_json_encode( $_POST );
 		}
-
 	}
-
 }
-
-?>

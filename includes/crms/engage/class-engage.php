@@ -81,7 +81,7 @@ class WPF_Engage {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-engage-admin.php';
+			require_once __DIR__ . '/class-engage-admin.php';
 			new WPF_Engage_Admin( $this->slug, $this->name, $this );
 		}
 
@@ -100,7 +100,6 @@ class WPF_Engage {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
-
 	}
 
 
@@ -138,14 +137,13 @@ class WPF_Engage {
 			return $value;
 
 		}
-
 	}
 
 	/**
 	 * Formats POST data received from webhooks into standard format.
 	 *
 	 * @since 3.40.42
-	 * 
+	 *
 	 * @param array $post_data The POST data.
 	 * @return array The formatted data.
 	 */
@@ -158,7 +156,6 @@ class WPF_Engage {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -207,24 +204,23 @@ class WPF_Engage {
 	public static function get_default_fields() {
 
 		return array(
-			'first_name'  => array(
+			'first_name'    => array(
 				'crm_label' => 'First Name',
 				'crm_field' => 'first_name',
 			),
-			'last_name'   => array(
+			'last_name'     => array(
 				'crm_label' => 'Last Name',
 				'crm_field' => 'last_name',
 			),
-			'user_email'  => array(
+			'user_email'    => array(
 				'crm_label' => 'Email',
 				'crm_field' => 'email',
 			),
 			'billing_phone' => array(
 				'crm_label' => 'Phone',
 				'crm_field' => 'number',
-			)
+			),
 		);
-
 	}
 
 
@@ -255,7 +251,7 @@ class WPF_Engage {
 			} elseif ( $response_code > 201 && $response_code < 404 ) {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
-				$error = 'There has been an error with your request.';
+				$error     = 'There has been an error with your request.';
 
 				if ( ! empty( $body_json ) && isset( $body_json->error ) ) {
 					$error = $body_json->error;
@@ -271,7 +267,6 @@ class WPF_Engage {
 		}
 
 		return $response;
-
 	}
 
 
@@ -285,7 +280,7 @@ class WPF_Engage {
 	 *
 	 * @param  string $engage_username Public API Key.
 	 * @param  string $engage_password Private API key.
-	 * @param  bool   $test   				 Whether to validate the credentials.
+	 * @param  bool   $test                  Whether to validate the credentials.
 	 * @return bool|WP_Error A WP_Error will be returned if the API credentials are invalid.
 	 */
 	public function connect( $engage_username = null, $engage_password = null, $test = false ) {
@@ -329,7 +324,6 @@ class WPF_Engage {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -380,9 +374,9 @@ class WPF_Engage {
 			return $response;
 		}
 
-		$crm_meta_fields = array();
+		$crm_meta_fields    = array();
 		$crm_contact_fields = array();
-		$standard_fields = $this->get_default_fields();
+		$standard_fields    = $this->get_default_fields();
 
 		foreach ( $standard_fields as $data ) {
 			$crm_contact_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -456,7 +450,7 @@ class WPF_Engage {
 			return $response;
 		}
 
-		$tags = array();
+		$tags     = array();
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		foreach ( $response->lists as $list ) {
@@ -479,7 +473,7 @@ class WPF_Engage {
 
 		$request        = $this->url . '/v1/users/' . urlencode( $contact_id ) . '/lists';
 		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( array ( 'lists' => $tags ) );
+		$params['body'] = wp_json_encode( array( 'lists' => $tags ) );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -504,7 +498,7 @@ class WPF_Engage {
 		$request          = $this->url . '/v1/users/' . urlencode( $contact_id ) . '/lists';
 		$params           = $this->get_params();
 		$params['method'] = 'DELETE';
-		$params['body']   = wp_json_encode( array ( 'lists' => $tags ) );
+		$params['body']   = wp_json_encode( array( 'lists' => $tags ) );
 
 		$response = wp_safe_remote_request( $request, $params );
 
@@ -526,16 +520,16 @@ class WPF_Engage {
 	 */
 	public function add_contact( $contact_data ) {
 
-		$contact_id     = md5(uniqid(rand(), true));
-		$request        = $this->url . '/v1/users';
-		$params         = $this->get_params();
-		$data = [];
+		$contact_id = md5( uniqid( rand(), true ) );
+		$request    = $this->url . '/v1/users';
+		$params     = $this->get_params();
+		$data       = array();
 		$data['id'] = $contact_id;
-		foreach ($contact_data as $key => $value) {
-			if (in_array($key, $this->standard_attributes)) {
-				$data[$key] = $value;
+		foreach ( $contact_data as $key => $value ) {
+			if ( in_array( $key, $this->standard_attributes ) ) {
+				$data[ $key ] = $value;
 			} else {
-				$data['meta'][$key] = $value;
+				$data['meta'][ $key ] = $value;
 			}
 		}
 		$params['body'] = wp_json_encode( $data );
@@ -550,7 +544,6 @@ class WPF_Engage {
 
 		// Get new contact ID out of response.
 		return $body->uid;
-
 	}
 
 	/**
@@ -564,15 +557,15 @@ class WPF_Engage {
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
 
-		$request        = $this->url . '/v1/users/' . $contact_id;
-		$params         = $this->get_params();
+		$request          = $this->url . '/v1/users/' . $contact_id;
+		$params           = $this->get_params();
 		$params['method'] = 'PUT';
-		$data = [];
-		foreach ($contact_data as $key => $value) {
-			if (in_array($key, $this->standard_attributes)) {
-				$data[$key] = $value;
+		$data             = array();
+		foreach ( $contact_data as $key => $value ) {
+			if ( in_array( $key, $this->standard_attributes ) ) {
+				$data[ $key ] = $value;
 			} else {
-				$data['meta'][$key] = $value;
+				$data['meta'][ $key ] = $value;
 			}
 		}
 		$params['body'] = wp_json_encode( $data );
@@ -603,15 +596,15 @@ class WPF_Engage {
 			return $response;
 		}
 
-		$user_meta           = array();
-		$contact_fields      = wp_fusion()->settings->get( 'contact_fields' );
-		$response            = json_decode( wp_remote_retrieve_body( $response ), true );
+		$user_meta      = array();
+		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
+		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 			if ( $field_data['active'] ) {
-				if (isset( $response[ $field_data['crm_field'] ] ) && in_array( $field_data['crm_field'], $this->standard_attributes ) ) {
-				$user_meta[ $field_id ] = $response[ $field_data['crm_field'] ];
-				} else if ( isset( $response['meta'][ $field_data['crm_field'] ] ) ) {
+				if ( isset( $response[ $field_data['crm_field'] ] ) && in_array( $field_data['crm_field'], $this->standard_attributes ) ) {
+					$user_meta[ $field_id ] = $response[ $field_data['crm_field'] ];
+				} elseif ( isset( $response['meta'][ $field_data['crm_field'] ] ) ) {
 					$user_meta[ $field_id ] = $response['meta'][ $field_data['crm_field'] ];
 				}
 			}

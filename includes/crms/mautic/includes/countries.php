@@ -3,7 +3,6 @@
  * Countries
  *
  * Returns an array of countries and codes.
- *
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -259,5 +258,5 @@ return array(
 	'WS' => 'Samoa',
 	'YE' => 'Yemen',
 	'ZM' => 'Zambia',
-	'ZW' => 'Zimbabwe'
+	'ZW' => 'Zimbabwe',
 );

@@ -54,7 +54,4 @@ class AC_Automation extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>

@@ -48,15 +48,13 @@ class WPF_Sendlane {
 	 *
 	 * @since   3.24.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-sendlane-admin.php';
+			require_once __DIR__ . '/class-sendlane-admin.php';
 			new WPF_Sendlane_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -64,14 +62,12 @@ class WPF_Sendlane {
 	 *
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
 		$this->list = wpf_get_option( 'default_list' );
-
 	}
 
 	/**
@@ -79,7 +75,6 @@ class WPF_Sendlane {
 	 *
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -91,15 +86,14 @@ class WPF_Sendlane {
 		$post_data['contact_id'] = sanitize_email( $payload->email );
 
 		return $post_data;
-
 	}
 
 
 	/**
 	 * Check HTTP Response for errors and return WP_Error if found.
-	 * 
+	 *
 	 * @since 3.24.0
-	 * 
+	 *
 	 * @param  HTTP_Response $response HTTP Response.
 	 * @param  array         $args     HTTP Request Args.
 	 * @param  string        $url      URL.
@@ -138,7 +132,6 @@ class WPF_Sendlane {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -174,7 +167,6 @@ class WPF_Sendlane {
 	 *
 	 * @return  bool
 	 */
-
 	public function connect( $api_token = false, $test = false ) {
 
 		if ( ! $test ) {
@@ -195,7 +187,6 @@ class WPF_Sendlane {
 	 *
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_tags();
@@ -205,7 +196,6 @@ class WPF_Sendlane {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -213,7 +203,6 @@ class WPF_Sendlane {
 	 *
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$available_tags = array();
@@ -233,7 +222,6 @@ class WPF_Sendlane {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -242,7 +230,6 @@ class WPF_Sendlane {
 	 *
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
 
 		$available_lists = array();
@@ -274,7 +261,6 @@ class WPF_Sendlane {
 		}
 
 		return $available_lists;
-
 	}
 
 
@@ -283,11 +269,10 @@ class WPF_Sendlane {
 	 *
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		// Load built in fields to get field types and subtypes.
-		require dirname( __FILE__ ) . '/sendlane-fields.php';
+		require __DIR__ . '/sendlane-fields.php';
 
 		$standard_fields = array();
 
@@ -325,7 +310,6 @@ class WPF_Sendlane {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 	/**
@@ -365,7 +349,6 @@ class WPF_Sendlane {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->data->tags;
-
 	}
 
 	/**
@@ -386,7 +369,6 @@ class WPF_Sendlane {
 		}
 
 		return true;
-
 	}
 
 
@@ -395,7 +377,6 @@ class WPF_Sendlane {
 	 *
 	 * @return bool|WP_Error True if successful, WP_Error if not.
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$params           = $this->get_params();
@@ -411,7 +392,6 @@ class WPF_Sendlane {
 		}
 
 		return true;
-
 	}
 
 
@@ -463,7 +443,6 @@ class WPF_Sendlane {
 		}
 
 		return $contact_id;
-
 	}
 
 	/**
@@ -480,7 +459,6 @@ class WPF_Sendlane {
 	public function update_contact( $contact_id, $data ) {
 
 		return $this->add_contact( $data );
-
 	}
 
 
@@ -489,7 +467,6 @@ class WPF_Sendlane {
 	 *
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$response = wp_safe_remote_get( 'https://api.sendlane.com/v2/contacts/' . $contact_id, $this->get_params() );
@@ -528,7 +505,6 @@ class WPF_Sendlane {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -553,7 +529,5 @@ class WPF_Sendlane {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

@@ -12,7 +12,6 @@ class WPF_MailPoet_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -36,7 +35,6 @@ class WPF_MailPoet_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -49,7 +47,6 @@ class WPF_MailPoet_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -81,7 +78,6 @@ class WPF_MailPoet_Admin {
 	 * @access  public
 	 * @since   3.31.1
 	 */
-
 	public function register_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -112,7 +108,6 @@ class WPF_MailPoet_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
@@ -136,7 +131,6 @@ class WPF_MailPoet_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_mailpoet_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -152,7 +146,6 @@ class WPF_MailPoet_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );

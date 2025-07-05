@@ -45,17 +45,15 @@ class WPF_MailPoet {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		$this->name = __( 'MailPoet', 'wp-fusion-lite' ); // lets people translate it.
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_MailPoet_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 
@@ -65,7 +63,6 @@ class WPF_MailPoet {
 	 * @access  public
 	 * @return  void
 	 */
-
 	public function init() {}
 
 
@@ -75,7 +72,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -86,7 +82,6 @@ class WPF_MailPoet {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -96,7 +91,6 @@ class WPF_MailPoet {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $test = false ) {
 
 		if ( true == $test && ! class_exists( \MailPoet\API\API::class ) ) {
@@ -108,7 +102,6 @@ class WPF_MailPoet {
 		$this->app = \MailPoet\API\API::MP( 'v1' );
 
 		return true;
-
 	}
 
 
@@ -118,7 +111,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		$this->connect();
@@ -142,7 +134,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$this->connect();
@@ -168,7 +159,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$this->connect();
@@ -184,7 +174,6 @@ class WPF_MailPoet {
 		}
 
 		return $contact['id'];
-
 	}
 
 	/**
@@ -193,7 +182,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$this->connect();
@@ -211,7 +199,6 @@ class WPF_MailPoet {
 		}
 
 		return wp_list_pluck( $contact['subscriptions'], 'segment_id' );
-
 	}
 
 	/**
@@ -220,7 +207,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$this->connect();
@@ -244,7 +230,6 @@ class WPF_MailPoet {
 		}
 
 		return true;
-
 	}
 
 
@@ -254,7 +239,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$this->connect();
@@ -270,7 +254,6 @@ class WPF_MailPoet {
 		}
 
 		return true;
-
 	}
 
 
@@ -280,7 +263,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		$this->connect();
@@ -296,7 +278,6 @@ class WPF_MailPoet {
 		}
 
 		return $contact['id'];
-
 	}
 
 	/**
@@ -305,7 +286,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$this->connect();
@@ -328,7 +308,6 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$this->connect();
@@ -356,7 +335,6 @@ class WPF_MailPoet {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -365,10 +343,8 @@ class WPF_MailPoet {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// Not supported
 	}
-
 }

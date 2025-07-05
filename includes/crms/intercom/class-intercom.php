@@ -50,15 +50,13 @@ class WPF_Intercom {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Intercom_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -67,7 +65,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
@@ -87,7 +84,6 @@ class WPF_Intercom {
 		if ( ! empty( $app_id_code ) ) {
 			$this->edit_url = 'https://app.intercom.com/a/apps/' . $app_id_code . '/users/%s/all-conversations';
 		}
-
 	}
 
 	/**
@@ -112,7 +108,6 @@ class WPF_Intercom {
 		wpf_log( 'info', 0, 'Starting site tracking session for contact #' . $contact_id . ' with email ' . $email . '.' );
 
 		setcookie( 'wpf_guest', $email, time() + DAY_IN_SECONDS * 30, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 	/**
@@ -123,7 +118,6 @@ class WPF_Intercom {
 	 * @access  public
 	 * @return  int Tracking ID
 	 */
-
 	public function get_tracking_id() {
 
 		if ( ! $this->params ) {
@@ -142,7 +136,6 @@ class WPF_Intercom {
 		wp_fusion()->settings->set( 'site_tracking_id', $body_json->app->id_code );
 
 		return $body_json->app->id_code;
-
 	}
 
 	/**
@@ -153,7 +146,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		if ( ! wpf_get_option( 'site_tracking' ) || wpf_get_option( 'staging_mode' ) ) {
@@ -179,7 +171,6 @@ class WPF_Intercom {
 		echo "(function(){var w=window;var ic=w.Intercom;if(typeof ic==='function'){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/' + APP_ID;var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s, x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();";
 		echo '</script>';
 		echo '<!-- End Intercom site tracking -->';
-
 	}
 
 
@@ -204,7 +195,6 @@ class WPF_Intercom {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -213,7 +203,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact_id'] ) ) {
@@ -225,7 +214,6 @@ class WPF_Intercom {
 		$post_data['contact_id'] = sanitize_key( $payload->data->item->user->id );
 
 		return $post_data;
-
 	}
 
 	/**
@@ -234,7 +222,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'intercom' ) !== false ) {
@@ -249,7 +236,6 @@ class WPF_Intercom {
 		}
 
 		return $response;
-
 	}
 
 
@@ -259,7 +245,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return array Customer data
 	 */
-
 	public function set_country_names( $customer_data, $order ) {
 
 		if ( isset( $customer_data['billing_country'] ) ) {
@@ -271,7 +256,6 @@ class WPF_Intercom {
 		}
 
 		return $customer_data;
-
 	}
 
 	/**
@@ -280,7 +264,6 @@ class WPF_Intercom {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_key = null ) {
 
 		// Get saved data from DB
@@ -309,7 +292,6 @@ class WPF_Intercom {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -348,7 +330,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -361,7 +342,6 @@ class WPF_Intercom {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -371,7 +351,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -405,7 +384,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$crm_fields = array(
@@ -446,7 +424,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$request  = 'https://api.intercom.io/users?email=' . rawurlencode( $email_address );
@@ -471,7 +448,6 @@ class WPF_Intercom {
 			return false;
 
 		}
-
 	}
 
 
@@ -507,7 +483,6 @@ class WPF_Intercom {
 			return false;
 
 		}
-
 	}
 
 
@@ -517,7 +492,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -552,7 +526,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -587,7 +560,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -619,7 +591,6 @@ class WPF_Intercom {
 		}
 
 		return true;
-
 	}
 
 
@@ -629,7 +600,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data, $lead = false ) {
 
 		// General cleanup and restructuring.
@@ -655,7 +625,7 @@ class WPF_Intercom {
 			$body['name'] = 'unknown';
 		}
 
-		require_once dirname( __FILE__ ) . '/admin/intercom-fields.php';
+		require_once __DIR__ . '/admin/intercom-fields.php';
 
 		// Move core fields up into the body and out of attributes.
 
@@ -691,7 +661,6 @@ class WPF_Intercom {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
-
 	}
 
 	/**
@@ -705,7 +674,6 @@ class WPF_Intercom {
 	public function add_lead( $data ) {
 
 		return $this->add_contact( $data, $lead = true );
-
 	}
 
 	/**
@@ -714,7 +682,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data, $lead = false ) {
 
 		// General cleanup and restructuring.
@@ -732,7 +699,7 @@ class WPF_Intercom {
 
 		}
 
-		require dirname( __FILE__ ) . '/admin/intercom-fields.php';
+		require __DIR__ . '/admin/intercom-fields.php';
 
 		// Move core fields up into the body and out of attributes.
 
@@ -781,7 +748,6 @@ class WPF_Intercom {
 	public function update_lead( $contact_id, $data ) {
 
 		return $this->update_contact( $contact_id, $data, $lead = true );
-
 	}
 
 	/**
@@ -790,7 +756,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$url      = 'https://api.intercom.io/users/' . $contact_id;
@@ -838,7 +803,6 @@ class WPF_Intercom {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag_query ) {
 
 		if ( ! $this->params ) {
@@ -887,7 +851,6 @@ class WPF_Intercom {
 		}
 
 		return $contact_ids;
-
 	}
 
 	/**
@@ -939,6 +902,4 @@ class WPF_Intercom {
 
 		return true;
 	}
-
-
 }

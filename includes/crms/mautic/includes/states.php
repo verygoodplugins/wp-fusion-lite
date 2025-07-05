@@ -3,7 +3,6 @@
  * States
  *
  * Returns an array of US states and codes.
- *
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

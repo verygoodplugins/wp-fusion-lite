@@ -132,13 +132,12 @@ class WPF_Dynamics_365 {
 
 		// Set up admin options.
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/class-dynamics-365-admin.php';
+			require_once __DIR__ . '/class-dynamics-365-admin.php';
 			new WPF_Dynamics_365_Admin( $this->slug, $this->name, $this );
 		}
 
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -160,7 +159,6 @@ class WPF_Dynamics_365 {
 		if ( ! empty( wpf_get_option( 'dynamics_365_rest_url' ) ) ) {
 			$this->edit_url = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/main.aspx?forceUCI=1&pagetype=entityrecord&etn=' . $this->object_type_singular . '&id=%s';
 		}
-
 	}
 
 	/**
@@ -182,7 +180,6 @@ class WPF_Dynamics_365 {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -219,7 +216,6 @@ class WPF_Dynamics_365 {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -306,7 +302,6 @@ class WPF_Dynamics_365 {
 		}
 
 		return $response;
-
 	}
 
 
@@ -360,7 +355,6 @@ class WPF_Dynamics_365 {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -418,7 +412,6 @@ class WPF_Dynamics_365 {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function refresh_token( $refresh_token = null ) {
 		if ( $refresh_token == null ) {
 			$refresh_token = wpf_get_option( 'dynamics_365_refresh_token' );
@@ -454,7 +447,6 @@ class WPF_Dynamics_365 {
 		wp_fusion()->settings->set( 'dynamics_365_refresh_token', $response->refresh_token );
 
 		return $response->access_token;
-
 	}
 
 
@@ -552,7 +544,7 @@ class WPF_Dynamics_365 {
 		$lookup_field = wp_fusion()->crm->get_crm_field( 'user_email', 'emailaddress1' );
 		$lookup_field = apply_filters( 'wpf_dynamics_365_lookup_field', $lookup_field );
 
-		// Escape single quotes by doubling them
+		// Escape single quotes by doubling them.
 		$email_address = str_replace( "'", "''", $email_address );
 
 		$request  = $this->url . '/' . $this->object_type . '?$filter=' . $lookup_field . ' eq \'' . $email_address . '\'';
@@ -592,7 +584,6 @@ class WPF_Dynamics_365 {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return wp_list_pluck( $response->value, '_listid_value' );
-
 	}
 
 	/**
@@ -647,7 +638,6 @@ class WPF_Dynamics_365 {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -689,7 +679,6 @@ class WPF_Dynamics_365 {
 		}
 
 		return $data;
-
 	}
 
 	/**
@@ -718,7 +707,6 @@ class WPF_Dynamics_365 {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->{ $this->object_type_singular . 'id' };
-
 	}
 
 	/**
@@ -808,8 +796,5 @@ class WPF_Dynamics_365 {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return wp_list_pluck( $response->value, '_entityid_value' );
-
 	}
-
-
 }

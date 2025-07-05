@@ -38,15 +38,13 @@ class WPF_ConvertFox {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_ConvertFox_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -55,7 +53,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ), 10, 1 );
@@ -67,7 +64,6 @@ class WPF_ConvertFox {
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ), 100 );
 
 		add_action( 'wpf_forms_post_submission', array( $this, 'set_tracking_cookie_forms' ), 10, 4 );
-
 	}
 
 	/**
@@ -76,7 +72,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
@@ -92,7 +87,6 @@ class WPF_ConvertFox {
 		}
 
 		return $post_data;
-
 	}
 
 	/**
@@ -101,7 +95,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'getgist' ) !== false && strpos( $url, '?email=' ) === false ) {
@@ -116,7 +109,6 @@ class WPF_ConvertFox {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -138,7 +130,6 @@ class WPF_ConvertFox {
 		}
 
 		return $value;
-
 	}
 
 	/**
@@ -147,7 +138,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		$email = wpf_get_current_user_email();
@@ -162,7 +152,6 @@ class WPF_ConvertFox {
 			echo '</script>';
 
 		}
-
 	}
 
 	/**
@@ -171,7 +160,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return void
 	 */
-
 	public function set_tracking_cookie_forms( $update_data, $user_id, $contact_id, $form_id ) {
 
 		if ( wpf_is_user_logged_in() || headers_sent() ) {
@@ -179,7 +167,6 @@ class WPF_ConvertFox {
 		}
 
 		setcookie( 'wpf_guest', $update_data['email'], time() + DAY_IN_SECONDS * 365, COOKIEPATH, COOKIE_DOMAIN );
-
 	}
 
 	/**
@@ -188,7 +175,6 @@ class WPF_ConvertFox {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_key = null ) {
 
 		// Get saved data from DB
@@ -215,7 +201,6 @@ class WPF_ConvertFox {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -249,7 +234,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -262,7 +246,6 @@ class WPF_ConvertFox {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -272,7 +255,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -302,7 +284,7 @@ class WPF_ConvertFox {
 				$proceed = false;
 			}
 
-			$page++;
+			++$page;
 
 		}
 
@@ -318,7 +300,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -326,7 +307,7 @@ class WPF_ConvertFox {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
+		require __DIR__ . '/admin/convertfox-fields.php';
 
 		$built_in_fields = array();
 
@@ -376,7 +357,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -407,7 +387,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -444,7 +423,6 @@ class WPF_ConvertFox {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $tags;
-
 	}
 
 	/**
@@ -453,7 +431,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -480,7 +457,6 @@ class WPF_ConvertFox {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -489,7 +465,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -521,7 +496,6 @@ class WPF_ConvertFox {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -530,7 +504,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data, $lead = false ) {
 
 		if ( ! $this->params ) {
@@ -566,7 +539,7 @@ class WPF_ConvertFox {
 		}
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
+		require __DIR__ . '/admin/convertfox-fields.php';
 
 		foreach ( $data as $crm_field => $value ) {
 
@@ -587,7 +560,7 @@ class WPF_ConvertFox {
 
 		}
 
-		if ( true === $lead  ) {
+		if ( true === $lead ) {
 			$update_data->type = 'lead';
 		}
 
@@ -603,7 +576,6 @@ class WPF_ConvertFox {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->contact->id;
-
 	}
 
 	/**
@@ -612,7 +584,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data, $lead = false ) {
 
 		if ( ! $this->params ) {
@@ -642,7 +613,7 @@ class WPF_ConvertFox {
 		);
 
 		// Load built in fields to get field types and subtypes
-		require dirname( __FILE__ ) . '/admin/convertfox-fields.php';
+		require __DIR__ . '/admin/convertfox-fields.php';
 
 		foreach ( $data as $crm_field => $value ) {
 
@@ -692,7 +663,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -745,7 +715,6 @@ class WPF_ConvertFox {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -755,7 +724,6 @@ class WPF_ConvertFox {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -784,12 +752,11 @@ class WPF_ConvertFox {
 			if ( count( $body_json->contacts ) < 50 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
 
 
@@ -822,7 +789,6 @@ class WPF_ConvertFox {
 		}
 
 		return $body_json['contact']['id'];
-
 	}
 
 	/**
@@ -836,7 +802,6 @@ class WPF_ConvertFox {
 	public function add_lead( $data ) {
 
 		return $this->add_contact( $data, $lead = true );
-
 	}
 
 
@@ -852,7 +817,6 @@ class WPF_ConvertFox {
 	public function update_lead( $contact_id, $data ) {
 
 		return $this->update_contact( $contact_id, $data, $lead = true );
-
 	}
 
 
@@ -909,5 +873,4 @@ class WPF_ConvertFox {
 
 		return true;
 	}
-
 }

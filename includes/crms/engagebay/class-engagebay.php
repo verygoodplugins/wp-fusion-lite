@@ -69,7 +69,6 @@ class WPF_EngageBay {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -85,7 +84,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
@@ -135,7 +133,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function tracking_code_output() {
 
 		if ( ! wpf_get_option( 'site_tracking' ) ) {
@@ -174,7 +171,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'engagebay' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -205,7 +201,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_post_data( $post_data ) {
 
 		$payload = json_decode( file_get_contents( 'php://input' ) );
@@ -226,7 +221,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array
 	 */
-
 	public function api_success( $user_id, $method ) {
 
 		wp_send_json_success();
@@ -238,7 +232,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'checkbox' == $field_type || 'multiselect' == $field_type ) {
@@ -264,7 +257,6 @@ class WPF_EngageBay {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_key = null ) {
 
 		if ( empty( $api_key ) ) {
@@ -291,7 +283,6 @@ class WPF_EngageBay {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -318,7 +309,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -339,7 +329,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -375,7 +364,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -413,7 +401,6 @@ class WPF_EngageBay {
 	 * @access private
 	 * @return array CRM Fields
 	 */
-
 	private function get_custom_fields( $ext ) {
 		$custom_fields = array();
 
@@ -440,7 +427,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$request  = $this->api_url . $this->contact_by_email_str . $email_address;
@@ -465,7 +451,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -515,7 +500,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -550,7 +534,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -592,7 +575,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -627,7 +609,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -661,7 +642,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -772,7 +752,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -883,7 +862,6 @@ class WPF_EngageBay {
 	 * @access public
 	 * @return array
 	 */
-
 	public function format_contact_api_payload( $data ) {
 
 		// Load built in fields to get field types and subtypes

@@ -41,6 +41,7 @@ class WPF_Mailjet {
 	/**
 	 * Lets us link directly to editing a contact record.
 	 * Edit page has a unique id that is not found in the API.
+	 *
 	 * @var string
 	 */
 
@@ -52,17 +53,15 @@ class WPF_Mailjet {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Mailjet_Admin( $this->slug, $this->name, $this );
 		}
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 10, 3 );
-
 	}
 
 	/**
@@ -71,11 +70,9 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
-
 	}
 
 	/**
@@ -84,7 +81,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'date' === $field_type ) {
@@ -96,7 +92,6 @@ class WPF_Mailjet {
 			return $value;
 
 		}
-
 	}
 
 	/**
@@ -105,7 +100,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'mailjet' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -134,7 +128,6 @@ class WPF_Mailjet {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -143,7 +136,6 @@ class WPF_Mailjet {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $mailjet_username = null, $mailjet_password = null ) {
 
 		// Get saved data from DB
@@ -174,7 +166,6 @@ class WPF_Mailjet {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $mailjet_username = null, $mailjet_password = null, $test = false ) {
 
 		if ( $test == false ) {
@@ -193,7 +184,6 @@ class WPF_Mailjet {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -202,7 +192,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -215,7 +204,6 @@ class WPF_Mailjet {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -224,7 +212,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -258,7 +245,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -292,7 +278,6 @@ class WPF_Mailjet {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 	/**
@@ -301,7 +286,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -329,7 +313,6 @@ class WPF_Mailjet {
 		}
 
 		return $body_json['Data'][0]['ID'];
-
 	}
 
 	/**
@@ -338,7 +321,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -365,7 +347,6 @@ class WPF_Mailjet {
 		}
 
 		return $tags;
-
 	}
 
 	/**
@@ -374,7 +355,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -384,10 +364,10 @@ class WPF_Mailjet {
 		$object_tags = array();
 
 		foreach ( $tags as $tag ) {
-			$object_tags[] = (object) [
+			$object_tags[] = (object) array(
 				'ListID' => $tag,
 				'Action' => 'addnoforce',
-			];
+			);
 		}
 
 		$request          = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
@@ -402,7 +382,6 @@ class WPF_Mailjet {
 		}
 
 		return true;
-
 	}
 
 
@@ -412,7 +391,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -422,10 +400,10 @@ class WPF_Mailjet {
 		$object_tags = array();
 
 		foreach ( $tags as $tag ) {
-			$object_tags[] = (object) [
+			$object_tags[] = (object) array(
 				'ListID' => $tag,
 				'Action' => 'remove',
-			];
+			);
 		}
 
 		$request          = 'https://api.mailjet.com/v3/REST/contact/' . $contact_id . '/managecontactslists';
@@ -440,7 +418,6 @@ class WPF_Mailjet {
 		}
 
 		return true;
-
 	}
 
 
@@ -450,7 +427,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -508,7 +484,6 @@ class WPF_Mailjet {
 		}
 
 		return $body->Data[0]->ID;
-
 	}
 
 	/**
@@ -517,7 +492,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -574,7 +548,6 @@ class WPF_Mailjet {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -583,7 +556,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -636,7 +608,6 @@ class WPF_Mailjet {
 		}
 
 		return $user_meta;
-
 	}
 
 	/**
@@ -645,7 +616,6 @@ class WPF_Mailjet {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -670,7 +640,5 @@ class WPF_Mailjet {
 		}
 
 		return $contact_ids;
-
 	}
-
 }

@@ -39,6 +39,7 @@ class WPF_Quentn {
 
 	/**
 	 * Lets us link directly to editing a contact record.
+	 *
 	 * @var string
 	 */
 
@@ -50,15 +51,13 @@ class WPF_Quentn {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Quentn_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -67,7 +66,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
@@ -80,7 +78,6 @@ class WPF_Quentn {
 			$api_url        = trailingslashit( $host_url );
 			$this->edit_url = 'https://' . $api_url . 'adm/contacts/%d/edit/nojs';
 		}
-
 	}
 
 	/**
@@ -91,11 +88,9 @@ class WPF_Quentn {
 	 * @param int $seconds The number of seconds to sleep
 	 * @return int Sleep time
 	 */
-
 	public function set_sleep_time( $seconds ) {
 
 		return 1;
-
 	}
 
 
@@ -105,7 +100,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'quentn' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -124,7 +118,6 @@ class WPF_Quentn {
 		}
 
 		return $response;
-
 	}
 
 	/**
@@ -133,7 +126,6 @@ class WPF_Quentn {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $api_url = null, $api_key = null ) {
 
 		// Get saved data from DB
@@ -166,7 +158,6 @@ class WPF_Quentn {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $api_url = null, $api_key = null, $test = false ) {
 
 		if ( ! $test ) {
@@ -193,7 +184,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		if ( is_wp_error( $this->connect() ) ) {
@@ -206,7 +196,6 @@ class WPF_Quentn {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 	/**
@@ -215,7 +204,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -250,7 +238,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -260,7 +247,7 @@ class WPF_Quentn {
 		$built_in_fields = array();
 
 		// Load built in fields
-		require dirname( __FILE__ ) . '/admin/quentn-fields.php';
+		require __DIR__ . '/admin/quentn-fields.php';
 
 		foreach ( $quentn_fields as $index => $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -297,7 +284,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -331,7 +317,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -369,7 +354,6 @@ class WPF_Quentn {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $tags;
-
 	}
 
 
@@ -379,7 +363,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -398,7 +381,6 @@ class WPF_Quentn {
 		}
 
 		return true;
-
 	}
 
 
@@ -408,7 +390,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -427,7 +408,6 @@ class WPF_Quentn {
 		}
 
 		return true;
-
 	}
 
 
@@ -437,7 +417,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -457,7 +436,6 @@ class WPF_Quentn {
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $body->id;
-
 	}
 
 	/**
@@ -466,7 +444,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -493,7 +470,6 @@ class WPF_Quentn {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -533,7 +509,6 @@ class WPF_Quentn {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -543,12 +518,9 @@ class WPF_Quentn {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		// Not possible
 		return array();
-
 	}
-
 }

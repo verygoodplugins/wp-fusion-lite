@@ -60,7 +60,6 @@ class WPF_FluentCRM_REST_Admin {
 	 *
 	 * @since 3.37.14
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
@@ -349,7 +348,6 @@ class WPF_FluentCRM_REST_Admin {
 	 * @param  array $options The options.
 	 * @return array The options.
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( true == $options['connection_configured'] ) {

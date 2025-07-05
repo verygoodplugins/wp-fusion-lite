@@ -158,35 +158,41 @@ function initializeTagsSelect(target) {
 			jQuery(this).on('select4:select', function(e) {
 
 				// Check if a new tag from API is added.
-
 				if( e.params.data.fromAPI ) {
+					var select = jQuery(this);
 
-					var that = jQuery(this);
-					that.next().find( 'span.select4-selection' ).append('<i id="wpf-select4-tags-loading" class="fa fa-spinner fa-spin"></i>');
+					// Add loading overlay to body if it doesn't exist
+					if (!jQuery('.wpf-loading-overlay').length) {
+						jQuery('body').append('<div class="wpf-loading-overlay"><div class="wpf-loading-content"><img src="' + ajaxurl.replace('admin-ajax.php', 'images/spinner.gif') + '" class="wpf-spinner" /><p>' + wpf_admin.strings.addingTagLoader + '</p></div></div>');
+					}
+
+					// Show loading overlay
+					jQuery('.wpf-loading-overlay').css('display', 'flex');
 
 					var data = {
-						'action'	  : 'add_tags_api',
+						'action'      : 'add_tags_api',
 						'_ajax_nonce' : wpf_admin.nonce,
 						'tag'         : e.params.data,
 					}
 					
 					jQuery.post(ajaxurl, data, function(response) {
 
-						jQuery('#wpf-select4-tags-loading').remove();
+						// Hide loading overlay
+						jQuery('.wpf-loading-overlay').hide();
 
 						if( response.success === true ){
-
-							that.find( '[value="'+e.params.data.id+'"]' ).replaceWith('<option selected value="' + response.data.tag_id + '">' + response.data.tag_name + '</option>');
-
+							select.find('option[value="' + e.params.data.id + '"]').replaceWith('<option selected value="' + response.data.tag_id + '">' + response.data.tag_name + '</option>');
 						} else {
-
-							alert( 'Error adding tag: ' + response.data[0].message );
-							that.find('[value="' + e.params.data.id + '"]').remove();
+							alert('Error adding tag: ' + response.data[0].message);
+							select.find('option[value="' + e.params.data.id + '"]').remove();
 						}
 
+					}).fail(function() {
+						// Hide loading overlay on error
+						jQuery('.wpf-loading-overlay').hide();
 					});
 				}
-			});;
+			});
 
 			if( jQuery.inArray('add_tags', wpf_admin.crm_supports) > -1 || jQuery.inArray('add_tags_api', wpf_admin.crm_supports) > -1 ) {
 
@@ -267,7 +273,6 @@ jQuery(document).ready(function($){
 
 		// Support for EDD 3.0+ sections
 		document.addEventListener('edd_repeatable_row_change', function(e) {
-			console.dir(e);
 			if(e.detail && e.detail.row) {
 				initializeTagsSelect('#' + e.detail.row.attr('id'));
 			}
@@ -508,26 +513,23 @@ jQuery(document).ready(function($){
 					tags: true,
 					multiple: false,
 					matcher: matcher,
-						createTag: function(params) {
-
-							var term = params.term ? params.term.trim() : '';
-
-							if(term === "") { return null; }
-
-							var optionsMatch = false;
-
-							this.$element.find("option").each(function() {
-									if(this.label.toLowerCase().indexOf(term.toLowerCase()) > -1) {
-										optionsMatch = true;
-									}
-							});
-
-							if(optionsMatch) {
-									return null;
+					createTag: function(params) {
+						var term = params.term ? params.term.trim() : '';
+						if(term === "") { return null; }
+						
+						var exactMatch = false;
+						this.$element.find("option").each(function() {
+							if(this.label.toLowerCase() === term.toLowerCase()) {
+								exactMatch = true;
 							}
-
-							return {id: term, text: term + ' (new)'};
-						},
+						});
+						
+						if(exactMatch) {
+							return null;
+						}
+						
+						return {id: term, text: term + ' (new)'};
+					},
 					escapeMarkup: function (markup) {
 						return markup;
 					},
@@ -922,7 +924,7 @@ jQuery(document).ready(function($){
 			mutations.forEach((mutation) => {
 				if (mutation.addedNodes.length) {
 					mutation.addedNodes.forEach((node) => {
-						if (node.classList && node.classList.contains('section-content--is-dynamic')) {
+						if (node.classList && node.classList.contains('edd-section-content__row')) {
 							// Convert DOM node to jQuery selector
 							initializeTagsSelect('#' + node.id);
 						}
@@ -944,22 +946,24 @@ jQuery(document).ready(function($){
 
 		if($( ".edd-recurring-enabled" ).length) {
 
-			$('.edd-recurring-enabled select, select#edd_recurring').on( 'change', function(event) {
+			// Use event delegation to handle both existing and dynamically added elements
+			$(document).on('change', '.edd-recurring-enabled select, select#edd_recurring', function(event) {
+				var $row = $(this).closest('.edd-variable-price__row, .edd_repeatable_row');
 				
-				var recurring = false;
-
-				if($(this).val() == 'yes') {
-					recurring = true;
-				}
-
-				if(recurring == true) {
-					$('.wpf-edd-recurring-options').slideDown();
+				if($(this).val() === 'yes') {
+					$row.find('.wpf-edd-recurring-options, .wpf-edd-custom-price-option-section.wpf-edd-recurring-options').slideDown();
 				} else {
-					$('.wpf-edd-recurring-options').slideUp();
+					$row.find('.wpf-edd-recurring-options, .wpf-edd-custom-price-option-section.wpf-edd-recurring-options').slideUp();
 				}
-
 			});
-
+			
+			// Trigger the change event on page load to set initial state
+			$('.edd-recurring-enabled select, select#edd_recurring').each(function() {
+				if($(this).val() === 'yes') {
+					var $row = $(this).closest('.edd-variable-price__row, .edd_repeatable_row');
+					$row.find('.wpf-edd-recurring-options, .wpf-edd-custom-price-option-section.wpf-edd-recurring-options').show();
+				}
+			});
 		}
 	}
 

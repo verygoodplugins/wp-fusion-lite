@@ -87,6 +87,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Quentn
 * Salesflare
 * Salesforce
+* Sender.net
 * SendFox
 * SendinBlue
 * Sendlane

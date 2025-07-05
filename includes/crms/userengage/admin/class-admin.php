@@ -12,7 +12,6 @@ class WPF_UserEngage_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function __construct( $slug, $name, $crm ) {
 
 		$this->slug = $slug;
@@ -28,7 +27,6 @@ class WPF_UserEngage_Admin {
 		if ( wpf_get_option( 'crm' ) == $this->slug ) {
 			$this->init();
 		}
-
 	}
 
 	/**
@@ -37,11 +35,9 @@ class WPF_UserEngage_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-
 	}
 
 
@@ -51,7 +47,6 @@ class WPF_UserEngage_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function register_connection_settings( $settings, $options ) {
 
 		$new_settings = array();
@@ -83,7 +78,6 @@ class WPF_UserEngage_Admin {
 		$settings = wp_fusion()->settings->insert_setting_after( 'crm', $settings, $new_settings );
 
 		return $settings;
-
 	}
 
 
@@ -93,12 +87,11 @@ class WPF_UserEngage_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function add_default_fields( $options ) {
 
 		if ( $options['connection_configured'] == true ) {
 
-			require_once dirname( __FILE__ ) . '/userengage-fields.php';
+			require_once __DIR__ . '/userengage-fields.php';
 
 			foreach ( $options['contact_fields'] as $field => $data ) {
 
@@ -109,7 +102,6 @@ class WPF_UserEngage_Admin {
 		}
 
 		return $options;
-
 	}
 
 
@@ -119,7 +111,6 @@ class WPF_UserEngage_Admin {
 	 * @access  public
 	 * @since   1.0
 	 */
-
 	public function show_field_userengage_header_begin( $id, $field ) {
 
 		echo '</table>';
@@ -130,7 +121,6 @@ class WPF_UserEngage_Admin {
 		}
 
 		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
-
 	}
 
 	/**
@@ -139,7 +129,6 @@ class WPF_UserEngage_Admin {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function test_connection() {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
@@ -167,7 +156,5 @@ class WPF_UserEngage_Admin {
 		}
 
 		die();
-
 	}
-
 }

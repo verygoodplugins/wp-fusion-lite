@@ -51,7 +51,6 @@ class WPF_FluentCRM {
 	 * @access  public
 	 * @since   3.35
 	 */
-
 	public function __construct() {
 
 		// Set up admin options
@@ -67,7 +66,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		add_filter( 'wpf_api_preflight_check', array( $this, 'preflight_check' ) );
@@ -119,7 +117,6 @@ class WPF_FluentCRM {
 	 *
 	 * @return bool|WP_Error
 	 */
-
 	public function preflight_check( $check ) {
 
 		if ( ! defined( 'FLUENTCRM' ) ) {
@@ -162,7 +159,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return mixed
 	 */
-
 	public function format_field_value( $value, $field_type, $field ) {
 
 		if ( 'date' === $field_type && ! empty( $value ) ) {
@@ -194,7 +190,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function connect( $test = false ) {
 
 		if ( true == $test && ! defined( 'FLUENTCRM' ) ) {
@@ -210,7 +205,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->sync_lists();
@@ -227,7 +221,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return array Tags
 	 */
-
 	public function sync_tags() {
 
 		$all_tags       = FluentCrmApi( 'tags' )->all();
@@ -249,7 +242,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_lists() {
 		$lists           = FluentCrmApi( 'lists' )->all();
 		$available_lists = array();
@@ -271,7 +263,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		$built_in_fields           = FluentCrmApi( 'contacts' )->getInstance()->mappables();
@@ -299,7 +290,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $email_address );
@@ -318,7 +308,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return array
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
@@ -342,7 +331,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		$this->wpf_modifying_tags = true; // Prevents infinite loop (see contact_tags_added_removed() below).
@@ -365,7 +353,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		$this->wpf_modifying_tags = true; // Prevents infinite loop (see contact_tags_added_removed() below).
@@ -388,7 +375,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( empty( $data['email'] ) ) {
@@ -473,7 +459,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		$custom_fields = $this->get_custom_fields();
@@ -529,7 +514,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		$contact = FluentCrmApi( 'contacts' )->getContact( $contact_id );
@@ -565,7 +549,6 @@ class WPF_FluentCRM {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag_id = false ) {
 
 		$model = FluentCrmApi( 'contacts' )->getInstance();

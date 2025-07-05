@@ -43,7 +43,6 @@ class WPF_Loopify {
 	 * @access  public
 	 * @since   2.0
 	 */
-
 	public function __construct() {
 
 		// OAuth
@@ -52,10 +51,9 @@ class WPF_Loopify {
 
 		// Set up admin options
 		if ( is_admin() ) {
-			require_once dirname( __FILE__ ) . '/admin/class-admin.php';
+			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Loopify_Admin( $this->slug, $this->name, $this );
 		}
-
 	}
 
 	/**
@@ -64,12 +62,10 @@ class WPF_Loopify {
 	 * @access public
 	 * @return void
 	 */
-
 	public function init() {
 
 		// Error handling
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
-
 	}
 
 	/**
@@ -78,7 +74,6 @@ class WPF_Loopify {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function refresh_token() {
 
 		$refresh_token = wpf_get_option( 'loopify_refresh_token' );
@@ -111,7 +106,6 @@ class WPF_Loopify {
 		wp_fusion()->settings->set( 'loopify_refresh_token', $body_json->refresh_token );
 
 		return $body_json->access_token;
-
 	}
 
 
@@ -121,7 +115,6 @@ class WPF_Loopify {
 	 * @access  public
 	 * @return  array Params
 	 */
-
 	public function get_params( $access_token = null ) {
 
 		// Get saved data from DB
@@ -148,7 +141,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return HTTP Response
 	 */
-
 	public function handle_http_response( $response, $args, $url ) {
 
 		if ( strpos( $url, 'loopify' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
@@ -190,7 +182,6 @@ class WPF_Loopify {
 		}
 
 		return $response;
-
 	}
 
 
@@ -201,7 +192,6 @@ class WPF_Loopify {
 	 * @access  public
 	 * @return  bool
 	 */
-
 	public function connect( $access_token = null, $test = false ) {
 
 		if ( ! $this->params ) {
@@ -220,7 +210,6 @@ class WPF_Loopify {
 		}
 
 		return true;
-
 	}
 
 
@@ -230,7 +219,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function sync() {
 
 		$this->connect();
@@ -241,7 +229,6 @@ class WPF_Loopify {
 		do_action( 'wpf_sync' );
 
 		return true;
-
 	}
 
 
@@ -251,7 +238,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return array Lists
 	 */
-
 	public function sync_tags() {
 
 		if ( ! $this->params ) {
@@ -291,7 +277,6 @@ class WPF_Loopify {
 		wp_fusion()->settings->set( 'available_tags', $available_tags );
 
 		return $available_tags;
-
 	}
 
 
@@ -301,7 +286,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return array CRM Fields
 	 */
-
 	public function sync_crm_fields() {
 
 		if ( ! $this->params ) {
@@ -311,7 +295,7 @@ class WPF_Loopify {
 		$built_in_fields = array();
 
 		// Load built in fields
-		require_once dirname( __FILE__ ) . '/admin/loopify-fields.php';
+		require_once __DIR__ . '/admin/loopify-fields.php';
 
 		foreach ( $loopify_fields as $index => $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
@@ -340,7 +324,6 @@ class WPF_Loopify {
 		wp_fusion()->settings->set( 'crm_fields', $crm_fields );
 
 		return $crm_fields;
-
 	}
 
 
@@ -350,7 +333,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function get_contact_id( $email_address ) {
 
 		if ( ! $this->params ) {
@@ -371,7 +353,6 @@ class WPF_Loopify {
 		}
 
 		return $response->contacts[0]->_id;
-
 	}
 
 
@@ -381,7 +362,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return void
 	 */
-
 	public function get_tags( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -408,7 +388,6 @@ class WPF_Loopify {
 		}
 
 		return $tags;
-
 	}
 
 
@@ -418,7 +397,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function apply_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -448,7 +426,6 @@ class WPF_Loopify {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -457,7 +434,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function remove_tags( $tags, $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -487,7 +463,6 @@ class WPF_Loopify {
 		}
 
 		return true;
-
 	}
 
 
@@ -497,7 +472,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return int Contact ID
 	 */
-
 	public function add_contact( $data ) {
 
 		if ( ! $this->params ) {
@@ -546,7 +520,6 @@ class WPF_Loopify {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return $response->_id;
-
 	}
 
 	/**
@@ -555,7 +528,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return bool
 	 */
-
 	public function update_contact( $contact_id, $data ) {
 
 		if ( ! $this->params ) {
@@ -603,7 +575,6 @@ class WPF_Loopify {
 		}
 
 		return true;
-
 	}
 
 	/**
@@ -612,7 +583,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return array User meta data that was returned
 	 */
-
 	public function load_contact( $contact_id ) {
 
 		if ( ! $this->params ) {
@@ -652,7 +622,6 @@ class WPF_Loopify {
 		}
 
 		return $user_meta;
-
 	}
 
 
@@ -662,7 +631,6 @@ class WPF_Loopify {
 	 * @access public
 	 * @return array Contact IDs returned
 	 */
-
 	public function load_contacts( $tag ) {
 
 		if ( ! $this->params ) {
@@ -696,13 +664,10 @@ class WPF_Loopify {
 			if ( count( $response->contacts ) < 100 ) {
 				$proceed = false;
 			} else {
-				$page++;
+				++$page;
 			}
 		}
 
 		return $contact_ids;
-
 	}
-
-
 }

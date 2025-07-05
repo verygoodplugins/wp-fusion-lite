@@ -20,7 +20,7 @@ class AC_Tracking extends ActiveCampaign {
 	function site_status( $params, $post_data ) {
 		// version 2 only.
 		$request_url = "{$this->url_base}/track/site";
-		$response    = $this->curl( $request_url, $post_data, "POST", "tracking_site_status" );
+		$response    = $this->curl( $request_url, $post_data, 'POST', 'tracking_site_status' );
 
 		return $response;
 	}
@@ -31,7 +31,7 @@ class AC_Tracking extends ActiveCampaign {
 	function event_status( $params, $post_data ) {
 		// version 2 only.
 		$request_url = "{$this->url_base}/track/event";
-		$response    = $this->curl( $request_url, $post_data, "POST", "tracking_event_status" );
+		$response    = $this->curl( $request_url, $post_data, 'POST', 'tracking_event_status' );
 
 		return $response;
 	}
@@ -42,11 +42,11 @@ class AC_Tracking extends ActiveCampaign {
 	function site_list( $params ) {
 		if ( $this->version == 1 ) {
 			// not supported currently.
-			//$request_url = "{$this->url}&api_action=contact_delete_list&api_output={$this->output}&{$params}";
+			// $request_url = "{$this->url}&api_action=contact_delete_list&api_output={$this->output}&{$params}";
 		} elseif ( $this->version == 2 ) {
 			$request_url = "{$this->url_base}/track/site";
 		}
-		$response = $this->curl( $request_url, array(), "GET", "tracking_site_list" );
+		$response = $this->curl( $request_url, array(), 'GET', 'tracking_site_list' );
 
 		return $response;
 	}
@@ -57,11 +57,11 @@ class AC_Tracking extends ActiveCampaign {
 	function event_list( $params ) {
 		if ( $this->version == 1 ) {
 			// not supported currently.
-			//$request_url = "{$this->url}&api_action=contact_delete_list&api_output={$this->output}&{$params}";
+			// $request_url = "{$this->url}&api_action=contact_delete_list&api_output={$this->output}&{$params}";
 		} elseif ( $this->version == 2 ) {
 			$request_url = "{$this->url_base}/track/event";
 		}
-		$response = $this->curl( $request_url, array(), "GET", "tracking_event_list" );
+		$response = $this->curl( $request_url, array(), 'GET', 'tracking_event_list' );
 
 		return $response;
 	}
@@ -72,7 +72,7 @@ class AC_Tracking extends ActiveCampaign {
 	function whitelist( $params, $post_data ) {
 		// version 2 only.
 		$request_url = "{$this->url_base}/track/site";
-		$response    = $this->curl( $request_url, $post_data, "PUT", "tracking_whitelist" );
+		$response    = $this->curl( $request_url, $post_data, 'PUT', 'tracking_whitelist' );
 
 		return $response;
 	}
@@ -83,7 +83,7 @@ class AC_Tracking extends ActiveCampaign {
 	function whitelist_remove( $params, $post_data ) {
 		// version 2 only.
 		$request_url = "{$this->url_base}/track/site";
-		$response    = $this->curl( $request_url, $post_data, "DELETE", "tracking_whitelist" );
+		$response    = $this->curl( $request_url, $post_data, 'DELETE', 'tracking_whitelist' );
 
 		return $response;
 	}
@@ -94,7 +94,7 @@ class AC_Tracking extends ActiveCampaign {
 	function event_remove( $params, $post_data ) {
 		// version 2 only.
 		$request_url = "{$this->url_base}/track/event";
-		$response    = $this->curl( $request_url, $post_data, "DELETE", "tracking_event_remove" );
+		$response    = $this->curl( $request_url, $post_data, 'DELETE', 'tracking_event_remove' );
 
 		return $response;
 	}
@@ -103,24 +103,21 @@ class AC_Tracking extends ActiveCampaign {
 	 * Adds a new event.
 	 */
 	function log( $params, $post_data ) {
-		$request_url        = "https://trackcmp.net/event";
-		$post_data["actid"] = $this->track_actid;
-		$post_data["key"]   = $this->track_key;
+		$request_url        = 'https://trackcmp.net/event';
+		$post_data['actid'] = $this->track_actid;
+		$post_data['key']   = $this->track_key;
 		$visit_data         = array();
 		if ( $this->track_email ) {
-			$visit_data["email"] = $this->track_email;
+			$visit_data['email'] = $this->track_email;
 		}
-		if ( isset( $post_data["visit"] ) ) {
-			$visit_data = array_merge( $visit_data, $post_data["visit"] );
+		if ( isset( $post_data['visit'] ) ) {
+			$visit_data = array_merge( $visit_data, $post_data['visit'] );
 		}
 		if ( $visit_data ) {
-			$post_data["visit"] = wp_json_encode( $visit_data );
+			$post_data['visit'] = wp_json_encode( $visit_data );
 		}
-		$response = $this->curl( $request_url, $post_data, "POST", "tracking_log" );
+		$response = $this->curl( $request_url, $post_data, 'POST', 'tracking_log' );
 
 		return $response;
 	}
-
 }
-
-?>

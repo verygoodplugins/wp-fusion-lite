@@ -111,7 +111,4 @@ class AC_Message extends ActiveCampaign {
 
 		return $response;
 	}
-
 }
-
-?>
