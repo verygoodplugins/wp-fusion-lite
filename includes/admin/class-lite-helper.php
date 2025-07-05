@@ -81,7 +81,7 @@ class WPF_Lite_Helper {
 	 */
 	public function handle_webhooks() {
 
-		if ( isset( $_REQUEST['wpf_action'] ) ) {
+		if ( ! is_admin() && isset( $_REQUEST['wpf_action'] ) ) {
 
 			$message = 'Webhook received but WP Fusion Lite does not support <a href="https://wpfusion.com/documentation/webhooks/' . wp_fusion()->crm->slug . '-webhooks/" target="_blank">' . wp_fusion()->crm->name . ' webhooks</a>. Please upgrade to the full version of WP Fusion to sync data bidirectionally with your CRM.';
 

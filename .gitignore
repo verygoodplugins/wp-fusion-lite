@@ -8,3 +8,5 @@ composer.json
 .idea/vcs.xml
 wp-fusion-lite.code-workspace
 .cursor/scratchpad.md
+vendor/
+composer.lock

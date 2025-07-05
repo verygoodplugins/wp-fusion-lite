@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
 Tested up to: 6.8.2
-Stable tag: 3.46.3
+Stable tag: 3.46.3.1
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -212,6 +212,9 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.46.3.1 - 7/5/2025 =
+* Fixed Klaviyo deactivate URL not working in Lite plugin
 
 = 3.46.3 - 7/5/2025 =
 * Added dynamic tagging support to Zoho (type new tags into WP Fusion, generate tags based on product names and order statuses)
