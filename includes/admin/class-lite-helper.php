@@ -324,7 +324,7 @@ class WPF_Lite_Helper {
 		echo '<a href="#wp_fusion_tab">';
 		// phpcs:ignore
 		echo wpf_logo_svg( '14px' ); // escaped in admin-functions.php
-		echo '<span>' . esc_html_e( 'WP Fusion', 'wp-fusion-lite' ) . '</span>';
+		echo '<span>' . esc_html__( 'WP Fusion', 'wp-fusion-lite' ) . '</span>';
 		echo '</a>';
 		echo '</li>';
 	}
