@@ -40,26 +40,7 @@ class WPF_Klaviyo_Admin {
 	 */
 	public function init() {
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		// add_action( 'wpf_settings_notices', array( $this, 'oauth_warning' ) );
-	}
-
-
-	/**
-	 * Check if we need to upgrade to the new OAuth.
-	 *
-	 * @since 3.46.0
-	 */
-	public function oauth_warning() {
-
-		if ( ! wpf_get_option( 'klaviyo_token' ) ) {
-
-			echo '<div class="notice notice-warning wpf-notice"><p>';
-
-			echo wp_kses_post( sprintf( __( '<strong>Heads up:</strong> WP Fusion\'s Klaviyo integration has been updated to use OAuth authentication.<br> Please %1$sclick here to re-authorize the connection%2$s and enable a deeper integration with new Klaviyo features.', 'wp-fusion-lite' ), '<a href="' . $this->get_oauth_url() . '">', '</a>' ) );
-
-			echo '</p></div>';
-
-		}
+		add_action( 'wpf_resetting_options', array( $this, 'revoke_tokens_on_reset' ) );
 	}
 
 
@@ -104,21 +85,13 @@ class WPF_Klaviyo_Admin {
 			);
 
 		} else {
-			$new_settings['klaviyo_token'] = array(
-				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
-				'type'           => 'text',
-				'section'        => 'setup',
-				'input_disabled' => true,
-			);
-
-			$new_settings['klaviyo_refresh_token'] = array(
-				'title'          => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'           => 'api_validate',
-				'section'        => 'setup',
-				'class'          => 'api_key',
-				'input_disabled' => true,
-				'post_fields'    => array( 'klaviyo_token', 'klaviyo_refresh_token' ),
-				'desc'           => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. <a href="https://wpfusion.com/oauth/connections/">' . esc_html__( 'Manage connections', 'wp-fusion-lite' ) . '</a>.',
+			$new_settings['klaviyo_oauth_status'] = array(
+				'title'       => __( 'Connection Status', 'wp-fusion-lite' ),
+				'type'        => 'oauth_connection_status',
+				'section'     => 'setup',
+				'name'        => $this->name,
+				'url'         => $this->get_oauth_url(),
+				'post_fields' => array( 'klaviyo_token', 'klaviyo_refresh_token' ),
 			);
 
 		}
@@ -156,10 +129,8 @@ class WPF_Klaviyo_Admin {
 				wp_die( 'OAuth Error: Failed to get access token from Klaviyo. Please check <a href="' . esc_url( admin_url( 'tools.php?page=wpf-settings-logs' ) ) . '">the logs</a> for more details.' );
 			}
 
-			// Clean up the code verifier
+			// Clean up the code verifier.
 			delete_option( 'wpf_klaviyo_code_verifier' );
-
-			// wp_fusion()->settings->set( 'connection_configured', true );
 
 			wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
 			exit;
@@ -497,6 +468,27 @@ class WPF_Klaviyo_Admin {
 	}
 
 	/**
+	 * Revoke tokens when settings are reset.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @param array $options The options.
+	 */
+	public function revoke_tokens_on_reset( $options ) {
+
+		// Only revoke if we have a refresh token (indicating an active OAuth connection).
+		if ( ! empty( $options['klaviyo_refresh_token'] ) ) {
+			$result = $this->crm->revoke_token();
+
+			if ( is_wp_error( $result ) ) {
+				wpf_log( 'error', 0, 'Failed to revoke Klaviyo tokens on settings reset: ' . $result->get_error_message() );
+			} else {
+				wpf_log( 'info', 0, 'Klaviyo tokens successfully revoked during settings reset.' );
+			}
+		}
+	}
+
+	/**
 	 * Loads standard Klaviyo field names and attempts to match them up with standard local ones
 	 *
 	 * @access  public
@@ -504,7 +496,7 @@ class WPF_Klaviyo_Admin {
 	 */
 	public function add_default_fields( $options ) {
 
-		if ( $options['connection_configured'] == true ) {
+		if ( ! empty( $options['connection_configured'] ) ) {
 
 			require_once __DIR__ . '/klaviyo-fields.php';
 

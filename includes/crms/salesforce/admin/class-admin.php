@@ -306,12 +306,16 @@ class WPF_Salesforce_Admin {
 			$response = wp_safe_remote_post( $url, $params );
 
 			if ( is_wp_error( $response ) ) {
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
+				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->get_error_message() );
 				return false;
 			}
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $body->error ) ) {
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $body->error . ' - ' . $body->error_description );
+				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $body->error . ' - ' . $body->error_description );
 				return false;
 			}
 

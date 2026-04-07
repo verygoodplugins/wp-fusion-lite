@@ -147,12 +147,20 @@ class WPF_Zoho {
 
 		} elseif ( 'checkbox' === $field_type ) {
 
+			// Handle string '0' and other falsy values that should be false
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
+				return false;
+			}
+
 			if ( ! empty( $value ) ) {
 
 				// If checkbox is selected
 				return true;
 
 			}
+
+			// Default to false for empty values
+			return false;
 		} elseif ( 'text' === $field_type ) {
 
 			if ( is_array( $value ) ) {
@@ -660,7 +668,7 @@ class WPF_Zoho {
 	/**
 	 * Applies tags to a contact
 	 *
-	 * @since  x.x.x
+	 * @since  3.46.3
 	 *
 	 * @param  array $tags       Array of tag names to apply.
 	 * @param  int   $contact_id Contact ID to apply tags to.
@@ -709,7 +717,7 @@ class WPF_Zoho {
 	/**
 	 * Removes tags from a contact
 	 *
-	 * @since  x.x.x
+	 * @since  3.46.3
 	 *
 	 * @param  array $tags       Array of tag names to remove.
 	 * @param  int   $contact_id Contact ID to remove tags from.
@@ -779,7 +787,7 @@ class WPF_Zoho {
 
 		$layout = wpf_get_option( 'zoho_layout' );
 
-		if ( ! empty( $layout ) && empty( $data['Layout'] ) ) {
+		if ( ! empty( $layout ) && empty( $data['Layout'] ) && 'Contacts' === $this->object_type ) {
 			$data['Layout'] = $layout;
 		}
 

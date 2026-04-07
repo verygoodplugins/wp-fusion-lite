@@ -70,7 +70,7 @@ class WPF_ConvertKit_Admin {
 
 		$new_settings['ck_secret'] = array(
 			'title'       => __( 'API Secret', 'wp-fusion-lite' ),
-			'desc'        => __( 'Enter the API Key and API Secret for your ConvertKit account (you can find your API keys in the <a href="https://app.convertkit.com/account_settings/advanced_settings" target="_blank">ConvertKit Account</a> page).', 'wp-fusion-lite' ),
+			'desc'        => __( 'Enter the API Key and API Secret for your Kit account (you can find your API keys in the <a href="https://app.convertkit.com/account_settings/advanced_settings" target="_blank">ConvertKit Account</a> page).', 'wp-fusion-lite' ),
 			'type'        => 'api_validate',
 			'section'     => 'setup',
 			'class'       => 'api_key',

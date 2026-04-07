@@ -146,17 +146,12 @@ class WPF_BirdSend_Admin {
 
 		} else {
 
-			$new_settings['birdsend_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'type'    => 'text',
-				'section' => 'setup',
-			);
-
-			$new_settings['birdsend_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'        => 'api_validate',
+			$new_settings['birdsend_oauth_status'] = array(
+				'title'       => __( 'Connection Status', 'wp-fusion-lite' ),
+				'type'        => 'oauth_connection_status',
 				'section'     => 'setup',
-				'class'       => 'api_key',
+				'name'        => $this->name,
+				'url'         => $this->get_oauth_url(),
 				'post_fields' => array( 'birdsend_token', 'birdsend_refresh_token' ),
 			);
 

@@ -34,7 +34,12 @@ $nationbuilder_fields['user_url'] = array(
 
 $nationbuilder_fields['phone_number'] = array(
 	'crm_field' => 'phone',
-	'crm_label' => 'Phone',
+	'crm_label' => 'Phone (v1)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'phone_number',
+	'crm_label' => 'Phone (v2)',
 );
 
 $nationbuilder_fields['billing_phone'] = array(
@@ -49,7 +54,12 @@ $nationbuilder_fields[] = array(
 
 $nationbuilder_fields[] = array(
 	'crm_field' => 'mobile',
-	'crm_label' => 'Phone (Mobile)',
+	'crm_label' => 'Phone (Mobile) (v1)',
+);
+
+$nationbuilder_fields[] = array(
+	'crm_field' => 'mobile_number',
+	'crm_label' => 'Phone (Mobile) (v2)',
 );
 
 // Billing
@@ -523,7 +533,6 @@ $nationbuilder_ignore_fields = array(
 	'is_twitter_follower',
 	'labour_region',
 	'linkedin_id',
-	'mobile',
 	'middle_name',
 	'nbec_guid',
 	'ngp_id',

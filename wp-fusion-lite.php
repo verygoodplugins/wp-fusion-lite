@@ -1,17 +1,21 @@
 <?php
-
 /**
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.46.3.1
+ * Version: 3.47.10
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
- * Text Domain: wp-fusion-lite
+ * Text Domain: wp-fusion
+ * GitHub Plugin URI: verygoodplugins/wp-fusion-lite
+ *
+ * @package WP_Fusion_Lite
  */
 
 /**
- * @copyright Copyright (c) 2018. All rights reserved.
+ * License and copyright information.
+ *
+ * @copyright Copyright (c) 2026. All rights reserved.
  *
  * @license   Released under the GPL license http://www.opensource.org/licenses/gpl-license.php
  *
@@ -28,7 +32,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.46.3.1' );
+define( 'WP_FUSION_VERSION', '3.47.10' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -38,7 +42,7 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 /**
- * Main WP_Fusion class.
+ * Main WP_Fusion_Lite class.
  *
  * @since 1.0.0
  */
@@ -47,7 +51,7 @@ final class WP_Fusion_Lite {
 	/** Singleton *************************************************************/
 
 	/**
-	 * @var WP_Fusion The one true WP_Fusion
+	 * @var WP_Fusion_Lite The one true WP_Fusion_Lite
 	 * @since 1.0
 	 */
 	private static $instance;
@@ -161,6 +165,14 @@ final class WP_Fusion_Lite {
 	public $lead_source_tracking;
 
 	/**
+	 * Handles tag ID migration and runtime translation.
+	 *
+	 * @since 3.47.8
+	 * @var WPF_Tag_Migration
+	 */
+	public $tag_migration;
+
+	/**
 	 * Handles ISO 3166-1 alpha-3 and alpha-2 codes
 	 *
 	 * @var WPF_ISO_Regions
@@ -229,6 +241,7 @@ final class WP_Fusion_Lite {
 				self::$instance->lead_source_tracking = new WPF_Lead_Source_Tracking();
 				self::$instance->access               = new WPF_Access_Control();
 				self::$instance->auto_login           = new WPF_Auto_Login();
+				self::$instance->tag_migration        = new WPF_Tag_Migration();
 				self::$instance->ajax                 = new WPF_AJAX();
 				self::$instance->iso_regions          = new WPF_ISO_Regions();
 
@@ -400,6 +413,7 @@ final class WP_Fusion_Lite {
 				'ontraport'        => 'WPF_Ontraport',
 				'drip'             => 'WPF_Drip',
 				'convertkit'       => 'WPF_ConvertKit',
+				'kit'              => 'WPF_Kit',
 				'agilecrm'         => 'WPF_AgileCRM',
 				'salesforce'       => 'WPF_Salesforce',
 				'mautic'           => 'WPF_Mautic',
@@ -516,6 +530,8 @@ final class WP_Fusion_Lite {
 		require_once WPF_DIR_PATH . 'includes/class-ajax.php';
 		require_once WPF_DIR_PATH . 'includes/class-access-control.php';
 		require_once WPF_DIR_PATH . 'includes/class-auto-login.php';
+		require_once WPF_DIR_PATH . 'includes/admin/class-tag-migration.php';
+		require_once WPF_DIR_PATH . 'includes/admin/class-tag-migration-handler.php';
 		require_once WPF_DIR_PATH . 'includes/class-iso-regions.php';
 		require_once WPF_DIR_PATH . 'includes/admin/gutenberg/class-gutenberg.php';
 		require_once WPF_DIR_PATH . 'includes/admin/class-admin-interfaces.php';
@@ -661,7 +677,6 @@ final class WP_Fusion_Lite {
 			return false;
 		}
 	}
-
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

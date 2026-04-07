@@ -187,21 +187,13 @@ class WPF_Constant_Contact_Admin {
 
 		} else {
 
-			$new_settings[ "{$this->slug}_token" ] = array(
-				'title'          => __( 'Access Token', 'wp-fusion-lite' ),
-				'type'           => 'text',
-				'section'        => 'setup',
-				'input_disabled' => true,
-			);
-
-			$new_settings[ "{$this->slug}_refresh_token" ] = array(
-				'title'          => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'           => 'api_validate',
-				'section'        => 'setup',
-				'class'          => 'api_key',
-				'post_fields'    => array( "{$this->slug}_token", "{$this->slug}_refresh_token" ),
-				'desc'           => '<a href="' . esc_url( $this->get_oauth_url() ) . '">' . sprintf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), $this->crm->name ) . '</a>. ',
-				'input_disabled' => true,
+			$new_settings[ "{$this->slug}_oauth_status" ] = array(
+				'title'       => __( 'Connection Status', 'wp-fusion-lite' ),
+				'type'        => 'oauth_connection_status',
+				'section'     => 'setup',
+				'name'        => $this->name,
+				'url'         => $this->get_oauth_url(),
+				'post_fields' => array( "{$this->slug}_token", "{$this->slug}_refresh_token" ),
 			);
 
 		}

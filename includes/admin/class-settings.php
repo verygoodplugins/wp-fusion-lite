@@ -45,8 +45,12 @@ class WPF_Settings {
 		// Check the license status once per week.
 		add_action( 'admin_init', array( $this, 'edd_check_license' ) );
 
+		// Auto-redirect to OAuth for marketplace installs.
+		add_action( 'admin_init', array( $this, 'maybe_auto_oauth_redirect' ), 1 );
+
 		add_action( 'wp_ajax_wpf_export_settings', array( $this, 'handle_settings_export' ) );
 		add_action( 'wp_ajax_wpf_import_settings', array( $this, 'handle_settings_import' ) );
+		add_action( 'wp_ajax_wpf_disconnect_crm', array( $this, 'handle_disconnect_crm' ) );
 	}
 
 	/**
@@ -83,6 +87,8 @@ class WPF_Settings {
 		add_action( 'show_field_api_validate_end', array( $this, 'show_field_api_validate_end' ), 10, 2 );
 		add_action( 'show_field_oauth_authorize', array( $this, 'show_field_oauth_authorize' ), 10, 2 );
 		add_action( 'show_field_oauth_authorize_end', array( $this, 'show_field_api_validate_end' ), 10, 2 );
+		add_action( 'show_field_oauth_connection_status', array( $this, 'show_field_oauth_connection_status' ), 10, 2 );
+		add_action( 'show_field_oauth_connection_status_end', array( $this, 'show_field_oauth_connection_status_end' ), 10, 2 );
 
 		// Resync button at top.
 		add_action( 'wpf_settings_page_title', array( $this, 'header_resync_button' ) );
@@ -322,7 +328,7 @@ class WPF_Settings {
 	 */
 	public function set_multiple( $options ) {
 
-		foreach ( $options as $key => $value ) {
+		foreach ( array_filter( $options ) as $key => $value ) {
 			$this->set( $key, $value );
 		}
 	}
@@ -649,7 +655,7 @@ class WPF_Settings {
 
 		wp_localize_script( 'wpf-options', 'wpf_ajax', $localize );
 
-		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip' ), WP_FUSION_VERSION, true );
+		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip', 'wp-i18n' ), WP_FUSION_VERSION, true );
 		wp_localize_script( 'wpf-admin', 'wpf', array( 'crm_supports' => wp_fusion()->crm->supports ) );
 	}
 
@@ -1041,6 +1047,93 @@ class WPF_Settings {
 	}
 
 	/**
+	 * Automatically redirect to OAuth flow for marketplace installs.
+	 *
+	 * @since 3.46.8
+	 */
+	public function maybe_auto_oauth_redirect() {
+
+		// Only run on settings page with CRM parameter.
+		if ( ! isset( $_GET['page'] ) || 'wpf-settings' !== $_GET['page'] ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['crm'] ) ) {
+			return;
+		}
+
+		// If we're getting a code, we're good.
+		if ( isset( $_GET['code'] ) ) {
+			return;
+		}
+
+		// Security check.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		// Skip CSRF protection for marketplace installs as they won't have nonces.
+		$crm_slug = sanitize_text_field( wp_unslash( $_GET['crm'] ) );
+
+		// Don't redirect if already configured.
+		if ( wpf_get_option( 'connection_configured' ) ) {
+			return;
+		}
+
+		// Don't redirect if CRM not available.
+		$available_crms = wp_fusion()->get_crms();
+		if ( ! isset( $available_crms[ $crm_slug ] ) ) {
+			wpf_log( 'notice', 0, 'Auto OAuth redirect requested for unknown CRM: ' . $crm_slug );
+			return;
+		}
+
+		// Initialize the CRM and check if it supports auto OAuth.
+		// Use static cache to avoid multiple instantiations.
+		static $crm_cache = array();
+		if ( ! isset( $crm_cache[ $crm_slug ] ) ) {
+			$crm_cache[ $crm_slug ] = new $available_crms[ $crm_slug ]();
+		}
+		$temp_crm = $crm_cache[ $crm_slug ];
+
+		if ( ! property_exists( $temp_crm, 'supports' ) || ! in_array( 'auto_oauth', $temp_crm->supports, true ) ) {
+			wpf_log( 'notice', 0, 'Auto OAuth redirect requested for CRM that does not support auto_oauth: ' . $crm_slug );
+			return;
+		}
+
+		// Generate admin class name using standard WP Fusion pattern.
+		$admin_class_name = $available_crms[ $crm_slug ] . '_Admin';
+
+		if ( ! class_exists( $admin_class_name ) ) {
+			return;
+		}
+
+		$admin_instance = new $admin_class_name( $crm_slug, $temp_crm->name, $temp_crm );
+
+		if ( ! method_exists( $admin_instance, 'get_oauth_url' ) ) {
+			return;
+		}
+
+		$oauth_url = $admin_instance->get_oauth_url();
+
+		if ( empty( $oauth_url ) ) {
+			return;
+		}
+
+		// Validate OAuth URL format and ensure it's HTTPS for security
+		if ( ! filter_var( $oauth_url, FILTER_VALIDATE_URL ) || strpos( $oauth_url, 'https://' ) !== 0 ) {
+			wpf_log( 'error', 0, 'Invalid OAuth URL generated for ' . $crm_slug . ': ' . $oauth_url );
+			return;
+		}
+
+		// Log successful redirect for debugging.
+		wpf_log( 'info', 0, 'Auto OAuth redirect initiated for ' . $crm_slug . ' to: ' . $oauth_url );
+
+		// Perform the redirect.
+		wp_redirect( $oauth_url );
+		exit;
+	}
+
+	/**
 	 * Check EDD license.
 	 *
 	 * @access public
@@ -1070,7 +1163,7 @@ class WPF_Settings {
 			);
 
 			// Call the custom API. This is a GET so CloudFlare can cache the response for 12h in cases where the transient in WP isn't working.
-			$response = wp_safe_remote_get(
+			$response = wp_remote_get(
 				WPF_STORE_URL,
 				array(
 					'timeout'   => 20,
@@ -1133,12 +1226,16 @@ class WPF_Settings {
 		}
 
 		// Call the custom API.
-		$response = wp_safe_remote_get(
+		$response = wp_remote_get(
 			WPF_STORE_URL,
 			array(
 				'timeout'   => 15,
 				'sslverify' => false,
 				'body'      => $api_params,
+				'headers'   => array(
+					'Content-Type' => 'application/x-www-form-urlencoded',
+					'User-Agent'   => 'WP-Fusion/' . WP_FUSION_VERSION . '; ' . get_bloginfo( 'url' ),
+				),
 			)
 		);
 
@@ -1261,12 +1358,16 @@ class WPF_Settings {
 		);
 
 		// Call the custom API.
-		$response = wp_safe_remote_get(
+		$response = wp_remote_get(
 			WPF_STORE_URL . '/?edd_action=deactivate',
 			array(
 				'timeout'   => 15,
 				'sslverify' => false,
 				'body'      => $api_params,
+				'headers'   => array(
+					'Content-Type' => 'application/x-www-form-urlencoded',
+					'User-Agent'   => 'WP-Fusion/' . WP_FUSION_VERSION . '; ' . get_bloginfo( 'url' ),
+				),
 			)
 		);
 
@@ -2174,6 +2275,12 @@ class WPF_Settings {
 			'section' => 'advanced',
 		);
 
+		$settings['import_settings'] = array(
+			'title'   => __( 'Import Settings', 'wp-fusion-lite' ),
+			'type'    => 'import_settings',
+			'section' => $this->get( 'connection_configured' ) ? 'advanced' : 'setup',
+		);
+
 		return $settings;
 	}
 
@@ -2210,12 +2317,69 @@ class WPF_Settings {
 
 				if ( isset( $data['unlock'] ) ) {
 
-					foreach ( $data['unlock'] as $unlock_field ) {
+					// Check if this is the new value-specific unlock format
+					$is_value_specific = false;
+					$unlock_fields     = array();
 
-						if ( ! empty( $settings[ $unlock_field ] ) && empty( $settings[ $unlock_field ]['disabled'] ) ) {
+					if ( is_array( $data['unlock'] ) ) {
+						// Check if any of the unlock array values are arrays themselves (indicating value-specific format)
+						foreach ( $data['unlock'] as $_ => $value ) {
+							if ( is_array( $value ) ) {
+								$is_value_specific = true;
+								break;
+							}
+						}
+					}
 
-							$settings[ $unlock_field ]['disabled'] = empty( $options[ $setting ] ) ? true : false;
+					if ( $is_value_specific ) {
+						// New value-specific unlock format
+						$current_value = isset( $options[ $setting ] ) ? $options[ $setting ] : '';
 
+						if ( isset( $data['unlock'][ $current_value ] ) ) {
+							// Use unlock fields for the current value
+							$unlock_fields = $data['unlock'][ $current_value ];
+						} elseif ( isset( $data['unlock']['default'] ) ) {
+							// Use default unlock fields if current value not found
+							$unlock_fields = $data['unlock']['default'];
+						} else {
+							// No specific or default unlock fields, so all fields should be disabled
+							$unlock_fields = array();
+						}
+
+						// Get all possible unlock fields from all values to disable the ones not in current selection
+						$all_unlock_fields = array();
+						foreach ( $data['unlock'] as $condition_value => $fields ) {
+							if ( is_array( $fields ) && $condition_value !== 'default' ) {
+								$all_unlock_fields = array_merge( $all_unlock_fields, $fields );
+							}
+						}
+						if ( isset( $data['unlock']['default'] ) && is_array( $data['unlock']['default'] ) ) {
+							$all_unlock_fields = array_merge( $all_unlock_fields, $data['unlock']['default'] );
+						}
+						$all_unlock_fields = array_unique( $all_unlock_fields );
+
+						// Disable all unlock fields first
+						foreach ( $all_unlock_fields as $field ) {
+							if ( ! empty( $settings[ $field ] ) && empty( $settings[ $field ]['disabled'] ) ) {
+								$settings[ $field ]['disabled'] = true;
+							}
+						}
+
+						// Enable only the fields that should be unlocked for the current value
+						foreach ( $unlock_fields as $unlock_field ) {
+							if ( ! empty( $settings[ $unlock_field ] ) ) {
+								$settings[ $unlock_field ]['disabled'] = false;
+							}
+						}
+					} else {
+						// Legacy unlock format - maintain existing behavior
+						foreach ( $data['unlock'] as $unlock_field ) {
+
+							if ( ! empty( $settings[ $unlock_field ] ) && empty( $settings[ $unlock_field ]['disabled'] ) ) {
+
+								$settings[ $unlock_field ]['disabled'] = empty( $options[ $setting ] ) ? true : false;
+
+							}
 						}
 					}
 				}
@@ -2289,7 +2453,7 @@ class WPF_Settings {
 
 		echo '<input id="' . esc_attr( $id ) . '" ' . disabled( $field['input_disabled'], true, false ) . ' class="form-control api_key ' . esc_attr( $field['class'] ) . '" type="' . esc_attr( $type ) . '" name="wpf_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $value ) . '">';
 
-		if ( $this->connection_configured ) {
+		if ( $this->get( 'connection_configured' ) ) {
 
 			$tip = sprintf( __( 'Refresh all custom fields and available tags from %s. Does not modify any user data or permissions.', 'wp-fusion-lite' ), wp_fusion()->crm->name );
 
@@ -2354,6 +2518,141 @@ class WPF_Settings {
 		if ( ! is_ssl() ) {
 			echo '<p class="wpf-notice notice notice-error">' . sprintf( esc_html__( '<strong>Warning:</strong> Your site is not currently SSL secured (https://). You will not be able to connect to the %s API. Your Site Address must be set to https:// in Settings &raquo; General.', 'wp-fusion-lite' ), $field['name'] ) . '</p>';
 		}
+	}
+
+	/**
+	 * Shows the OAuth connection status field with collapsible token display.
+	 *
+	 * @since 3.46.8
+	 *
+	 * @param string $id     The field ID.
+	 * @param array  $field  The field parameters.
+	 */
+	public function show_field_oauth_connection_status( $id, $field ) {
+
+		// Get token field values
+		$access_token_field  = ! empty( $field['post_fields'][0] ) ? $field['post_fields'][0] : '';
+		$refresh_token_field = ! empty( $field['post_fields'][1] ) ? $field['post_fields'][1] : '';
+
+		$access_token  = $access_token_field ? $this->get( $access_token_field ) : '';
+		$refresh_token = $refresh_token_field ? $this->get( $refresh_token_field ) : '';
+
+		// Connection status display.
+		echo '<div class="oauth-connection-status">';
+
+		if ( ! empty( $access_token ) && ! empty( $refresh_token ) ) {
+			echo '<span class="dashicons dashicons-yes-alt"></span>';
+			// Translators: %s is the name of the CRM.
+			printf( esc_html__( 'Connected to %s', 'wp-fusion-lite' ), esc_html( $field['name'] ) );
+		} else {
+			echo '<span class="dashicons dashicons-warning"></span>';
+			esc_html_e( 'Not Connected', 'wp-fusion-lite' );
+		}
+
+		echo '</div>';
+
+		// Action buttons
+		echo '<div class="oauth-actions" style="margin: 10px 0;">';
+
+		// Refresh button (same logic as api_validate)
+		$tip = sprintf( __( 'Refresh all custom fields and available tags from %s. Does not modify any user data or permissions.', 'wp-fusion-lite' ), $field['name'] );
+
+		echo '<a id="test-connection" data-post-fields="' . esc_attr( implode( ',', $field['post_fields'] ) ) . '"';
+
+		if ( ! empty( $field['resync_fields'] ) ) {
+			echo ' data-resync-fields="' . esc_attr( implode( ',', $field['resync_fields'] ) ) . '"';
+		}
+
+		echo ' class="button button-primary wpf-tip wpf-tip-right test-connection-button" data-tip="' . esc_attr( $tip ) . '">';
+		echo '<span class="dashicons dashicons-update-alt"></span>';
+		echo '<span class="text">' . esc_html__( 'Refresh Available Tags &amp; Fields', 'wp-fusion-lite' ) . '</span>';
+		echo '</a>';
+
+		// Re-authorize button
+		if ( ! empty( $field['url'] ) ) {
+			echo '<a href="' . esc_url( $field['url'] ) . '" class="button button-secondary" style="margin-right: 10px;">';
+			printf( esc_html__( 'Re-authorize with %s', 'wp-fusion-lite' ), esc_html( $field['name'] ) );
+			echo '</a>';
+		}
+
+		// Manage connections button
+		echo '<a href="https://wpfusion.com/oauth/connections/" target="_blank" class="button button-secondary" style="margin-right: 10px;">';
+		echo esc_html__( 'Manage connections', 'wp-fusion-lite' );
+		echo '</a>';
+
+		// Disconnect button
+		echo '<a href="#" class="button button-secondary wpf-disconnect-crm" style="margin-right: 10px; color: #dc3232; border-color: #dc3232;">';
+		echo esc_html__( 'Disconnect', 'wp-fusion-lite' );
+		echo '</a>';
+
+		echo '</div>';
+
+		// Toggle link for tokens
+		echo '<div class="oauth-toggle-container" style="margin: 10px 0;">';
+		echo '<a href="#" class="oauth-tokens-toggle" style="text-decoration: none;">';
+		echo '<span class="dashicons dashicons-visibility" style="margin-right: 5px;"></span>';
+		echo '<span class="toggle-text">' . esc_html__( 'Show tokens for debugging', 'wp-fusion-lite' ) . '</span>';
+		echo '</a>';
+		echo '</div>';
+
+		// Hidden token fields container
+		echo '<div class="oauth-tokens-container hide" style="background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 3px; margin-top: 10px;">';
+		echo '<p style="margin-top: 0; color: #666; font-style: italic;">' . esc_html__( 'Token fields for debugging purposes. These are automatically managed by the OAuth connection.', 'wp-fusion-lite' ) . '</p>';
+
+		// Access token field
+		if ( $access_token_field ) {
+			echo '<div style="margin-bottom: 15px;">';
+			echo '<label for="' . esc_attr( $access_token_field ) . '" style="display: block; font-weight: bold; margin-bottom: 5px;">' . esc_html__( 'Access Token', 'wp-fusion-lite' ) . '</label>';
+
+			// Handle non-scalar values
+			if ( ! is_scalar( $access_token ) ) {
+				echo '<strong style="color: #dc3232;">' . esc_html__( 'Error: The access token is not a string. Please reauthorize the connection.', 'wp-fusion-lite' ) . '</strong>';
+				$access_token = '';
+			}
+
+			echo '<input id="' . esc_attr( $access_token_field ) . '" class="form-control" type="text" name="wpf_options[' . esc_attr( $access_token_field ) . ']" value="' . esc_attr( $access_token ) . '" disabled style="width: 100%; font-family: monospace; font-size: 11px;">';
+			echo '</div>';
+		}
+
+		// Refresh token field
+		if ( $refresh_token_field ) {
+			echo '<div>';
+			echo '<label for="' . esc_attr( $refresh_token_field ) . '" style="display: block; font-weight: bold; margin-bottom: 5px;">' . esc_html__( 'Refresh Token', 'wp-fusion-lite' ) . '</label>';
+
+			// Handle non-scalar values
+			if ( ! is_scalar( $refresh_token ) ) {
+				echo '<strong style="color: #dc3232;">' . esc_html__( 'Error: The refresh token is not a string. Please reauthorize the connection.', 'wp-fusion-lite' ) . '</strong>';
+				$refresh_token = '';
+			}
+
+			echo '<input id="' . esc_attr( $refresh_token_field ) . '" class="form-control" type="text" name="wpf_options[' . esc_attr( $refresh_token_field ) . ']" value="' . esc_attr( $refresh_token ) . '" disabled style="width: 100%; font-family: monospace; font-size: 11px;">';
+			echo '</div>';
+		}
+
+		echo '</div>'; // Close oauth-tokens-container
+	}
+
+	/**
+	 * Close out OAuth connection status field.
+	 *
+	 * @since 3.46.8
+	 *
+	 * @param string $id     The field ID.
+	 * @param array  $field  The field parameters.
+	 */
+	public function show_field_oauth_connection_status_end( $id, $field ) {
+
+		if ( ! empty( $field['desc'] ) ) {
+			echo '<div style="margin-top: 15px;">';
+			echo '<span class="description">' . wp_kses_post( $field['desc'] ) . '</span>';
+			echo '</div>';
+		}
+
+		echo '</td>';
+		echo '</tr>';
+
+		echo '</table><div id="connection-output"></div>';
+		echo '</div>'; // close CRM div.
 	}
 
 	/**
@@ -2996,6 +3295,9 @@ class WPF_Settings {
 
 		uasort( $options, 'wpf_sort_by_label' );
 
+		// Get the stored timestamps for batch operations.
+		$batch_timestamps = get_option( 'wpf_batch_timestamps', array() );
+
 		foreach ( $options as $key => $data ) {
 
 			echo '<div class="wpf-export-option wpf-export-option-' . esc_attr( $key ) . '">';
@@ -3005,6 +3307,14 @@ class WPF_Settings {
 
 			if ( isset( $data['tooltip'] ) ) {
 				echo '<i class="fa fa-question-circle wpf-tip wpf-tip-right" data-tip="' . esc_attr( $data['tooltip'] ) . '"></i>';
+			}
+
+			// Display the last run time if available.
+			if ( isset( $batch_timestamps[ $key ] ) ) {
+				echo '<span style="color: #999; font-size: 12px; margin-left: 8px;">';
+				echo '(' . esc_html__( 'Last run:', 'wp-fusion-lite' ) . ' ';
+				echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $batch_timestamps[ $key ] ) );
+				echo ')</span>';
 			}
 
 			echo '</label><br />';
@@ -3266,7 +3576,7 @@ class WPF_Settings {
 		// Remove API credentials if using OAuth.
 		if ( wp_fusion()->crm->supports( 'refresh_token' ) ) {
 			unset( $settings['crm'] );
-			unset( $settings['connection_configured'] );
+			$settings['connection_configured'] = false;
 
 			// Remove any API keys or tokens.
 			foreach ( $settings as $key => $value ) {
@@ -3346,5 +3656,36 @@ class WPF_Settings {
 		$this->set_multiple( $settings );
 
 		wp_send_json_success( __( 'Settings imported successfully.', 'wp-fusion-lite' ) );
+	}
+
+	/**
+	 * Handle CRM disconnect via AJAX.
+	 *
+	 * @since 3.46.8
+	 */
+	public function handle_disconnect_crm() {
+
+		// Verify nonce and permissions.
+		check_ajax_referer( 'wpf_settings_nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'You do not have permission to perform this action.', 'wp-fusion-lite' ) );
+		}
+
+		// Get current options to pass to the reset action.
+		$current_options = $this->get_all();
+
+		// Fire the wpf_resetting_options action (this allows CRMs to revoke tokens, etc).
+		do_action( 'wpf_resetting_options', $current_options );
+
+		// Delete the main options.
+		delete_option( 'wpf_options' );
+		delete_option( 'wpf_available_tags' );
+		delete_option( 'wpf_crm_fields' );
+
+		// Also reset the settings in memory.
+		$this->options = array();
+
+		wp_send_json_success( __( 'CRM connection disconnected successfully.', 'wp-fusion-lite' ) );
 	}
 }

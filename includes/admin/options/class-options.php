@@ -764,7 +764,7 @@ class WP_Fusion_Options {
 
 		<form id="<?php echo esc_attr( $page['slug'] ); ?>" class="
 								<?php
-								if ( $this->options['connection_configured'] == false ) {
+								if ( empty( $this->options['connection_configured'] ) ) {
 									echo 'setup';}
 								?>
 " action="" method="post" enctype="multipart/form-data">
@@ -879,7 +879,7 @@ class WP_Fusion_Options {
 					<?php $isfirst = false; ?>
 				<?php } ?>
 			</div>
-			<p class="submit"><input name="Submit" type="submit" class="button-primary" <?php disabled( ! $this->options['connection_configured'] ); ?> value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
+			<p class="submit"><input name="Submit" type="submit" class="button-primary" <?php disabled( empty( $this->options['connection_configured'] ) ); ?> value="<?php esc_attr_e( 'Save Changes', 'wp-fusion-lite' ); ?>" /></p>
 		</form>
 
 		<?php
@@ -1060,7 +1060,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validate field
 	 *
-	 * @param mixed   $input
+	 * @param mixed $input
 	 * @param       $setting
 	 *
 	 * @return mixed
@@ -1218,7 +1218,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validate Text field.
 	 *
-	 * @param string  $input
+	 * @param string $input
 	 *
 	 * @param        $setting
 	 *
@@ -1292,7 +1292,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validate Textarea field.
 	 *
-	 * @param string  $input
+	 * @param string $input
 	 *
 	 * @param        $setting
 	 *
@@ -1316,27 +1316,14 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_checkbox( $id, $field ) {
 
-		$unlock = '';
-
-		if ( isset( $field['unlock'] ) ) {
-
-			foreach ( $field['unlock'] as $target ) {
-				$unlock .= $target . ' ';
-			}
-		}
-
-		if ( isset( $field['lock'] ) ) {
-
-			foreach ( $field['lock'] as $target ) {
-				$unlock .= $target . ' ';
-			}
-		}
+		// Generate unlock attributes
+		$unlock_attrs = $this->generate_unlock_attributes( $field );
 
 		if ( ! isset( $field['class'] ) ) {
 			$field['class'] = '';
 		}
 
-		echo '<input class="checkbox ' . esc_attr( $field['class'] ) . '" type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $this->option_group ) . '[' . esc_attr( $id ) . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . esc_attr( trim( $unlock ) ) . '"' : '' ) . ' />';
+		echo '<input class="checkbox ' . esc_attr( $field['class'] ) . '" type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $this->option_group ) . '[' . esc_attr( $id ) . ']" value="1" ' . checked( $this->options[ $id ], 1, false ) . ' ' . ( isset( $field['disabled'] ) && $field['disabled'] == true ? 'disabled="true"' : '' ) . ' ' . $unlock_attrs . ' />';
 
 		if ( $field['desc'] != '' ) {
 			echo '<label for="' . esc_attr( $id ) . '">' . wp_kses_post( $field['desc'] ) . '</label>';
@@ -1416,11 +1403,14 @@ class WP_Fusion_Options {
 	 */
 	private function show_field_radio( $id, $field ) {
 
+		// Generate unlock attributes
+		$unlock_attrs = $this->generate_unlock_attributes( $field );
+
 		$i = 0;
 
 		foreach ( $field['choices'] as $value => $label ) {
 
-			echo '<input class="radio ' . esc_attr( $field['class'] ) . '" type="radio" name="' . esc_attr( $this->option_group ) . '[' . esc_attr( $id ) . ']" id="' . esc_attr( $id . $i ) . '" value="' . esc_attr( $value ) . '" ' . checked( $this->options[ $id ], $value, false ) . ' ' . ( $field['disabled'] ? 'disabled=true' : '' ) . '>';
+			echo '<input class="radio ' . esc_attr( $field['class'] ) . '" type="radio" name="' . esc_attr( $this->option_group ) . '[' . esc_attr( $id ) . ']" id="' . esc_attr( $id . $i ) . '" value="' . esc_attr( $value ) . '" ' . checked( $this->options[ $id ], $value, false ) . ' ' . ( $field['disabled'] ? 'disabled=true' : '' ) . ' ' . $unlock_attrs . '>';
 			echo '<label for="' . esc_attr( $id . $i ) . '">' . esc_html( $label ) . '</label>';
 
 			if ( $i < count( $field['choices'] ) - 1 ) {
@@ -1429,6 +1419,58 @@ class WP_Fusion_Options {
 
 			++$i;
 		}
+	}
+
+	/**
+	 * Generate unlock attributes for form fields
+	 *
+	 * @since 3.46.8
+	 *
+	 * @param array $field Field configuration
+	 * @return string Unlock attributes HTML
+	 */
+	private function generate_unlock_attributes( $field ) {
+		$unlock_attrs = '';
+
+		if ( isset( $field['unlock'] ) ) {
+			// Check if this is the new value-specific unlock format
+			$is_value_specific = false;
+			if ( is_array( $field['unlock'] ) ) {
+				foreach ( $field['unlock'] as $value ) {
+					if ( is_array( $value ) ) {
+						$is_value_specific = true;
+						break;
+					}
+				}
+			}
+
+			if ( $is_value_specific ) {
+				// New value-specific format - add data-unlock-conditions attribute
+				$unlock_attrs .= 'data-unlock-conditions="' . esc_attr( wp_json_encode( $field['unlock'] ) ) . '"';
+			} else {
+				// Legacy format - maintain existing data-unlock attribute for backward compatibility
+				$unlock = '';
+				foreach ( $field['unlock'] as $target ) {
+					$unlock .= $target . ' ';
+				}
+				$unlock_attrs .= 'data-unlock="' . esc_attr( trim( $unlock ) ) . '"';
+			}
+		}
+
+		// Handle lock fields (existing functionality)
+		if ( isset( $field['lock'] ) ) {
+			$lock = '';
+			foreach ( $field['lock'] as $target ) {
+				$lock .= $target . ' ';
+			}
+			// For lock fields, we use the same data-unlock attribute (existing behavior)
+			// Only add if data-unlock attribute hasn't already been added
+			if ( ! empty( $lock ) && false === strpos( $unlock_attrs, 'data-unlock=' ) ) {
+				$unlock_attrs .= ( ! empty( $unlock_attrs ) ? ' ' : '' ) . 'data-unlock="' . esc_attr( trim( $lock ) ) . '"';
+			}
+		}
+
+		return $unlock_attrs;
 	}
 
 	/**
@@ -1516,27 +1558,29 @@ class WP_Fusion_Options {
 			$field['placeholder'] = __( 'Select an option', 'wp-fusion-lite' );
 		}
 
-		$unlock = '';
-
-		if ( isset( $field['unlock'] ) ) {
-
-			foreach ( $field['unlock'] as $target ) {
-				$unlock .= $target . ' ';
-			}
-		}
+		// Generate unlock attributes.
+		$unlock_attrs = $this->generate_unlock_attributes( $field );
 
 		if ( count( $field['choices'] ) > 10 ) {
 			$field['class'] .= 'select4-search';
 		}
 
-		echo '<select id="' . esc_attr( $id ) . '" class="select4 ' . esc_attr( $field['class'] ) . '" name="' . esc_attr( $this->option_group ) . '[' . esc_attr( $id ) . ']" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . ' ' . ( $field['placeholder'] ? 'data-placeholder="' . esc_attr( $field['placeholder'] ) . '"' : '' ) . ' ' . ( $field['allow_null'] == false ? 'data-allow-clear="false"' : '' ) . ' ' . ( ! empty( $unlock ) ? 'data-unlock="' . esc_attr( trim( $unlock ) ) . '"' : '' ) . '>';
+		// Get the current value safely.
+		$current_value = isset( $this->options[ $id ] ) ? $this->options[ $id ] : '';
+
+		// If the value is an array, convert to string or use first element.
+		if ( is_array( $current_value ) ) {
+			$current_value = ! empty( $current_value ) ? reset( $current_value ) : '';
+		}
+
+		echo '<select id="' . esc_attr( $id ) . '" class="select4 ' . esc_attr( $field['class'] ) . '" name="' . esc_attr( $this->option_group ) . '[' . esc_attr( $id ) . ']" ' . ( $field['disabled'] ? 'disabled="true"' : '' ) . ' ' . ( $field['placeholder'] ? 'data-placeholder="' . esc_attr( $field['placeholder'] ) . '"' : '' ) . ' ' . ( $field['allow_null'] == false ? 'data-allow-clear="false"' : '' ) . ' ' . $unlock_attrs . '>';
 
 		if ( isset( $field['choices'] ) && is_array( $field['choices'] ) ) {
 			if ( ! empty( $field['placeholder'] ) ) {
 				echo '<option></option>';
 			}
 			foreach ( $field['choices'] as $value => $label ) {
-				echo '<option value="' . esc_attr( $value ) . '"' . selected( $this->options[ $id ], $value, false ) . '>' . esc_html( $label ) . '</option>';
+				echo '<option value="' . esc_attr( $value ) . '"' . selected( $current_value, $value, false ) . '>' . esc_html( $label ) . '</option>';
 			}
 		}
 
@@ -1583,7 +1627,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validate number field
 	 *
-	 * @param mixed   $input
+	 * @param mixed $input
 	 *
 	 * @param       $setting
 	 *
@@ -1724,7 +1768,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validate hidden field
 	 *
-	 * @param mixed   $input
+	 * @param mixed $input
 	 *
 	 * @param       $setting
 	 *
@@ -1892,7 +1936,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validate color field.
 	 *
-	 * @param string  $input
+	 * @param string $input
 	 *
 	 * @param        $setting
 	 *
@@ -1931,7 +1975,7 @@ class WP_Fusion_Options {
 	 *
 	 * @param      $id
 	 * @param      $field
-	 * @param null  $subfield_id
+	 * @param null $subfield_id
 	 *
 	 * @internal param string $input
 	 *
@@ -1961,7 +2005,7 @@ class WP_Fusion_Options {
 	 *
 	 * @param      $id
 	 * @param      $field
-	 * @param null  $subfield_id
+	 * @param null $subfield_id
 	 *
 	 * @internal param string $input
 	 *
@@ -2065,7 +2109,7 @@ class WP_Fusion_Options {
 	/**
 	 * Validates input field
 	 *
-	 * @param  bool    $input
+	 * @param  bool $input
 	 *
 	 * @param       $setting
 	 *

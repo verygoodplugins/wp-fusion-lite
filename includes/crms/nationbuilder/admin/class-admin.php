@@ -51,6 +51,7 @@ class WPF_NationBuilder_Admin {
 			'redirect' => rawurlencode( $admin_url . 'options-general.php?page=wpf-settings' ),
 			'action'   => "wpf_get_{$this->slug}_token",
 			'slug'     => wpf_get_option( 'nationbuilder_slug', 'unknown' ),
+			'version'  => 'v2',
 		);
 
 		return apply_filters( "wpf_{$this->slug}_auth_url", add_query_arg( $args, 'https://wpfusion.com/oauth/' ) );
@@ -75,17 +76,25 @@ class WPF_NationBuilder_Admin {
 	 */
 	public function maybe_oauth_complete() {
 
-		if ( isset( $_GET['code'] ) && isset( $_GET['slug'] ) && isset( $_GET['state'] ) && $_GET['state'] == 'wpfnationbuilder' ) {
+		if ( isset( $_GET['code'] ) && isset( $_GET['slug'] ) && isset( $_GET['state'] ) && 'wpfnationbuilder' === $_GET['state'] ) {
 
-			$code = sanitize_text_field( wp_unslash( $_GET['code'] ) );
-			$slug = sanitize_text_field( wp_unslash( $_GET['slug'] ) );
+			$code    = sanitize_text_field( wp_unslash( $_GET['code'] ) );
+			$slug    = sanitize_text_field( wp_unslash( $_GET['slug'] ) );
+			$version = isset( $_GET['version'] ) ? sanitize_text_field( wp_unslash( $_GET['version'] ) ) : '';
+			$is_v2   = ( 'v2' === $version );
+
+			$redirect_uri = apply_filters( 'wpf_nationbuilder_token_redirect_uri', 'https://wpfusion.com/oauth/?action=wpf_get_nationbuilder_token' );
+
+			// Use v2 credentials when the OAuth helper confirms v2 flow.
+			$client_id     = $is_v2 ? $this->crm->client_id_v2 : $this->crm->client_id;
+			$client_secret = $is_v2 ? $this->crm->client_secret_v2 : $this->crm->client_secret;
 
 			$body = array(
 				'grant_type'    => 'authorization_code',
 				'code'          => $code,
-				'client_id'     => $this->crm->client_id,
-				'client_secret' => $this->crm->client_secret,
-				'redirect_uri'  => 'https://wpfusion.com/parse-nationbuilder-oauth.php',
+				'client_id'     => $client_id,
+				'client_secret' => $client_secret,
+				'redirect_uri'  => $redirect_uri,
 			);
 
 			wpf_log( 'info', 0, 'Requesting authorization token from NationBuilder:', array( 'meta_array_nofilter' => $body ) );
@@ -103,15 +112,44 @@ class WPF_NationBuilder_Admin {
 			$response = wp_safe_remote_post( 'https://' . $slug . '.nationbuilder.com/oauth/token', $params );
 
 			if ( is_wp_error( $response ) ) {
+				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
 				wpf_log( 'error', 0, 'Error getting authorization token: ' . $response->get_error_message() );
 				return false;
 			}
 
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
+		$body_raw = wp_remote_retrieve_body( $response );
+
+		// Detect Cloudflare challenge pages (bot protection).
+		if ( false !== strpos( $body_raw, 'cf-mitigated' ) || false !== strpos( $body_raw, 'cf_chl_opt' ) ) {
+			$message = __( 'NationBuilder\'s firewall (Cloudflare) is blocking requests from your server. This usually means your hosting server\'s IP address has a low reputation score. Please contact NationBuilder support and ask them to whitelist your server IP, or try a different hosting provider.', 'wp-fusion-lite' );
+			wp_fusion()->admin_notices->add_notice( $message );
+			wpf_log( 'error', 0, $message );
+			return false;
+		}
+
+		$response = json_decode( $body_raw );
+
+		if ( empty( $response->access_token ) ) {
+			wp_fusion()->admin_notices->add_notice( 'NationBuilder token exchange returned an unexpected response: ' . wp_json_encode( $response ) );
+			wpf_log( 'error', 0, 'NationBuilder token exchange returned an unexpected response: ' . wp_json_encode( $response ) );
+			return false;
+		}
 
 			wp_fusion()->settings->set( 'nationbuilder_slug', $slug );
 			wp_fusion()->settings->set( 'nationbuilder_token', $response->access_token );
+			wp_fusion()->settings->set( 'nationbuilder_use_v2', $is_v2 );
 			wp_fusion()->settings->set( 'crm', $this->slug );
+
+			// Store refresh token and expiry for v2 connections.
+			if ( $is_v2 ) {
+				if ( ! empty( $response->refresh_token ) ) {
+					wp_fusion()->settings->set( 'nationbuilder_refresh_token', $response->refresh_token );
+				}
+
+				if ( ! empty( $response->expires_in ) ) {
+					wp_fusion()->settings->set( 'nationbuilder_token_expires', time() + (int) $response->expires_in );
+				}
+			}
 
 			wp_safe_redirect( get_admin_url() . 'options-general.php?page=wpf-settings#setup' );
 			exit;
@@ -237,6 +275,7 @@ class WPF_NationBuilder_Admin {
 			$options                          = array();
 			$options['nationbuilder_token']   = $access_token;
 			$options['nationbuilder_slug']    = $slug;
+			$options['nationbuilder_use_v2']  = false;
 			$options['crm']                   = $this->slug;
 			$options['connection_configured'] = true;
 

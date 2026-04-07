@@ -154,10 +154,16 @@ class WPF_SendinBlue {
 	/**
 	 * Formats user entered data to match SendinBlue field formats
 	 *
-	 * @access public
-	 * @return mixed
+	 * @since 3.16.0
+	 * @since 3.47.0 Added phone number formatting using wpf_phone_number_to_e164() and $update_data parameter.
+	 *
+	 * @param  mixed  $value      The field value.
+	 * @param  string $field_type The field type.
+	 * @param  string $field      The CRM field ID.
+	 * @param  array  $update_data The full array of data being sent to the CRM.
+	 * @return mixed  The formatted value.
 	 */
-	public function format_field_value( $value, $field_type, $field ) {
+	public function format_field_value( $value, $field_type, $field, $update_data = array() ) {
 
 		// Categories are stored numerically, like https://share.getcloudapp.com/L1uNjnLA.
 		// We'll try and convert them back here.
@@ -185,42 +191,46 @@ class WPF_SendinBlue {
 
 		if ( $field_type == 'date' ) {
 
-			// Adjust formatting for date fields
+			// Adjust formatting for date fields.
 			$date = gmdate( 'Y-m-d', intval( $value ) );
 
 			return $date;
 
-		} elseif ( $field_type == 'checkbox' && $value == null ) {
+		} elseif ( $field_type == 'checkbox' ) {
 
-			// Brevo only treats false as a No for checkboxes
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
+				return false;
+			}
+
+			if ( ! empty( $value ) ) {
+				// Brevo only treats true as a Yes for checkboxes.
+				return true;
+			}
+
+			// Brevo only treats false as a No for checkboxes.
 			return false;
 
-		} elseif ( $field_type == 'checkbox' && ! empty( $value ) ) {
+		} elseif ( 'tel' === $field_type && ! empty( $value ) ) {
 
-			// Brevo only treats true as a Yes for checkboxes
-			return true;
+			// Format phone. Brevo requires a country code for phone numbers. With or without dashes is fine.
 
-		} elseif ( 'tel' === $field_type ) {
+			// Try to get country code from available fields in priority order.
+			$country = 'US'; // Default to US.
 
-			// Format phone. Brevo requires a country code and + for phone numbers. With or without dashes is fine.
-
-			if ( strpos( $value, '+' ) !== 0 ) {
-
-				// Default to US if no country code is provided
-
-				if ( strpos( $value, '1' ) === 0 ) {
-
-					// The plus was causing an error with WhatsApp field.
-					// $value = '+' . $value;
-
-				} else {
-
-					$value = '1' . $value;
-
+			if ( ! empty( $update_data['country'] ) ) {
+				$country = $update_data['country'];
+			} elseif ( function_exists( 'wc_get_base_location' ) ) {
+				// Use WooCommerce store base location as fallback.
+				$base_location = wc_get_base_location();
+				if ( ! empty( $base_location['country'] ) ) {
+					$country = $base_location['country'];
 				}
 			}
 
-			return $value;
+			// Use the wpf_phone_number_to_e164() function to properly format the phone number.
+			// ltrim to remove the '+' as it can cause errors with WhatsApp fields: https://developers.brevo.com/reference/createcontact .
+			return ltrim( wpf_phone_number_to_e164( $value, $country ), '+' );
 
 		} elseif ( is_array( $value ) ) {
 
@@ -228,27 +238,23 @@ class WPF_SendinBlue {
 
 		} elseif ( 'raw' !== $field_type && is_numeric( trim( str_replace( array( '-', ' ' ), '', $value ) ) ) && 'tel' === wpf_get_remote_field_type( $field, 'tel' ) ) {
 
-			$length = strlen( trim( str_replace( array( '-', ' ' ), '', $value ) ) );
+			// This field looks like a phone number but wasn't explicitly marked as 'tel' type.
+			// Try to get country code from available fields in priority order.
+			$country = 'US'; // Default to US.
 
-			// Maybe another phone number
-
-			if ( $length == 10 ) {
-
-				// Let's assume this is a US phone number and needs a +1
-
-				$value = '1' . $value;
-
-			} elseif ( $length >= 11 && $length <= 13 && strpos( $value, '+' ) === false ) {
-
-				// Let's assume this is a phone number and needs a plus??
-
-				// Plus throws errors with some fields: https://developers.brevo.com/reference/createcontact .
-
-				// $value = '+' . $value;
-
+			if ( ! empty( $update_data['country'] ) ) {
+				$country = $update_data['country'];
+			} elseif ( function_exists( 'wc_get_base_location' ) ) {
+				// Use WooCommerce store base location as fallback.
+				$base_location = wc_get_base_location();
+				if ( ! empty( $base_location['country'] ) ) {
+					$country = $base_location['country'];
+				}
 			}
 
-			return $value;
+			// Use the wpf_phone_number_to_e164() function to properly format the phone number.
+			// ltrim to remove the '+' as it can cause errors with WhatsApp fields: https://developers.brevo.com/reference/createcontact .
+			return ltrim( wpf_phone_number_to_e164( $value, $country ), '+' );
 
 		} elseif ( false !== wpf_get_remote_option_value( $value, $field ) ) {
 
@@ -341,7 +347,8 @@ class WPF_SendinBlue {
 
 		if ( strpos( $url, 'brevo' ) !== false && $args['user-agent'] == 'WP Fusion; ' . home_url() ) {
 
-			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
+			$response_code = wp_remote_retrieve_response_code( $response );
 
 			if ( isset( $body_json->error ) ) {
 
@@ -349,13 +356,18 @@ class WPF_SendinBlue {
 
 			} elseif ( isset( $body_json->code ) && $body_json->code == 'unauthorized' ) {
 
-				$response = new WP_Error( 'error', 'Invalid API key' );
+				$response = new WP_Error( 'error', $body_json->message );
 
 			} elseif ( isset( $body_json->code ) && $body_json->code == 'invalid_parameter' ) {
 
 				$response = new WP_Error( 'error', $body_json->message );
 
-			} elseif ( 400 === wp_remote_retrieve_response_code( $response ) ) {
+			} elseif ( 401 === $response_code ) {
+
+				// Handle 401 for insufficient API key permissions.
+				$response = new WP_Error( 'error', __( 'API key does not have sufficient permissions for this request. Please regenerate your API key in Brevo with all required access scopes enabled.', 'wp-fusion-lite' ) );
+
+			} elseif ( 400 === $response_code ) {
 
 				// Sales CRM responses.
 

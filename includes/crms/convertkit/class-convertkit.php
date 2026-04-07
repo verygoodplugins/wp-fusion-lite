@@ -18,7 +18,7 @@ class WPF_ConvertKit {
 	 *
 	 * @var string
 	 */
-	public $name = 'ConvertKit';
+	public $name = 'Kit (legacy v3 API)';
 
 	/**
 	 * Contains API secret

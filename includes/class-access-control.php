@@ -326,13 +326,13 @@ class WPF_Access_Control {
 			return true;
 		}
 
-		// If not logged in
-		if ( ! wpf_is_user_logged_in() ) {
-			return apply_filters( 'wpf_user_can_access_archive', false, $user_id, $term_id );
+		if ( empty( $user_id ) ) {
+			$user_id = wpf_get_current_user_id();
 		}
 
-		if ( empty( $user ) ) {
-			$user_id = wpf_get_current_user_id();
+		// If not logged in
+		if ( ! wpf_is_user_logged_in() && empty( $user_id ) ) {
+			return apply_filters( 'wpf_user_can_access_archive', false, $user_id, $term_id );
 		}
 
 		// If no tags specified for restriction, but user is logged in, allow access
@@ -441,7 +441,7 @@ class WPF_Access_Control {
 
 		if ( ! empty( $settings[ $post_type ] ) && ! empty( $settings[ $post_type ]['allow_tags'] ) ) {
 
-			if ( ! wpf_is_user_logged_in() ) {
+			if ( ! wpf_is_user_logged_in() && empty( $user_id ) ) {
 
 				$can_access = false;
 

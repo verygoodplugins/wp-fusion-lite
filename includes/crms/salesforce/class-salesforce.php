@@ -299,15 +299,33 @@ class WPF_Salesforce {
 
 		} elseif ( 'checkbox' === $field_type ) {
 
-			if ( empty( $value ) ) {
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
 				return 'false';
-			} else {
+			}
+
+			if ( ! empty( $value ) ) {
+				// If checkbox is selected.
 				return 'true';
 			}
+
+			// Default to false for empty values.
+			return 'false';
 		} elseif ( is_array( $value ) ) {
 
 			// Multiselects
 			return implode( ';', array_filter( $value ) );
+
+		} elseif ( is_string( $value ) && preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value ) ) {
+
+			// Convert Gravity Forms Entry Date format (YYYY-MM-DD HH:MM:SS) to Salesforce DateTime format.
+			// This fixes sync issues with Gravity Forms Entry Date to Salesforce DateTime fields.
+			$datetime = DateTime::createFromFormat( 'Y-m-d H:i:s', $value, new DateTimeZone( 'UTC' ) );
+			if ( $datetime ) {
+				return $datetime->format( 'Y-m-d\TH:i:s.000\Z' );
+			}
+
+			return $value;
 
 		} else {
 

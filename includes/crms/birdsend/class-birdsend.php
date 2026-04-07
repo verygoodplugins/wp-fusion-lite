@@ -24,7 +24,7 @@ class WPF_BirdSend {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array();
+	public $supports = array( 'auto_oauth' );
 
 	/**
 	 * Contains API params

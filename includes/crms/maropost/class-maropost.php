@@ -56,8 +56,7 @@ class WPF_Maropost {
 	/**
 	 * Get things started
 	 *
-	 * @access  public
-	 * @since   2.0
+	 * @since 3.15.1
 	 */
 	public function __construct() {
 
@@ -73,13 +72,12 @@ class WPF_Maropost {
 	/**
 	 * Sets up hooks specific to this CRM
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.15.1
 	 */
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 4 );
 
 		$this->get_params(); // initialize the API URL and key.
 
@@ -91,7 +89,7 @@ class WPF_Maropost {
 	/**
 	 * Formats POST data received from HTTP Posts into standard format
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return array
 	 */
 	public function format_post_data( $post_data ) {
@@ -110,17 +108,56 @@ class WPF_Maropost {
 	/**
 	 * Formats user entered data to match Maropost field formats
 	 *
-	 * @access public
-	 * @return mixed
+	 * @since 3.15.1
+	 * @since 3.46.8 Added phone number formatting.
+	 *
+	 * @param mixed  $value      The field value.
+	 * @param string $field_type The field type.
+	 * @param string $field      The CRM field name.
+	 * @param array  $update_data The full array of data being sent to the CRM.
+	 * @return mixed The formatted value.
 	 */
-	public function format_field_value( $value, $field_type, $field ) {
+	public function format_field_value( $value, $field_type, $field, $update_data = array() ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' ) {
+		if ( 'date' === $field_type ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			// Adjust formatting for date fields.
+			$date = gmdate( 'm/d/Y', $value );
 
 			return $date;
+
+		} elseif ( 'phone' === $field && ! empty( $value ) ) {
+
+			// Format phone numbers to E.164 format for Maropost.
+			$country = 'US'; // Default to US.
+
+			// Try to get country code from available fields in priority order.
+			if ( ! empty( $update_data['country'] ) ) {
+				$country = $update_data['country'];
+			} elseif ( function_exists( 'wc_get_base_location' ) ) {
+				// Use WooCommerce store base location as fallback.
+				$base_location = wc_get_base_location();
+				if ( ! empty( $base_location['country'] ) ) {
+					$country = $base_location['country'];
+				}
+			}
+
+			return ltrim( wpf_phone_number_to_e164( $value, $country ), '+' );
+
+		} elseif ( 'checkbox' === $field_type ) {
+
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
+				return null;
+			}
+
+			if ( ! empty( $value ) ) {
+				// If checkbox is selected.
+				return true;
+			}
+
+			// Default to null for empty values.
+			return null;
 
 		} else {
 
@@ -132,7 +169,7 @@ class WPF_Maropost {
 	/**
 	 * Check HTTP Response for errors and return WP_Error if found
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return HTTP Response
 	 */
 	public function handle_http_response( $response, $args, $url ) {
@@ -173,7 +210,7 @@ class WPF_Maropost {
 	/**
 	 * Gets params for API calls
 	 *
-	 * @access  public
+	 * @since 3.15.1
 	 * @return  array Params
 	 */
 	public function get_params( $account_id = null, $api_key = null ) {
@@ -187,7 +224,7 @@ class WPF_Maropost {
 		$this->api_key = $api_key;
 
 		if ( 112216 === intval( $account_id ) ) {
-			$this->api_url = "https://sandbox.maropost.com/accounts/{$account_id}/"; // sandbox account.
+			$this->api_url = "https://sandbox-web.maropost.com/accounts/{$account_id}/"; // sandbox account.
 		} else {
 			$this->api_url = "https://api.maropost.com/accounts/{$account_id}/";
 		}
@@ -220,7 +257,7 @@ class WPF_Maropost {
 	/**
 	 * Initialize connection
 	 *
-	 * @access  public
+	 * @since 3.15.1
 	 * @return  bool
 	 */
 	public function connect( $account_id = null, $api_key = null, $test = false ) {
@@ -248,7 +285,7 @@ class WPF_Maropost {
 	/**
 	 * Performs initial sync once connection is configured
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return bool
 	 */
 	public function sync() {
@@ -270,7 +307,7 @@ class WPF_Maropost {
 	/**
 	 * Gets all available tags and saves them to options
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return array Lists
 	 */
 	public function sync_tags() {
@@ -300,7 +337,7 @@ class WPF_Maropost {
 	/**
 	 * Loads all custom fields from CRM and merges with local list
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return array CRM Fields
 	 */
 	public function sync_crm_fields() {
@@ -352,7 +389,7 @@ class WPF_Maropost {
 	/**
 	 * Loads lists from CRM and merges with local copy
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return array Lists
 	 */
 	public function sync_lists() {
@@ -385,7 +422,7 @@ class WPF_Maropost {
 	/**
 	 * Gets contact ID for a user based on email address
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return int Contact ID
 	 */
 	public function get_contact_id( $email_address ) {
@@ -412,8 +449,7 @@ class WPF_Maropost {
 	/**
 	 * Gets all tags currently applied to the user, also update the list of available tags
 	 *
-	 * @access public
-	 * @return void
+	 * @since 3.15.1
 	 */
 	public function get_tags( $contact_id ) {
 
@@ -440,7 +476,7 @@ class WPF_Maropost {
 	/**
 	 * Applies tags to a contact
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return bool
 	 */
 	public function apply_tags( $tags, $contact_id ) {
@@ -472,7 +508,7 @@ class WPF_Maropost {
 	/**
 	 * Removes tags from a contact
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return bool
 	 */
 	public function remove_tags( $tags, $contact_id ) {
@@ -504,7 +540,7 @@ class WPF_Maropost {
 	/**
 	 * Adds a new contact
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return int Contact ID
 	 */
 	public function add_contact( $data ) {
@@ -533,6 +569,10 @@ class WPF_Maropost {
 			return $response;
 		}
 
+		if ( empty( $body ) || ! isset( $body->id ) ) {
+			return new WP_Error( 'error', 'Failed to add contact.' );
+		}
+
 		return $body->id;
 	}
 
@@ -541,7 +581,7 @@ class WPF_Maropost {
 	/**
 	 * Update contact
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return bool
 	 */
 	public function update_contact( $contact_id, $data ) {
@@ -556,6 +596,7 @@ class WPF_Maropost {
 			foreach ( $custom_fields as $cf_key => $cf_field ) {
 				if ( isset( $data[ $key ] ) || isset( $data[ $cf_key ] ) ) {
 					$send = true;
+					break 2;
 				}
 			}
 		}
@@ -592,7 +633,7 @@ class WPF_Maropost {
 	/**
 	 * Loads a contact and updates local user meta
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return array User meta data that was returned
 	 */
 	public function load_contact( $contact_id ) {
@@ -612,6 +653,10 @@ class WPF_Maropost {
 		$contact_fields = wpf_get_option( 'contact_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
+		if ( empty( $body_json ) ) {
+			return new WP_Error( 'error', 'Failed to load contact.' );
+		}
+
 		foreach ( $body_json as $key => $field ) {
 			foreach ( $contact_fields as $field_id => $field_data ) {
 				if ( $field_data['active'] == true && $key == $field_data['crm_field'] ) {
@@ -627,7 +672,7 @@ class WPF_Maropost {
 	/**
 	 * Gets a list of contact IDs based on list
 	 *
-	 * @access public
+	 * @since 3.15.1
 	 * @return array Contact IDs returned
 	 */
 	public function load_contacts( $tag ) {

@@ -35,7 +35,7 @@ class WPF_Pipedrive {
 	 * @since 3.40.33
 	 */
 
-	public $supports = array( 'add_fields' );
+	public $supports = array( 'add_fields', 'auto_oauth' );
 
 	/**
 	 * API parameters
@@ -46,6 +46,14 @@ class WPF_Pipedrive {
 	public $params = array();
 
 	/**
+	 * Tracks whether the selected tags field expects an array payload.
+	 *
+	 * @var bool|null
+	 * @since 3.47.2
+	 */
+	private $tags_field_is_array = null;
+
+	/**
 	 * Lets us link directly to editing a contact record in the CRM.
 	 *
 	 * @var string
@@ -53,22 +61,37 @@ class WPF_Pipedrive {
 	 */
 	public $edit_url = '';
 
-
 	/**
-	 * Client ID for OAuth (if applicable).
+	 * New public app client ID.
 	 *
 	 * @var string
 	 * @since 3.40.33
 	 */
-	public $client_id = 'd684d1641b7c3d28';
+	public $client_id = '6cc27b9043b3360f';
 
 	/**
-	 * Client secret for OAuth (if applicable).
+	 * New public app client secret.
 	 *
 	 * @var string
 	 * @since 3.40.33
 	 */
-	public $client_secret = '526c120fad23e27249f4df624fad88d5e0d66555';
+	public $client_secret = '6d185afb6780388f02547c645549dd4bb291f37c';
+
+	/**
+	 * Legacy client ID for existing private app users.
+	 *
+	 * @var string
+	 * @since 3.46.7
+	 */
+	public $legacy_client_id = 'd684d1641b7c3d28';
+
+	/**
+	 * Legacy client secret for existing private app users.
+	 *
+	 * @var string
+	 * @since 3.46.7
+	 */
+	public $legacy_client_secret = '526c120fad23e27249f4df624fad88d5e0d66555';
 
 	/**
 	 * Authorization URL for OAuth (if applicable).
@@ -84,6 +107,9 @@ class WPF_Pipedrive {
 	 * @since 3.40.33
 	 */
 	public function __construct() {
+
+		// Set the correct client credentials based on app version.
+		$this->set_client_credentials();
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -114,6 +140,33 @@ class WPF_Pipedrive {
 		if ( ! empty( $api_domain ) ) {
 			$this->edit_url = $api_domain . '/person/%d#/';
 		}
+
+		// Set the correct client credentials based on app version.
+		$this->set_client_credentials();
+	}
+
+	/**
+	 * Sets the correct client ID and secret based on app version.
+	 *
+	 * @since 3.46.7
+	 */
+	private function set_client_credentials() {
+
+		if ( ! $this->is_public_app() && ! isset( $_GET['code'] ) ) {
+			$this->client_id     = $this->legacy_client_id;
+			$this->client_secret = $this->legacy_client_secret;
+		}
+	}
+
+	/**
+	 * Checks if this connection is using the new public app.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @return bool True if using public app, false if using legacy app.
+	 */
+	public function is_public_app() {
+		return (bool) wpf_get_option( 'pipedrive_public_app' );
 	}
 
 
@@ -172,7 +225,15 @@ class WPF_Pipedrive {
 		$tags_field = wpf_get_option( 'pipedrive_tag' );
 
 		if ( ! empty( $payload->current->{ $tags_field } ) ) {
-			$post_data['tags'] = explode( ',', $payload->current->{ $tags_field } );
+			$field_value = $payload->current->{ $tags_field };
+
+			if ( is_array( $field_value ) ) {
+				$this->tags_field_is_array = true;
+				$post_data['tags']         = array_map( 'intval', $field_value );
+			} else {
+				$this->tags_field_is_array = false;
+				$post_data['tags']         = array_map( 'intval', array_filter( array_map( 'trim', explode( ',', $field_value ) ), 'strlen' ) );
+			}
 		}
 
 		return $post_data;
@@ -236,7 +297,7 @@ class WPF_Pipedrive {
 			),
 		);
 
-		$response = wp_safe_remote_post( $this->auth_url, $params );
+		$response = wp_remote_post( $this->auth_url, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -249,6 +310,76 @@ class WPF_Pipedrive {
 		wp_fusion()->settings->set( "{$this->slug}_refresh_token", $body_json->refresh_token );
 
 		return $body_json->access_token;
+	}
+
+	/**
+	 * Revoke access and refresh tokens.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	public function revoke_token() {
+
+		$refresh_token = wpf_get_option( "{$this->slug}_refresh_token" );
+
+		if ( empty( $refresh_token ) ) {
+			return new WP_Error( 'error', 'No refresh token found to revoke.' );
+		}
+
+		// Format the request as form data (not JSON) as required by Pipedrive.
+		$form_data = array(
+			'token_type_hint' => 'refresh_token',
+			'token'           => $refresh_token,
+		);
+
+		$params = array(
+			'user-agent' => 'WP Fusion; ' . home_url(),
+			'timeout'    => 30,
+			'headers'    => array(
+				'Authorization' => 'Basic ' . base64_encode( $this->client_id . ':' . $this->client_secret ),
+				'Content-Type'  => 'application/x-www-form-urlencoded',
+			),
+			'body'       => $form_data,
+		);
+
+		$response = wp_remote_post( 'https://oauth.pipedrive.com/oauth/revoke', $params );
+
+		if ( is_wp_error( $response ) ) {
+			wpf_log( 'error', 0, 'Failed to revoke Pipedrive token: ' . $response->get_error_message() );
+			return $response;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+
+		// Pipedrive returns 200 for both successful revocation and invalid tokens.
+		if ( 200 !== $response_code ) {
+			$error_message = 'Unknown error occurred while revoking token.';
+			$body          = wp_remote_retrieve_body( $response );
+
+			if ( ! empty( $body ) ) {
+				$body_json = json_decode( $body );
+				if ( $body_json && isset( $body_json->error_description ) ) {
+					$error_message = $body_json->error_description;
+				} elseif ( $body_json && isset( $body_json->error ) ) {
+					$error_message = $body_json->error;
+				}
+			}
+
+			wpf_log( 'error', 0, 'Error revoking Pipedrive token: ' . $error_message );
+			return new WP_Error( 'error', 'Error revoking token: ' . $error_message );
+		}
+
+		// Clear stored tokens from database.
+		wp_fusion()->settings->set( "{$this->slug}_token", '' );
+		wp_fusion()->settings->set( "{$this->slug}_refresh_token", '' );
+		wp_fusion()->settings->set( "{$this->slug}_api_domain", '' );
+		wp_fusion()->settings->set( "{$this->slug}_public_app", false );
+		wp_fusion()->settings->set( 'connection_configured', false );
+
+		wpf_log( 'info', 0, 'Pipedrive token successfully revoked.' );
+
+		return true;
 	}
 
 	/**
@@ -293,7 +424,7 @@ class WPF_Pipedrive {
 	 * @return object $response The response.
 	 */
 	public function handle_http_response( $response, $args, $url ) {
-		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) { // check if the request came from us.
+		if ( strpos( $url, 'pipedrive.com' ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) { // check if the request came from us.
 
 			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
 			$response_code = wp_remote_retrieve_response_code( $response );
@@ -304,10 +435,15 @@ class WPF_Pipedrive {
 
 				if ( strpos( $body_json->error, 'invalid' ) !== false || strpos( $body_json->error, 'expired' ) !== false ) {
 
-					$access_token                     = $this->refresh_token();
+					$access_token = $this->refresh_token();
+
+					if ( is_wp_error( $access_token ) ) {
+						return $access_token;
+					}
+
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
 
-					$response = wp_safe_remote_request( $url, $args );
+					$response = wp_remote_request( $url, $args );
 
 				} else {
 
@@ -315,7 +451,11 @@ class WPF_Pipedrive {
 
 				}
 			} elseif ( isset( $body_json->success ) && false === (bool) $body_json->success ) {
-				$response = new WP_Error( 'error', $body_json->error );
+				$error_message = isset( $body_json->error ) ? $body_json->error : 'Unknown error';
+				if ( isset( $body_json->message ) ) {
+					$error_message .= ': ' . $body_json->message;
+				}
+				$response = new WP_Error( 'error', $error_message );
 
 			} elseif ( 500 === $response_code ) {
 
@@ -352,7 +492,7 @@ class WPF_Pipedrive {
 		}
 
 		$request  = $this->url . '/persons';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		// Validate the connection.
 		if ( is_wp_error( $response ) ) {
@@ -393,7 +533,7 @@ class WPF_Pipedrive {
 		}
 
 		$request  = $this->url . '/personFields';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -440,49 +580,56 @@ class WPF_Pipedrive {
 	 */
 	public function sync_crm_fields() {
 
-		// Load built in fields first.
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		$built_in_fields = array();
+		$custom_fields   = array();
+
 		require __DIR__ . '/pipedrive-fields.php';
 
 		foreach ( $pipedrive_fields as $data ) {
 			$built_in_fields[ $data['crm_field'] ] = $data['crm_label'];
 		}
 
-		if ( ! $this->params ) {
-			$this->get_params();
-		}
-
 		$request  = $this->url . '/personFields';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$response      = json_decode( wp_remote_retrieve_body( $response ) );
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
 		$custom_fields = array();
 
 		if ( ! empty( $response->data ) ) {
 			foreach ( $response->data as $field ) {
 
-				// Skip built in fields.
-				if ( in_array( $field->key, array_keys( $built_in_fields ) ) ) {
-					continue;
-				}
-
 				// Email and phone have sub-fields so we'll treat them differently.
-				if ( 'email' === $field->key || 'phone' === $field->key ) {
+				if ( 'email' === $field->key || 'phone' === $field->key || 'label' === $field->key ) {
 					continue;
 				}
 
-				$custom_fields[ $field->key ] = $field->name;
+				if ( empty( $field->edit_flag ) ) {
+					$built_in_fields[ $field->key ] = $field->name;
+				} else {
+					$custom_fields[ $field->key ] = $field->name;
+				}
 
-				if ( 'tags' === strtolower( $field->name ) && empty( wpf_get_option( 'pipedrive_tag' ) ) ) {
+				// Auto-detect and set label_ids as the default tags field for new connections.
+				if ( 'label_ids' === $field->key && empty( wpf_get_option( 'pipedrive_tag' ) ) ) {
+					wp_fusion()->settings->set( 'pipedrive_tag', 'label_ids' );
+				} elseif ( 'tags' === strtolower( $field->name ) && empty( wpf_get_option( 'pipedrive_tag' ) ) ) {
+					// Fallback to custom field named "tags" if label_ids wasn't found.
 					wp_fusion()->settings->set( 'pipedrive_tag', $field->key );
 				}
 			}
 		}
 
 		asort( $custom_fields );
+		asort( $built_in_fields );
 
 		$crm_fields = array(
 			'Standard Fields' => $built_in_fields,
@@ -515,7 +662,7 @@ class WPF_Pipedrive {
 			$request
 		);
 
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -543,6 +690,7 @@ class WPF_Pipedrive {
 	public function get_tags( $contact_id ) {
 
 		$tags_key = wpf_get_option( 'pipedrive_tag' );
+		$tags     = array();
 
 		if ( ! $tags_key ) {
 			wpf_log( 'notice', 0, __( 'No tags field selected, please create a field for tags. For more information, <a href="https://wpfusion.com/documentation/installation-guides/how-to-connect-pipedrive-to-wordpress/#tags-with-pipedrive">see the documentation</a>', 'wp-fusion-lite' ) );
@@ -551,7 +699,7 @@ class WPF_Pipedrive {
 
 		$request = $this->url . '/persons/' . $contact_id;
 
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -560,12 +708,24 @@ class WPF_Pipedrive {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( ! property_exists( $response->data, $tags_key ) || empty( $response->data->$tags_key ) ) {
+			// If we know the field key uses arrays, store that so outbound payloads match.
+			if ( null === $this->tags_field_is_array && $this->should_assume_array_field( $tags_key ) ) {
+				$this->tags_field_is_array = true;
+			}
+
 			return array();
 		}
 
-		$tags = array_map( 'intval', explode( ',', $response->data->$tags_key ) );
+		$field_value = $response->data->$tags_key;
 
-		return $tags;
+		if ( is_array( $field_value ) ) {
+			$this->tags_field_is_array = true;
+			return array_map( 'intval', $field_value );
+		}
+
+		$this->tags_field_is_array = false;
+
+		return array_map( 'intval', explode( ',', $field_value ) );
 	}
 
 	/**
@@ -587,18 +747,28 @@ class WPF_Pipedrive {
 		}
 
 		$current_tags = $this->get_tags( $contact_id );
-		$tags         = array_unique( array_merge( $current_tags, $tags ) );
+
+		$tags = array_unique( array_merge( $current_tags, array_map( 'intval', $tags ) ) );
 
 		$params  = $this->get_params();
 		$request = $this->url . '/persons/' . $contact_id;
 
-		$params['body'] = array(
-			$tags_key => implode( ',', $tags ),
-		);
+		if ( $this->is_tags_field_array( $tags_key ) ) {
+			$params['headers']['Content-Type'] = 'application/json';
+			$params['body']                    = wp_json_encode(
+				array(
+					$tags_key => array_values( $tags ),
+				)
+			);
+		} else {
+			$params['body'] = array(
+				$tags_key => implode( ',', $tags ),
+			);
+		}
 
 		$params['method'] = 'PUT';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -640,19 +810,59 @@ class WPF_Pipedrive {
 		$params  = $this->get_params();
 		$request = $this->url . '/persons/' . $contact_id;
 
-		$params['body'] = array(
-			$tags_key => implode( ',', $current_tags ),
-		);
+		if ( $this->is_tags_field_array( $tags_key ) ) {
+			$params['headers']['Content-Type'] = 'application/json';
+			$params['body']                    = wp_json_encode(
+				array(
+					$tags_key => array_values( array_map( 'intval', $current_tags ) ),
+				)
+			);
+		} else {
+			$params['body'] = array(
+				$tags_key => implode( ',', $current_tags ),
+			);
+		}
 
 		$params['method'] = 'PUT';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Determines if the selected tags field expects array payloads.
+	 *
+	 * @since 3.47.2
+	 *
+	 * @param string $tags_key The tags field key.
+	 * @return bool True if the field expects an array, otherwise false.
+	 */
+	private function is_tags_field_array( $tags_key ) {
+
+		if ( null !== $this->tags_field_is_array ) {
+			return $this->tags_field_is_array;
+		}
+
+		$this->tags_field_is_array = $this->should_assume_array_field( $tags_key );
+
+		return $this->tags_field_is_array;
+	}
+
+	/**
+	 * Helper to infer whether a field should be treated as array-based.
+	 *
+	 * @since 3.47.2
+	 *
+	 * @param string $tags_key The field key currently in use.
+	 * @return bool
+	 */
+	private function should_assume_array_field( $tags_key ) {
+		return ( 'label_ids' === $tags_key );
 	}
 
 	/**
@@ -711,7 +921,7 @@ class WPF_Pipedrive {
 
 		$params['body']['marketing_status'] = 'subscribed';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -739,7 +949,7 @@ class WPF_Pipedrive {
 		$params['body']   = $this->format_contact_data( $contact_data );
 		$params['method'] = 'PUT';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -759,7 +969,7 @@ class WPF_Pipedrive {
 	public function load_contact( $contact_id ) {
 
 		$request  = $this->url . '/persons/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -778,6 +988,33 @@ class WPF_Pipedrive {
 					$response['data'][ $field . '+' . $data['label'] ] = $data['value'];
 				}
 			}
+		}
+
+		// Ensure the lookup field is populated with any available email.
+		$lookup_field = wpf_get_lookup_field();
+
+		if ( ! empty( $lookup_field ) && ! isset( $response['data'][ $lookup_field ] ) && isset( $response['data']['email'] ) && is_array( $response['data']['email'] ) ) {
+
+			// The mapped email field doesn't exist, but we have emails available.
+			// Try to use the primary email first, otherwise use the first available.
+			$email_to_use = null;
+
+			foreach ( $response['data']['email'] as $email_data ) {
+				if ( ! empty( $email_data['value'] ) ) {
+					$email_to_use = $email_data['value'];
+					if ( ! empty( $email_data['primary'] ) ) {
+						break; // Use primary email if available.
+					}
+				}
+			}
+
+			if ( ! empty( $email_to_use ) ) {
+				$response['data'][ $lookup_field ] = $email_to_use;
+			} else {
+				wpf_log( 'notice', 0, 'Contact #' . $contact_id . ' has no valid email address in Pipedrive.' );
+			}
+		} elseif ( ! empty( $lookup_field ) && ! isset( $response['data'][ $lookup_field ] ) ) {
+			wpf_log( 'notice', 0, 'Contact #' . $contact_id . ' has no email address in Pipedrive.' );
 		}
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -801,40 +1038,198 @@ class WPF_Pipedrive {
 	 */
 	public function load_contacts( $tag ) {
 
-		$tag_field = wpf_get_option( 'pipedrive_tag' );
+		$tag_field   = wpf_get_option( 'pipedrive_tag' );
+		$contact_ids = array();
+		if ( 'label_ids' === $tag_field ) {
 
-		$continue = true;
-		$start    = 0;
+			$cursor = null;
 
-		while ( $continue ) {
+			do {
+				// We can't search by labels, so we'll load all records and filter in PHP.
 
-			$request  = $this->url . '/itemSearch/field/?field_key=' . $tag_field . '&field_type=personField&term=' . $tag . '&return_item_ids=1&start=' . $start;
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+				$request = $this->url . '/persons?limit=500';
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
-			}
-
-			$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-			foreach ( $body->data as $contact ) {
-
-				// The search will return partial matches on the tag ID so this ensures that
-				// the contact really has the tag.
-				$tags = explode( ',', $contact->{ $tag_field } );
-
-				if ( in_array( $tag, $tags ) ) {
-					$contact_ids[] = $contact->id;
+				if ( ! empty( $cursor ) ) {
+					$request .= '&cursor=' . rawurlencode( $cursor );
 				}
-			}
 
-			if ( $body->additional_data->pagination->more_items_in_collection ) {
-				$start += $body->additional_data->pagination->limit;
-			} else {
-				$continue = false;
+				$response = wp_remote_get( $request, $this->get_params() );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( ! empty( $body->data ) ) {
+					foreach ( $body->data as $contact ) {
+
+						if ( empty( $contact->label_ids ) || ! is_array( $contact->label_ids ) ) {
+							continue;
+						}
+
+						if ( in_array( intval( $tag ), $contact->label_ids, true ) ) {
+							$contact_ids[] = $contact->id;
+						}
+					}
+				}
+
+				// Get cursor for next page.
+				$cursor = isset( $body->additional_data->next_cursor ) ? $body->additional_data->next_cursor : null;
+
+			} while ( ! empty( $cursor ) );
+
+		} else {
+
+			// Use itemSearch for custom multiselect fields.
+			$continue = true;
+			$start    = 0;
+
+			while ( $continue ) {
+
+				$request = $this->url . '/itemSearch/field/?field_key=' . $tag_field . '&field_type=personField&term=' . rawurlencode( $tag ) . '&return_item_ids=1&start=' . $start . '&exact_match=true';
+
+				$response = wp_remote_get( $request, $this->get_params() );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( ! empty( $body->data ) ) {
+					foreach ( $body->data as $contact ) {
+
+						// The search will return partial matches on the tag ID so this ensures that
+						// the contact really has the tag.
+						$tags = explode( ',', $contact->{ $tag_field } );
+
+						if ( in_array( $tag, $tags, true ) ) {
+							$contact_ids[] = $contact->id;
+						}
+					}
+				}
+
+				if ( isset( $body->additional_data->pagination->more_items_in_collection ) && $body->additional_data->pagination->more_items_in_collection ) {
+					$start += $body->additional_data->pagination->limit;
+				} else {
+					$continue = false;
+				}
 			}
 		}
 
 		return $contact_ids;
+	}
+
+	/**
+	 * Lists all webhooks.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @return array|WP_Error The webhooks or an error object.
+	 */
+	public function get_webhooks() {
+
+		$response = wp_remote_get( $this->url . '/webhooks', $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( isset( $response->data ) ) {
+			return $response->data;
+		}
+
+		return array();
+	}
+
+	/**
+	 * Creates a webhook.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @param string $type The webhook type: add or update.
+	 * @return array|WP_Error The created webhook IDs or an error.
+	 */
+	public function register_webhooks( $type ) {
+
+		$access_key = wpf_get_option( 'access_key' );
+
+		// Don't do this when the settings are being reset.
+		if ( empty( $access_key ) ) {
+			return false;
+		}
+
+		$ids = array();
+
+		// Pipedrive requires HTTPS for webhook URLs.
+		$webhook_url = str_replace( 'http://', 'https://', get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key ) );
+
+		if ( 'add' === $type ) {
+
+			$data = array(
+				'subscription_url' => $webhook_url,
+				'event_action'     => 'create',
+				'event_object'     => 'person',
+				'version'          => '2.0',
+			);
+
+		} elseif ( 'update' === $type ) {
+
+			$data = array(
+				'subscription_url' => $webhook_url,
+				'event_action'     => 'change',
+				'event_object'     => 'person',
+				'version'          => '2.0',
+			);
+
+		} else {
+			return new WP_Error( 'error', 'Invalid webhook type: ' . $type );
+		}
+
+		wpf_log( 'info', 0, 'Registering Pipedrive webhook for ' . $type . ' events: <pre>' . print_r( $data, true ) . '</pre>' );
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( $data );
+
+		$response = wp_remote_post( $this->url . '/webhooks', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( isset( $response->data->id ) ) {
+			$ids[] = $response->data->id;
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * Destroys a webhook.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @param int $webhook_id The webhook ID.
+	 * @return bool|WP_Error True or an error on failure.
+	 */
+	public function destroy_webhook( $webhook_id ) {
+
+		$params           = $this->get_params();
+		$params['method'] = 'DELETE';
+
+		wpf_log( 'info', 0, 'Deleting Pipedrive webhook with ID ' . $webhook_id );
+
+		$response = wp_remote_request( $this->url . '/webhooks/' . $webhook_id, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return true;
 	}
 }

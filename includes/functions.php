@@ -493,35 +493,53 @@ function wpf_get_datetime_format() {
  */
 function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
 
-	// If the number already has a country code, return it.
+	// If the number already has a country code, clean it and return it.
 	if ( 0 === strpos( $phone_number, '+' ) ) {
-		return $phone_number;
+		$clean_number = preg_replace( '/\D/', '', $phone_number ); // remove non-numeric characters.
+		return '+' . $clean_number;
 	}
 
 	$country_codes = array(
-		'CN' => '86', // China
-		'IN' => '91', // India
-		'US' => '1',  // United States
-		'GB' => '44', // United Kingdom
-		'AU' => '61', // Australia
-		'CA' => '1',  // Canada
-		'ID' => '62', // Indonesia
-		'PK' => '92', // Pakistan
-		'BR' => '55', // Brazil
-		'NG' => '234', // Nigeria
-		'BD' => '880', // Bangladesh
-		'RU' => '7',  // Russia
-		'MX' => '52', // Mexico
-		'JP' => '81', // Japan
-		'ET' => '251', // Ethiopia
-		'PH' => '63', // Philippines
-		'EG' => '20', // Egypt
-		'VN' => '84', // Vietnam
-		'CD' => '243', // Democratic Republic of the Congo
-		'TR' => '90', // Turkey
-		'IR' => '98', // Iran
-		'DE' => '49', // Germany
-		'TH' => '66', // Thailand
+		'CN' => '86',  // China.
+		'IN' => '91',  // India.
+		'US' => '1',   // United States.
+		'GB' => '44',  // United Kingdom.
+		'AU' => '61',  // Australia.
+		'CA' => '1',   // Canada.
+		'ID' => '62',  // Indonesia.
+		'PK' => '92',  // Pakistan.
+		'BR' => '55',  // Brazil.
+		'NG' => '234', // Nigeria.
+		'BD' => '880', // Bangladesh.
+		'RU' => '7',   // Russia.
+		'MX' => '52',  // Mexico.
+		'JP' => '81',  // Japan.
+		'ET' => '251', // Ethiopia.
+		'PH' => '63',  // Philippines.
+		'EG' => '20',  // Egypt.
+		'VN' => '84',  // Vietnam.
+		'CD' => '243', // Democratic Republic of the Congo.
+		'TR' => '90',  // Turkey.
+		'IR' => '98',  // Iran.
+		'DE' => '49',  // Germany.
+		'TH' => '66',  // Thailand.
+		'FR' => '33',  // France.
+		'IT' => '39',  // Italy.
+		'ES' => '34',  // Spain.
+		'PL' => '48',  // Poland.
+		'NL' => '31',  // Netherlands.
+		'BE' => '32',  // Belgium.
+		'GR' => '30',  // Greece.
+		'PT' => '351', // Portugal.
+		'SE' => '46',  // Sweden.
+		'CH' => '41',  // Switzerland.
+		'AT' => '43',  // Austria.
+		'NO' => '47',  // Norway.
+		'DK' => '45',  // Denmark.
+		'FI' => '358', // Finland.
+		'IE' => '353', // Ireland.
+		'NZ' => '64',  // New Zealand.
+		'ZA' => '27',  // South Africa.
 	);
 
 	// Remove any non-numeric characters from the phone number
@@ -611,11 +629,17 @@ function wpf_clean( $var ) {
 		return $var;
 	} else {
 
-		$allowed_html = apply_filters( 'wpf_wp_kses_allowed_html', wp_kses_allowed_html( 'post' ) );
-
 		if ( is_scalar( $var ) ) {
-			$var = wp_kses( $var, $allowed_html );
-			$var = htmlspecialchars_decode( $var ); // we need special characters to be left alone.
+			// If the value doesn't contain any HTML tags, use simple sanitization to avoid triggering expensive filters early in the loading process.
+			if ( false === strpos( $var, '<' ) && false === strpos( $var, '>' ) ) {
+				// Decode %40 to @ to preserve email addresses, since sanitize_text_field() strips percent-encoded characters.
+				$var = str_ireplace( '%40', '@', $var );
+				return sanitize_text_field( $var );
+			}
+
+			$allowed_html = apply_filters( 'wpf_wp_kses_allowed_html', wp_kses_allowed_html( 'post' ) );
+			$var          = wp_kses( $var, $allowed_html );
+			$var          = htmlspecialchars_decode( $var ); // we need special characters to be left alone.
 		}
 
 		return $var;
@@ -665,6 +689,11 @@ function wpf_clean_tags( $tags ) {
 	// If we've switched from a CRM with add_tags to one without, we can convert labels to IDs automatically.
 	if ( ! empty( $tags ) && wp_fusion()->crm && ! wp_fusion()->crm->supports( 'add_tags' ) && ! isset( wpf_get_option( 'available_tags' )[ $tags[0] ] ) ) {
 		$tags = array_map( 'wpf_get_tag_id', $tags );
+	}
+
+	// Auto-upgrade legacy tag IDs to their current equivalents on save.
+	if ( ! empty( $tags ) && wp_fusion()->tag_migration ) {
+		$tags = wp_fusion()->tag_migration->translate_tags( $tags );
 	}
 
 	return array_filter( $tags );
@@ -868,4 +897,27 @@ function wpf_get_asset_meta( $path ) {
 		'dependencies' => array(),
 		'version'      => WP_FUSION_VERSION,
 	);
+}
+
+/**
+ * Syncs lead source data for a user.
+ *
+ * Collects and syncs any enabled lead source fields to the CRM for the specified user.
+ * This function can be used to manually sync lead source data at any time.
+ *
+ * @since 3.46.11
+ *
+ * @param int|bool    $user_id    Optional. The user ID to sync lead source data for.
+ *                                 Defaults to current user ID.
+ * @param string|bool $contact_id Optional. The contact ID in the CRM. If not provided,
+ *                                 will be looked up from the user ID.
+ * @return bool|WP_Error True on success, WP_Error on failure.
+ */
+function wpf_sync_lead_source_data( $user_id = false, $contact_id = false ) {
+
+	if ( ! wp_fusion()->lead_source_tracking ) {
+		return new WP_Error( 'lead_source_not_available', __( 'Lead source tracking is not available.', 'wp-fusion-lite' ) );
+	}
+
+	return wp_fusion()->lead_source_tracking->sync_lead_source_data( $user_id, $contact_id );
 }

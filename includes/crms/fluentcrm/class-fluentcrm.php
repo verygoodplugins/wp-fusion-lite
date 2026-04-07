@@ -722,7 +722,7 @@ class WPF_FluentCRM {
 			fcrm_events_add_event( $email_address, 'wp_fusion', $event, $event_data );
 		} else {
 
-			if ( ! empty( $event_data ) && 1 === count( $event_data ) ) {
+			if ( ! empty( $event_data ) && is_array( $event_data ) && 1 === count( $event_data ) ) {
 				$event_text = reset( $event_data );
 			} else {
 				$event_text = wp_json_encode( $event_data, JSON_NUMERIC_CHECK );

@@ -160,7 +160,12 @@ class WPF_KlickTipp {
 
 			$code = wp_remote_retrieve_response_code( $response );
 
-			if ( ( 200 !== $code && 404 !== $code ) || ( 404 === $code && strpos( $url, '/search' ) !== false ) ) {
+			if ( 200 !== $code ) {
+
+				// Allow 404s from subscriber search so get_contact_id() can create the contact.
+				if ( 404 === $code && false !== strpos( $url, '/subscriber/search' ) ) {
+					return $response;
+				}
 
 				if ( '["API Zugriff verweigert."]' === wp_remote_retrieve_body( $response ) ) {
 					return new WP_Error( 'error', __( 'Access denied. This user account does not have access to the KlickTipp API. See the installation guide (click View Documentation above) for more information.', 'wp-fusion-lite' ) );
@@ -382,13 +387,79 @@ class WPF_KlickTipp {
 			return $response;
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+		$code = wp_remote_retrieve_response_code( $response );
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( ! empty( $body ) ) {
-			return $body[0];
+		if ( 404 === $code && $this->is_missing_contact_response( $body ) ) {
+			return $this->maybe_create_contact_from_email( $email_address );
+		}
+
+		if ( ! empty( $body ) && isset( $body[0] ) && is_numeric( $body[0] ) ) {
+			return absint( $body[0] );
 		}
 
 		return false;
+	}
+
+	/**
+	 * Determines whether the API response indicates an email has no contact.
+	 *
+	 * @since 3.47.3
+	 *
+	 * @param  mixed $body The decoded response body.
+	 * @return bool Whether the response indicates a missing contact.
+	 */
+	private function is_missing_contact_response( $body ) {
+
+		if ( empty( $body ) ) {
+			return false;
+		}
+
+		if ( is_array( $body ) && isset( $body[0] ) && false !== stripos( $body[0], 'No such contact' ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Creates a new contact when Klick-Tipp reports it is missing.
+	 *
+	 * @since 3.47.3
+	 *
+	 * @param  string $email_address The email address.
+	 * @return int|bool|WP_Error The new contact ID, false on invalid email, or error.
+	 */
+	private function maybe_create_contact_from_email( $email_address ) {
+
+		if ( ! is_email( $email_address ) ) {
+			return false;
+		}
+
+		$contact_id = $this->add_contact(
+			array(
+				'email' => $email_address,
+			)
+		);
+
+		if ( is_wp_error( $contact_id ) ) {
+			return $contact_id;
+		}
+
+		$user    = get_user_by( 'email', $email_address );
+		$user_id = $user instanceof WP_User ? $user->ID : 0;
+
+		wpf_log(
+			'notice',
+			$user_id,
+			sprintf(
+				/* translators: %s is the contact email address. */
+				__( 'No Klick-Tipp contact was found for %s. Created a new contact automatically.', 'wp-fusion-lite' ),
+				$email_address
+			)
+		);
+
+		return $contact_id;
 	}
 
 	/**

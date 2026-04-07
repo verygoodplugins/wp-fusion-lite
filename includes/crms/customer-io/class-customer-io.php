@@ -83,6 +83,11 @@ class WPF_Customer_IO {
 	 */
 	public function __construct() {
 
+		$region             = wpf_get_option( "{$this->slug}_region" );
+		$region             = ( 'eu' === $region ? '-' . $region : '' );
+		$this->url          = 'https://api' . $region . '.customer.io/v1/';
+		$this->tracking_url = 'https://track' . $region . '.customer.io/api/v1/';
+
 		// Set up admin options.
 		if ( is_admin() ) {
 			require_once __DIR__ . '/admin/class-customer-io-admin.php';
@@ -105,11 +110,6 @@ class WPF_Customer_IO {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ), 100 );
-
-		$region             = wpf_get_option( "{$this->slug}_region" );
-		$region             = ( $region === 'eu' ? '-' . $region : '' );
-		$this->url          = 'https://api' . $region . '.customer.io/v1/';
-		$this->tracking_url = 'https://track' . $region . '.customer.io/api/v1/';
 	}
 
 	/**
@@ -299,20 +299,32 @@ class WPF_Customer_IO {
 	 */
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) { // check if the request came from us.
+		if ( $this->url && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) {
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
 
 			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
 			$response_code = wp_remote_retrieve_response_code( $response );
 
-			if ( 404 === $response_code ) {
-				$response = new WP_Error( 'not_found', $body_json->error->message );
+			if ( 200 !== $response_code && 201 !== $response_code ) {
 
-			} elseif ( isset( $body_json->meta ) && isset( $body_json->meta->error ) ) {
-				$response = new WP_Error( 'error', $body_json->meta->error );
+				$code = 404 === $response_code ? 'not_found' : 'error';
 
-			} elseif ( 500 === $response_code ) {
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
+				if ( ! empty( $body_json->errors[0]->detail ) ) {
+					$message = $body_json->errors[0]->detail;
+				} elseif ( isset( $body_json->meta ) && ! empty( $body_json->meta->error ) ) {
+					$message = $body_json->meta->error;
+				} else {
+					$message = sprintf(
+						/* translators: %d is the HTTP response code. */
+						__( 'An error has occurred in API server. [error %d]', 'wp-fusion-lite' ),
+						$response_code
+					);
+				}
 
+				$response = new WP_Error( $code, $message );
 			}
 		}
 
@@ -443,7 +455,7 @@ class WPF_Customer_IO {
 	 */
 	public function get_contact_id( $email_address ) {
 
-		$request = $this->url . 'customers/?email=' . $email_address;
+		$request = $this->url . 'customers/?email=' . rawurlencode( $email_address );
 
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
@@ -646,6 +658,16 @@ class WPF_Customer_IO {
 
 		$contact_data['_update'] = true;
 
+		// Check if email is changing. Customer.io uses email as the identifier, so we
+		// can't include email in the update data if it differs from the contact_id.
+		// We'll handle the email change separately using cio_id.
+		$new_email = false;
+
+		if ( isset( $contact_data['email'] ) && strtolower( $contact_data['email'] ) !== strtolower( $contact_id ) ) {
+			$new_email = $contact_data['email'];
+			unset( $contact_data['email'] );
+		}
+
 		$params           = $this->get_tracking_params();
 		$params['body']   = wp_json_encode( $contact_data );
 		$params['method'] = 'PUT';
@@ -657,7 +679,91 @@ class WPF_Customer_IO {
 			return $response;
 		}
 
+		// Handle email change using cio_id.
+		if ( false !== $new_email ) {
+			$this->update_contact_email( $contact_id, $new_email );
+		}
+
 		return true;
+	}
+
+	/**
+	 * Updates a contact's email address using their cio_id.
+	 *
+	 * Customer.io uses email as the identifier, so changing email requires
+	 * using the immutable cio_id to identify the contact.
+	 *
+	 * @since 3.47.4
+	 *
+	 * @param string $old_email The contact's current email (contact_id).
+	 * @param string $new_email The new email address.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function update_contact_email( $old_email, $new_email ) {
+
+		// Get the cio_id for the contact.
+		$cio_id = $this->get_cio_id( $old_email );
+
+		if ( is_wp_error( $cio_id ) || empty( $cio_id ) ) {
+			return is_wp_error( $cio_id ) ? $cio_id : new WP_Error( 'error', 'Could not get cio_id for contact.' );
+		}
+
+		// Update the email using cio_id.
+		$params           = $this->get_tracking_params();
+		$params['method'] = 'PUT';
+		$params['body']   = wp_json_encode(
+			array(
+				'email'   => $new_email,
+				'_update' => true,
+			)
+		);
+
+		$request  = $this->tracking_url . 'customers/cio_' . $cio_id;
+		$response = wp_safe_remote_post( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		// Update the stored contact_id to the new email.
+		$user_id = wp_fusion()->user->get_user_id( $old_email );
+
+		if ( $user_id ) {
+			update_user_meta( $user_id, WPF_CONTACT_ID_META_KEY, $new_email );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Gets the cio_id for a contact by email.
+	 *
+	 * Customer.io assigns an immutable cio_id to each contact. This is needed
+	 * to update the email address when email is used as the identifier.
+	 *
+	 * @since 3.47.4
+	 *
+	 * @param string $email The contact's email address.
+	 * @return string|WP_Error The cio_id on success, or WP_Error on failure.
+	 */
+	public function get_cio_id( $email ) {
+
+		$params  = $this->get_params();
+		$request = $this->url . "customers/{$email}/attributes?id_type=email";
+
+		$response = wp_safe_remote_get( $request, $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( empty( $body['customer']['identifiers']['cio_id'] ) ) {
+			return new WP_Error( 'error', 'cio_id not found in response.' );
+		}
+
+		return $body['customer']['identifiers']['cio_id'];
 	}
 
 	/**

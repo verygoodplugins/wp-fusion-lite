@@ -101,6 +101,9 @@ class WPF_Groundhogg {
 		// Don't sync users back to GH if they were created by GH.
 		add_action( 'wpf_user_register', array( $this, 'user_register' ), 10, 2 );
 
+		// Capture password when creating user from contact.
+		add_filter( 'groundhogg/create_user_from_contact/new_user_args', array( $this, 'prepare_user_sync' ) );
+
 		add_action( 'groundhogg/contact/tag_applied', array( $this, 'tag_applied' ), 10, 2 );
 		add_action( 'groundhogg/contact/tag_removed', array( $this, 'tag_removed' ), 10, 2 );
 		add_action( 'groundhogg/admin/contact/save', array( $this, 'contact_post_update' ), 10, 2 );
@@ -297,6 +300,10 @@ class WPF_Groundhogg {
 		$tags = $this->get_tags( $contact_id );
 
 		wp_fusion()->user->set_tags( $tags, $user_id );
+
+		// Push user metadata to sync fields like user_pass, user_registered, etc.
+		// when a user is created from an existing contact.
+		wp_fusion()->user->push_user_meta( $user_id );
 	}
 
 	/**
@@ -319,6 +326,34 @@ class WPF_Groundhogg {
 
 		return $post_data;
 	}
+
+	/**
+	 * Allows for Groundhogg-generated passwords to be synced back to the CRM.
+	 *
+	 * @since 3.46.11
+	 *
+	 * @param array $new_user_args The new user arguments.
+	 * @return array The new user arguments.
+	 */
+	public function prepare_user_sync( $new_user_args ) {
+
+		// Hook into user_register to capture the password and sync after user creation.
+		add_filter(
+			'wpf_user_register',
+			function ( $post_data ) use ( $new_user_args ) {
+
+				// Add the password to the sync data if available.
+				if ( ! empty( $new_user_args['user_pass'] ) ) {
+					$post_data['user_pass'] = $new_user_args['user_pass'];
+				}
+
+				return $post_data;
+			}
+		);
+
+		return $new_user_args;
+	}
+
 	/**
 	 * Update WPF tags when tags applied in Groundhogg
 	 *

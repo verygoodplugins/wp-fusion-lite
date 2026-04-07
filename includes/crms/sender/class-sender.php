@@ -1,4 +1,12 @@
 <?php
+/**
+ * WP Fusion - Sender CRM
+ *
+ * @package   WP Fusion
+ * @copyright Copyright (c) 2024, Very Good Plugins, https://verygoodplugins.com
+ * @license   GPL-3.0+
+ * @since     3.37.14
+ */
 
 /**
  * WP Fusion Sender CRM class.
@@ -123,6 +131,8 @@ class WPF_Sender {
 	 * @return mixed  The field value.
 	 */
 	public function format_field_value( $value, $field_type, $field ) {
+
+		unset( $field ); // The field key is not needed for Sender formatting.
 
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 
@@ -342,20 +352,33 @@ class WPF_Sender {
 	 */
 	public function sync_tags() {
 
-		$request  = $this->url . '/groups';
-		$response = wp_remote_get( $request, $this->get_params() );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$response       = json_decode( wp_remote_retrieve_body( $response ) );
 		$available_tags = array();
+		$proceed        = true;
+		$page           = 1;
 
-		if ( ! empty( $response->data ) ) {
+		while ( $proceed ) {
 
-			foreach ( $response->data as $group ) {
-				$available_tags[ $group->id ] = $group->title;
+			$request  = $this->url . '/groups?page=' . $page;
+			$response = wp_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->data ) ) {
+
+				foreach ( $response->data as $group ) {
+					$available_tags[ $group->id ] = $group->title;
+				}
+			}
+
+			// Check if there are more pages.
+			if ( empty( $response->meta ) || $response->meta->current_page === $response->meta->last_page ) {
+				$proceed = false;
+			} else {
+				++$page;
 			}
 		}
 
@@ -397,7 +420,7 @@ class WPF_Sender {
 				continue;
 			}
 
-			// We did like that because load_contact requires the field name to be used and the update contact requires the field id
+			// load_contact requires the field name to be used and update_contact requires the field ID.
 			$custom_fields[ $field->name . '__' . $field->id ] = $field->title;
 		}
 
@@ -510,7 +533,7 @@ class WPF_Sender {
 	 */
 	public function apply_tags( $tags, $contact_id ) {
 
-		// We can do update contact endpoint to apply tags but it fails most of the times and it does not trigger automations
+		// We can use update_contact to apply tags, but it fails frequently and does not trigger automations.
 		$params = $this->get_params();
 		foreach ( $tags as $tag ) {
 			$request        = $this->url . '/subscribers/groups/' . $tag;
@@ -659,7 +682,7 @@ class WPF_Sender {
 
 		$response = $response['data'];
 
-		// Add columns to response
+		// Add columns to response.
 		foreach ( $response['columns'] as $column ) {
 			$response[ $column['id'] ] = $column['value'];
 		}

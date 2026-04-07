@@ -173,6 +173,21 @@ function wpf_render_tag_multiselect( $args = array() ) {
 					$field_data['label'] .= '<small>(' . esc_html__( 'form', 'wp-fusion-lite' ) . ')</small>';
 				}
 
+				if ( 'Lists' === $tag_category ) {
+					// Klaviyo.
+					$field_data['label'] .= '<small>(' . esc_html__( 'list', 'wp-fusion-lite' ) . ')</small>';
+				}
+
+				if ( 'Paths' === $tag_category ) {
+					$field_data['label'] .= '<small>(' . esc_html__( 'path', 'wp-fusion-lite' ) . ')</small>';
+				}
+
+				if ( false !== strpos( $field_data['label'], 'opt-in to marketing' ) ) {
+					// Klaviyo.
+					$field_data['label'] = str_replace( '(', '<small>(', $field_data['label'] );
+					$field_data['label'] = str_replace( ')', ')</small>', $field_data['label'] );
+				}
+
 				if ( $field_data['category'] === $tag_category ) {
 					echo '<option value="' . esc_attr( $id ) . '" ' . selected( true, in_array( $id, $args['setting'] ), false ) . '>' . esc_html( $field_data['label'] ) . '</option>';
 				}
@@ -408,7 +423,7 @@ function wpf_status_icon( $complete_data, $type = 'entry' ) {
 
 	$url = false;
 
-	if ( $complete_data['contact_id'] ) {
+	if ( $complete_data['complete'] ) {
 
 		$class = 'success';
 

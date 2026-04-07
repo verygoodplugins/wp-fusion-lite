@@ -5,3 +5,7 @@
 
 .distignore
 .gitignore
+.stylelintrc.js
+.stylelintignore
+.gitattributes
+junit.xml

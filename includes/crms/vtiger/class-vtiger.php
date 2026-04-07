@@ -152,13 +152,18 @@ class WPF_Vtiger {
 
 		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
-			if ( empty( $value ) ) {
-				// If checkbox is unselected
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
 				return 'off';
-			} else {
-				// If checkbox is selected
+			}
+
+			if ( ! empty( $value ) ) {
+				// If checkbox is selected.
 				return 'on';
 			}
+
+			// Default to off for empty values.
+			return 'off';
 		} else {
 
 			return $value;

@@ -127,6 +127,7 @@ class WPF_Log_Handler {
 		// Export & Flush logs.
 		add_action( 'admin_init', array( $this, 'export_logs' ) );
 		add_action( 'admin_init', array( $this, 'flush_logs' ) );
+		add_action( 'admin_init', array( $this, 'delete_logs' ) );
 
 		// Error handling.
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
@@ -506,6 +507,93 @@ class WPF_Log_Handler {
 		}
 	}
 
+	/**
+	 * Delete individual or bulk log entries.
+	 *
+	 * @since 3.46.7
+	 */
+	public function delete_logs() {
+
+		// Handle individual log deletion.
+		if ( ! empty( $_REQUEST['action'] ) && 'delete' === $_REQUEST['action'] && ! empty( $_REQUEST['log'] ) && ! is_array( $_REQUEST['log'] ) ) {
+
+			$log_id = absint( $_REQUEST['log'] );
+
+			if ( empty( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'wpf_delete_log_' . $log_id ) ) {
+				wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
+			}
+
+			$this->delete_log_entry( $log_id );
+
+			// Redirect to clear the URL.
+			wp_redirect( esc_url_raw( admin_url( 'tools.php?page=wpf-settings-logs' ) ) );
+			exit;
+		}
+
+		// Handle bulk log deletion.
+		if ( ! empty( $_REQUEST['action'] ) && 'delete' === $_REQUEST['action'] && ! empty( $_REQUEST['log'] ) && is_array( $_REQUEST['log'] ) ) {
+
+			if ( empty( $_REQUEST['wpf_logs_submit'] ) || ! wp_verify_nonce( $_REQUEST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) {
+				wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
+			}
+
+			$log_ids = array_map( 'absint', $_REQUEST['log'] );
+
+			foreach ( $log_ids as $log_id ) {
+				$this->delete_log_entry( $log_id );
+			}
+
+			// Redirect to clear the URL.
+			wp_redirect( esc_url_raw( admin_url( 'tools.php?page=wpf-settings-logs' ) ) );
+			exit;
+		}
+
+		// Handle bulk action from dropdown.
+		if ( ! empty( $_REQUEST['action2'] ) && 'delete' === $_REQUEST['action2'] && ! empty( $_REQUEST['log'] ) && is_array( $_REQUEST['log'] ) ) {
+
+			if ( empty( $_REQUEST['wpf_logs_submit'] ) || ! wp_verify_nonce( $_REQUEST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) {
+				wp_die( esc_html__( 'Action failed. Please refresh the page and retry.', 'wp-fusion-lite' ) );
+			}
+
+			$log_ids = array_map( 'absint', $_REQUEST['log'] );
+
+			foreach ( $log_ids as $log_id ) {
+				$this->delete_log_entry( $log_id );
+			}
+
+			// Redirect to clear the URL.
+			wp_redirect( esc_url_raw( admin_url( 'tools.php?page=wpf-settings-logs' ) ) );
+			exit;
+		}
+	}
+
+	/**
+	 * Delete a single log entry by ID.
+	 *
+	 * @since 3.46.7
+	 *
+	 * @param int $log_id The log ID to delete.
+	 * @return bool True if deleted successfully, false otherwise.
+	 */
+	public function delete_log_entry( $log_id ) {
+
+		global $wpdb;
+
+		$log_id = absint( $log_id );
+
+		if ( empty( $log_id ) ) {
+			return false;
+		}
+
+		$result = $wpdb->delete(
+			$wpdb->prefix . 'wpf_logging',
+			array( 'log_id' => $log_id ),
+			array( '%d' )
+		);
+
+		return false !== $result;
+	}
+
 
 	/**
 	 * Export logs from db to a csv file.
@@ -564,20 +652,20 @@ class WPF_Log_Handler {
 		$params = wp_fusion()->crm->get_params();
 
 		if ( isset( $params['headers'] ) ) {
-			$context['request_args']['headers'] = $params['headers'];
+			$context['request_args']['headers']['Authorization'] = $params['headers']['Authorization'];
 		}
 
-		// Make the API call
+		// Make the API call.
 		$response = wp_remote_request( $context['request_uri'], $context['request_args'] );
 
-		// Log the response
+		// Log the response.
 		if ( is_wp_error( $response ) ) {
 			wpf_log( 'error', $log->user, 'Error retrying API call: ' . $response->get_error_message() );
 		} else {
 			wpf_log( 'notice', $log->user, 'Successfully retried API call to ' . $context['request_uri'] );
 		}
 
-		// Redirect back to logs
+		// Redirect back to logs.
 		wp_safe_redirect( admin_url( 'tools.php?page=wpf-settings-logs' ) );
 		exit;
 	}
@@ -605,7 +693,7 @@ class WPF_Log_Handler {
 
 		<div class="wrap">
 
-			<form method="get" id="mainform">
+			<form method="post" id="mainform">
 
 				<h1 class="wp-heading-inline"><?php esc_html_e( 'WP Fusion Activity Log', 'wp-fusion-lite' ); ?></h1>
 
@@ -633,6 +721,16 @@ class WPF_Log_Handler {
 				<?php endif; ?>
 
 				<input type="hidden" name="page" value="wpf-settings-logs">
+
+				<?php
+				// Preserve current filters.
+				$allowed_params = array( 'level', 'source', 'user', 'startdate', 'enddate', 's', 'orderby', 'order', 'paged' );
+				foreach ( $allowed_params as $param ) {
+					if ( ! empty( $_REQUEST[ $param ] ) ) {
+						echo '<input type="hidden" name="' . esc_attr( $param ) . '" value="' . esc_attr( $_REQUEST[ $param ] ) . '">';
+					}
+				}
+				?>
 
 				<?php $log_table_list->display(); ?>
 
