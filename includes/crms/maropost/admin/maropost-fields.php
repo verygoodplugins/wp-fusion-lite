@@ -17,9 +17,9 @@ $maropost_fields['user_email'] = array(
 	'crm_field' => 'email',
 );
 
-$maropost_fields['phone_number'] = array(
+$maropost_fields['billing_phone'] = array(
 	'crm_label' => 'Phone',
-	'crm_field' => 'phone_number',
+	'crm_field' => 'phone',
 );
 
 $maropost_fields['billing_city'] = array(
@@ -35,4 +35,10 @@ $maropost_fields['website'] = array(
 $maropost_fields['billing_country'] = array(
 	'crm_label' => 'Country',
 	'crm_field' => 'country',
+);
+
+$maropost_fields[] = array(
+	'crm_label' => 'Subscribe to List',
+	'crm_field' => 'subscribe',
+	'type'      => 'checkbox',
 );

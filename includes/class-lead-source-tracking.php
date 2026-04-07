@@ -396,4 +396,95 @@ class WPF_Lead_Source_Tracking {
 			wp_enqueue_script( 'wpf-leadsource-tracking', WPF_DIR_URL . 'assets/js/wpf-leadsource-tracking.js', array(), WP_FUSION_VERSION, true );
 		}
 	}
+
+	/**
+	 * Syncs lead source data for a specific user.
+	 *
+	 * Collects and syncs any enabled lead source fields to the CRM for the specified user.
+	 * This method can be called programmatically to sync lead source data at any time.
+	 *
+	 * @since 3.46.11
+	 *
+	 * @param int|bool    $user_id    Optional. The user ID to sync lead source data for.
+	 *                                 Defaults to current user ID.
+	 * @param string|bool $contact_id Optional. The contact ID in the CRM. If not provided,
+	 *                                 will be looked up from the user ID.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
+	 */
+	public function sync_lead_source_data( $user_id = false, $contact_id = false ) {
+
+		if ( ! $this->is_tracking_leadsource() ) {
+			wpf_log(
+				'notice',
+				$user_id,
+				'Lead source tracking is disabled.',
+				array(
+					'source' => 'lead-source-tracking',
+				)
+			);
+			return false;
+		}
+
+		if ( did_action( 'wpf_api_add_contact_args' ) ) {
+			wpf_log(
+				'info',
+				$user_id,
+				'Lead source data was already sent with the create contact API call, to improve performance it won\'t be synced again.',
+				array(
+					'source' => 'lead-source-tracking',
+				)
+			);
+			return true;
+		}
+
+		// Get the user ID if not provided.
+		if ( false === $user_id ) {
+			$user_id = wpf_get_current_user_id();
+		}
+
+		// Get contact ID if not provided.
+		if ( false === $contact_id ) {
+			$contact_id = wpf_get_contact_id( $user_id );
+		}
+
+		// Validate contact ID.
+		if ( empty( $contact_id ) ) {
+			return new WP_Error( 'no_contact_id', __( 'No contact ID found for user.', 'wp-fusion-lite' ) );
+		}
+
+		// Collect lead source data.
+		$lead_source_data = $this->merge_lead_source();
+
+		// If no lead source data is available, return early.
+		if ( empty( $lead_source_data ) ) {
+			wpf_log(
+				'info',
+				$user_id,
+				'No lead source data available to sync.',
+				array(
+					'source' => 'lead-source-tracking',
+				)
+			);
+			return true; // Not an error, just no data to sync.
+		}
+
+		$lead_source_data = $lead_source_data[0];
+
+		// Update the contact in the CRM.
+		$result = wp_fusion()->crm->update_contact( $contact_id, $lead_source_data );
+
+		if ( is_wp_error( $result ) ) {
+			wpf_log(
+				'error',
+				$user_id,
+				'Failed to sync lead source data: ' . $result->get_error_message(),
+				array(
+					'source' => 'lead-source-tracking',
+				)
+			);
+			return $result;
+		}
+
+		return true;
+	}
 }

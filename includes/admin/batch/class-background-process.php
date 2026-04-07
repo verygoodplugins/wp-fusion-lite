@@ -95,6 +95,9 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		 */
 		public function dispatch() {
 
+			// Clean up orphaned operations before starting new processes.
+			$this->cleanup_orphaned_operations();
+
 			if ( $this->is_process_running() ) {
 				return true;
 			}
@@ -137,9 +140,11 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 				// Save status for health check. Don't track status on quick-add from Woo orders etc.
 
 				$status = array(
-					'key'       => $key,
-					'total'     => count( $this->data ),
-					'remaining' => count( $this->data ),
+					'key'        => $key,
+					'total'      => count( $this->data ),
+					'remaining'  => count( $this->data ),
+					'started_at' => time(),
+					'updated_at' => time(),
 				);
 
 				// Get max packet size
@@ -475,6 +480,7 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 
 				$status['total_time']     = time() - $this->start_time;
 				$status['memory_percent'] = ( memory_get_usage( true ) / $this->get_memory_limit() ) * 100 . '%';
+				$status['updated_at']     = time();
 
 				update_site_option( 'wpfb_status_' . $batch->key, $status );
 
@@ -617,6 +623,120 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 		}
 
 		/**
+		 * Clean up orphaned background operations.
+		 *
+		 * An operation is considered orphaned if:
+		 * - No timestamp exists (legacy records from years ago), OR
+		 * - Queue data doesn't exist but status does (completed but not cleaned), OR
+		 * - Status hasn't been updated in 24+ hours AND no process lock exists
+		 *
+		 * @since 3.46.11
+		 */
+		public function cleanup_orphaned_operations() {
+
+			// Only run cleanup if no process is currently running.
+			if ( $this->is_process_running() ) {
+				return;
+			}
+
+			global $wpdb;
+
+			// Get all wpfb_status_ keys from both options and sitemeta tables.
+			$table        = is_multisite() ? $wpdb->sitemeta : $wpdb->options;
+			$column       = is_multisite() ? 'meta_key' : 'option_name';
+			$value_column = is_multisite() ? 'meta_value' : 'option_value';
+
+			$status_keys = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT {$column} as option_name, {$value_column} as option_value 
+					FROM {$table} 
+					WHERE {$column} LIKE %s",
+					'wpfb_status_' . $this->identifier . '_%'
+				)
+			);
+
+			if ( empty( $status_keys ) ) {
+				return;
+			}
+
+			$max_age_hours = apply_filters( 'wpf_batch_max_age_hours', 24 );
+			$cleaned_count = 0;
+
+			foreach ( $status_keys as $status_row ) {
+				$status_key = $status_row->option_name;
+				$status     = maybe_unserialize( $status_row->option_value );
+
+				// Skip if status data is invalid.
+				if ( ! is_array( $status ) || empty( $status['key'] ) ) {
+					delete_site_option( $status_key );
+					++$cleaned_count;
+					continue;
+				}
+
+				$queue_key   = $status['key'];
+				$is_orphaned = false;
+				$reason      = '';
+
+				// Check if this operation is orphaned.
+				if ( ! isset( $status['started_at'] ) ) {
+					// Legacy record without timestamp - definitely orphaned.
+					$is_orphaned = true;
+					$reason      = 'no timestamp (legacy record)';
+				} else {
+					// Check if queue data still exists.
+					$queue_data = get_site_option( $queue_key );
+
+					if ( false === $queue_data ) {
+						// Queue data is gone but status remains - orphaned.
+						$is_orphaned = true;
+						$reason      = 'queue data missing';
+					} elseif ( empty( $queue_data ) ) {
+						// Queue is empty but status exists - orphaned.
+						$is_orphaned = true;
+						$reason      = 'queue empty';
+					} else {
+						// Check age and process lock.
+						$updated_at = isset( $status['updated_at'] ) ? $status['updated_at'] : $status['started_at'];
+						$age_hours  = ( time() - $updated_at ) / HOUR_IN_SECONDS;
+
+						if ( $age_hours > $max_age_hours ) {
+							// Old operation - check if process is truly dead.
+							$process_lock = get_transient( $this->identifier . '_process_lock' );
+							if ( false === $process_lock ) {
+								$is_orphaned = true;
+								$reason      = sprintf( 'aged %.1f hours with no process lock', $age_hours );
+							}
+						}
+					}
+				}
+
+				// Clean up orphaned operation.
+				if ( $is_orphaned ) {
+					delete_site_option( $status_key );
+					delete_site_option( $queue_key ); // Clean queue data too.
+					++$cleaned_count;
+
+					wpf_log(
+						'notice',
+						0,
+						sprintf( 'Cleaned up orphaned batch operation: %s (%s)', $queue_key, $reason ),
+						array( 'source' => 'batch-cleanup' )
+					);
+				}
+			}
+
+			// Log summary if any operations were cleaned.
+			if ( $cleaned_count > 0 ) {
+				wpf_log(
+					'info',
+					0,
+					sprintf( 'Batch cleanup completed: removed %d orphaned operations', $cleaned_count ),
+					array( 'source' => 'batch-cleanup' )
+				);
+			}
+		}
+
+		/**
 		 * Complete.
 		 *
 		 * Override if applicable, but ensure that the below actions are
@@ -687,6 +807,9 @@ if ( ! class_exists( 'WPF_Background_Process' ) ) {
 			if ( ! wpf_get_option( 'connection_configured' ) ) {
 				return; // the WPF settings have been reset.
 			}
+
+			// Clean up orphaned operations during healthcheck as backup.
+			$this->cleanup_orphaned_operations();
 
 			if ( $this->is_process_running() ) {
 

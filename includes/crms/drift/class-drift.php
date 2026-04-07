@@ -20,7 +20,7 @@ class WPF_Drift {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array( 'add_tags' );
+	public $supports = array( 'add_tags', 'auto_oauth' );
 
 	/**
 	 * Contains API params

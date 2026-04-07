@@ -108,15 +108,26 @@ class WPF_Admin_Bar {
 	 * @return void
 	 */
 	public function subval_sort( $a, $subkey ) {
+		$sort_map = array();
+		$sorted   = array();
+
 		foreach ( $a as $k => $v ) {
-			$b[ $k ] = strtolower( $v[ $subkey ] );
-		}
-		asort( $b );
-		foreach ( $b as $key => $val ) {
-			$c[ $key ] = $a[ $key ];
+			if ( is_array( $v ) && isset( $v[ $subkey ] ) ) {
+				$sort_map[ $k ] = strtolower( (string) $v[ $subkey ] );
+			} elseif ( is_string( $v ) ) {
+				$sort_map[ $k ] = strtolower( $v );
+			} else {
+				$sort_map[ $k ] = '';
+			}
 		}
 
-		return $c;
+		asort( $sort_map );
+
+		foreach ( $sort_map as $key => $val ) {
+			$sorted[ $key ] = $a[ $key ];
+		}
+
+		return $sorted;
 	}
 
 	/**
@@ -213,7 +224,7 @@ class WPF_Admin_Bar {
 		if ( is_array( reset( $available_tags ) ) ) {
 
 			foreach ( (array) $available_tags as $value ) {
-				if ( is_array( $value ) ) {
+				if ( is_array( $value ) && isset( $value['category'] ) && is_scalar( $value['category'] ) ) {
 					$tag_categories[] = $value['category'];
 				}
 			}
@@ -242,10 +253,15 @@ class WPF_Admin_Bar {
 			// Add the submenu links.
 			foreach ( $available_tags as $tag_id => $tag_data ) {
 
-				$parent_id = 'wpf-cat-' . sanitize_title_with_dashes( $tag_data['category'] );
+				if ( ! is_array( $tag_data ) ) {
+					continue;
+				}
+
+				$category_slug = isset( $tag_data['category'] ) && is_scalar( $tag_data['category'] ) ? sanitize_title_with_dashes( (string) $tag_data['category'] ) : '';
+				$parent_id     = 'wpf-cat-' . $category_slug;
 
 				// If no category specified.
-				if ( sanitize_title_with_dashes( $tag_data['category'] ) == '0' ) {
+				if ( '' === $category_slug || '0' === $category_slug ) {
 
 					if ( $without_category_id == null ) {
 						$without_category_id = 'no-category';
@@ -260,6 +276,10 @@ class WPF_Admin_Bar {
 					}
 
 					$parent_id = $without_category_id;
+				}
+
+				if ( empty( $tag_data['label'] ) || ! is_scalar( $tag_data['label'] ) ) {
+					continue;
 				}
 
 				$wp_admin_bar->add_menu(

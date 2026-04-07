@@ -114,6 +114,7 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 */
 	public function get_columns() {
 		return array(
+			'cb'        => '<input type="checkbox" />',
 			'timestamp' => __( 'Timestamp', 'wp-fusion-lite' ),
 			'level'     => __( 'Level', 'wp-fusion-lite' ),
 			'user'      => __( 'User', 'wp-fusion-lite' ),
@@ -133,21 +134,51 @@ class WPF_Log_Table_List extends WP_List_Table {
 	}
 
 	/**
+	 * Get available bulk actions.
+	 *
+	 * @return array
+	 */
+	public function get_bulk_actions() {
+		return array(
+			'delete' => __( 'Delete', 'wp-fusion-lite' ),
+		);
+	}
+
+	/**
 	 * Timestamp column.
 	 *
 	 * @param  array $log
 	 * @return string
 	 */
 	public function column_timestamp( $log ) {
-		$output = esc_html(
-			mysql2date(
+		// Convert UTC timestamp to local timezone for display.
+		$utc_timestamp = strtotime( $log['timestamp'] . ' UTC' );
+		$output        = esc_html(
+			wp_date(
 				get_option( 'date_format' ) . ' H:i:s',
-				$log['timestamp']
+				$utc_timestamp
 			)
 		);
 
 		$link    = admin_url( "tools.php?page=wpf-settings-logs&id={$log['log_id']}#{$log['log_id']}" );
 		$output .= sprintf( __( '<a class="wpf-log-link" href="%s"><span class="dashicons dashicons-admin-links"></span></a>', 'wp-fusion-lite' ), $link );
+
+		// Add row actions.
+		$delete_url = wp_nonce_url(
+			admin_url( "tools.php?page=wpf-settings-logs&action=delete&log={$log['log_id']}" ),
+			'wpf_delete_log_' . $log['log_id']
+		);
+
+		$actions = array(
+			'delete' => sprintf(
+				'<a href="%s" class="wpf-delete-log" onclick="return confirm(\'%s\')">%s</a>',
+				esc_url( $delete_url ),
+				esc_js( __( 'Are you sure you want to delete this log entry?', 'wp-fusion-lite' ) ),
+				esc_html__( 'Delete', 'wp-fusion-lite' )
+			),
+		);
+
+		$output .= $this->row_actions( $actions );
 
 		return $output;
 	}
@@ -566,33 +597,29 @@ class WPF_Log_Table_List extends WP_List_Table {
 	 */
 	public function prepare_items() {
 
-		if ( ! empty( $_REQUEST['_wp_http_referer'] ) ) {
+		// Handle filter form submission - convert POST to GET redirect
+		if ( ! empty( $_POST['filter-action'] ) && ! empty( $_POST['wpf_logs_submit'] ) && wp_verify_nonce( $_POST['wpf_logs_submit'], 'wp-fusion-status-logs' ) ) {
 
-			// Cleans up the logs URL when filtering entries to make it easier
-			// to read / link to. Doing it here to avoid having to run the
-			// queries twice.
-			//
-			// @since 3.38.45.
+			$filter_params  = array();
+			$allowed_params = array( 'level', 'source', 'user', 'startdate', 'enddate', 's', 'orderby', 'order' );
 
-			$args = array(
-				'_wp_http_referer',
-				'_wpnonce',
-				'filter-action',
-				'wpf_logs_submit',
-			);
-
-			if ( isset( $_GET['paged'] ) && '1' === $_GET['paged'] ) {
-				$args[] = 'paged'; // don't need this if it's 1.
-			}
-
-			foreach ( $_GET as $key => $val ) {
-				if ( empty( $val ) ) {
-					$args[] = $key;
+			foreach ( $allowed_params as $param ) {
+				if ( ! empty( $_POST[ $param ] ) ) {
+					if ( 'user' === $param ) {
+						$filter_params[ $param ] = absint( $_POST[ $param ] );
+					} else {
+						$filter_params[ $param ] = sanitize_text_field( wp_unslash( $_POST[ $param ] ) );
+					}
 				}
 			}
 
+			$redirect_url = admin_url( 'tools.php?page=wpf-settings-logs' );
+			if ( ! empty( $filter_params ) ) {
+				$redirect_url = add_query_arg( $filter_params, $redirect_url );
+			}
+
 			if ( ! headers_sent() ) {
-				wp_safe_redirect( remove_query_arg( $args, wp_unslash( esc_url_raw( $_SERVER['REQUEST_URI'] ) ) ) );
+				wp_safe_redirect( $redirect_url );
 				exit;
 			}
 		}

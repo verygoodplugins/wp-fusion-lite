@@ -62,8 +62,7 @@ class WPF_Admin_Interfaces {
 		add_filter( 'pre_get_users', array( $this, 'custom_users_filter' ), 5 );
 
 		// Bulk edit / quick edit interfaces.
-		add_filter( 'manage_posts_columns', array( $this, 'bulk_edit_columns' ), 10, 2 );
-		add_filter( 'manage_pages_columns', array( $this, 'bulk_edit_columns' ), 10, 2 );
+		add_action( 'admin_init', array( $this, 'register_bulk_edit_columns' ) );
 		add_action( 'bulk_edit_custom_box', array( $this, 'bulk_edit_box' ), 10, 2 );
 		add_action( 'admin_init', array( $this, 'bulk_edit_save' ) );
 
@@ -202,7 +201,7 @@ class WPF_Admin_Interfaces {
 		wp_enqueue_script( 'jquery-tiptip', WPF_DIR_URL . 'assets/js/jquery-tiptip/jquery.tipTip.min.js', array( 'jquery' ), '1.3', true );
 
 		wp_enqueue_style( 'wpf-admin', WPF_DIR_URL . 'assets/css/wpf-admin.css', array(), WP_FUSION_VERSION );
-		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip' ), WP_FUSION_VERSION, true );
+		wp_enqueue_script( 'wpf-admin', WPF_DIR_URL . 'assets/js/wpf-admin.js', array( 'jquery', 'select4', 'jquery-tiptip', 'wp-i18n' ), WP_FUSION_VERSION, true );
 
 		$localize = array(
 			'crm_name'             => wp_fusion()->crm->name,
@@ -295,6 +294,11 @@ class WPF_Admin_Interfaces {
 					$tag_categories = array();
 
 					foreach ( $available_tags as $value ) {
+
+						if ( ! is_array( $value ) || ! isset( $value['category'] ) ) {
+							continue;
+						}
+
 						$tag_categories[] = $value['category'];
 					}
 
@@ -305,6 +309,10 @@ class WPF_Admin_Interfaces {
 						echo '<optgroup label="' . esc_attr( $tag_category ) . '">';
 
 						foreach ( $available_tags as $id => $field_data ) {
+
+							if ( ! is_array( $field_data ) || ! isset( $field_data['category'], $field_data['label'] ) ) {
+								continue;
+							}
 
 							if ( $field_data['category'] === $tag_category ) {
 								echo '<option value="' . esc_attr( $id ) . '" ' . selected( $val, $id, false ) . '>' . esc_html( $field_data['label'] ) . '</option>';
@@ -479,7 +487,7 @@ class WPF_Admin_Interfaces {
 				<tr class="form-field">
 					<th scope="row" valign="top"><label for="lock_posts"><?php esc_html_e( 'Users must be logged in to access all posts', 'wp-fusion-lite' ); ?></label></th>
 					<td>
-						<input class="checkbox" type="checkbox" 
+						<input class="checkbox" type="checkbox"
 						<?php
 						if ( $settings['lock_content'] != true ) {
 							echo 'disabled="disabled"';}
@@ -492,7 +500,7 @@ class WPF_Admin_Interfaces {
 				<tr class="form-field">
 					<th scope="row" valign="top"><label for="lock_posts"><?php esc_html_e( 'Hide term', 'wp-fusion-lite' ); ?></label></th>
 					<td>
-						<input class="checkbox" type="checkbox" 
+						<input class="checkbox" type="checkbox"
 						<?php
 						if ( $settings['lock_content'] != true ) {
 							echo 'disabled="disabled"';}
@@ -638,12 +646,12 @@ class WPF_Admin_Interfaces {
 				$tags = array();
 
 				if ( ! empty( $settings['allow_tags'] ) ) {
-					$allow_tags = array_map( array( wp_fusion()->user, 'get_tag_label' ), $settings['allow_tags'] );
+					$allow_tags = array_map( array( wp_fusion()->user, 'get_tag_label' ), (array) $settings['allow_tags'] );
 					$tags       = array_merge( $tags, $allow_tags );
 				}
 
 				if ( ! empty( $settings['allow_tags_all'] ) ) {
-					$allow_tags_all = array_map( array( wp_fusion()->user, 'get_tag_label' ), $settings['allow_tags_all'] );
+					$allow_tags_all = array_map( array( wp_fusion()->user, 'get_tag_label' ), (array) $settings['allow_tags_all'] );
 					$tags           = array_merge( $tags, $allow_tags_all );
 				}
 
@@ -688,12 +696,40 @@ class WPF_Admin_Interfaces {
 
 
 	/**
-	 * Bulk edit columns config
+	 * Register bulk edit column filters for supported post types only.
 	 *
-	 * @access public
+	 * This ensures we don't interfere with post types that don't support WP Fusion.
+	 *
+	 * @since 3.47.4
+	 *
+	 * @return void
+	 */
+	public function register_bulk_edit_columns() {
+
+		$supported_post_types = get_post_types( array( 'public' => true ) );
+		unset( $supported_post_types['attachment'] );
+		unset( $supported_post_types['revision'] );
+		$supported_post_types = apply_filters( 'wpf_meta_box_post_types', $supported_post_types );
+
+		foreach ( $supported_post_types as $post_type ) {
+			// Pages use manage_pages_columns, other post types use manage_{$post_type}_posts_columns.
+			if ( 'page' === $post_type ) {
+				add_filter( 'manage_pages_columns', array( $this, 'bulk_edit_columns' ) );
+			} else {
+				add_filter( "manage_{$post_type}_posts_columns", array( $this, 'bulk_edit_columns' ) );
+			}
+		}
+	}
+
+	/**
+	 * Add the bulk edit column for supported post types.
+	 *
+	 * @since 3.0
+	 *
+	 * @param array $columns The columns.
 	 * @return array Columns
 	 */
-	public function bulk_edit_columns( $columns, $post_type = null ) {
+	public function bulk_edit_columns( $columns ) {
 
 		$columns['wpf_settings'] = false;
 
@@ -1229,7 +1265,7 @@ class WPF_Admin_Interfaces {
 		echo '<input class="checkbox" type="checkbox" ' . disabled( $disabled, true, false ) . ' id="wpf-check-tags" name="wpf-settings[check_tags]" value="1" ' . checked( $settings['check_tags'], 1, false ) . ' />';
 		echo '<label id="wpf-check-tags-label" for="wpf-check-tags" class="' . ( $disabled ? 'disabled' : '' ) . '">';
 
-		esc_html_e( 'Refresh tags if access is denied', 'wp-fusion-lite' );
+		esc_html_e( 'Refresh access if denied', 'wp-fusion-lite' );
 		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . sprintf( esc_attr__( 'If the user is logged in and does not have the required tags, this will force-refresh their tags from %s.', 'wp-fusion-lite' ), esc_html( wp_fusion()->crm->name ) ) . '"></span></label>';
 
 		echo '</label>';
@@ -1349,11 +1385,11 @@ class WPF_Admin_Interfaces {
 	 */
 	public function get_redirect_options() {
 
-		if ( empty( $_POST['search'] ) ) {
+		if ( empty( $_REQUEST['search'] ) ) {
 			wp_die();
 		}
 
-		$search = sanitize_text_field( wp_unslash( $_POST['search'] ) );
+		$search = sanitize_text_field( wp_unslash( $_REQUEST['search'] ) );
 
 		$args = array(
 			'post_type'      => 'any',

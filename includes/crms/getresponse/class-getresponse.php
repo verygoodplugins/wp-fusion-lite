@@ -268,7 +268,7 @@ class WPF_GetResponse {
 
 		$available_tags = array();
 
-		$request  = 'http://api.getresponse.com/v3/tags';
+		$request  = 'http://api.getresponse.com/v3/tags?perPage=1000';
 		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
@@ -421,7 +421,7 @@ class WPF_GetResponse {
 		$body_json = json_decode( $response['body'], true );
 
 		if ( empty( $body_json['tags'] ) ) {
-			return false;
+			return $tags;
 		}
 
 		foreach ( $body_json['tags'] as $tag ) {

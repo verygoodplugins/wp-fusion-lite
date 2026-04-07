@@ -449,13 +449,18 @@ class WPF_MailEngine {
 			return $new_value;
 		} elseif ( $field_type == 'checkbox' || $field_type == 'checkbox-full' ) {
 
-			if ( empty( $value ) ) {
-				// If checkbox is unselected
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
 				return null;
-			} else {
-				// If checkbox is selected
+			}
+
+			if ( ! empty( $value ) ) {
+				// If checkbox is selected.
 				return 1;
 			}
+
+			// Default to null for empty values.
+			return null;
 		} elseif ( $field == 'user_pass' ) {
 
 			// Don't update password if it's empty

@@ -474,7 +474,7 @@ class WPF_Infusionsoft_iSDK {
 			return true;
 		}
 
-		$response = wp_remote_get( $this->url . 'contacts/', $params );
+		$response = wp_remote_get( $this->url . 'contacts', $params );
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -629,7 +629,7 @@ class WPF_Infusionsoft_iSDK {
 		$custom_fields    = array();
 		$custom_field_ids = array();
 
-		$response = wp_remote_get( $this->url . 'contacts/model/', $this->get_params() );
+		$response = wp_remote_get( $this->url . 'contacts/model', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -736,7 +736,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$query_args = apply_filters( 'wpf_infusionsoft_query_args', $query_args, 'get_contact_id', $email_address );
 
-		$request = add_query_arg( $query_args, $this->url . 'contacts/' );
+		$request = add_query_arg( $query_args, $this->url . 'contacts' );
 
 		$response = wp_remote_get( $request, $this->get_params() );
 
@@ -1290,7 +1290,7 @@ class WPF_Infusionsoft_iSDK {
 
 		$api_custom_fields = array();
 
-		$response = wp_remote_get( $this->url . 'contacts/model/', $this->get_params() );
+		$response = wp_remote_get( $this->url . 'contacts/model', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1331,7 +1331,7 @@ class WPF_Infusionsoft_iSDK {
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $data );
 
-		$response = wp_remote_post( $this->url . 'contacts/', $params );
+		$response = wp_remote_post( $this->url . 'contacts', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1476,9 +1476,9 @@ class WPF_Infusionsoft_iSDK {
 		$proceed     = true;
 
 		if ( $tag ) {
-			$request = $this->url . 'tags/' . $tag . '/contacts/';
+			$request = $this->url . 'tags/' . $tag . '/contacts';
 		} else {
-			$request = $this->url . 'contacts/';
+			$request = $this->url . 'contacts';
 		}
 
 		while ( $proceed ) {

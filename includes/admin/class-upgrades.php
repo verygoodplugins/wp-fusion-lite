@@ -1,4 +1,10 @@
 <?php
+/**
+ * WP Fusion - Upgrades
+ *
+ * @package WP Fusion
+ * @since   3.38.22
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -200,7 +206,109 @@ class WPF_Upgrades {
 
 		global $wpdb;
 
-		$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'wpfb_status_wpf_background_process_%';" );
+		$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'wpfb_status_wpf_background_process_%';" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	}
+
+	/**
+	 * Migrates FluentCommunity settings from global options to individual course/space meta.
+	 *
+	 * @since 3.46.6
+	 */
+	public static function v_3_46_6() {
+
+		$settings = get_option( 'wpf_fluent_community_options', array() );
+
+		if ( empty( $settings ) ) {
+			return; // No settings to migrate.
+		}
+
+		// Migrate course settings.
+		if ( class_exists( '\FluentCommunity\App\Functions\Utility' ) ) {
+			$courses = \FluentCommunity\App\Functions\Utility::getCourses();
+
+			foreach ( $courses as $course ) {
+				$course_settings = array();
+
+				// Check for course-specific settings.
+				$course_prefix = 'fc_course_' . $course->id . '_';
+
+				foreach ( $settings as $key => $value ) {
+					if ( strpos( $key, $course_prefix ) === 0 ) {
+						$setting_key = str_replace( $course_prefix, '', $key );
+
+						if ( 'tag_link' === $setting_key && is_array( $value ) ) {
+							$course_settings['tag_link'] = $value[0];
+						} else {
+							$course_settings[ $setting_key ] = $value;
+						}
+					}
+				}
+
+				if ( ! empty( $course_settings ) ) {
+					$course->updateCustomMeta( '_wpf_settings', $course_settings );
+				}
+			}
+
+			// Migrate space settings.
+			$spaces = \FluentCommunity\App\Functions\Utility::getSpaces();
+
+			foreach ( $spaces as $space ) {
+				$space_settings = array();
+
+				// Check for space-specific settings.
+				$space_prefix = 'fc_space_' . $space->id . '_';
+
+				foreach ( $settings as $key => $value ) {
+					if ( strpos( $key, $space_prefix ) === 0 ) {
+						$setting_key = str_replace( $space_prefix, '', $key );
+
+						if ( 'tag_link' === $setting_key && is_array( $value ) ) {
+							$space_settings['tag_link'] = $value[0];
+						} else {
+							$space_settings[ $setting_key ] = $value;
+						}
+					}
+				}
+
+				if ( ! empty( $space_settings ) ) {
+					$space->updateCustomMeta( '_wpf_settings', $space_settings );
+				}
+			}
+
+			// Keep global settings (access control) in the main options.
+			$global_settings = array();
+			foreach ( $settings as $key => $value ) {
+				if ( strpos( $key, 'fc_access_tags' ) === 0 || strpos( $key, 'redirect' ) === 0 ) {
+					$global_settings[ $key ] = $value;
+				}
+			}
+		}
+	}
+
+
+	/**
+	 * HubSpot v1→v3 list ID migration flag.
+	 *
+	 * Sets a flag so the HubSpot class shows the migration notice on
+	 * next admin page load. Only applies to HubSpot users who are
+	 * using lists (not multiselect properties).
+	 *
+	 * @since 3.47.7
+	 *
+	 * @return void
+	 */
+	public static function v_3_47_7() {
+
+		if ( 'hubspot' !== wpf_get_option( 'crm' ) || 'multiselect' === wpf_get_option( 'hubspot_tag_type' ) ) {
+			return;
+		}
+
+		if ( wpf_get_option( 'wpf_hubspot_v3_migrated' ) ) {
+			wpf_update_option( 'wpf_hubspot_lists_api_mode', 'v3' );
+		} else {
+			wpf_update_option( 'wpf_hubspot_lists_api_mode', 'v1' );
+			update_option( 'wpf_hubspot_v3_migration_needed', true, false );
+		}
 	}
 }
 

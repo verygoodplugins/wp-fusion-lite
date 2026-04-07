@@ -1,5 +1,5 @@
 body > .select4-container--open {
-	z-index: 999999; 
+	z-index: 999999;
 }
 
 /* Icon  (at the moment just used by RestroPress and LearnPress) */
@@ -62,6 +62,11 @@ li.active i.icon-wp-fusion:before {
 
 /* Admin Menus */
 
+/* Fix for User Menus float bug */
+#menu-to-edit .menu-item .nav_item_options-roles label {
+	float: none;
+}
+
 .wpf_nav_menu_field select.wpf-nav-menu {
 	width: 100%;
 }
@@ -84,7 +89,7 @@ li.active i.icon-wp-fusion:before {
 	animation: dashicons-spin 2s infinite;
 	animation-timing-function: linear;
  }
- 
+
 @keyframes dashicons-spin {
 	0% {
 	   transform: rotate( 0deg );
@@ -94,12 +99,31 @@ li.active i.icon-wp-fusion:before {
 	}
 }
 
+#wpf-batch-status {
+	position: relative !important;
+	border-left: 4px solid #72aee6 !important;
+	height: 41px !important;
+	padding: initial !important;
+	line-height: initial !important;
+	margin: initial !important;
+	color: #000 !important;
+}
+
 #wpf-batch-status.hidden {
 	display: none !important;
 }
 
+#wpf-batch-status.active {
+	display: block !important;
+}
+
 #wpf-batch-status span.dashicons {
 	color: #444;
+}
+
+#wpf-batch-status > p {
+	margin: 0.5em 0 !important;
+	padding: 4px 12px !important;
 }
 
 #wpf-batch-status span.title {
@@ -108,9 +132,41 @@ li.active i.icon-wp-fusion:before {
 }
 
 #wpf-batch-status a#cancel-batch {
-	float: right;
-	position: relative;
-	top: -2px;
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	min-height: auto;
+	height: auto;
+	padding: 4px 12px !important;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+/* Gravity Forms compatibility - override GF notice styling */
+#wpf-batch-status.gf-notice::before,
+#wpf-batch-status.gf-notice::after {
+	display: none !important;
+}
+
+#wpf-batch-status.gf-notice {
+	padding-left: 12px !important;
+	border-left-color: #72aee6 !important;
+}
+
+#wpf-batch-status.gf-notice a#cancel-batch {
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	color: #2271b1;
+	padding: 0px 12px;
+	text-decoration: none;
+	font-size: 13px;
+}
+
+#wpf-batch-status.gf-notice a#cancel-batch:hover {
+	background: #f0f0f1;
+	border-color: #0a4b78;
+	color: #0a4b78;
 }
 
 /* Tooltips */
@@ -792,6 +848,20 @@ h2.wp-fusion-user-profile-settings > svg {
 
 
 /* EDD Settings Grid */
+
+#edd_download_editor__wp_fusion-nav-item span.section-title__indicator {
+	display: none;
+}
+
+#edd_download_editor__wp_fusion-nav-item span.label {
+	line-height: 20px;
+}
+
+#edd_download_editor__wp_fusion-nav-item svg {
+	vertical-align: middle;
+	padding-right: 3px;
+}
+
 .wpf-edd-custom-price-option-section {
     padding: 15px;
     background: #f9f9f9;
@@ -1241,7 +1311,7 @@ ul.wc-tabs li.wp-fusion-settings-tab a svg {
 
 
 
-/* WPF Admin Bar */  
+/* WPF Admin Bar */
 
 @keyframes dashicons-spin {
 	0% {
@@ -1251,7 +1321,7 @@ ul.wc-tabs li.wp-fusion-settings-tab a svg {
 	   transform: rotate( 360deg );
 	}
  }
- 
+
 
 #wpadminbar .quicklinks .menupop ul li#wp-admin-bar-wpfusion-refresh-tags span.dashicons{
 	font-family: dashicons;
@@ -1460,4 +1530,16 @@ body.tools_page_wpf-settings-logs #fen-pro a.button-primary {
     margin: 0;
     font-size: 14px;
     color: #444;
+}
+
+/* Fix for User Menus plugin compatibility - restore checkbox functionality */
+#nav-menu-meta .menu-item-settings input[type="checkbox"],
+#nav-menu-meta .menu-item-settings input[type="radio"],
+.menu-item-settings input[type="checkbox"],
+.menu-item-settings input[type="radio"],
+.wp-core-ui .menu-item-settings input[type="checkbox"],
+.wp-core-ui .menu-item-settings input[type="radio"] {
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: auto !important;
 }

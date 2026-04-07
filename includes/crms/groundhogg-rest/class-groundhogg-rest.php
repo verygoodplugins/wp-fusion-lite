@@ -118,7 +118,7 @@ class WPF_Groundhogg_REST {
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
 		// Data formats.
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 2 );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
 		// Add tracking code to footer.
 		// add_action( 'wp_enqueue_scripts', array( $this, 'tracking_code' ) );
@@ -168,11 +168,30 @@ class WPF_Groundhogg_REST {
 	 * @param  string $field      The field in the CRM.
 	 * @return mixed  The field value.
 	 */
-	public function format_field_value( $value, $field_type ) {
+	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( 'date' === $field_type ) {
+	if ( 'birthday' === $field ) {
+		if ( ! empty( $value ) ) {
+			if ( ! is_numeric( $value ) ) {
+				$timestamp = strtotime( $value );
+				if ( false !== $timestamp ) {
+					$value = gmdate( 'Y-m-d', $timestamp );
+				}
+			} else {
+				$value = gmdate( 'Y-m-d', $value );
+			}
+		}
+	} elseif ( 'date' === $field_type && ! empty( $value ) ) {
+		// Groundhogg expects 'Y-m-d H:i:s' format for date fields.
+		if ( ! is_numeric( $value ) ) {
+			$timestamp = strtotime( $value );
+			if ( false !== $timestamp ) {
+				$value = gmdate( 'Y-m-d H:i:s', $timestamp );
+			}
+		} else {
 			$value = gmdate( 'Y-m-d H:i:s', $value );
 		}
+	}
 
 		return $value;
 	}

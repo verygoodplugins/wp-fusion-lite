@@ -223,6 +223,16 @@ class WPF_HighLevel {
 					// Try to look up the contact again by email address.
 					$response = new WP_Error( 'not_found', $body_json->error );
 
+				} elseif ( 400 === $response_code && isset( $body_json->message ) && 0 === strpos( $body_json->message, 'Contact not found for id:' ) ) {
+
+					// Contact was deleted in HighLevel. Try to look up the contact again by email address.
+					$response = new WP_Error( 'not_found', $body_json->message );
+
+				} elseif ( 400 === $response_code && isset( $body_json->message ) && "Opportunity doesn't exist or is deleted." === $body_json->message ) {
+
+					// The opportunity was deleted in HighLevel. Return a specific error so the ecommerce addon can create a new one.
+					$response = new WP_Error( 'opportunity_not_found', $body_json->message );
+
 				} elseif ( 400 === $response_code && isset( $body_json->message ) && 'This location does not allow duplicated contacts.' === $body_json->message && 'email' === $body_json->meta->{'matchingField'} ) {
 
 					// If a contact already exists with that email, update the existing contact instead of creating a new one.
@@ -496,19 +506,6 @@ class WPF_HighLevel {
 			return new WP_Error( 'error', 'Authorization failed and no refresh token found.' );
 		}
 
-		// Handles API incident from May 7 2025 where the refresh token was returned as an object.
-		if ( ! is_string( $refresh_token ) ) {
-
-			$auth_code = $this->reconnect_api();
-
-			if ( is_wp_error( $auth_code ) ) {
-				return $auth_code;
-			}
-
-			$refresh_token = $this->authorize( $auth_code );
-
-		}
-
 		$params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'headers'    => array(
@@ -618,7 +615,7 @@ class WPF_HighLevel {
 			return true;
 		}
 
-		$response = wp_remote_get( $this->url . 'contacts/?locationId=' . $location_id, $params );
+		$response = wp_remote_get( $this->url . 'contacts/?locationId=' . $this->location_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

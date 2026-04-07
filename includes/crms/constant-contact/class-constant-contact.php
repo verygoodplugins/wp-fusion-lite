@@ -38,7 +38,7 @@ class WPF_Constant_Contact {
 	 * @since 3.40.0
 	 */
 
-	public $supports = array( 'add_tags_api', 'lists' );
+	public $supports = array( 'add_tags_api', 'lists', 'auto_oauth' );
 
 	/**
 	 * API parameters
@@ -794,12 +794,30 @@ class WPF_Constant_Contact {
 	 *
 	 * @since 3.40.0
 	 * @since 3.43.14 Added support for lists.
+	 * @since 3.46.9 Fixed to load existing contact data before updating to prevent field erasure.
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
 	 * @param array $contact_data    An associative array of contact fields and field values.
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
+
+		// First, load the existing contact to preserve all current field values.
+		$request  = $this->url . '/contacts/' . $contact_id . '?include=custom_fields,phone_numbers,street_addresses,list_memberships';
+		$response = wp_safe_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$existing_contact = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( empty( $existing_contact ) ) {
+			return new WP_Error( 'error', 'Unable to load existing contact data for contact ID: ' . $contact_id );
+		}
+
+		// Start with the existing contact data to preserve all fields.
+		$merged_data = $existing_contact;
 
 		// Address kind is required.
 		if ( ! isset( $contact_data['kind'] ) || ! in_array( $contact_data['kind'], array( 'home', 'work', 'other' ) ) ) {
@@ -813,50 +831,91 @@ class WPF_Constant_Contact {
 			}
 		}
 
-		// Put addresses/phones fields in their places.
+		// Merge in the new contact data, overwriting existing values.
 		foreach ( $contact_data as $key => $value ) {
 
 			if ( strpos( $key, '+' ) !== false ) {
 
 				$keyparts = explode( '+', $key );
 
-				$contact_data[ $keyparts[0] ][0][ $keyparts[1] ] = $value;
+				// Initialize the array if it doesn't exist.
+				if ( ! isset( $merged_data[ $keyparts[0] ] ) ) {
+					$merged_data[ $keyparts[0] ] = array();
+				}
+				if ( ! isset( $merged_data[ $keyparts[0] ][0] ) ) {
+					$merged_data[ $keyparts[0] ][0] = array();
+				}
 
-				unset( $contact_data[ $key ] );
+				$merged_data[ $keyparts[0] ][0][ $keyparts[1] ] = $value;
 
+			} else {
+				// Direct field update.
+				$merged_data[ $key ] = $value;
 			}
 		}
 
-		$contact_data['update_source'] = 'Contact';
+		$merged_data['update_source'] = 'Contact';
 
 		// Lists.
-
 		if ( ! empty( $contact_data['lists'] ) ) {
-			$contact_data['list_memberships'] = $contact_data['lists'];
-			unset( $contact_data['lists'] );
+			$merged_data['list_memberships'] = $contact_data['lists'];
 		}
 
-		if ( ! isset( $contact_data['email_address'] ) ) {
-			$contact_data['email_address'] = wp_fusion()->crm->get_email_from_cid( $contact_id ); // email address is required.
+		// Ensure email address is in correct format.
+		if ( isset( $merged_data['email_address'] ) ) {
+			if ( is_string( $merged_data['email_address'] ) ) {
+				$merged_data['email_address'] = array(
+					'address' => $merged_data['email_address'],
+				);
+			} elseif ( is_array( $merged_data['email_address'] ) && ! isset( $merged_data['email_address']['address'] ) ) {
+				// If it's already an array but missing the address key, assume it's the address.
+				$email_value                  = is_array( $merged_data['email_address'] ) ? reset( $merged_data['email_address'] ) : $merged_data['email_address'];
+				$merged_data['email_address'] = array(
+					'address' => $email_value,
+				);
+			}
+		} else {
+			// Fallback to get email from contact ID.
+			$email = wp_fusion()->crm->get_email_from_cid( $contact_id );
+			if ( $email ) {
+				$merged_data['email_address'] = array(
+					'address' => $email,
+				);
+			}
 		}
 
-		$contact_data['email_address'] = array(
-			'address' => $contact_data['email_address'],
-		);
-
-		// Custom fields.
+		// Handle custom fields from the update data.
 		$crm_fields = wpf_get_option( 'crm_fields' );
 
 		if ( ! empty( $crm_fields['Custom Fields'] ) ) {
 
+			// Initialize custom_fields array if it doesn't exist.
+			if ( ! isset( $merged_data['custom_fields'] ) ) {
+				$merged_data['custom_fields'] = array();
+			}
+
 			foreach ( $contact_data as $crm_field => $value ) {
 				foreach ( $crm_fields['Custom Fields'] as $custom_field => $custom_field_value ) {
 					if ( $crm_field === $custom_field ) {
-						$contact_data['custom_fields'][] = array(
-							'custom_field_id' => $crm_field,
-							'value'           => $value,
-						);
-						unset( $contact_data[ $custom_field ] );
+						// Find and update existing custom field or add new one.
+						$field_found = false;
+						foreach ( $merged_data['custom_fields'] as &$existing_field ) {
+							if ( $crm_field === $existing_field['custom_field_id'] ) {
+								$existing_field['value'] = $value;
+								$field_found             = true;
+								break;
+							}
+						}
+
+						if ( ! $field_found ) {
+							$merged_data['custom_fields'][] = array(
+								'custom_field_id' => $crm_field,
+								'value'           => $value,
+							);
+						}
+
+						// Remove from top level since it's now in custom_fields.
+						unset( $merged_data[ $custom_field ] );
 					}
 				}
 			}
@@ -864,7 +923,7 @@ class WPF_Constant_Contact {
 
 		$request          = $this->url . '/contacts/' . $contact_id;
 		$params           = $this->get_params();
-		$params['body']   = wp_json_encode( $contact_data );
+		$params['body']   = wp_json_encode( $merged_data );
 		$params['method'] = 'PUT';
 
 		$response = wp_safe_remote_request( $request, $params );
@@ -906,7 +965,7 @@ class WPF_Constant_Contact {
 			// Custom fields.
 			if ( $field_data['active'] && ! empty( $response['custom_fields'] ) ) {
 				foreach ( $response['custom_fields'] as $custom_field ) {
-					if ( $field_data['crm_field'] == $custom_field['custom_field_id'] ) {
+					if ( $field_data['crm_field'] === $custom_field['custom_field_id'] ) {
 						$user_meta[ $field_id ] = $custom_field['value'];
 					}
 				}
@@ -915,7 +974,7 @@ class WPF_Constant_Contact {
 			// Addresses.
 			if ( $field_data['active'] && ! empty( $response['street_addresses'] ) ) {
 				foreach ( $response['street_addresses'][0] as $address_key => $address_value ) {
-					if ( $field_data['crm_field'] == 'street_addresses+' . $address_key ) {
+					if ( 'street_addresses+' . $address_key === $field_data['crm_field'] ) {
 						$user_meta[ $field_id ] = $address_value;
 					}
 				}
@@ -924,7 +983,7 @@ class WPF_Constant_Contact {
 			// Phones.
 			if ( $field_data['active'] && ! empty( $response['phone_numbers'] ) ) {
 				foreach ( $response['phone_numbers'][0] as $phone_key => $phone_value ) {
-					if ( $field_data['crm_field'] == 'phone_numbers+' . $phone_key ) {
+					if ( 'phone_numbers+' . $phone_key === $field_data['crm_field'] ) {
 						$user_meta[ $field_id ] = $phone_value;
 					}
 				}

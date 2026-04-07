@@ -170,9 +170,20 @@ class WPF_MooSend {
 
 			return implode( ', ', array_filter( $value ) );
 
-		} elseif ( 'checkbox' === $field_type && ! empty( $value ) ) {
+		} elseif ( 'checkbox' === $field_type ) {
 
-			return ( boolval( $value ) === true ? 'true' : 'false' );
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
+				return 'false';
+			}
+
+			if ( ! empty( $value ) ) {
+				// If checkbox is selected.
+				return 'true';
+			}
+
+			// Default to false for empty values.
+			return 'false';
 
 		} else {
 

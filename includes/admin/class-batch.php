@@ -82,7 +82,7 @@ class WPF_Batch {
 	public function enqueue_scripts() {
 		$screen = get_current_screen();
 
-		if ( $screen && ( 'settings_page_wpf-settings' === $screen->id || 'users' === $screen->id || 'woocommerce_page_wc-orders' === $screen->id ) ) {
+		if ( $screen && in_array( $screen->id, array( 'settings_page_wpf-settings', 'users', 'woocommerce_page_wc-orders', 'edit-shop_order', 'forms_page_gf_entries' ), true ) ) {
 			$localize_data = array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'wpf_settings_nonce' ),
@@ -251,7 +251,7 @@ class WPF_Batch {
 		$remaining = absint( $status['remaining'] );
 		$done      = $total - $remaining;
 
-		echo '<div id="wpf-batch-status" class="notice notice-info ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . esc_attr( $remaining ) . '"' : '' ) . ' ' . ( $active ? 'data-key="' . esc_attr( $status['key'] ) . '"' : '' ) . '>';
+		echo '<div id="wpf-batch-status" class="notice notice-info gf-notice ' . ( $active ? 'active' : 'hidden' ) . '" ' . ( $active ? 'data-remaining="' . esc_attr( $remaining ) . '"' : '' ) . ' ' . ( $active ? 'data-key="' . esc_attr( $status['key'] ) . '"' : '' ) . '>';
 		echo '<p><span class="dashicons dashicons-update-alt wpf-spin"></span><span class="title"><strong>' . esc_html__( 'Background operation running:', 'wp-fusion-lite' ) . '</strong></span> <span class="status">';
 
 		$title = 'records';
@@ -336,6 +336,11 @@ class WPF_Batch {
 			),
 			array( 'source' => 'batch-process' )
 		);
+
+		// Store the timestamp for when this batch operation was last run.
+		$batch_timestamps          = get_option( 'wpf_batch_timestamps', array() );
+		$batch_timestamps[ $hook ] = time();
+		update_option( 'wpf_batch_timestamps', $batch_timestamps, false );
 
 		// Int IDs are smaller in the DB than strings, but sometimes we'll still need to use strings (i.e. Drip subscriber IDs).
 		if ( is_numeric( $objects[0] ) ) {

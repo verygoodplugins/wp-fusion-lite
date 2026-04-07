@@ -79,7 +79,7 @@ class WPF_Dynamics_365 {
 	 *
 	 * @since 3.38.43
 	 */
-	public $client_secret = 'glH8Q~zL2OBS1Nc3zuwUwzLF3rc3CXetEP1aKb9~';
+	public $client_secret = 'JQ.8Q~dwiMqLAoTGGk5eRZbt3iqd3lNFRtGpgc.C';
 
 	/**
 	 * The OAuth callback URL.
@@ -290,6 +290,11 @@ class WPF_Dynamics_365 {
 			} elseif ( 400 === $response_code ) {
 				$response = new WP_Error( 'error', $body_json->error->message );
 
+			} elseif ( 403 === $response_code ) {
+
+				$message  = ! empty( $body_json->error->message ) ? $body_json->error->message : 'Access denied. Check user permissions in Dynamics 365.';
+				$response = new WP_Error( 'error', $message );
+
 			} elseif ( 413 === $response_code ) {
 
 				$response = new WP_Error( 'error', 'the request length is too large.' );
@@ -297,6 +302,12 @@ class WPF_Dynamics_365 {
 			} elseif ( 429 === $response_code ) {
 
 				$response = new WP_Error( 'error', 'You have maxed your number of API calls for the provided time window.' );
+
+			} elseif ( $response_code >= 400 && ! empty( $body_json->error ) ) {
+
+				// Handle any other error codes with detailed message.
+				$message  = ! empty( $body_json->error->message ) ? $body_json->error->message : 'Unknown API error occurred.';
+				$response = new WP_Error( 'error', $message );
 
 			}
 		}
@@ -464,6 +475,9 @@ class WPF_Dynamics_365 {
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
+
+		$built_in_fields = array();
+		$custom_fields   = array();
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 

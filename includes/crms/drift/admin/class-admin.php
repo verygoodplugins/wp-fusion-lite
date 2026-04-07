@@ -144,18 +144,12 @@ class WPF_Drift_Admin {
 
 		} else {
 
-			$new_settings['drift_token'] = array(
-				'title'   => __( 'Access Token', 'wp-fusion-lite' ),
-				'std'     => '',
-				'type'    => 'text',
-				'section' => 'setup',
-			);
-
-			$new_settings['drift_refresh_token'] = array(
-				'title'       => __( 'Refresh token', 'wp-fusion-lite' ),
-				'type'        => 'api_validate',
+			$new_settings['drift_oauth_status'] = array(
+				'title'       => __( 'Connection Status', 'wp-fusion-lite' ),
+				'type'        => 'oauth_connection_status',
 				'section'     => 'setup',
-				'class'       => 'api_key',
+				'name'        => $this->name,
+				'url'         => $this->get_oauth_url(),
 				'post_fields' => array( 'drift_token', 'drift_refresh_token' ),
 			);
 

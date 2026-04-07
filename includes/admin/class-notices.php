@@ -43,7 +43,7 @@ class WPF_Admin_Notices {
 	 */
 	public function display_batch_notices() {
 		$screen = get_current_screen();
-		if ( $screen && ( 'settings_page_wpf-settings' === $screen->id || 'users' === $screen->id || 'woocommerce_page_wc-orders' === $screen->id ) ) {
+		if ( $screen && in_array( $screen->id, array( 'settings_page_wpf-settings', 'users', 'woocommerce_page_wc-orders', 'edit-shop_order', 'forms_page_gf_entries' ), true ) ) {
 			do_action( 'wpf_settings_notices' );
 		}
 	}

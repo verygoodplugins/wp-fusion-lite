@@ -80,9 +80,11 @@ class WPF_Ontraport {
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_woocommerce_customer_data', array( $this, 'format_states' ), 10, 2 );
 
-		// Add tracking code to footer
+		// Add tracking code to footer.
 		add_action( 'init', array( $this, 'set_tracking_cookie' ) );
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
+
+		add_filter( 'wpf_use_api_queue', array( $this, 'bypass_queue_for_referrals' ), 10, 2 );
 
 		$this->object_type = apply_filters( 'wpf_crm_object_type', $this->object_type );
 	}
@@ -279,6 +281,27 @@ class WPF_Ontraport {
 		echo '<!-- Ontraport -->';
 		echo "<script src='https://optassets.ontraport.com/tracking.js' type='text/javascript' async='true' onload='_mri=\"" . esc_js( wpf_get_option( 'account_id' ) ) . "\",_mr_domain=\"tracking.ontraport.com\",mrtracking();'></script>";
 		echo '<!-- end Ontraport -->';
+	}
+
+	/**
+	 * Bypass the API queue when tracking referrals.
+	 *
+	 * Without this, the referal only gets updated on the contact record after the sale
+	 * has been added by Enhanced Ecommerce, potentially crediting the wrong referrer.
+	 *
+	 * @since 3.46.11
+	 *
+	 * @param bool   $enabled Whether the API queue is enabled.
+	 * @param string $method  The method being called.
+	 * @return bool True if the API queue should be bypassed, false otherwise.
+	 */
+	public function bypass_queue_for_referrals( $enabled, $method ) {
+
+		if ( 'update_contact' === $method && isset( $_COOKIE['aff_'] ) ) {
+			return false;
+		}
+
+		return $enabled;
 	}
 
 	/**

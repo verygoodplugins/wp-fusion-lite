@@ -39,6 +39,7 @@ class WPF_Infusionsoft_iSDK_Admin {
 
 		add_filter( 'wpf_initialize_options', array( $this, 'add_default_fields' ), 20 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
+		add_filter( 'validate_field_backup_api_key', array( $this, 'validate_field_backup_api_key' ), 10, 3 );
 	}
 
 
@@ -248,6 +249,9 @@ class WPF_Infusionsoft_iSDK_Admin {
 			wp_send_json_error( $connection->get_error_message() );
 		}
 
+		// Clear the backup SAK transient in case we were using a backup key.
+		delete_transient( 'wpf_keap_backup_key' );
+
 		$options                          = array();
 		$options['app_name']              = $app_name;
 		$options['api_key']               = $api_key;
@@ -257,5 +261,20 @@ class WPF_Infusionsoft_iSDK_Admin {
 		wp_fusion()->settings->set_multiple( $options );
 
 		wp_send_json_success();
+	}
+
+	/**
+	 * Clear the backup SAK transient when the backup API key is changed.
+	 *
+	 * @since 3.47.6
+	 *
+	 * @param string $input   The new value.
+	 * @param array  $setting The setting parameters.
+	 * @param object $options The options class instance.
+	 * @return string The input value (unchanged).
+	 */
+	public function validate_field_backup_api_key( $input, $setting, $options ) {
+		delete_transient( 'wpf_keap_backup_key' );
+		return $input;
 	}
 }

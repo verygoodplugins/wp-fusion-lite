@@ -76,6 +76,10 @@ class WPF_CRM_Base {
 		// Process queued actions at PHP shutdown.
 		add_action( 'shutdown', array( $this, 'shutdown' ), -1 );
 
+		// Global transient error handler for all CRMs.
+		// Priority 80 so it after before individual CRM handle_http_response methods (usually priority 50).
+		add_filter( 'http_response', array( $this, 'handle_transient_errors_global' ), 80, 3 );
+
 		// Load the field mapping into memory.
 		$this->contact_fields = wpf_get_option( 'contact_fields', array() );
 	}
@@ -310,6 +314,84 @@ class WPF_CRM_Base {
 	}
 
 	/**
+	 * Global handler for transient network errors across all CRMs.
+	 *
+	 * Runs at priority 80 on the http_response filter, before individual
+	 * CRM handlers (usually priority 50). Automatically retries transient
+	 * network errors for all WP Fusion API requests.
+	 *
+	 * @since 3.47.3
+	 *
+	 * @param WP_Error|array $response The HTTP response or WP_Error.
+	 * @param array          $args     The HTTP request arguments.
+	 * @param string         $url      The HTTP request URL.
+	 * @return WP_Error|array The potentially retried response.
+	 */
+	public function handle_transient_errors_global( $response, $args, $url ) {
+
+		// Only handle WP Fusion requests.
+		if ( empty( $args['user-agent'] ) || false === strpos( $args['user-agent'], 'WP Fusion;' ) ) {
+			return $response;
+		}
+
+		// Only handle WP_Error responses (cURL errors, not HTTP errors).
+		if ( ! is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$error_code    = $response->get_error_code();
+		$error_message = $response->get_error_message();
+
+		// Define transient error codes worth retrying.
+		$transient_errors = array(
+			'http_request_failed', // Generic network failure.
+		);
+
+		$transient_curl_errors = array(
+			'28', // Timeout.
+			'52', // Empty reply from server.
+			'56', // SSL EOF error (unexpected connection close).
+			'7',  // Failed to connect.
+			'35', // SSL connect error.
+		);
+
+		// Check if it's a transient error.
+		$is_transient = in_array( $error_code, $transient_errors, true );
+
+		if ( ! $is_transient ) {
+			// Extract cURL error code from message if present.
+			foreach ( $transient_curl_errors as $curl_code ) {
+				if ( false !== strpos( $error_message, 'cURL error ' . $curl_code ) ) {
+					$is_transient = true;
+					break;
+				}
+			}
+		}
+
+		// Retry transient errors once.
+		if ( $is_transient && ! isset( $args['wpf_retry'] ) ) {
+
+			wpf_log( 'notice', 0, 'Transient network error detected (' . $error_message . '). Retrying request...' );
+
+			// Add retry flag to prevent infinite loops.
+			$args['wpf_retry'] = true;
+
+			// Wait briefly before retry.
+			sleep( 1 );
+
+			// Retry the request.
+			$response = wp_remote_request( $url, $args );
+
+			// If retry still fails, log as warning instead of error.
+			if ( is_wp_error( $response ) ) {
+				wpf_log( 'warning', 0, 'Retry failed: ' . $response->get_error_message() );
+			}
+		}
+
+		return $response;
+	}
+
+	/**
 	 * Runs when a guest has been created/updated, and sets the guest email property
 	 * so it can be passed to tracking scripts in the footer.
 	 *
@@ -357,84 +439,65 @@ class WPF_CRM_Base {
 	 */
 	private function request( $method, $args ) {
 
+		$call_args = $args;
+
+		if ( isset( $call_args['wpf_not_found_retry'] ) ) {
+			unset( $call_args['wpf_not_found_retry'] );
+		}
+
 		// Allow short-circuiting the API calls.
 		$result = apply_filters( "wpf_api_{$method}", null, $args );
 
 		if ( null === $result ) {
-			$result = call_user_func_array( array( $this->crm, $method ), $args );
+			$result = call_user_func_array( array( $this->crm, $method ), $call_args );
 		}
 
 		$contact_id = $this->get_contact_id_from_args( $method, $args );
 
-		// Error handling.
+		// Error recovery handlers.
 		if ( is_wp_error( $result ) ) {
 
-			$user_id = wpf_get_user_id( $contact_id );
+			$error_code = $result->get_error_code();
 
-			// Contact ID changed, maybe retry.
-
-			if ( 'not_found' === $result->get_error_code() && false !== $contact_id && false !== $user_id ) {
-
-				$new_contact_id = wpf_get_contact_id( $user_id, true ); // force an update.
-
-				if ( false !== $new_contact_id && $new_contact_id !== $contact_id ) {
-
-					// Replace the contact ID and try again.
-
-					foreach ( $args as $i => $val ) {
-						if ( $val === $contact_id ) {
-							$args[ $i ] = $new_contact_id;
-						}
-					}
-
-					wpf_log( 'notice', $user_id, '"Contact not found" error while performing API method <code>' . $method . '</code> on contact ID #' . $contact_id . '. This probably means the contact was deleted or merged. We were able to find a new record with the same email, contact #' . $new_contact_id . '. Retrying API call...' );
-
-					return $this->request( $method, $args );
-
-				}
-			} elseif ( 'duplicate' === $result->get_error_code() && 'add_contact' === $method ) {
-
-				$lookup_field = $this->get_lookup_field(); // get the email address field.
-
-				$result = $this->crm->get_contact_id( $args[0][ $lookup_field ] ); // get the email address field.
-
-				if ( empty( $result ) ) {
-					$result = new WP_Error( 'duplicate', 'A duplicate contact error was returned while trying to add a new contact, but searching by email for ' . $args[0][ $lookup_field ] . ' returned no results. Please contact support.' );
-				}
-
-				// If there is a contact (and no error), update them.
-
-				if ( ! is_wp_error( $result ) ) {
-					$result = $this->crm->update_contact( $result, $args[0] );
-				}
+			// Try to recover from known error types.
+			if ( 'not_found' === $error_code && false !== $contact_id ) {
+				$result = $this->handle_not_found_error( $result, $method, $args, $contact_id );
+			} elseif ( 'duplicate' === $error_code ) {
+				$result = $this->handle_duplicate_error( $result, $method, $args );
 			}
 
-			if ( doing_action( 'shutdown' ) ) {
-
-				// We only need to log errors during the shutdown actions / queue
-				// processing, otherwise errors are handled by the class that called
-				// the API.
-				//
-				// @since 3.40.2.
-
+			// Log errors during shutdown processing.
+			if ( is_wp_error( $result ) && doing_action( 'shutdown' ) ) {
+				$user_id = wpf_get_user_id( $contact_id );
 				wpf_log(
 					'error',
 					$user_id,
-					'Error while performing method <strong>' . $method . '</strong>: ' . $result->get_error_message(),
+					'Error performing <strong>' . $method . '</strong>: ' . $result->get_error_message(),
 					array(
 						'source' => $this->crm->slug,
 						'args'   => $args,
 					)
 				);
-
 			}
 
-			do_action( 'wpf_api_error', $method, $args, $contact_id, $result );
-
-			do_action( "wpf_api_error_{$method}", $args, $contact_id, $result );
-
+			// Fire error hooks.
+			if ( is_wp_error( $result ) ) {
+				do_action( 'wpf_api_error', $method, $args, $contact_id, $result );
+				do_action( "wpf_api_error_{$method}", $args, $contact_id, $result );
+			}
 		} else {
 
+			/**
+			 * Fires after an API call is made.
+			 *
+			 * Examples: wpf_did_add_contact, wpf_did_update_contact, wpf_did_apply_tags, wpf_did_remove_tags, etc.
+			 *
+			 * @since unknown
+			 *
+			 * @param array  $args The arguments.
+			 * @param string $contact_id The contact ID.
+			 * @param mixed  $result The result.
+			 */
 			do_action( "wpf_api_did_{$method}", $args, $contact_id, $result );
 
 		}
@@ -444,6 +507,126 @@ class WPF_CRM_Base {
 		$result = wpf_clean( $result ); // wp_kses recursive.
 
 		return $result;
+	}
+
+	/**
+	 * Handle "contact not found" errors by looking up the contact by email and retrying.
+	 *
+	 * @since 3.47.3
+	 *
+	 * @param WP_Error $error      The error object.
+	 * @param string   $method     The API method.
+	 * @param array    $args       The API arguments.
+	 * @param string   $contact_id The contact ID.
+	 * @return mixed|WP_Error The retry result or error.
+	 */
+	private function handle_not_found_error( $error, $method, $args, $contact_id ) {
+
+		// Prevent infinite loops.
+		if ( isset( $args['wpf_not_found_retry'] ) ) {
+			return $error;
+		}
+
+		$user_id = wpf_get_user_id( $contact_id );
+
+		if ( false === $user_id ) {
+			return $error; // Can't look up without a user ID.
+		}
+
+		$new_contact_id = wpf_get_contact_id( $user_id, true ); // Force lookup.
+
+		if ( false === $new_contact_id || $new_contact_id === $contact_id ) {
+			return $error; // No new contact found or same ID.
+		}
+
+		// Replace the contact ID in args.
+		$args = $this->replace_contact_id_in_args( $args, $contact_id, $new_contact_id, $method );
+
+		// Mark as retry to prevent infinite loops.
+		$args['wpf_not_found_retry'] = true;
+
+		wpf_log(
+			'notice',
+			$user_id,
+			sprintf(
+				'"Contact not found" error while performing <code>%s</code> on contact #%s. Contact was likely deleted or merged. Found new contact #%s. Retrying...',
+				$method,
+				$contact_id,
+				$new_contact_id
+			)
+		);
+
+		return $this->request( $method, $args );
+	}
+
+	/**
+	 * Handle duplicate contact errors by updating instead of creating.
+	 *
+	 * @since 3.47.3
+	 *
+	 * @param WP_Error $error  The error object.
+	 * @param string   $method The API method.
+	 * @param array    $args   The API arguments.
+	 * @return mixed|WP_Error The update result or error.
+	 */
+	private function handle_duplicate_error( $error, $method, $args ) {
+
+		if ( 'add_contact' !== $method ) {
+			return $error; // Only applies to add_contact.
+		}
+
+		$lookup_field = $this->get_lookup_field();
+
+		if ( empty( $args[0][ $lookup_field ] ) ) {
+			return $error; // No email to look up.
+		}
+
+		$contact_id = $this->crm->get_contact_id( $args[0][ $lookup_field ] );
+
+		if ( empty( $contact_id ) || is_wp_error( $contact_id ) ) {
+			return new WP_Error(
+				'duplicate',
+				sprintf(
+					'Duplicate contact error while adding contact, but searching by email (%s) returned no results.',
+					$args[0][ $lookup_field ]
+				)
+			);
+		}
+
+		wpf_log(
+			'notice',
+			wpf_get_user_id_by_email( $args[0][ $lookup_field ] ),
+			sprintf(
+				'Contact with email %s already exists (ID: %s). Updating instead of creating.',
+				$args[0][ $lookup_field ],
+				$contact_id
+			)
+		);
+
+		return $this->crm->update_contact( $contact_id, $args[0] );
+	}
+
+	/**
+	 * Replace a contact ID in the args array with a new contact ID.
+	 *
+	 * @since 3.47.3
+	 *
+	 * @param array  $args           The API arguments.
+	 * @param string $old_contact_id The old contact ID.
+	 * @param string $new_contact_id The new contact ID.
+	 * @param string $method         The API method.
+	 * @return array The updated args.
+	 */
+	private function replace_contact_id_in_args( $args, $old_contact_id, $new_contact_id, $method ) {
+
+		// More efficient: we know exactly where the contact ID is based on the method.
+		if ( 'update_contact' === $method || 'load_contact' === $method || 'get_tags' === $method ) {
+			$args[0] = $new_contact_id;
+		} elseif ( 'apply_tags' === $method || 'remove_tags' === $method ) {
+			$args[1] = $new_contact_id;
+		}
+
+		return $args;
 	}
 
 	/**
@@ -845,15 +1028,17 @@ class WPF_CRM_Base {
 				 * Format field value.
 				 *
 				 * @since 1.0.0
+				 * @since 3.46.8 Added $update_data parameter.
 				 *
 				 * @link  https://wpfusion.com/documentation/filters/wpf_format_field_value/
 				 *
-				 * @param mixed  $value     The field value.
-				 * @param string $type      The field type.
-				 * @param string $crm_field The field ID in the CRM.
+				 * @param mixed  $value      The field value.
+				 * @param string $type       The field type.
+				 * @param string $crm_field  The field ID in the CRM.
+				 * @param array  $update_data The full array of data being sent to the CRM.
 				 */
 
-				$value = apply_filters( 'wpf_format_field_value', $user_meta[ $field ], $field_data['type'], $field_data['crm_field'] );
+				$value = apply_filters( 'wpf_format_field_value', $user_meta[ $field ], $field_data['type'], $field_data['crm_field'], $update_data );
 
 				if ( 'raw' === $field_data['type'] ) {
 
@@ -1144,13 +1329,18 @@ class WPF_CRM_Base {
 
 		} elseif ( 'checkbox' === $field_type ) {
 
-			if ( empty( $value ) ) {
-				// If checkbox is unselected.
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
 				return null;
-			} else {
+			}
+
+			if ( ! empty( $value ) ) {
 				// If checkbox is selected.
 				return 1;
 			}
+
+			// Default to null for empty values.
+			return null;
 		} elseif ( 'text' === $field_type || 'textarea' === $field_type ) {
 
 			return strval( $value );

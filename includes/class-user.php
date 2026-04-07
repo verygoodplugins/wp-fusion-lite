@@ -766,13 +766,41 @@ class WPF_User {
 
 		$user_meta = wp_fusion()->crm->load_contact( $contact_id );
 
-		// Error logging.
+		// Error handling with recovery for deleted/merged contacts.
 		if ( is_wp_error( $user_meta ) ) {
 
-			wpf_log( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() );
-			return $user_meta;
+			// If the contact was not found (deleted/merged), try to recover by looking up the contact by email.
+			if ( 'not_found' === $user_meta->get_error_code() ) {
 
-		} elseif ( empty( $user_meta ) ) {
+				wpf_log( 'notice', $user_id, 'Contact #' . $contact_id . ' not found. Attempting to recover by looking up contact by email.' );
+
+				$new_contact_id = wpf_get_contact_id( $user_id, true ); // Force lookup by email.
+
+				if ( ! empty( $new_contact_id ) && $new_contact_id !== $contact_id ) {
+
+					wpf_log( 'notice', $user_id, 'Found new contact ID #' . $new_contact_id . ' for user. Retrying load.' );
+
+					// Update the stored contact ID.
+					update_user_meta( $user_id, WPF_CONTACT_ID_META_KEY, $new_contact_id );
+
+					// Retry loading with the new contact ID.
+					$user_meta = wp_fusion()->crm->load_contact( $new_contact_id );
+
+					if ( is_wp_error( $user_meta ) ) {
+						wpf_log( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta after recovery: ' . $user_meta->get_error_message() );
+						return $user_meta;
+					}
+				} else {
+					wpf_log( 'error', $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() . ' Could not recover by email lookup.' );
+					return $user_meta;
+				}
+			} else {
+				wpf_log( $user_meta->get_error_code(), $user_id, 'Error loading contact user meta: ' . $user_meta->get_error_message() );
+				return $user_meta;
+			}
+		}
+
+		if ( empty( $user_meta ) ) {
 
 			wpf_log( 'notice', $user_id, 'No elligible user meta loaded.' );
 			return new WP_Error( 'error', 'No elligible user meta loaded.' );
@@ -1955,7 +1983,8 @@ class WPF_User {
 	public function has_tag( $tags, $user_id = false ) {
 
 		// Allow overrides by admin bar.
-		if ( wpf_is_user_logged_in() && current_user_can( 'manage_options' ) && get_query_var( 'wpf_tag' ) ) {
+		$wp_query = isset( $GLOBALS['wp_query'] ) ? $GLOBALS['wp_query'] : null;
+		if ( wpf_is_user_logged_in() && current_user_can( 'manage_options' ) && $wp_query instanceof WP_Query && get_query_var( 'wpf_tag' ) ) {
 
 			if ( 'unlock-all' === get_query_var( 'wpf_tag' ) ) {
 				return true;
@@ -1993,9 +2022,13 @@ class WPF_User {
 	}
 
 	/**
-	 * Gets tag ID from tag name
+	 * Gets tag ID from tag name.
 	 *
-	 * @access public
+	 * @since 1.0.0
+	 *
+	 * @see WPF_Tag_Migration::translate_tag_id() — via wpf_get_tag_id filter.
+	 *
+	 * @param string $tag_name The tag name or ID.
 	 * @return string|bool The tag ID or false if not found.
 	 */
 	public function get_tag_id( $tag_name ) {
@@ -2016,7 +2049,7 @@ class WPF_User {
 		// If it's already an ID.
 
 		if ( is_numeric( $tag_name ) ) {
-			return $tag_name;
+			return apply_filters( 'wpf_get_tag_id', $tag_name, $tag_name );
 		}
 
 		$available_tags = wp_fusion()->settings->get_available_tags_flat( true, false );
@@ -2024,7 +2057,7 @@ class WPF_User {
 		// If it's already an ID and exists.
 
 		if ( isset( $available_tags[ $tag_name ] ) ) {
-			return $tag_name;
+			return apply_filters( 'wpf_get_tag_id', $tag_name, $tag_name );
 		}
 
 		// Search for a tag with the ID.
@@ -2033,22 +2066,26 @@ class WPF_User {
 		$tag_id = array_search( $tag_name, $available_tags, true );
 
 		if ( false !== $tag_id ) {
-			return $tag_id;
+			return apply_filters( 'wpf_get_tag_id', $tag_id, $tag_name );
 		}
 
 		// If no match found, and CRM supports add_tags, return the label.
 		if ( ! empty( wp_fusion()->crm ) && wp_fusion()->crm->supports( 'add_tags' ) ) {
-			return $tag_name;
+			return apply_filters( 'wpf_get_tag_id', $tag_name, $tag_name );
 		}
 
 		return false;
 	}
 
 	/**
-	 * Gets the display label for a given tag ID
+	 * Gets the display label for a given tag ID.
 	 *
-	 * @access public
-	 * @return string Label for given tag
+	 * @since 1.0.0
+	 *
+	 * @see WPF_Tag_Migration::translate_tag_label() — via wpf_get_tag_label filter.
+	 *
+	 * @param string|int $tag_id The tag ID.
+	 * @return string|false Label for given tag.
 	 */
 	public function get_tag_label( $tag_id ) {
 
@@ -2057,7 +2094,7 @@ class WPF_User {
 			// CRMs that support add_tags don't use IDs.
 			// We'll do this before loading available_tags to avoid a database hit.
 
-			return $tag_id;
+			return apply_filters( 'wpf_get_tag_label', $tag_id, $tag_id );
 
 		}
 
@@ -2067,21 +2104,22 @@ class WPF_User {
 
 			// CRMs with tag optgroups.
 
-			return $available_tags[ $tag_id ]['label'];
+			return apply_filters( 'wpf_get_tag_label', $available_tags[ $tag_id ]['label'], $tag_id );
 
 		} elseif ( isset( $available_tags[ $tag_id ] ) ) {
 
 			// CRMs with id => label.
 
-			return $available_tags[ $tag_id ];
+			return apply_filters( 'wpf_get_tag_label', $available_tags[ $tag_id ], $tag_id );
 
 		} elseif ( ! isset( $available_tags[ $tag_id ] ) ) {
 
 			// Unknown tags.
 
 			$tag_type = wpf_get_option( 'crm_tag_type', 'tag' );
+			$label    = '(Unknown ' . $tag_type . ': ' . $tag_id . ')';
 
-			return '(Unknown ' . $tag_type . ': ' . $tag_id . ')';
+			return apply_filters( 'wpf_get_tag_label', $label, $tag_id );
 
 		} else {
 

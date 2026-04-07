@@ -42,28 +42,75 @@ class WPF_HighLevel_Admin {
 	 */
 	public function init() {
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
-		add_action( 'wpf_settings_notices', array( $this, 'oauth_warning' ) );
+		add_action( 'admin_init', array( $this, 'check_oauth_conflicts' ) );
 	}
 
 
 	/**
-	 * Check if we need to upgrade to the new OAuth.
+	 * Check for known conflicting plugins that interfere with OAuth flows.
 	 *
-	 * @since 3.41.11
+	 * @since 3.46.7
+	 *
+	 * @return array List of conflicting plugin names that are currently active.
 	 */
-	public function oauth_warning() {
+	public function check_plugin_conflicts() {
 
-		if ( ! wpf_get_option( 'highlevel_token' ) ) {
+		$conflicting_plugins = array(
+			'engagebay-chat/engagebay-chat.php' => 'EngageBay LiveChat',
+			// Add more as we discover them.
+		);
 
-			echo '<div class="notice notice-warning wpf-notice"><p>';
-
-			echo wp_kses_post( sprintf( __( '<strong>Heads up:</strong> WP Fusion\'s HighLevel integration has been updated to use OAuth authentication. Please %1$sclick here to re-authorize the connection%2$s and enable a deeper integration with new HighLevel features.', 'wp-fusion-lite' ), '<a href="' . $this->get_oauth_url() . '">', '</a>' ) );
-
-			echo '</p></div>';
-
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . '/wp-admin/includes/plugin.php';
 		}
+
+		$active_conflicts = array();
+
+		foreach ( $conflicting_plugins as $plugin_file => $plugin_name ) {
+			if ( is_plugin_active( $plugin_file ) ) {
+				$active_conflicts[] = $plugin_name;
+			}
+		}
+
+		return $active_conflicts;
 	}
 
+
+	/**
+	 * Check for OAuth conflicts and add notice if found.
+	 *
+	 * @since 3.46.7
+	 */
+	public function check_oauth_conflicts() {
+
+		// Only check on admin pages and if not already connected.
+		if ( wpf_get_option( 'highlevel_token' ) ) {
+			return;
+		}
+
+		$conflicts = $this->check_plugin_conflicts();
+
+		if ( ! empty( $conflicts ) ) {
+
+			$message = '<strong>' . esc_html__( 'OAuth Conflict Warning:', 'wp-fusion-lite' ) . '</strong> ';
+
+			if ( count( $conflicts ) === 1 ) {
+				$message .= sprintf(
+					// translators: %1$s is the name of the conflicting plugin.
+					__( 'The %1$s plugin may interfere with HighLevel authorization. If you experience connection issues, try temporarily disabling this plugin during setup.', 'wp-fusion-lite' ),
+					'<strong>' . esc_html( $conflicts[0] ) . '</strong>'
+				);
+			} else {
+				$message .= sprintf(
+					// translators: %1$s is a comma-separated list of conflicting plugin names.
+					__( 'The following plugins may interfere with HighLevel authorization: %1$s. If you experience connection issues, try temporarily disabling these plugins during setup.', 'wp-fusion-lite' ),
+					'<strong>' . esc_html( implode( ', ', $conflicts ) ) . '</strong>'
+				);
+			}
+
+			wp_fusion()->admin_notices->add_notice( $message );
+		}
+	}
 
 
 	/**

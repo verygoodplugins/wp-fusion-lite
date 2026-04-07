@@ -563,10 +563,10 @@ class WPF_ActiveCampaign {
 
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
 	 * @access public
-	 * @return int Contact ID
+	 * @return int|WP_Error Contact ID or WP_Error
 	 */
 	public function get_contact_id( $email_address ) {
 
@@ -577,6 +577,10 @@ class WPF_ActiveCampaign {
 		}
 
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $response ) || ! isset( $response->contacts ) ) {
+			return new WP_Error( 'error', 'Unexpected empty response from ActiveCampaign' );
+		}
 
 		if ( empty( $response->contacts ) ) {
 			return false;
@@ -970,6 +974,21 @@ class WPF_ActiveCampaign {
 			return false;
 		}
 
+		// Check if the contact has been deleted in ActiveCampaign.
+		// When AC deletes a contact, it changes the email to "deleted+{id}@example.com".
+		// We treat this as a "not found" error to trigger the recovery mechanism.
+		if ( ! empty( $response->contact->{'email'} ) && preg_match( '/^deleted\+\d+@/', $response->contact->{'email'} ) ) {
+			return new WP_Error(
+				'not_found',
+				sprintf(
+					// translators: %1$d is the contact ID, %2$s is the deleted email address.
+					__( 'Contact #%1$d appears to have been deleted in ActiveCampaign (email: %2$s). The stored contact ID is no longer valid.', 'wp-fusion-lite' ),
+					$contact_id,
+					$response->contact->{'email'}
+				)
+			);
+		}
+
 		$user_meta = array();
 
 		// Map contact fields.
@@ -1213,25 +1232,64 @@ class WPF_ActiveCampaign {
 	}
 
 	/**
-	 * Gets or creates an ActiveCampaign deep data customer
+	 * Load a single ActiveCampaign e-commerce customer by ID.
+	 *
+	 * @since x.x.x
+	 *
+	 * @param int $customer_id Customer ID.
+	 * @return object|false|WP_Error Customer object, false when customer not
+	 *                               found (404), or WP_Error on transport/API
+	 *                               failure.
+	 */
+	private function load_ecom_customer( $customer_id ) {
+
+		$params   = $this->get_params();
+		$response = wp_safe_remote_get( $this->api_url . 'api/3/ecomCustomers/' . absint( $customer_id ), $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$response_code = wp_remote_retrieve_response_code( $response );
+
+		if ( 404 === $response_code ) {
+			return false;
+		}
+
+		if ( 200 !== $response_code ) {
+			$body    = json_decode( wp_remote_retrieve_body( $response ) );
+			$message = ! empty( $body->message ) ? $body->message : 'HTTP ' . $response_code;
+
+			return new WP_Error( 'error', $message );
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( is_object( $body ) && ! empty( $body->{'ecomCustomer'} ) ) {
+			return $body->{'ecomCustomer'};
+		}
+
+		return false;
+	}
+
+	/**
+	 * Gets or creates an ActiveCampaign deep data customer.
+	 *
+	 * ActiveCampaign requires ecom order email and customerid to refer to the same ecomCustomer.
+	 * Cached IDs are validated against the email used for the order (Woo billing email when provided).
 	 *
 	 * @since 3.24.11
-	 * @return int
+	 * @since x.x.x  Prefer order billing email when $order_id is set; validate cached customer ID.
+	 *
+	 * @param int|string $contact_id    CRM contact ID.
+	 * @param int|string $connection_id Deep data connection ID.
+	 * @param int|false  $order_id      Optional WooCommerce order ID for billing email resolution.
+	 *
+	 * @return int|false
 	 */
 	public function get_customer_id( $contact_id, $connection_id, $order_id = false ) {
 
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
-
-		if ( false !== $user_id ) {
-
-			// Get the customer ID from the cache if it's a registered user
-
-			$customer_id = get_user_meta( $user_id, 'wpf_ac_customer_id', true );
-
-			if ( ! empty( $customer_id ) ) {
-				return $customer_id;
-			}
-		}
 
 		if ( empty( $user_id ) ) {
 
@@ -1244,18 +1302,90 @@ class WPF_ActiveCampaign {
 
 			}
 
-			$user_email = $contact_data['user_email'];
+			$ecom_email = $contact_data['user_email'];
 
 		} else {
+
 			$user       = get_userdata( $user_id );
-			$user_email = $user->user_email;
+			$ecom_email = $user->user_email;
+
+		}
+
+		if ( $order_id && function_exists( 'wc_get_order' ) ) {
+
+			$order = wc_get_order( absint( $order_id ) );
+
+			if ( $order && is_a( $order, 'WC_Order' ) ) {
+
+				// @phpstan-ignore-next-line -- WooCommerce optional dependency.
+				$billing_email = $order->get_billing_email();
+
+				if ( ! empty( $billing_email ) ) {
+					$ecom_email = $billing_email;
+				}
+			}
+		}
+
+		if ( empty( $ecom_email ) ) {
+
+			wpf_log( 'error', $user_id, 'Unable to resolve an email for e-commerce customer lookup with contact #' . $contact_id . '.', array( 'source' => 'wpf-ecommerce' ) );
+			return false;
+
+		}
+
+		$ecom_email_normalized = strtolower( $ecom_email );
+
+		if ( false !== $user_id ) {
+
+			$customer_id  = get_user_meta( $user_id, 'wpf_ac_customer_id', true );
+			$cached_email = get_user_meta( $user_id, 'wpf_ac_ecom_customer_email', true );
+
+			if ( ! empty( $customer_id ) ) {
+
+				$use_cache = false;
+
+				if ( ! empty( $cached_email ) && strtolower( $cached_email ) === $ecom_email_normalized ) {
+
+					$use_cache = true;
+
+				} elseif ( empty( $cached_email ) ) {
+
+					$remote = $this->load_ecom_customer( $customer_id );
+
+					if ( is_wp_error( $remote ) ) {
+
+						// API/transport error -- trust the cache rather than clearing a potentially valid ID.
+						$use_cache = true;
+
+					} elseif ( is_object( $remote ) && ! empty( $remote->email ) && strtolower( $remote->email ) === $ecom_email_normalized ) {
+
+						update_user_meta( $user_id, 'wpf_ac_ecom_customer_email', $ecom_email );
+						$use_cache = true;
+
+					}
+				}
+
+				if ( $use_cache ) {
+					return (int) $customer_id;
+				}
+
+				delete_user_meta( $user_id, 'wpf_ac_customer_id' );
+				delete_user_meta( $user_id, 'wpf_ac_ecom_customer_email' );
+
+				wpf_log(
+					'notice',
+					$user_id,
+					'Discarded cached ActiveCampaign ecomCustomer ID because it did not match the current order/contact email (<strong>' . esc_html( $ecom_email ) . '</strong>). Looking up or creating the correct customer.',
+					array( 'source' => 'wpf-ecommerce' )
+				);
+			}
 		}
 
 		$params = $this->get_params();
 
 		// Try to look up an existing customer.
 
-		$request  = $this->api_url . 'api/3/ecomCustomers?filters[email]=' . rawurlencode( $user_email ) . '&filters[connectionid]=' . $connection_id;
+		$request  = $this->api_url . 'api/3/ecomCustomers?filters[email]=' . rawurlencode( $ecom_email ) . '&filters[connectionid]=' . $connection_id;
 		$response = wp_safe_remote_get( $request, $params );
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
@@ -1266,7 +1396,14 @@ class WPF_ActiveCampaign {
 
 				if ( intval( $customer->connectionid ) === intval( $connection_id ) ) {
 
-					return $customer->id;
+					$found_id = (int) $customer->id;
+
+					if ( false !== $user_id ) {
+						update_user_meta( $user_id, 'wpf_ac_customer_id', $found_id );
+						update_user_meta( $user_id, 'wpf_ac_ecom_customer_email', $ecom_email );
+					}
+
+					return $found_id;
 
 				}
 			}
@@ -1274,7 +1411,7 @@ class WPF_ActiveCampaign {
 
 		// Create a new customer.
 
-		$customer_id = $this->add_customer( $user_email, $user_id );
+		$customer_id = $this->add_customer( $ecom_email, $user_id );
 
 		if ( false === $customer_id ) {
 
@@ -1304,7 +1441,7 @@ class WPF_ActiveCampaign {
 			$external_id = 'guest';
 		}
 
-		// If no customer was found, create a new one
+		// If no customer was found, create a new one.
 
 		$body = array(
 			'ecomCustomer' => array(
@@ -1339,7 +1476,7 @@ class WPF_ActiveCampaign {
 				// Connection was deleted or is invalid.
 				delete_option( 'wpf_ac_connection_id' );
 
-				wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message() . ' It looks like the connection ID ' . $connection_id . ' was deleted. Please re-enable Deep Data via the WP Fusion settings.', array( 'source' => 'wpf-ecommerce' ) );
+				wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message() . ' It looks like the Deep Data connection was deleted. Please re-enable Deep Data via the WP Fusion settings.', array( 'source' => 'wpf-ecommerce' ) );
 
 			} else {
 				wpf_log( 'error', $user_id, 'Error creating customer: ' . $response->get_error_message(), array( 'source' => 'wpf-ecommerce' ) );
@@ -1351,12 +1488,13 @@ class WPF_ActiveCampaign {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( is_object( $body ) ) {
-			$customer_id = intval( $body->{'ecomCustomer'}->id );
+		if ( is_object( $body ) && ! empty( $body->{'ecomCustomer'}->id ) ) {
+			$customer_id = (int) $body->{'ecomCustomer'}->id;
 		}
 
-		if ( false !== $user_id ) {
+		if ( false !== $user_id && ! empty( $customer_id ) ) {
 			update_user_meta( $user_id, 'wpf_ac_customer_id', $customer_id );
+			update_user_meta( $user_id, 'wpf_ac_ecom_customer_email', $user_email );
 		}
 
 		return $customer_id;

@@ -167,6 +167,23 @@ abstract class WPF_Integrations_Base {
 	}
 
 	/**
+	 * Migrates tag IDs in this integration's storage.
+	 *
+	 * Override in integrations with complex or non-standard tag
+	 * storage (JSON blobs, custom tables, etc.). The migration
+	 * wizard calls this for every active integration.
+	 *
+	 * @since 3.47.8
+	 *
+	 * @param array $id_map Legacy-to-new tag ID mapping.
+	 * @return int Number of settings updated.
+	 */
+	public function migrate_tag_ids( $id_map ) {
+		return 0;
+	}
+
+
+	/**
 	 * Handles signups from plugins which support guest registrations
 	 *
 	 * @since   3.26.6
@@ -219,5 +236,44 @@ abstract class WPF_Integrations_Base {
 		}
 
 		return $contact_id;
+	}
+
+
+	/**
+	 * Returns a declarative description of where this integration stores tag IDs.
+	 *
+	 * Override in subclasses that have non-standard tag storage (e.g. Elementor
+	 * JSON blobs, custom tables). The returned array is used by migration tooling
+	 * and the future tag-report feature to locate and update tag references.
+	 *
+	 * The format mirrors the registry returned by
+	 * WPF_Admin_Tag_Migration::get_postmeta_tag_keys() — an associative array of
+	 * meta/option key → array of sub-keys that contain tag ID arrays.  Return an
+	 * empty array when the integration relies entirely on standard postmeta/
+	 * usermeta storage already covered by the generic migration engine.
+	 *
+	 * @since 3.47.8
+	 *
+	 * @return array<string, array<string>> Storage definitions.
+	 */
+	public function get_tag_settings() {
+		return array();
+	}
+
+
+	/**
+	 * Returns all tag IDs currently configured for this integration.
+	 *
+	 * Override in subclasses to provide an accurate list of every tag ID
+	 * referenced by this integration across all of its settings. Used by the
+	 * migration engine to build an ID-map and by the tag-report tool to give
+	 * administrators a cross-plugin view of configured tags.
+	 *
+	 * @since 3.47.8
+	 *
+	 * @return array<int|string> Flat array of tag IDs (deduplicated).
+	 */
+	public function get_configured_tag_ids() {
+		return array();
 	}
 }

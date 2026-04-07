@@ -49,7 +49,7 @@ class WPF_Klaviyo {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array( 'events', 'add_fields', 'events_multi_key' );
+	public $supports = array( 'events', 'add_fields', 'events_multi_key', 'auto_oauth' );
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -196,7 +196,7 @@ class WPF_Klaviyo {
 
 					// Update the authorization header and retry the request.
 					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
-					$response                         = wp_safe_remote_request( $url, $args );
+					$response                         = wp_remote_request( $url, $args );
 
 					return $response;
 				}
@@ -225,7 +225,7 @@ class WPF_Klaviyo {
 						$args['body']   = wp_json_encode( $body );
 						$args['method'] = 'PATCH';
 
-						$response = wp_safe_remote_post( $url, $args );
+						$response = wp_remote_post( $url, $args );
 
 						if ( is_wp_error( $response ) ) {
 							return $response;
@@ -240,19 +240,19 @@ class WPF_Klaviyo {
 
 							return $args; // return the body so add_contact() can get the ID.
 						}
-					} elseif ( 'invalid' === $error->code && isset( $error->source->pointer ) ) {
+					} elseif ( 'invalid' === $error->code && isset( $error->source->pointer ) && '/data' !== $error->source->pointer ) {
 
-						// Convert pointer path to array keys
+						// Convert pointer path to array keys.
 						$path = explode( '/', trim( $error->source->pointer, '/' ) );
 
-						// Get the body data
+						// Get the body data.
 						$body = json_decode( $args['body'], true );
 
-						// Remove the invalid field by traversing the path
+						// Remove the invalid field by traversing the path.
 						$current  = &$body;
 						$last_key = array_pop( $path );
 
-						// Navigate through the path
+						// Navigate through the path.
 						foreach ( $path as $key ) {
 							if ( isset( $current[ $key ] ) ) {
 								$current = &$current[ $key ];
@@ -263,11 +263,11 @@ class WPF_Klaviyo {
 						if ( isset( $current[ $last_key ] ) ) {
 							unset( $current[ $last_key ] );
 
-							// Update the request body
+							// Update the request body.
 							$args['body'] = wp_json_encode( $body );
 
-							// Try the request again
-							$response = wp_safe_remote_post( $url, $args );
+							// Try the request again.
+							$response = wp_remote_post( $url, $args );
 
 						}
 
@@ -310,7 +310,7 @@ class WPF_Klaviyo {
 			'headers'    => array(
 				'Accept'       => 'application/json',
 				'Content-Type' => 'application/json',
-				'Revision'     => '2025-01-15',
+				'Revision'     => '2025-07-15',
 			),
 		);
 
@@ -356,7 +356,7 @@ class WPF_Klaviyo {
 			),
 		);
 
-		$response = wp_safe_remote_post( 'https://a.klaviyo.com/oauth/token', $params );
+		$response = wp_remote_post( 'https://a.klaviyo.com/oauth/token', $params );
 
 		if ( is_wp_error( $response ) ) {
 			wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->get_error_message() );
@@ -426,7 +426,7 @@ class WPF_Klaviyo {
 			),
 		);
 
-		$response = wp_safe_remote_post( 'https://a.klaviyo.com/oauth/token', $params );
+		$response = wp_remote_post( 'https://a.klaviyo.com/oauth/token', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -491,7 +491,7 @@ class WPF_Klaviyo {
 			),
 		);
 
-		$response = wp_safe_remote_post( 'https://a.klaviyo.com/oauth/revoke', $params );
+		$response = wp_remote_post( 'https://a.klaviyo.com/oauth/revoke', $params );
 
 		if ( is_wp_error( $response ) ) {
 			wpf_log( 'error', 0, 'Error revoking Klaviyo token: ' . $response->get_error_message() );
@@ -542,7 +542,7 @@ class WPF_Klaviyo {
 		}
 
 		$request  = 'https://a.klaviyo.com/api/lists';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -585,8 +585,9 @@ class WPF_Klaviyo {
 		if ( ! empty( $customer_data['billing_phone'] ) ) {
 			$customer_data['billing_phone'] = wpf_phone_number_to_e164( $customer_data['billing_phone'], $customer_data['billing_country'] );
 
-			if ( ! preg_match( '/^\+\d{10,15}$/', $customer_data['billing_phone'] ) ) {
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Klaviyo phone number is potentially invalid: ' . $customer_data['billing_phone'] );
+			// E.164 format: + followed by country code and number, 7-15 digits total after +
+			if ( ! preg_match( '/^\+\d{7,15}$/', $customer_data['billing_phone'] ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Klaviyo phone number is potentially invalid (not E.164 format): ' . $customer_data['billing_phone'] );
 				unset( $customer_data['billing_phone'] );
 			}
 		}
@@ -594,8 +595,9 @@ class WPF_Klaviyo {
 		if ( ! empty( $customer_data['shipping_phone'] ) ) {
 			$customer_data['shipping_phone'] = wpf_phone_number_to_e164( $customer_data['shipping_phone'], $customer_data['shipping_country'] );
 
-			if ( ! preg_match( '/^\+\d{10,15}$/', $customer_data['shipping_phone'] ) ) {
-				wpf_log( 'notice', wpf_get_current_user_id(), 'Klaviyo phone number is potentially invalid: ' . $customer_data['shipping_phone'] );
+			// E.164 format: + followed by country code and number, 7-15 digits total after +
+			if ( ! preg_match( '/^\+\d{7,15}$/', $customer_data['shipping_phone'] ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Klaviyo phone number is potentially invalid (not E.164 format): ' . $customer_data['shipping_phone'] );
 				unset( $customer_data['shipping_phone'] );
 			}
 		}
@@ -631,8 +633,9 @@ class WPF_Klaviyo {
 	 * Gets all available tags and saves them to options.
 	 *
 	 * @since 3.41.21 Added support for pagination.
+	 * @since 3.46.4 Added support for segments (read-only).
 	 *
-	 * @return array Lists.
+	 * @return array Lists and segments.
 	 */
 	public function sync_tags() {
 
@@ -641,9 +644,10 @@ class WPF_Klaviyo {
 
 		$request = 'https://a.klaviyo.com/api/lists';
 
+		// Get all lists.
 		while ( $continue ) {
 
-			$response = wp_safe_remote_get( $request, $this->get_params() );
+			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -652,8 +656,43 @@ class WPF_Klaviyo {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			foreach ( $response->data as $list ) {
-				$available_tags[ $list->id ]            = $list->attributes->name;
-				$available_tags[ $list->id . '_optin' ] = $list->attributes->name . ' ' . __( '(opt-in to marketing)', 'wp-fusion-lite' );
+				$available_tags[ $list->id ]            = array(
+					'label'    => $list->attributes->name,
+					'category' => 'Lists',
+				);
+				$available_tags[ $list->id . '_optin' ] = array(
+					'label'    => $list->attributes->name . ' ' . __( '(opt-in to marketing)', 'wp-fusion-lite' ),
+					'category' => 'Lists',
+				);
+			}
+
+			$response->links->next ? $request = $response->links->next : $continue = false;
+
+		}
+
+		// Get all segments (read-only for access control).
+		$continue = true;
+		$request  = 'https://a.klaviyo.com/api/segments';
+
+		while ( $continue ) {
+
+			$response = wp_remote_get( $request, $this->get_params() );
+
+			if ( is_wp_error( $response ) ) {
+				// If segments API fails, just continue with lists.
+				wpf_log( 'error', 0, 'Error fetching Klaviyo segments: ' . $response->get_error_message() );
+				break;
+			}
+
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->data ) ) {
+				foreach ( $response->data as $segment ) {
+					$available_tags[ 'segment_' . $segment->id ] = array(
+						'label'    => $segment->attributes->name,
+						'category' => 'Segments (Read Only)',
+					);
+				}
 			}
 
 			$response->links->next ? $request = $response->links->next : $continue = false;
@@ -696,7 +735,7 @@ class WPF_Klaviyo {
 		// Custom fields.
 
 		$request  = 'https://a.klaviyo.com/api/profiles/';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -739,7 +778,7 @@ class WPF_Klaviyo {
 		}
 
 		$request  = 'https://a.klaviyo.com/api/profiles/?filter=equals(email,"' . $email_address . '")';
-		$response = wp_safe_remote_get( $request, $this->params );
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -771,8 +810,10 @@ class WPF_Klaviyo {
 			$this->get_params();
 		}
 		$user_tags = array();
-		$request   = 'https://a.klaviyo.com/api/profiles/' . $contact_id . '/lists';
-		$response  = wp_safe_remote_get( $request, $this->params );
+
+		// Get list memberships.
+		$request  = 'https://a.klaviyo.com/api/profiles/' . $contact_id . '/lists';
+		$response = wp_remote_get( $request, $this->params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -795,6 +836,24 @@ class WPF_Klaviyo {
 			}
 		}
 
+		// Get segment memberships.
+		$request  = 'https://a.klaviyo.com/api/profiles/' . $contact_id . '/segments';
+		$response = wp_remote_get( $request, $this->params );
+
+		if ( ! is_wp_error( $response ) ) {
+			$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+			if ( ! empty( $response->data ) ) {
+				foreach ( $response->data as $segment ) {
+					$segment_tag = 'segment_' . $segment->id;
+
+					if ( isset( $available_tags[ $segment_tag ] ) ) {
+						$user_tags[] = $segment_tag;
+					}
+				}
+			}
+		}
+
 		return $user_tags;
 	}
 
@@ -804,6 +863,20 @@ class WPF_Klaviyo {
 	 * @return bool|WP_Error True on success, error on failure.
 	 */
 	public function apply_tags( $tags, $contact_id ) {
+
+		// Filter out segment tags - segments are read-only.
+		$filtered_tags = array();
+		foreach ( $tags as $tag_id ) {
+			if ( 0 === strpos( $tag_id, 'segment_' ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Cannot apply segment tag <strong>' . $tag_id . '</strong> - segments are read-only.' );
+				continue;
+			}
+			$filtered_tags[] = $tag_id;
+		}
+
+		if ( empty( $filtered_tags ) ) {
+			return true; // No applicable tags.
+		}
 
 		$params = $this->get_params();
 
@@ -841,11 +914,11 @@ class WPF_Klaviyo {
 			),
 		);
 
-		foreach ( $tags as $tag_id ) {
+		foreach ( $filtered_tags as $tag_id ) {
 
 			if ( false === strpos( $tag_id, '_optin' ) ) {
 
-				if ( in_array( $tag_id . '_optin', $tags ) ) {
+				if ( in_array( $tag_id . '_optin', $filtered_tags ) ) {
 					continue; // if we're set to opt them in as well, don't do a normal add.
 				}
 
@@ -873,7 +946,7 @@ class WPF_Klaviyo {
 
 			}
 
-			$response = wp_safe_remote_post( $request, $params );
+			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -891,6 +964,20 @@ class WPF_Klaviyo {
 	 */
 	public function remove_tags( $tags, $contact_id ) {
 
+		// Filter out segment tags - segments are read-only.
+		$filtered_tags = array();
+		foreach ( $tags as $tag_id ) {
+			if ( 0 === strpos( $tag_id, 'segment_' ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Cannot remove segment tag <strong>' . $tag_id . '</strong> - segments are read-only.' );
+				continue;
+			}
+			$filtered_tags[] = $tag_id;
+		}
+
+		if ( empty( $filtered_tags ) ) {
+			return true; // No applicable tags.
+		}
+
 		$params = $this->get_params();
 
 		$data = array(
@@ -907,12 +994,12 @@ class WPF_Klaviyo {
 
 		// Remove any optin flags.
 
-		$tags = array_unique( $this->format_tags( $tags ) );
+		$filtered_tags = array_unique( $this->format_tags( $filtered_tags ) );
 
-		foreach ( $tags as $tag_id ) {
+		foreach ( $filtered_tags as $tag_id ) {
 
 			$request  = 'https://a.klaviyo.com/api/lists/' . $tag_id . '/relationships/profiles/';
-			$response = wp_safe_remote_post( $request, $params );
+			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
 				return $response;
@@ -928,107 +1015,136 @@ class WPF_Klaviyo {
 	 * @since 3.40.41
 	 *
 	 * @param array $data The contact data.
+	 * @return array The complete API payload.
 	 */
 	public function format_contact_payload( $data ) {
 
-		// Move custom fields to their own place.
+		$body = array(
+			'data' => array(
+				'type'       => 'profile',
+				'attributes' => array(),
+			),
+		);
+
 		$crm_fields = wpf_get_option( 'crm_fields' );
+		$attributes = array();
+		$properties = array();
 
 		foreach ( $data as $key => $value ) {
 
-			if ( ! isset( $crm_fields['Standard Fields'][ $key ] ) ) {
-
-				if ( ! isset( $data['properties'] ) ) {
-					$data['properties'] = array();
-				}
-
-				$data['properties'][ $key ] = $value;
-				unset( $data[ $key ] );
-
-				// Save the last source used to create/update a contact.
-				if ( '$source' === $key ) {
-					$this->last_source = $value;
-				}
-			} elseif ( false !== strpos( $key, '$' ) ) {
-
-				// Klavio doesn't allow the $ sign when updating a contact.
-
-				$newkey = str_replace( '$', '', $key );
-				unset( $data[ $key ] );
-				$data[ $newkey ] = $value;
+			if ( ! is_scalar( $value ) ) {
+				wpf_log( 'notice', wpf_get_current_user_id(), 'Skipping non-scalar value for field <strong>' . $key . '</strong> (type: ' . gettype( $value ) . ')' );
+				continue;
 			}
 
-			// Format address & compound fields.
+			// Save the last source used to create/update a contact.
+			if ( '$source' === $key ) {
+				$this->last_source = $value;
+				continue; // Don't include this in the payload.
+			}
+
+			// Handle compound fields first (fields with + like location+address1).
 			if ( false !== strpos( $key, '+' ) ) {
+				$parts = explode( '+', $key, 2 ); // Limit to 2 parts in case there are multiple + signs.
 
-				$parts = explode( '+', $key );
+				if ( 2 === count( $parts ) ) {
+					$parent_field = $parts[0];
+					$child_field  = $parts[1];
 
-				if ( ! isset( $data[ $parts[0] ] ) ) {
-					$data[ $parts[0] ] = array();
+					// Initialize the parent object if it doesn't exist.
+					if ( ! isset( $attributes[ $parent_field ] ) ) {
+						$attributes[ $parent_field ] = array();
+					}
+
+					$attributes[ $parent_field ][ $child_field ] = $value;
 				}
+				continue;
+			}
 
-				$data[ $parts[0] ][ $parts[1] ] = $value;
+			// Handle fields with $ prefix (standard Klaviyo fields).
+			if ( 0 === strpos( $key, '$' ) || isset( $crm_fields['Standard Fields'][ $key ] ) ) {
 
-				unset( $data[ $key ] );
-
+				$field_name                = ltrim( $key, '$' );
+				$attributes[ $field_name ] = $value;
+			} else {
+				// If it's not a known standard field, treat as custom property.
+				$properties[ $key ] = $value;
 			}
 		}
 
-		return $data;
+        // Set the attributes in the body.
+        $body['data']['attributes'] = $attributes;
+
+        // Custom properties must be nested under attributes.properties per Klaviyo JSON:API.
+        if ( ! empty( $properties ) ) {
+            if ( ! isset( $body['data']['attributes']['properties'] ) || ! is_array( $body['data']['attributes']['properties'] ) ) {
+                $body['data']['attributes']['properties'] = array();
+            }
+            $body['data']['attributes']['properties'] = array_merge( $body['data']['attributes']['properties'], $properties );
+        }
+
+		return $body;
 	}
 
 	/**
 	 * Adds a new contact
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * @since 3.40.41
+	 *
+	 * @param array $data The contact data.
+	 * @return int|WP_Error Contact ID or WP_Error
 	 */
 	public function add_contact( $data ) {
 
-		$data = $this->format_contact_payload( $data );
-
-		$body = array(
-			'type'       => 'profile',
-			'attributes' => $data,
-		);
+		$body = $this->format_contact_payload( $data );
 
 		$request        = 'https://a.klaviyo.com/api/profiles';
 		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( array( 'data' => $body ) );
+		$params['body'] = wp_json_encode( $body );
 
-		$response = wp_safe_remote_post( $request, $params );
+		// Check payload size limit (100KB as per Klaviyo API docs).
+		if ( strlen( $params['body'] ) > 102400 ) {
+			return new WP_Error( 'payload_too_large', __( 'Profile payload exceeds 100KB limit', 'wp-fusion-lite' ) );
+		}
+
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
+		$response_body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $body->data->id;
+		return $response_body->data->id;
 	}
 
 	/**
 	 * Update contact
 	 *
-	 * @access public
-	 * @return bool
+	 * @since 3.40.41
+	 *
+	 * @param string $contact_id The contact ID.
+	 * @param array  $data       The contact data.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
 	 */
 	public function update_contact( $contact_id, $data ) {
 
-		$data = $this->format_contact_payload( $data );
+		$body = $this->format_contact_payload( $data );
 
-		$body = array(
-			'type'       => 'profile',
-			'id'         => $contact_id,
-			'attributes' => $data,
-		);
+		// Add the contact ID for updates.
+		$body['data']['id'] = $contact_id;
 
 		$request          = 'https://a.klaviyo.com/api/profiles/' . $contact_id;
 		$params           = $this->get_params();
-		$params['body']   = wp_json_encode( array( 'data' => $body ) );
+		$params['body']   = wp_json_encode( $body );
 		$params['method'] = 'PATCH';
 
-		$response = wp_safe_remote_post( $request, $params );
+		// Check payload size limit (100KB as per Klaviyo API docs).
+		if ( strlen( $params['body'] ) > 102400 ) {
+			return new WP_Error( 'payload_too_large', __( 'Profile payload exceeds 100KB limit', 'wp-fusion-lite' ) );
+		}
+
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1041,12 +1157,13 @@ class WPF_Klaviyo {
 	 * Loads a contact and updates local user meta
 	 *
 	 * @access public
+	 * @param string $contact_id The contact ID.
 	 * @return array|WP_Error User meta data that was returned or WP_Error.
 	 */
 	public function load_contact( $contact_id ) {
 
 		$request  = 'https://a.klaviyo.com/api/profiles/' . $contact_id;
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1054,14 +1171,43 @@ class WPF_Klaviyo {
 
 		$user_meta      = array();
 		$contact_fields = wpf_get_option( 'contact_fields' );
+		$crm_fields     = wpf_get_option( 'crm_fields' );
 		$body_json      = json_decode( $response['body'], true );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
-			// Core fields.
-			$crm_field = str_replace( '$', '', $field_data['crm_field'] );
 
-			if ( $field_data['active'] && isset( $body_json['data']['attributes'][ $crm_field ] ) ) {
-				$user_meta[ $field_id ] = $body_json['data']['attributes'][ $crm_field ];
+			if ( ! $field_data['active'] ) {
+				continue;
+			}
+
+			$crm_field = $field_data['crm_field'];
+
+			// Handle compound fields (like location+address1).
+			if ( false !== strpos( $crm_field, '+' ) ) {
+				$parts = explode( '+', $crm_field, 2 );
+
+				if ( 2 === count( $parts ) ) {
+					$parent_field = $parts[0];
+					$child_field  = $parts[1];
+
+					if ( isset( $body_json['data']['attributes'][ $parent_field ][ $child_field ] ) ) {
+						$user_meta[ $field_id ] = $body_json['data']['attributes'][ $parent_field ][ $child_field ];
+					}
+				}
+				continue;
+			}
+
+			// Handle fields with $ prefix or standard fields.
+			if ( 0 === strpos( $crm_field, '$' ) || ( ! empty( $crm_fields['Standard Fields'] ) && isset( $crm_fields['Standard Fields'][ $crm_field ] ) ) ) {
+
+				$field_name = ltrim( $crm_field, '$' );
+
+				if ( isset( $body_json['data']['attributes'][ $field_name ] ) ) {
+					$user_meta[ $field_id ] = $body_json['data']['attributes'][ $field_name ];
+				}
+			} elseif ( isset( $body_json['data']['attributes']['properties'][ $crm_field ] ) ) {
+				// Custom fields are stored in the properties field.
+				$user_meta[ $field_id ] = $body_json['data']['attributes']['properties'][ $crm_field ];
 			}
 		}
 
@@ -1080,7 +1226,7 @@ class WPF_Klaviyo {
 		$contact_ids = array();
 
 		$request  = 'https://a.klaviyo.com/api/lists/' . $tag . '/profiles';
-		$response = wp_safe_remote_get( $request, $this->get_params() );
+		$response = wp_remote_get( $request, $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -1126,40 +1272,42 @@ class WPF_Klaviyo {
 		}
 
 		$body = array(
-			'type'       => 'event',
-			'attributes' => array(
-				'profile'    => array(
-					'data' => array(
-						'type'       => 'profile',
-						'attributes' => array(
-							'email' => $email_address,
+			'data' => array(
+				'type'       => 'event',
+				'attributes' => array(
+					'profile'    => array(
+						'data' => array(
+							'type'       => 'profile',
+							'attributes' => array(
+								'email' => $email_address,
+							),
 						),
 					),
-				),
-				'metric'     => array(
-					'data' => array(
-						'type'       => 'metric',
-						'attributes' => array(
-							'name' => $event,
+					'metric'     => array(
+						'data' => array(
+							'type'       => 'metric',
+							'attributes' => array(
+								'name' => $event,
+							),
 						),
 					),
-				),
-				'properties' => array(
-					'event_title' => $event,
-					'event_desc'  => $event_data,
+					'properties' => array(
+						'event_title' => $event,
+						'event_desc'  => $event_data,
+					),
 				),
 			),
 		);
 
 		if ( is_array( $event_data ) ) {
-			$body['attributes']['properties'] = $event_data; // multi-key support.
+			$body['data']['attributes']['properties'] = $event_data; // multi-key support.
 		}
 
 		$request        = 'https://a.klaviyo.com/api/events';
 		$params         = $this->get_params();
-		$params['body'] = wp_json_encode( array( 'data' => $body ) );
+		$params['body'] = wp_json_encode( $body );
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;

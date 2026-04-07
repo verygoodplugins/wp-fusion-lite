@@ -624,3 +624,94 @@ body.tools_page_wpf-settings-logs .alignleft span.select4-container.select4-cont
 		width: 10%;
 	}
 }
+
+/* OAuth Connection Status Styling */
+.oauth-connection-status {
+	margin-bottom: 15px;
+	line-height: 1.4;
+}
+
+.oauth-connection-status span.dashicons.dashicons-yes-alt {
+	color: #00a32a;
+	margin-right: 5px;
+}
+
+.oauth-connection-status span.dashicons.dashicons-warning {
+	color: #dc3232;
+	margin-right: 5px;
+}
+
+.oauth-actions {
+	margin: 15px 0;
+}
+
+.oauth-actions .button {
+	margin-right: 10px;
+}
+
+.oauth-toggle-container {
+	margin: 15px 0;
+}
+
+.oauth-tokens-toggle {
+	color: #0073aa;
+	font-size: 13px;
+	transition: color 0.15s ease-in-out;
+}
+
+.oauth-tokens-toggle:hover {
+	color: #005177;
+}
+
+.oauth-tokens-toggle .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+}
+
+.oauth-tokens-container {
+	background: #f9f9f9;
+	padding: 15px;
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	margin-top: 10px;
+	transition: all 0.3s ease-in-out;
+}
+
+.oauth-tokens-container.hide {
+	display: none;
+}
+
+.oauth-tokens-container p {
+	margin-top: 0;
+	color: #666;
+	font-style: italic;
+	font-size: 12px;
+}
+
+.oauth-tokens-container label {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 5px;
+	font-size: 13px;
+}
+
+.oauth-tokens-container input[type="text"] {
+	width: 100%;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 11px;
+	padding: 8px;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	background: #fff;
+	color: #333;
+}
+
+.oauth-tokens-container .token-field {
+	margin-bottom: 15px;
+}
+
+.oauth-tokens-container .token-field:last-child {
+	margin-bottom: 0;
+}

@@ -1,69 +1,106 @@
 <?php
 
-class WPF_Drip {
+/**
+ * WP Fusion - Drip CRM Integration
+ *
+ * @package   WP Fusion
+ * @copyright Copyright (c) 2024, Very Good Plugins, https://verygoodplugins.com
+ * @license   GPL-3.0+
+ * @since     3.46.10
+ */
 
-	// Unsubscribes:
-	// When someone unsubscribes get_contact_id() will return Not Found unless the peson has been reactivated
-	// update_contact() will work but will return the "status" indicating they're unsubscribed
-	// apply_tags() does work.
+/**
+ * Drip CRM integration class.
+ *
+ * Handles all communication with the Drip API including contact management,
+ * tag operations, and event tracking.
+ *
+ * Note: When someone unsubscribes from Drip:
+ * - get_contact_id() will return Not Found unless the person has been reactivated
+ * - update_contact() will work but will return the "status" indicating they're unsubscribed
+ * - apply_tags() does work
+ *
+ * @since 3.46.10
+ */
+class WPF_Drip {
 
 	/**
 	 * The CRM slug.
 	 *
-	 * @var string
+	 * @since 3.46.10
+	 * @var   string
 	 */
 	public $slug = 'drip';
 
 	/**
 	 * The CRM name.
 	 *
-	 * @var string
+	 * @since 3.46.10
+	 * @var   string
 	 */
 	public $name = 'Drip';
 
 	/**
-	 * Allows for direct access to the API, bypassing WP Fusion
+	 * Drip API instance for direct access, bypassing WP Fusion.
+	 *
+	 * @since 3.46.10
+	 * @var   Drip_API
 	 */
-
 	public $app;
 
 	/**
-	 * API params for v3 API methods
+	 * API parameters for v3 API methods.
+	 *
+	 * @since 3.46.10
+	 * @var   array
 	 */
-
 	public $params;
 
 	/**
-	 * Account ID (used for API queries)
+	 * Drip Account ID used for API queries.
+	 *
+	 * @since 3.46.10
+	 * @var   string
 	 */
-
 	public $account_id;
 
 	/**
-	 * Lets pluggable functions know which features are supported by the CRM
+	 * Features supported by this CRM.
+	 *
+	 * @since 3.46.10
+	 * @var   array
 	 */
-
 	public $supports = array( 'add_tags', 'add_fields', 'events', 'events_multi_key' );
 
+	/**
+	 * Regex pattern for validating event property keys.
+	 *
+	 * Drip supports alphanumeric characters, spaces, underscores, and hyphens
+	 * in event property keys. Keys are case-sensitive.
+	 *
+	 * @since 3.46.10
+	 * @var   string
+	 */
+	public $event_key_format = '/^[a-zA-Z0-9 _-]+$/';
 
 	/**
-	 * Lets us link directly to editing a contact record.
+	 * URL template for editing contact records in Drip.
 	 *
 	 * @since 3.37.30
-	 * @var string
+	 * @var   string
 	 */
-
 	public $edit_url = '';
 
 	/**
-	 * Get things started
+	 * Constructor - Initialize the Drip CRM integration.
 	 *
-	 * @access  public
-	 * @since   2.0
+	 * Sets up admin interface if running in WordPress admin.
+	 *
+	 * @since 2.0
 	 */
 	public function __construct() {
 
-		// Set up admin options
+		// Set up admin options.
 		if ( is_admin() ) {
 			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_Drip_Admin( $this->slug, $this->name, $this );
@@ -71,23 +108,25 @@ class WPF_Drip {
 	}
 
 	/**
-	 * Sets up hooks specific to this CRM
+	 * Sets up hooks specific to this CRM.
 	 *
-	 * @access public
-	 * @return void
+	 * Initializes filters and actions for Drip-specific functionality
+	 * including field formatting, HTTP response handling, and tracking.
+	 *
+	 * @since 3.46.10
 	 */
 	public function init() {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
-		// HTTP response filter for API calls outside the SDK
+		// HTTP response filter for API calls outside the SDK.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 
-		// Slow down the batch processses to get around the 3600 requests per hour limit
+		// Slow down the batch processes to get around the 3600 requests per hour limit.
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
 
-		// Add tracking code to footer
+		// Add tracking code to footer.
 		add_action( 'wp_footer', array( $this, 'tracking_code_output' ) );
 
 		$this->account_id = wpf_get_option( 'drip_account' );
@@ -113,10 +152,15 @@ class WPF_Drip {
 	}
 
 	/**
-	 * Slow down batch processses to get around the 3600 requests per hour limit
+	 * Slow down batch processes to get around the 3600 requests per hour limit.
 	 *
-	 * @access public
-	 * @return int Sleep time
+	 * Drip has a rate limit of 3600 requests per hour, so we need to add
+	 * a delay between batch operations to prevent hitting the limit.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  int $seconds The default sleep time.
+	 * @return int Sleep time in seconds.
 	 */
 	public function set_sleep_time( $seconds ) {
 
@@ -125,17 +169,24 @@ class WPF_Drip {
 
 
 	/**
-	 * Formats user entered data to match Drip field formats
+	 * Formats user entered data to match Drip field formats.
 	 *
-	 * @access public
-	 * @return mixed
+	 * Handles special formatting for date fields and string values to ensure
+	 * compatibility with Drip's API requirements.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  mixed  $value      The field value to format.
+	 * @param  string $field_type The type of field being formatted.
+	 * @param  string $field      The field name.
+	 * @return mixed  The formatted field value.
 	 */
 	public function format_field_value( $value, $field_type, $field ) {
 
-		if ( $field_type == 'datepicker' || $field_type == 'date' && ! empty( $value ) ) {
+		if ( ( 'datepicker' === $field_type || 'date' === $field_type ) && ! empty( $value ) ) {
 
-			// Adjust formatting for date fields
-			$date = date( 'm/d/Y', $value );
+			// Adjust formatting for date fields.
+			$date = gmdate( 'm/d/Y', $value );
 
 			return $date;
 
@@ -171,14 +222,21 @@ class WPF_Drip {
 	}
 
 	/**
-	 * Check HTTP Response for errors and return WP_Error if found
+	 * Check HTTP Response for errors and return WP_Error if found.
 	 *
-	 * @access public
-	 * @return HTTP Response
+	 * Filters HTTP responses from Drip API calls to detect and handle
+	 * error conditions, converting them to WP_Error objects.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  array|WP_Error $response HTTP response or WP_Error object.
+	 * @param  array          $args     HTTP request arguments.
+	 * @param  string         $url      The request URL.
+	 * @return array|WP_Error HTTP response on success, WP_Error on API error.
 	 */
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, 'api.getdrip.com' ) !== false ) {
+		if ( false !== strpos( $url, 'api.getdrip.com' ) ) {
 
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
@@ -210,11 +268,14 @@ class WPF_Drip {
 
 		$drip_payload = json_decode( file_get_contents( 'php://input' ) );
 
-		if ( isset( $drip_payload->event ) && ( $drip_payload->event == 'subscriber.applied_tag' || $drip_payload->event == 'subscriber.removed_tag' || $drip_payload->event == 'subscriber.updated_custom_field' || $drip_payload->event == 'subscriber.updated_email_address' ) ) {
+		if ( isset( $drip_payload->event ) && ( 'subscriber.applied_tag' === $drip_payload->event || 'subscriber.removed_tag' === $drip_payload->event || 'subscriber.updated_custom_field' === $drip_payload->event || 'subscriber.updated_email_address' === $drip_payload->event ) ) {
 
 			// Admin settings webhooks.
 			$post_data['contact_id'] = sanitize_key( $drip_payload->data->subscriber->id );
-			$post_data['tags']       = array_map( 'sanitize_text_field', $drip_payload->data->subscriber->tags );
+			$post_data['tags']       = array_map(
+				'sanitize_text_field',
+				$drip_payload->data->subscriber->tags ?? array()
+			);
 
 			return $post_data;
 
@@ -222,7 +283,10 @@ class WPF_Drip {
 
 			// Automations / rules triggers.
 			$post_data['contact_id'] = sanitize_key( $drip_payload->subscriber->id );
-			$post_data['tags']       = array_map( 'sanitize_text_field', $drip_payload->subscriber->tags );
+			$post_data['tags']       = array_map(
+				'sanitize_text_field',
+				$drip_payload->subscriber->tags ?? array()
+			);
 
 			return $post_data;
 
@@ -307,10 +371,17 @@ class WPF_Drip {
 
 
 	/**
-	 * Initialize connection
+	 * Initialize connection to Drip API.
 	 *
-	 * @access  public
-	 * @return  bool
+	 * Sets up the Drip API client and validates account access if testing.
+	 * If the API client is already initialized, returns true immediately.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  string $api_token  The Drip API token.
+	 * @param  string $account_id The Drip account ID.
+	 * @param  bool   $test       Whether to test the connection.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
 	 */
 	public function connect( $api_token = null, $account_id = null, $test = false ) {
 
@@ -330,7 +401,7 @@ class WPF_Drip {
 
 		$app = new Drip_API( $api_token );
 
-		if ( $test == true ) {
+		if ( true === $test ) {
 
 			$accounts = $app->get_accounts();
 
@@ -342,13 +413,13 @@ class WPF_Drip {
 
 			if ( ! empty( $accounts ) ) {
 				foreach ( $accounts as $account ) {
-					if ( $account['id'] == $account_id ) {
+					if ( strval( $account['id'] ) === strval( $account_id ) ) {
 						$valid_id = true;
 					}
 				}
 			}
 
-			if ( $valid_id == false ) {
+			if ( false === $valid_id ) {
 				return new WP_Error( 'error', __( 'Access denied: Your API token doesn\'t have access to this account.', 'wp-fusion-lite' ) );
 			}
 		}
@@ -428,7 +499,7 @@ class WPF_Drip {
 			return false;
 		}
 
-		// Load built in fields first
+		// Load built in fields first.
 		require __DIR__ . '/admin/drip-fields.php';
 
 		$built_in_fields = array();
@@ -439,7 +510,7 @@ class WPF_Drip {
 
 		asort( $built_in_fields );
 
-		// Custom fields
+		// Custom fields.
 
 		$url      = 'https://api.getdrip.com/v2/' . $this->account_id . '/custom_field_identifiers/';
 		$response = $this->app->make_request( $url );
@@ -475,10 +546,15 @@ class WPF_Drip {
 
 
 	/**
-	 * Gets contact ID for a user based on email address
+	 * Gets contact ID for a user based on email address.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * Searches Drip for a subscriber with the given email address and returns
+	 * their contact ID. Also clears any inactive status if the contact is found.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  string $email_address The email address to search for.
+	 * @return string|false|WP_Error Contact ID on success, false if not found, WP_Error on API error.
 	 */
 	public function get_contact_id( $email_address ) {
 
@@ -493,9 +569,9 @@ class WPF_Drip {
 
 		if ( is_wp_error( $result ) ) {
 
-			if ( $result->get_error_message() == 'The resource you requested was not found' ) {
+			if ( 'The resource you requested was not found' === $result->get_error_message() ) {
 
-				// If no contact with that email
+				// If no contact with that email.
 				return false;
 
 			} else {
@@ -510,7 +586,6 @@ class WPF_Drip {
 		}
 
 		// If the lookup worked then they aren't inactive.
-
 		$user = get_user_by( 'email', $email_address );
 
 		if ( $user ) {
@@ -566,10 +641,16 @@ class WPF_Drip {
 	}
 
 	/**
-	 * Applies tags to a contact
+	 * Applies tags to a contact.
 	 *
-	 * @access public
-	 * @return bool
+	 * Adds one or more tags to a Drip subscriber. Tags are applied individually
+	 * through separate API calls to ensure proper error handling.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  array  $tags       Array of tag names to apply.
+	 * @param  string $contact_id The Drip contact ID.
+	 * @return bool|WP_Error True on success, WP_Error on failure.
 	 */
 	public function apply_tags( $tags, $contact_id ) {
 
@@ -623,7 +704,18 @@ class WPF_Drip {
 
 		foreach ( $tags as $tag ) {
 
-			$result = wp_safe_remote_request( "https://api.getdrip.com/v2/{$this->account_id}/subscribers/{$email}/tags/{$tag}/", $params );
+			$data = array(
+				'tags' => array(
+					array(
+						'email' => $email,
+						'tag'   => $tag,
+					),
+				),
+			);
+
+			$params['body'] = wp_json_encode( $data );
+
+			$result = wp_safe_remote_request( "https://api.getdrip.com/v2/{$this->account_id}/tags", $params );
 
 			if ( is_wp_error( $result ) ) {
 				return $result;
@@ -635,10 +727,15 @@ class WPF_Drip {
 
 
 	/**
-	 * Adds a new contact
+	 * Adds a new contact to Drip.
 	 *
-	 * @access public
-	 * @return int Contact ID
+	 * Creates a new subscriber in Drip with the provided contact data.
+	 * Email is required and is handled separately from custom fields.
+	 *
+	 * @since  3.46.10
+	 *
+	 * @param  array $data Contact data including email and custom fields.
+	 * @return string|WP_Error Contact ID on success, WP_Error on failure.
 	 */
 	public function add_contact( $data ) {
 
@@ -648,7 +745,6 @@ class WPF_Drip {
 		unset( $data['email'] );
 
 		// Fixes user entered field key formats to avoid 422 errors.
-
 		foreach ( $data as $key => $value ) {
 
 			$newkey = $this->format_custom_field_key( $key );
@@ -822,11 +918,11 @@ class WPF_Drip {
 			// Fix formatting differences between user entered fields and those stored in Drip.
 			$field_data['crm_field'] = $this->format_custom_field_key( $field_data['crm_field'] );
 
-			if ( $field_data['active'] == true && isset( $result[ $field_data['crm_field'] ] ) ) {
+			if ( true === $field_data['active'] && isset( $result[ $field_data['crm_field'] ] ) ) {
 
 				$user_meta[ $field_id ] = $result[ $field_data['crm_field'] ];
 
-			} elseif ( $field_data['active'] == true && isset( $result['custom_fields'][ $field_data['crm_field'] ] ) ) {
+			} elseif ( true === $field_data['active'] && isset( $result['custom_fields'][ $field_data['crm_field'] ] ) ) {
 
 				$user_meta[ $field_id ] = $result['custom_fields'][ $field_data['crm_field'] ];
 

@@ -1,5 +1,18 @@
 <?php
+/**
+ * WP Fusion - Omnisend CRM Integration
+ *
+ * @package   WP Fusion
+ * @copyright Copyright (c) 2024, Very Good Plugins, https://verygoodplugins.com
+ * @license   GPL-3.0+
+ * @since     3.42.8
+ */
 
+/**
+ * Omnisend CRM integration class.
+ *
+ * @since 3.42.8
+ */
 class WPF_Omnisend {
 
 	/**
@@ -36,8 +49,10 @@ class WPF_Omnisend {
 
 	/**
 	 * Contains API params
+	 *
+	 * @var array
+	 * @since 3.42.8
 	 */
-
 	public $params;
 
 	/**
@@ -122,7 +137,19 @@ class WPF_Omnisend {
 		if ( 'date' === $field_type && ! empty( $value ) ) {
 			return gmdate( 'Y-m-d H:i:s', $value );
 		} elseif ( 'checkbox' === $field_type ) {
-			return (bool) $value;
+
+			// Handle string '0' and other falsy values that should be false.
+			if ( '0' === $value || 0 === $value || false === $value || '' === $value || null === $value || ( is_array( $value ) && empty( $value ) ) ) {
+				return false;
+			}
+
+			if ( ! empty( $value ) ) {
+				// If checkbox is selected.
+				return true;
+			}
+
+			// Default to false for empty values.
+			return false;
 		} else {
 			return $value;
 		}
@@ -145,6 +172,9 @@ class WPF_Omnisend {
 	/**
 	 * Formats POST data received from webhooks into standard format.
 	 *
+	 * Handles webhooks with or without contact_id in URL. If contact_id is not
+	 * provided, extracts email from request body and looks up contact_id.
+	 *
 	 * @TODO Omnisend batches webhooks and they can contain multiple subsceribers,
 	 * we'll need to update this to create a background process in case there are
 	 * multiple subscribers in the payload.
@@ -160,9 +190,26 @@ class WPF_Omnisend {
 
 		if ( $payload ) {
 
-			$post_data['contact_id'] = $payload[0]->id;
-			$post_data['tags']       = $payload[0]->contact_tags;
+			// Handle batched webhooks (array of contacts).
+			if ( is_array( $payload ) ) {
+				$contact = $payload[0];
+			} else {
+				$contact = $payload;
+			}
 
+			// If contact_id not provided in URL, look it up by email.
+			if ( empty( $post_data['contact_id'] ) && ! empty( $contact->email ) ) {
+				$post_data['contact_id'] = $this->get_contact_id( $contact->email );
+			} elseif ( ! empty( $contact->id ) ) {
+				$post_data['contact_id'] = $contact->id;
+			}
+
+			// Extract tags if available.
+			if ( ! empty( $contact->contact_tags ) ) {
+				$post_data['tags'] = $contact->contact_tags;
+			} elseif ( ! empty( $contact->tags ) ) {
+				$post_data['tags'] = $contact->tags;
+			}
 		}
 
 		return $post_data;
@@ -246,49 +293,57 @@ class WPF_Omnisend {
 	public static function get_standard_fields() {
 
 		$standard_fields = array(
-			'first_name'  => array(
+			'first_name'      => array(
 				'crm_label' => 'First Name',
 				'crm_field' => 'firstName',
 			),
-			'last_name'   => array(
+			'last_name'       => array(
 				'crm_label' => 'Last Name',
 				'crm_field' => 'lastName',
 			),
-			'user_email'  => array(
+			'user_email'      => array(
 				'crm_label' => 'Email Address',
 				'crm_field' => 'email',
 			),
-			'country'     => array(
+			'country'         => array(
 				'crm_label' => 'Country',
 				'crm_field' => 'country',
 			),
-			'countryCode' => array(
+			'countryCode'     => array(
 				'crm_label' => 'Country Code',
 				'crm_field' => 'countryCode',
 			),
-			'state'       => array(
+			'state'           => array(
 				'crm_label' => 'State',
 				'crm_field' => 'state',
 			),
-			'city'        => array(
+			'city'            => array(
 				'crm_label' => 'City',
 				'crm_field' => 'city',
 			),
-			'address'     => array(
+			'address'         => array(
 				'crm_label' => 'Address',
 				'crm_field' => 'address',
 			),
-			'postalCode'  => array(
+			'postalCode'      => array(
 				'crm_label' => 'Postal Code',
 				'crm_field' => 'postalCode',
 			),
-			'gender'      => array(
+			'gender'          => array(
 				'crm_label' => 'Gender',
 				'crm_field' => 'gender',
 			),
-			'birthday'    => array(
+			'birthday'        => array(
 				'crm_label' => 'Birthdate',
 				'crm_field' => 'birthdate',
+			),
+			'emailStatus'     => array(
+				'crm_label' => 'Email Subscription Status',
+				'crm_field' => 'emailStatus',
+			),
+			'emailStatusDate' => array(
+				'crm_label' => 'Email Status Date',
+				'crm_field' => 'emailStatusDate',
 			),
 		);
 
@@ -315,7 +370,7 @@ class WPF_Omnisend {
 
 		$params   = $this->get_params( $api_key );
 		$request  = 'https://api.omnisend.com/v3/contacts';
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -491,7 +546,7 @@ class WPF_Omnisend {
 		$params  = $this->get_params();
 		$request = 'https://api.omnisend.com/v3/contacts?email=' . rawurlencode( $email_address );
 
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -520,7 +575,7 @@ class WPF_Omnisend {
 		$params  = $this->get_params();
 		$request = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
 
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -575,7 +630,7 @@ class WPF_Omnisend {
 
 		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PATCH';
-		$response         = wp_safe_remote_post( $request, $params );
+		$response         = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -609,7 +664,7 @@ class WPF_Omnisend {
 	}
 
 	/**
-	 * Moves custom properties into their own array.
+	 * Moves custom properties into their own array and handles email subscription status.
 	 *
 	 * @since 3.42.8
 	 *
@@ -620,9 +675,37 @@ class WPF_Omnisend {
 
 		$standard_fields = wp_list_pluck( $this::get_standard_fields(), 'crm_field' );
 
+		// Handle email subscription status if present.
+		if ( ! empty( $update_data['emailStatus'] ) && ! empty( $update_data['email'] ) ) {
+			$update_data['identifiers'] = array(
+				array(
+					'type'     => 'email',
+					'id'       => $update_data['email'],
+					'channels' => array(
+						'email' => array(
+							'status' => $update_data['emailStatus'],
+						),
+					),
+				),
+			);
+
+			if ( ! empty( $update_data['emailStatusDate'] ) ) {
+				$update_data['identifiers'][0]['channels']['email']['statusDate'] = $update_data['emailStatusDate'];
+			}
+		}
+
+		// Remove emailStatus fields as they're now in identifiers.
+		unset( $update_data['emailStatus'], $update_data['emailStatusDate'] );
+
+		// Move custom properties into their own array.
 		foreach ( $update_data as $key => $value ) {
 
-			if ( ! in_array( $key, $standard_fields ) ) {
+			// Skip identifiers array - it needs to stay at root level.
+			if ( 'identifiers' === $key ) {
+				continue;
+			}
+
+			if ( ! in_array( $key, $standard_fields, true ) ) {
 				$update_data['customProperties'][ $key ] = $value;
 				unset( $update_data[ $key ] );
 			}
@@ -641,25 +724,29 @@ class WPF_Omnisend {
 	 */
 	public function add_contact( $contact_data ) {
 
+		// Format contact data (handles identifiers if emailStatus is set).
 		$contact_data = $this->format_contact_payload( $contact_data );
 
-		$contact_data['identifiers'] = array(
-			array(
-				'id'       => $contact_data['email'],
-				'type'     => 'email',
-				'channels' => array(
-					'email' => array(
-						'status' => 'subscribed',
+		// If identifiers weren't set by format_contact_payload(), default to subscribed.
+		if ( empty( $contact_data['identifiers'] ) ) {
+			$contact_data['identifiers'] = array(
+				array(
+					'id'       => $contact_data['email'],
+					'type'     => 'email',
+					'channels' => array(
+						'email' => array(
+							'status' => 'subscribed',
+						),
 					),
 				),
-			),
-		);
+			);
+		}
 
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $contact_data );
 		$request        = 'https://api.omnisend.com/v3/contacts';
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -681,6 +768,7 @@ class WPF_Omnisend {
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
 
+		// Format contact data (handles identifiers if emailStatus is set).
 		$contact_data = $this->format_contact_payload( $contact_data );
 
 		$params           = $this->get_params();
@@ -688,7 +776,7 @@ class WPF_Omnisend {
 		$params['method'] = 'PATCH';
 		$request          = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
 
-		$response = wp_safe_remote_post( $request, $params );
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -712,7 +800,7 @@ class WPF_Omnisend {
 		$params  = $this->get_params();
 		$request = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
 
-		$response = wp_safe_remote_get( $request, $params );
+		$response = wp_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -722,9 +810,31 @@ class WPF_Omnisend {
 		$contact_fields = wp_fusion()->settings->get( 'contact_fields' );
 		$response       = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		foreach ( $response['customProperties'] as $key => $value ) {
-			$response[ $key ] = $value;
+		// Extract custom properties into main array.
+		if ( ! empty( $response['customProperties'] ) ) {
+			foreach ( $response['customProperties'] as $key => $value ) {
+				$response[ $key ] = $value;
+			}
 			unset( $response['customProperties'] );
+		}
+
+		// Extract email subscription status from identifiers array.
+		if ( ! empty( $response['identifiers'] ) && is_array( $response['identifiers'] ) ) {
+			foreach ( $response['identifiers'] as $identifier ) {
+				if ( 'email' === $identifier['type'] && ! empty( $identifier['channels']['email'] ) ) {
+					$email_channel = $identifier['channels']['email'];
+
+					if ( ! empty( $email_channel['status'] ) ) {
+						$response['emailStatus'] = $email_channel['status'];
+					}
+
+					if ( ! empty( $email_channel['statusDate'] ) ) {
+						$response['emailStatusDate'] = $email_channel['statusDate'];
+					}
+
+					break;
+				}
+			}
 		}
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
@@ -823,7 +933,7 @@ class WPF_Omnisend {
 		$params['body']     = wp_json_encode( $data );
 		$params['blocking'] = false;
 		$request            = 'https://api.omnisend.com/v3/customer-events';
-		$response           = wp_safe_remote_post( $request, $params );
+		$response           = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
