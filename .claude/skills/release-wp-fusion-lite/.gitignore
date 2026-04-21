@@ -1,0 +1,5 @@
+# Per-user configuration (Local WP site path, etc.) — not for version control.
+config.json
+
+# Draft changelog output from filter_changelog.py — ephemeral.
+*.draft.txt

@@ -35,7 +35,7 @@ class WPF_HubSpot {
 	 *
 	 * @var array
 	 */
-	public $supports = array( 'events', 'add_tags_api', 'auto_oauth' );
+	public $supports = array( 'events', 'add_tags_api', 'auto_oauth', 'disconnect' );
 
 	/**
 	 * Contains API params.
@@ -337,6 +337,25 @@ class WPF_HubSpot {
 			}
 		}
 
+		/*
+		 * Force async processing for HubSpot webhook and workflow extension
+		 * requests so the site responds to HubSpot in milliseconds instead of
+		 * blocking on follow-up HubSpot API calls (load_contact, get_tags,
+		 * import_user, etc). HubSpot's workflow custom actions retry on
+		 * 502/504, and a slow synchronous response counts as a failed
+		 * delivery against the app's workflow extension success rate.
+		 *
+		 * Opt out via &async=false on the webhook URL or the
+		 * wpf_hubspot_webhook_async filter.
+		 */
+		if ( ! isset( $post_data['async'] ) ) {
+			$post_data['async'] = true;
+		} elseif ( in_array( $post_data['async'], array( 'false', '0', 0, false ), true ) ) {
+			$post_data['async'] = false;
+		} else {
+			$post_data['async'] = (bool) $post_data['async'];
+		}
+
 		return $post_data;
 	}
 
@@ -466,7 +485,7 @@ class WPF_HubSpot {
 	/**
 	 * Uninstalls the WP Fusion app from the customer's HubSpot account.
 	 *
-	 * @since x.x.x
+	 * @since 3.47.10
 	 *
 	 * @see https://developers.hubspot.com/docs/api-reference/crm-app-uninstalls-v3/uninstall/delete-appinstalls-v3-external-install
 	 *
@@ -502,6 +521,48 @@ class WPF_HubSpot {
 	}
 
 	/**
+	 * Disconnect from HubSpot: uninstall the WP Fusion app and clear local tokens.
+	 *
+	 * Called by WPF_CRM_Disconnect from both the wpfusion.com revoke URL and
+	 * the settings-reset hook. Always clears local tokens, even if the remote
+	 * uninstall call fails (so the site isn't stuck in a half-connected state).
+	 *
+	 * @since 3.47.10
+	 *
+	 * @return bool|WP_Error True on success (or if nothing to disconnect),
+	 *                      WP_Error when the uninstall API call failed.
+	 */
+	public function disconnect() {
+
+		$access_token  = wpf_get_option( 'hubspot_token' );
+		$refresh_token = wpf_get_option( 'hubspot_refresh_token' );
+
+		if ( empty( $access_token ) && empty( $refresh_token ) ) {
+			wp_fusion()->settings->set( 'hubspot_token', '' );
+			wp_fusion()->settings->set( 'hubspot_refresh_token', '' );
+			wp_fusion()->settings->set( 'site_tracking_id', '' );
+			wp_fusion()->settings->set( 'connection_configured', false );
+			return true;
+		}
+
+		$result = $this->uninstall_app();
+
+		wp_fusion()->settings->set( 'hubspot_token', '' );
+		wp_fusion()->settings->set( 'hubspot_refresh_token', '' );
+		wp_fusion()->settings->set( 'site_tracking_id', '' );
+		wp_fusion()->settings->set( 'connection_configured', false );
+
+		if ( is_wp_error( $result ) ) {
+			wpf_log( 'error', 0, 'Failed to uninstall HubSpot app: ' . $result->get_error_message() );
+			return $result;
+		}
+
+		wpf_log( 'info', 0, 'HubSpot app successfully uninstalled.' );
+
+		return true;
+	}
+
+	/**
 	 * Check HTTP Response for errors and return WP_Error if found
 	 *
 	 * @since  unknown
@@ -519,7 +580,87 @@ class WPF_HubSpot {
 			$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 			$body_json = is_object( $body_json ) ? $body_json : (object) array();
 
-			if ( 401 === $code ) {
+			/*
+			 * Proactive throttling. HubSpot returns
+			 * X-HubSpot-RateLimit-Secondly-Remaining on every successful
+			 * response. When we're about to exhaust the secondly bucket, sleep
+			 * briefly so the next request from this PHP worker doesn't fire a
+			 * 429. This prevents bursts of update_contact + apply_tags +
+			 * load_contact during e.g. WooCommerce checkout from saturating
+			 * the bucket.
+			 */
+			if ( 200 === $code || 201 === $code || 204 === $code ) {
+
+				$secondly_remaining = wp_remote_retrieve_header( $response, 'x-hubspot-ratelimit-secondly-remaining' );
+
+				if ( '' !== $secondly_remaining && (int) $secondly_remaining <= 2 ) {
+
+					$interval_ms = (int) wp_remote_retrieve_header( $response, 'x-hubspot-ratelimit-interval-milliseconds' );
+
+					if ( $interval_ms <= 0 ) {
+						$interval_ms = 1000;
+					}
+
+					usleep( min( $interval_ms, 2000 ) * 1000 );
+				}
+			}
+
+			if ( 429 === $code || 503 === $code ) {
+
+				/*
+				 * HubSpot rate limit / temporary unavailability. Honor the
+				 * Retry-After header (seconds) up to a sane cap and retry once.
+				 * HubSpot's daily/secondly limits are documented at
+				 * https://developers.hubspot.com/docs/api/usage-details — 429s
+				 * count against our app's API success rate so a single retry
+				 * dramatically improves measured reliability.
+				 */
+				if ( ! isset( $args['wpf_hubspot_429_retry'] ) ) {
+
+					$retry_after = (int) wp_remote_retrieve_header( $response, 'retry-after' );
+
+					if ( $retry_after <= 0 ) {
+						$retry_after = 2;
+					}
+
+					$max_retry_after = (int) apply_filters( 'wpf_hubspot_max_retry_after', 10 );
+					$retry_after     = min( $retry_after, max( 1, $max_retry_after ) );
+
+					wpf_log(
+						'notice',
+						0,
+						sprintf( 'HubSpot returned %d. Waiting %ds and retrying.', $code, $retry_after ),
+						array( 'source' => 'hubspot' )
+					);
+
+					sleep( $retry_after );
+
+					$args['wpf_hubspot_429_retry'] = true;
+
+					$response = wp_remote_request( $url, $args );
+
+					if ( is_wp_error( $response ) ) {
+						return $response;
+					}
+
+					$retry_code = wp_remote_retrieve_response_code( $response );
+
+					if ( 429 === $retry_code || 503 === $retry_code ) {
+						return new WP_Error(
+							'rate_limited',
+							sprintf( 'HubSpot is rate limiting requests (HTTP %d). Please try again later.', $retry_code )
+						);
+					}
+
+					return $response;
+				}
+
+				return new WP_Error(
+					'rate_limited',
+					sprintf( 'HubSpot is rate limiting requests (HTTP %d). Please try again later.', $code )
+				);
+
+			} elseif ( 401 === $code ) {
 
 				$message = isset( $body_json->message ) ? $body_json->message : '';
 

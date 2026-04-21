@@ -35,7 +35,7 @@ class WPF_Pipedrive {
 	 * @since 3.40.33
 	 */
 
-	public $supports = array( 'add_fields', 'auto_oauth' );
+	public $supports = array( 'add_fields', 'auto_oauth', 'disconnect' );
 
 	/**
 	 * API parameters
@@ -313,18 +313,22 @@ class WPF_Pipedrive {
 	}
 
 	/**
-	 * Revoke access and refresh tokens.
+	 * Disconnect from Pipedrive: revoke the OAuth refresh token and clear local tokens.
 	 *
-	 * @since 3.46.7
+	 * Called by WPF_CRM_Disconnect from both the wpfusion.com revoke URL and the
+	 * settings-reset hook.
 	 *
-	 * @return bool|WP_Error True on success, error on failure.
+	 * @since 3.47.10
+	 *
+	 * @return bool|WP_Error True on success (or if already disconnected),
+	 *                      WP_Error when the revoke API call failed.
 	 */
-	public function revoke_token() {
+	public function disconnect() {
 
 		$refresh_token = wpf_get_option( "{$this->slug}_refresh_token" );
 
 		if ( empty( $refresh_token ) ) {
-			return new WP_Error( 'error', 'No refresh token found to revoke.' );
+			return true;
 		}
 
 		// Format the request as form data (not JSON) as required by Pipedrive.
@@ -380,6 +384,18 @@ class WPF_Pipedrive {
 		wpf_log( 'info', 0, 'Pipedrive token successfully revoked.' );
 
 		return true;
+	}
+
+	/**
+	 * Backwards-compatible alias for {@see self::disconnect()}.
+	 *
+	 * @since      3.46.7
+	 * @deprecated 3.47.10 Use disconnect() instead.
+	 *
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	public function revoke_token() {
+		return $this->disconnect();
 	}
 
 	/**

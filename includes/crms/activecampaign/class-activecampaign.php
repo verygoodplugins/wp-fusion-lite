@@ -1234,7 +1234,7 @@ class WPF_ActiveCampaign {
 	/**
 	 * Load a single ActiveCampaign e-commerce customer by ID.
 	 *
-	 * @since x.x.x
+	 * @since 3.47.10
 	 *
 	 * @param int $customer_id Customer ID.
 	 * @return object|false|WP_Error Customer object, false when customer not
@@ -1279,7 +1279,7 @@ class WPF_ActiveCampaign {
 	 * Cached IDs are validated against the email used for the order (Woo billing email when provided).
 	 *
 	 * @since 3.24.11
-	 * @since x.x.x  Prefer order billing email when $order_id is set; validate cached customer ID.
+	 * @since 3.47.10  Prefer order billing email when $order_id is set; validate cached customer ID.
 	 *
 	 * @param int|string $contact_id    CRM contact ID.
 	 * @param int|string $connection_id Deep data connection ID.

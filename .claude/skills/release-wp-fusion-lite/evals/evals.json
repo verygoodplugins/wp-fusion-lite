@@ -1,0 +1,52 @@
+{
+  "skill_name": "release-wp-fusion-lite",
+  "evals": [
+    {
+      "id": 1,
+      "name": "full-release-pipeline",
+      "prompt": "Pro just shipped 3.47.10. Can you cut a matching Lite release? Assume Dependabot is clean and my local working tree is clean.",
+      "expected_output": "Skill runs Phase 0 pre-flight, then walks Phase 1-6 in order, pausing for changelog review (Phase 4) and version confirmation (Phase 0). Stops at Phase 7 and asks me to run the CRM smoke-test before tagging. Does NOT push anything without explicit confirmation.",
+      "files": [],
+      "assertions": [
+        {"text": "Skill verifies wp-fusion sibling directory exists before syncing"},
+        {"text": "Skill runs gh pr list for Dependabot PRs and reports"},
+        {"text": "Skill checks git status is clean before sync"},
+        {"text": "sync_from_pro.sh is invoked"},
+        {"text": "patch_main_file.py is invoked"},
+        {"text": "replace_textdomain.py is invoked"},
+        {"text": "filter_changelog.py is invoked with an --output path (temp file for review)"},
+        {"text": "bump_version.py is invoked with 3.47.10 as the argument"},
+        {"text": "verify_sync.sh is invoked"},
+        {"text": "Skill STOPS at Phase 7 and prompts for CRM smoke-test confirmation — does not proceed to git commit or tag push"},
+        {"text": "No `git push` command is executed in the transcript"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "dry-run-diff-review",
+      "prompt": "I want to see what would change if I synced Lite from Pro right now. Don't actually write anything — just show me a diff of the changelog and which files would be touched.",
+      "expected_output": "Skill runs sync_from_pro.sh --dry-run, filter_changelog.py to stdout, replace_textdomain.py --dry-run, and reports counts + proposed changelog. Never actually modifies files.",
+      "files": [],
+      "assertions": [
+        {"text": "At least one script is invoked with --dry-run"},
+        {"text": "Skill runs filter_changelog.py and shows proposed Lite changelog"},
+        {"text": "Skill reports count of dropped bullets (integration-specific) vs kept"},
+        {"text": "No actual file writes occur in the Lite repo (verified via git status)"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "resume-after-smoke-test",
+      "prompt": "OK I did the smoke test, Lite works against HubSpot and ActiveCampaign with no errors. Tag it and push.",
+      "expected_output": "Skill runs verify_sync.sh first (must pass), then git add/commit/tag, then asks ONE more time for confirmation before pushing the tag. After confirmation, pushes and watches the workflow run.",
+      "files": [],
+      "assertions": [
+        {"text": "Skill runs verify_sync.sh before committing"},
+        {"text": "Commit message is the version string (matches existing repo convention)"},
+        {"text": "Skill asks for explicit confirmation before git push"},
+        {"text": "Skill runs gh run watch or equivalent after the push succeeds"},
+        {"text": "Skill reports the GitHub release URL, Actions run URL, and wordpress.org plugin URL at the end"}
+      ]
+    }
+  ]
+}

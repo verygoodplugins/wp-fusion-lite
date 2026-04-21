@@ -3,11 +3,11 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.47.10
+ * Version: 3.47.11
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
- * Text Domain: wp-fusion
- * GitHub Plugin URI: verygoodplugins/wp-fusion-lite
+ * Text Domain: wp-fusion-lite
+ *
  *
  * @package WP_Fusion_Lite
  */
@@ -15,7 +15,7 @@
 /**
  * License and copyright information.
  *
- * @copyright Copyright (c) 2026. All rights reserved.
+ * @copyright Copyright (c) 2018. All rights reserved.
  *
  * @license   Released under the GPL license http://www.opensource.org/licenses/gpl-license.php
  *
@@ -32,7 +32,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.47.10' );
+define( 'WP_FUSION_VERSION', '3.47.11' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -139,6 +139,15 @@ final class WP_Fusion_Lite {
 
 
 	/**
+	 * Shared CRM disconnect / revoke flow.
+	 *
+	 * @var WPF_CRM_Disconnect
+	 * @since 3.47.10
+	 */
+	public $crm_disconnect;
+
+
+	/**
 	 * Handles restricted content and redirects
 	 *
 	 * @var WPF_Access_Control
@@ -218,6 +227,7 @@ final class WP_Fusion_Lite {
 
 			if ( is_admin() ) {
 				self::$instance->admin_notices = new WPF_Admin_Notices();
+				self::$instance->crm_disconnect = new WPF_CRM_Disconnect();
 			}
 
 			// Integration modules are stored here for easy access, for
@@ -379,7 +389,187 @@ final class WP_Fusion_Lite {
 
 		return apply_filters(
 			'wpf_integrations',
-			array()
+			array(
+				'edd'                           => 'Easy_Digital_Downloads',
+				'edd-recurring'                 => 'EDD_Recurring',
+				'gravity-forms'                 => 'GFForms',
+				'formidable-forms'              => 'FrmFormsController',
+				'woocommerce'                   => 'WooCommerce',
+				'woo-subscriptions'             => 'WC_Subscriptions_Product', // works for both Woo Subscriptions and Woo Payments.
+				'woo-memberships'               => 'WC_Memberships',
+				'woo-bookings'                  => 'WC_Bookings',
+				'woo-coupons'                   => 'WC_Smart_Coupons',
+				'woo-deposits'                  => 'WC_Deposits',
+				'woo-addons'                    => 'WC_Product_Addons',
+				'ultimate-member-1x'            => 'UM_API',
+				'ultimate-member'               => 'UM',
+				'userpro'                       => 'userpro_api',
+				'acf'                           => 'acf',
+				'learndash'                     => 'SFWD_LMS',
+				'wpep'                          => 'WPEP\Controller',
+				'sensei'                        => 'WooThemes_Sensei',
+				'bbpress'                       => 'bbPress',
+				'contact-form-7'                => 'wpcf7',
+				'membermouse'                   => 'MemberMouse',
+				'memberpress'                   => 'MeprBaseCtrl',
+				'buddypress'                    => 'BuddyPress',
+				'buddyboss-access-control'      => 'BB_Access_Control_Abstract',
+				'buddyboss-app'                 => 'bbapp',
+				'pmpro'                         => 'MemberOrder',
+				'restrict-content-pro'          => 'RCP_Capabilities',
+				'lifterlms'                     => 'LifterLMS',
+				's2member'                      => 'c_ws_plugin__s2member_utilities',
+				'affiliate-wp'                  => 'Affiliate_WP',
+				'wp-job-manager'                => 'WP_Job_Manager',
+				'user-meta'                     => 'UserMeta\\SupportModel',
+				'simple-membership'             => 'SimpleWpMembership',
+				'badgeos'                       => 'BadgeOS',
+				'tribe-tickets'                 => 'Tribe__Tickets__Main',
+				'tribe-events'                  => 'Tribe__Events__Main',
+				'wishlist-member'               => 'WishListMember',
+				'cred'                          => 'CRED_CRED',
+				'mycred'                        => 'myCRED_Core',
+				'learnpress'                    => 'LearnPress',
+				'courseware'                    => 'WPCW_Requirements',
+				'gamipress'                     => 'GamiPress',
+				'peepso'                        => 'PeepSo',
+				'profilepress'                  => 'ppress_is_admin_page',
+				'beaver-builder'                => 'FLBuilder',
+				'elementor'                     => 'Elementor\\Frontend',
+				'elementor-forms'               => 'ElementorPro\Modules\Forms\Classes\Integration_Base',
+				'wplms'                         => 'BP_Course_Component',
+				'profile-builder'               => 'WPPB_Add_General_Notices',
+				'accessally'                    => 'AccessAlly',
+				'wpml'                          => 'SitePress',
+				'divi'                          => 'ET_Builder_Plugin',
+				'weglot'                        => 'WeglotWP\\Bootstrap_Weglot',
+				'wp-complete'                   => 'WPComplete',
+				'wpforms'                       => 'WPForms',
+				'popup-maker'                   => 'Popup_Maker',
+				'wpforo'                        => 'wpforo\\wpforo',
+				'give'                          => 'Give',
+				'ninja-forms'                   => 'NF_Abstracts_Action',
+				'advanced-ads'                  => 'Advanced_Ads',
+				'clean-login'                   => 'CleanLogin',
+				'private-messages'              => 'Private_Messages',
+				'coursepress'                   => 'CoursePress',
+				'event-espresso'                => 'EE_Base',
+				'fooevents'                     => 'FooEvents',
+				'convert-pro'                   => 'Cp_V2_Loader',
+				'woo-memberships-teams'         => 'WC_Memberships_For_Teams_Loader',
+				'woo-wholesale-lead'            => 'WooCommerce_Wholesale_Lead_Capture',
+				'caldera-forms'                 => 'Caldera_Forms',
+				'wp-affiliate-manager'          => 'WPAM_Plugin',
+				'wcff'                          => 'Wcff',
+				'gtranslate'                    => 'GTranslate',
+				'tutor-lms'                     => 'tutor_lms',
+				'translatepress'                => 'TRP_Translate_Press',
+				'edd-software-licensing'        => 'EDD_Software_Licensing',
+				'cartflows'                     => 'Cartflows_Loader',
+				'memberium'                     => 'memb_getLoggedIn',
+				'uncanny-groups'                => 'uncanny_learndash_groups\\InitializePlugin',
+				'salon-booking'                 => 'SLN_Plugin',
+				'cpt-ui'                        => 'cptui_load_ui_class',
+				'ahoy'                          => 'Ahoy',
+				'wppizza'                       => 'WPPIZZA',
+				'users-insights'                => 'USIN_Manager',
+				'e-signature'                   => 'WP_E_Digital_Signature',
+				'fluent-forms'                  => 'FluentForm\App\Http\Controllers\IntegrationManagerController',
+				'toolset-forms'                 => 'CRED_Main',
+				'toolset-types'                 => 'Types_Autoloader',
+				'wp-event-manager'              => 'WPEM_Registrations',
+				'gravityview'                   => 'GravityView_Plugin',
+				'facetwp'                       => 'FacetWP',
+				'share-logins-pro'              => 'codexpert\Share_Logins_Pro\Plugin',
+				'bp-account-deactivator'        => 'BP_Account_Deactivator',
+				'wp-ultimo'                     => 'WP_Ultimo',
+				'edd-custom-prices'             => 'edd_cp_has_custom_pricing',
+				'oxygen'                        => 'oxygen_vsb_register_condition',
+				'woo-request-a-quote'           => 'Addify_Request_For_Quote',
+				'wcs-att'                       => 'WCS_ATT',
+				'refer-a-friend'                => 'WPGens_RAF',
+				'simple-pay'                    => 'SimplePay\Core\SimplePay',
+				'wcs-gifting'                   => 'WCS_Gifting',
+				'events-manager'                => 'EM_Object',
+				'wp-members'                    => 'wpmem_init',
+				'woo-shipment-tracking'         => 'WC_Shipment_Tracking',
+				'pods'                          => 'Pods',
+				'beaver-themer'                 => 'FLThemeBuilderLoader',
+				'woo-appointments'              => 'WC_Appointments',
+				'wp-crowdfunding'               => 'WPCF\Crowdfunding',
+				'modern-events-calendar'        => 'MEC',
+				'woo-points-rewards'            => 'WC_Points_Rewards',
+				'wp-remote-users-sync'          => 'wprus_run',
+				'yith-vendors'                  => 'YITH_Vendors',
+				'members'                       => 'Members_Plugin',
+				'piotnet-forms'                 => 'Piotnetforms',
+				'ontrapages'                    => 'ONTRApage',
+				'ld-group-registration'         => 'LdGroupRegistration\Includes\Ld_Group_Registration',
+				'woofunnels'                    => 'WFOCU_Core',
+				'tickera'                       => 'TC',
+				'ws-form'                       => 'WS_Form',
+				'upsell'                        => 'upsell',
+				'restropress'                   => 'RestroPress',
+				'if-so'                         => 'if_so',
+				'eventon'                       => 'EventON',
+				'login-with-ajax'               => 'LoginWithAjax',
+				'download-monitor'              => 'WP_DLM',
+				'simply-schedule-appointments'  => 'Simply_Schedule_Appointments',
+				'woo-payment-plans'             => 'WC_Payment_Plans',
+				'jet-engine'                    => 'Jet_Engine',
+				'if-menu'                       => 'If_Menu',
+				'user-menus'                    => 'JP_User_Menus',
+				'armember'                      => 'ARMemberlite',
+				'solid-affiliate'               => 'SolidAffiliate\Main',
+				'slicewp'                       => 'SliceWP',
+				'metabox'                       => 'RWMB_Core',
+				'acf-frontend'                  => 'Front_End_Admin',
+				'wppayform'                     => 'WPPayForm\App\App',
+				'wp-booking-system'             => 'WP_Booking_System',
+				'wpbakery'                      => 'Vc_Manager',
+				'holler-box'                    => 'Holler_Box',
+				'subscriptions-for-woocommerce' => 'Subscriptions_For_Woocommerce',
+				'thrive-apprentice'             => 'TVA_Const',
+				'thrive-automator-trigger'      => 'Thrive\Automator\Admin',
+				'breakdance'                    => 'Breakdance\DynamicData\DynamicDataController',
+				'studiocart'                    => 'NCS_Cart',
+				'surecart'                      => 'SureCartAppCore\AppCore\AppCoreServiceProvider',
+				'sureforms'                     => 'SRFM\Plugin_Loader',
+				'yith-woocommerce-booking'      => 'yith_wcbk_init',
+				'woo-gravity-forms-addons'      => 'WC_GFPA_Main',
+				'pretty-links'                  => 'prli_autoloader',
+				'thirsty-affiliates'            => 'ThirstyAffiliates',
+				'wp-all-import'                 => 'PMXI_Plugin',
+				'object-sync-for-salesforce'    => 'Object_Sync_Salesforce',
+				'woo-product-options'           => 'Barn2\Plugin\WC_Product_Options\Plugin',
+				'download-manager'              => 'WPDM\WordPressDownloadManager',
+				'userswp'                       => 'UsersWP',
+				'blockli-streamer'              => 'Blockli_Streamer_Loader',
+				'fluent-booking'                => 'FluentBooking\App\Http\Controllers\IntegrationManagerController',
+				'fluent-cart'                   => 'FluentCart\Framework\Foundation\Application',
+				'geodirectory'                  => 'GeoDirectory',
+				'wp-user-manager'               => 'WPUM',
+				'forminator'                    => 'Forminator',
+				'suremembers'                   => 'SureMembers\Admin\Settings_Screen',
+				'ameliabooking'                 => 'AmeliaBooking\Plugin',
+				'latepoint'                     => 'LatePoint',
+				'masterstudy'                   => 'MasterStudy\Lms\Plugin',
+				'thrive-architect'              => 'TCB_Post',
+				'content-control'               => 'ContentControl\Plugin',
+				'search-filter'                 => 'Search_Filter',
+				'memberdash'                    => 'MS_Plugin',
+				'woo-cancellation-surveys'      => 'MeowCrew\CancellationOffers\CancellationOffersPlugin',
+				'gs-product-configurator'       => 'GS_Product_Configurator',
+				'fluent-community'              => 'FluentCommunity\App\App',
+				'presto-player-forms'           => 'PrestoPlayer\Plugin',
+				'woo-checkout-field-editor-pro' => 'WCFE_Checkout_Section',
+				'bookingpress'                  => 'BookingPress_Core',
+				'clickwhale'                    => 'Clickwhale',
+				'travel-engine'                 => 'WPTravelEngine',
+				'miniorange-jwt-login'          => 'MoJWT\Base\BaseStructure',
+				'suredash'                      => 'SureDashboard\Portals_Loader',
+				'document-library-pro'          => 'Barn2\Plugin\Document_Library_Advanced\Plugin',
+			)
 		);
 	}
 
@@ -393,7 +583,13 @@ final class WP_Fusion_Lite {
 
 		return apply_filters(
 			'wpf_integrations_theme',
-			array()
+			array(
+				'divi'                  => 'et_setup_theme',
+				'memberoni'             => 'memberoni_llms_theme_support',
+				'acf'                   => 'acf', // For ACF bundled with Memberoni or other themes.
+				'bricks'                => 'Bricks\Theme',
+				'thrive-api-connection' => 'Thrive_Dash_List_Manager',
+			)
 		);
 	}
 
@@ -503,6 +699,7 @@ final class WP_Fusion_Lite {
 			require_once WPF_DIR_PATH . 'includes/admin/class-notices.php';
 			require_once WPF_DIR_PATH . 'includes/admin/admin-functions.php';
 			require_once WPF_DIR_PATH . 'includes/admin/class-upgrades.php';
+			require_once WPF_DIR_PATH . 'includes/admin/class-crm-disconnect.php';
 		}
 
 		if ( $this->is_full_version() ) {
@@ -663,6 +860,7 @@ final class WP_Fusion_Lite {
 		}
 	}
 
+
 	/**
 	 * Check to see if this is WPF Lite or regular
 	 *
@@ -677,6 +875,8 @@ final class WP_Fusion_Lite {
 			return false;
 		}
 	}
+
+
 
 	/**
 	 * Returns error message and deactivates plugin when error returned.

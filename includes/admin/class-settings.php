@@ -710,19 +710,15 @@ class WPF_Settings {
 
 			if ( $this->connection_configured && ! empty( $tag_type ) ) {
 
-				if ( strpos( $translation, ' Tag' ) !== false ) {
+				// Avoid running regex replacements on every gettext call when the string doesn't contain "tag".
+				if ( false !== stripos( $translation, 'tag' ) ) {
 
-					$translation = str_replace( ' Tag', ' ' . $tag_type, $translation );
-
-				}
-
-				if ( strpos( $translation, ' tag' ) !== false ) {
-
-					$translation = str_replace( ' tag', ' ' . strtolower( $tag_type ), $translation );
+					// Word-boundary replacement to avoid mangling words like "tagged" → "listged", while preserving plural forms like "Tags" / "tags".
+					$translation = preg_replace( '/(?<= )Tag(s?)\b/', $tag_type . '$1', $translation );
+					$translation = preg_replace( '/(?<= )tag(s?)\b/', strtolower( $tag_type ) . '$1', $translation );
 
 				}
-
-				$translation = str_replace( ' \tag', ' tag', $translation ); // escaped tags, for example AcccessAlly.
+				$translation = str_replace( ' \tag', ' tag', $translation ); // Escaped tags, for example AccessAlly.
 
 			}
 		}

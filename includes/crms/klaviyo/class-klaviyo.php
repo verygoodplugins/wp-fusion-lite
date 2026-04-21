@@ -49,7 +49,7 @@ class WPF_Klaviyo {
 	 * Lets pluggable functions know which features are supported by the CRM
 	 */
 
-	public $supports = array( 'events', 'add_fields', 'events_multi_key', 'auto_oauth' );
+	public $supports = array( 'events', 'add_fields', 'events_multi_key', 'auto_oauth', 'disconnect' );
 
 	/**
 	 * Allows text to be overridden for CRMs that use different segmentation labels (groups, lists, etc)
@@ -459,18 +459,22 @@ class WPF_Klaviyo {
 	}
 
 	/**
-	 * Revoke access and refresh tokens.
+	 * Disconnect from Klaviyo: revoke the OAuth refresh token and clear local tokens.
 	 *
-	 * @since 3.46.2
+	 * Called by WPF_CRM_Disconnect from both the wpfusion.com revoke URL and the
+	 * settings-reset hook.
 	 *
-	 * @return bool|WP_Error True on success, error on failure.
+	 * @since 3.47.10
+	 *
+	 * @return bool|WP_Error True on success (or if already disconnected),
+	 *                      WP_Error when the revoke API call failed.
 	 */
-	public function revoke_token() {
+	public function disconnect() {
 
 		$refresh_token = wpf_get_option( 'klaviyo_refresh_token' );
 
 		if ( empty( $refresh_token ) ) {
-			return new WP_Error( 'error', 'No refresh token found to revoke.' );
+			return true;
 		}
 
 		// Format the request as form data (not JSON) as required by Klaviyo.
@@ -515,7 +519,7 @@ class WPF_Klaviyo {
 			return new WP_Error( 'error', 'Error revoking token: ' . $error_message );
 		}
 
-		// Clear stored tokens from database
+		// Clear stored tokens from database.
 		wp_fusion()->settings->set( 'klaviyo_token', '' );
 		wp_fusion()->settings->set( 'klaviyo_refresh_token', '' );
 		wp_fusion()->settings->set( 'connection_configured', false );
@@ -523,6 +527,18 @@ class WPF_Klaviyo {
 		wpf_log( 'notice', 0, 'Klaviyo OAuth tokens successfully revoked.' );
 
 		return true;
+	}
+
+	/**
+	 * Backwards-compatible alias for {@see self::disconnect()}.
+	 *
+	 * @since      3.46.2
+	 * @deprecated 3.47.10 Use disconnect() instead.
+	 *
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	public function revoke_token() {
+		return $this->disconnect();
 	}
 
 	/**

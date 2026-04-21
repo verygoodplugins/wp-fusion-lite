@@ -129,6 +129,12 @@ class WPF_NationBuilder {
 
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 
+		// v2 uses numeric tag IDs so the add_tags fast path in get_tag_label()
+		// returns the raw ID. This filter resolves it to the label.
+		if ( $this->use_v2() ) {
+			add_filter( 'wpf_get_tag_label', array( $this, 'get_tag_label' ), 10, 2 );
+		}
+
 		// Error handling.
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
@@ -200,6 +206,39 @@ class WPF_NationBuilder {
 		}
 
 		return $value;
+	}
+
+
+	/**
+	 * Resolve numeric v2 tag IDs to their labels for logging.
+	 *
+	 * The add_tags fast path in WPF_User::get_tag_label() returns the
+	 * raw tag ID as the label, which works for v1 (name = ID) but not
+	 * for v2 (numeric IDs with separate labels).
+	 *
+	 * @since 3.47.10
+	 *
+	 * @param string     $label  The current label (may be a numeric ID).
+	 * @param string|int $tag_id The tag ID.
+	 * @return string The resolved label.
+	 */
+	public function get_tag_label( $label, $tag_id ) {
+
+		if ( ! ctype_digit( (string) $tag_id ) ) {
+			return $label;
+		}
+
+		$available_tags = wpf_get_option( 'available_tags', array() );
+
+		if ( isset( $available_tags[ $tag_id ] ) && is_array( $available_tags[ $tag_id ] ) ) {
+			return $available_tags[ $tag_id ]['label'];
+		}
+
+		if ( isset( $available_tags[ $tag_id ] ) ) {
+			return $available_tags[ $tag_id ];
+		}
+
+		return $label;
 	}
 
 
@@ -1876,8 +1915,9 @@ class WPF_NationBuilder {
 			$exploded_address = explode( '+', $key );
 			$address_key      = $exploded_address[0];
 
-			// v2 API requires _attributes suffix for writing address data.
-			if ( $use_v2 ) {
+			// v2 API requires _attributes suffix for writing address data,
+			// but not for custom_values which are sent directly.
+			if ( $use_v2 && 'custom_values' !== $address_key ) {
 				$address_key .= '_attributes';
 			}
 

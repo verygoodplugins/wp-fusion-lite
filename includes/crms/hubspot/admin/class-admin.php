@@ -49,7 +49,6 @@ class WPF_HubSpot_Admin {
 		add_filter( 'wpf_compatibility_notices', array( $this, 'compatibility_notices' ) );
 		add_filter( 'wpf_initialize_options_contact_fields', array( $this, 'add_default_fields' ), 10 );
 		add_filter( 'wpf_configure_settings', array( $this, 'register_settings' ), 10, 2 );
-		add_action( 'wpf_resetting_options', array( $this, 'uninstall_app_on_disconnect' ) );
 
 		// Always register the AJAX migration handler when HubSpot is active.
 		add_action( 'wp_ajax_wpf_hubspot_migrate_ids', array( $this, 'ajax_migrate_list_ids' ) );
@@ -1497,26 +1496,5 @@ class WPF_HubSpot_Admin {
 		})();
 		</script>
 		<?php
-	}
-
-	/**
-	 * Uninstalls the HubSpot app when the user disconnects.
-	 *
-	 * @since x.x.x
-	 *
-	 * @param array $options The options being reset.
-	 */
-	public function uninstall_app_on_disconnect( $options ) {
-
-		if ( ! empty( $options['hubspot_token'] ) ) {
-
-			$result = $this->crm->uninstall_app();
-
-			if ( is_wp_error( $result ) ) {
-				wpf_log( 'error', 0, 'Failed to uninstall HubSpot app on disconnect: ' . $result->get_error_message() );
-			} else {
-				wpf_log( 'info', 0, 'HubSpot app successfully uninstalled during disconnect.' );
-			}
-		}
 	}
 }

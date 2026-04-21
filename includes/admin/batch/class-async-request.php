@@ -82,6 +82,13 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 		/**
 		 * Dispatch the async request
 		 *
+		 * Uses wp_remote_post() (not wp_safe_remote_post()) because this is a
+		 * loopback to our own admin-ajax.php endpoint. The "safe" variant adds
+		 * reject_unsafe_urls => true, which blocks local IPs, .local TLDs, and
+		 * non-standard ports — all common in dev environments and behind
+		 * reverse proxies. WP core's spawn_cron() makes the same choice for
+		 * the same reason.
+		 *
 		 * @return array|WP_Error
 		 */
 		public function dispatch() {
@@ -89,7 +96,7 @@ if ( ! class_exists( 'WPF_Async_Request' ) ) {
 			$url  = add_query_arg( $this->get_query_args(), $this->get_query_url() );
 			$args = $this->get_post_args();
 
-			return wp_safe_remote_post( esc_url_raw( $url ), $args );
+			return wp_remote_post( esc_url_raw( $url ), $args );
 		}
 
 		/**
