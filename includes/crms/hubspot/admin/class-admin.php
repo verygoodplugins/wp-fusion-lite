@@ -1125,63 +1125,10 @@ class WPF_HubSpot_Admin {
 		// The API expects string IDs.
 		$legacy_ids = array_map( 'strval', array_keys( $orphaned_ids ) );
 
-		if ( ! $this->crm->params ) {
-			$this->crm->get_params();
-		}
+		$id_map = $this->crm->get_v3_list_ids( $legacy_ids );
 
-		if ( empty( $this->crm->params ) ) {
-			return new WP_Error( 'auth', __( 'Unable to connect to HubSpot.', 'wp-fusion-lite' ) );
-		}
-
-		$v3_lists = $this->crm->sync_tags_v3();
-
-		if ( is_wp_error( $v3_lists ) ) {
-			return $v3_lists;
-		}
-
-		$v3_list_ids = array_map( 'strval', array_keys( $v3_lists ) );
-		$id_map      = array();
-
-		foreach ( array_chunk( $legacy_ids, 10000 ) as $chunk ) {
-
-			$params           = $this->crm->params;
-			$params['body']   = wp_json_encode( $chunk );
-			$params['method'] = 'POST';
-
-			$response = wp_remote_request( 'https://api.hubapi.com/crm/v3/lists/idmapping', $params );
-
-			if ( is_wp_error( $response ) ) {
-				wpf_log( 'error', 0, 'HubSpot v1→v3 ID mapping API error: ' . $response->get_error_message() );
-				return $response;
-			}
-
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
-
-			if ( empty( $body['legacyListIdsToIdsMapping'] ) || ! is_array( $body['legacyListIdsToIdsMapping'] ) ) {
-				continue;
-			}
-
-			foreach ( $body['legacyListIdsToIdsMapping'] as $mapping ) {
-				$legacy_id = (string) $mapping['legacyListId'];
-				$new_id    = (string) $mapping['listId'];
-
-				// Skip self-mappings (no change needed).
-				if ( $legacy_id === $new_id ) {
-					continue;
-				}
-
-				// Skip if the legacy ID already exists as a valid v3 list.
-				// This prevents corrupting settings that reference the
-				// v3 list when a v1 list shares the same numeric ID.
-				if ( in_array( $legacy_id, $v3_list_ids, true ) ) {
-					continue;
-				}
-
-				// Only map to IDs that exist in live v3 list results.
-				if ( in_array( $new_id, $v3_list_ids, true ) ) {
-					$id_map[ $legacy_id ] = $new_id;
-				}
-			}
+		if ( is_wp_error( $id_map ) ) {
+			return $id_map;
 		}
 
 		if ( empty( $id_map ) ) {
