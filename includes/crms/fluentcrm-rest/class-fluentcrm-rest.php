@@ -819,22 +819,42 @@ class WPF_FluentCRM_REST {
 
 		if ( $tag ) {
 
-			// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
+			if ( is_numeric( $tag ) ) {
 
-			$request  = $this->url . '/tags?sort_by=id&per_page=1&search=' . $tag;
-			$response = wp_remote_get( $request, $this->get_params() );
+				// Tag is stored as numeric ID, fetch directly.
+				$request  = $this->url . '/tags/' . $tag;
+				$response = wp_remote_get( $request, $this->get_params() );
 
-			if ( is_wp_error( $response ) ) {
-				return $response;
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( empty( $response->tag->id ) ) {
+					return new WP_Error( 'error', 'Unable to determine tag ID from tag ' . $tag );
+				}
+
+				$tag_id = $response->tag->id;
+
+			} else {
+
+				// Tag is stored as slug, search by title.
+				$request  = $this->url . '/tags?sort_by=id&per_page=1&search=' . rawurlencode( $tag );
+				$response = wp_remote_get( $request, $this->get_params() );
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$response = json_decode( wp_remote_retrieve_body( $response ) );
+
+				if ( empty( $response->tags->data ) ) {
+					return new WP_Error( 'error', 'Unable to determine tag ID from tag ' . $tag );
+				}
+
+				$tag_id = $response->tags->data[0]->id;
 			}
-
-			$response = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( empty( $response->tags->data ) ) {
-				return new WP_Error( 'error', 'Unable to determine tag ID from tag ' . $tag );
-			}
-
-			$tag_id = $response->tags->data[0]->id;
 
 			if ( $tag_id ) {
 				$url = add_query_arg( 'tags%5B%5D', $tag_id, $url );

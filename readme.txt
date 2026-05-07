@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
 Tested up to: 6.9.4
-Stable tag: 3.47.11
+Stable tag: 3.47.11.1
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -212,6 +212,9 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.47.11.1 - 5/8/2026 =
+* Fixed fatal error on admin pages for HubSpot sites that had not yet completed the v1 to v3 list ID migration after the 4/30/2026 cutoff, caused by a missing get_v3_list_ids() method on the HubSpot CRM class
 
 = 3.47.11 - 4/22/2026 =
 * Added app disconnect functionality for HubSpot

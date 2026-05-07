@@ -293,7 +293,6 @@ class WPF_Autonami {
 		$continue       = true;
 		$limit          = 100;
 		$offset         = 0;
-		$page           = 1;
 
 		while ( $continue ) {
 			if ( $this->same_site ) {
@@ -318,11 +317,10 @@ class WPF_Autonami {
 				}
 			}
 
-			if ( empty( $results ) || count( $results ) < 100 ) {
+			if ( empty( $results ) || count( $results ) < $limit ) {
 				$continue = false;
 			} else {
-				$offset = ( $page > 1 ) ? ( $limit * ( $page - 1 ) ) : 0;
-				++$page;
+				$offset += $limit;
 			}
 		}
 
@@ -345,7 +343,6 @@ class WPF_Autonami {
 		$continue        = true;
 		$limit           = 100;
 		$offset          = 0;
-		$page            = 1;
 
 		while ( $continue ) {
 			if ( $this->same_site ) {
@@ -370,11 +367,10 @@ class WPF_Autonami {
 				}
 			}
 
-			if ( empty( $results ) || count( $results ) < 100 ) {
+			if ( empty( $results ) || count( $results ) < $limit ) {
 				$continue = false;
 			} else {
-				$offset = ( $page > 1 ) ? ( $limit * ( $page - 1 ) ) : 0;
-				++$page;
+				$offset += $limit;
 			}
 		}
 
@@ -809,7 +805,6 @@ class WPF_Autonami {
 	 */
 	public function load_contacts( $tag ) {
 
-		// At the moment WP Fusion is storing the tag slug, but FCRM uses the ID for searches, so we need to look it up
 		if ( ! is_numeric( $tag ) ) {
 			if ( $this->same_site ) {
 				$results = BWFCRM_Tag::get_tags( array(), $tag, 0, 1 );
@@ -833,13 +828,12 @@ class WPF_Autonami {
 			$tag_id = (int) $results[0]['ID'];
 		}
 
-		if ( ! $tag_id ) {
+		if ( empty( $tag_id ) ) {
 			$tag_id = absint( $tag );
 		}
 
 		$contact_ids = array();
 		$proceed     = true;
-		$page        = 1;
 		$limit       = 100;
 		$offset      = 0;
 
@@ -847,9 +841,12 @@ class WPF_Autonami {
 			if ( $this->same_site ) {
 				$filter  = array( 'tags_any' => array( $tag_id ) );
 				$results = BWFCRM_Contact::get_contacts( false, $offset, $limit, $filter );
-				if ( ! empty( $results ) ) {
-					$results = $results['contacts'];
+
+				if ( is_wp_error( $results ) ) {
+					return $results;
 				}
+
+				$results = isset( $results['contacts'] ) ? $results['contacts'] : array();
 			} else {
 				$request  = $this->url . 'contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset;
 				$response = wp_remote_get( $request, $this->get_params() );
@@ -862,15 +859,18 @@ class WPF_Autonami {
 				$results  = $response['result'];
 			}
 
+			if ( ! is_array( $results ) || empty( $results ) ) {
+				break;
+			}
+
 			foreach ( $results as $contact ) {
 				$contact_ids[] = $contact['id'];
 			}
 
-			if ( count( $results ) < 100 ) {
+			if ( count( $results ) < $limit ) {
 				$proceed = false;
 			} else {
-				$offset = ( $page > 1 ) ? ( $limit * ( $page - 1 ) ) : 0;
-				++$page;
+				$offset += $limit;
 			}
 		}
 

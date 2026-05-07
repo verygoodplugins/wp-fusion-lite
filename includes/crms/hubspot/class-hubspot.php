@@ -1130,6 +1130,82 @@ class WPF_HubSpot {
 
 
 	/**
+	 * Maps legacy HubSpot v1 list IDs to current v3 list IDs.
+	 *
+	 * @since x.x.x
+	 *
+	 * @param array<int|string> $legacy_ids Legacy HubSpot list IDs.
+	 * @return array<string, string>|WP_Error Map of legacy ID → v3 ID, or WP_Error.
+	 */
+	public function get_v3_list_ids( $legacy_ids ) {
+
+		if ( empty( $legacy_ids ) || ! is_array( $legacy_ids ) ) {
+			return array();
+		}
+
+		if ( ! $this->params ) {
+			$this->get_params();
+		}
+
+		if ( empty( $this->params ) ) {
+			return new WP_Error( 'auth', __( 'Unable to connect to HubSpot.', 'wp-fusion-lite' ) );
+		}
+
+		$v3_lists = $this->sync_tags_v3();
+
+		if ( is_wp_error( $v3_lists ) ) {
+			return $v3_lists;
+		}
+
+		$v3_list_ids = array_map( 'strval', array_keys( $v3_lists ) );
+		$id_map      = array();
+
+		foreach ( array_chunk( array_map( 'strval', $legacy_ids ), 10000 ) as $chunk ) {
+
+			$params           = $this->params;
+			$params['body']   = wp_json_encode( $chunk );
+			$params['method'] = 'POST';
+
+			$response = wp_remote_request( 'https://api.hubapi.com/crm/v3/lists/idmapping', $params );
+
+			if ( is_wp_error( $response ) ) {
+				wpf_log( 'error', 0, 'HubSpot v1→v3 ID mapping API error: ' . $response->get_error_message() );
+				return $response;
+			}
+
+			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( empty( $body['legacyListIdsToIdsMapping'] ) || ! is_array( $body['legacyListIdsToIdsMapping'] ) ) {
+				continue;
+			}
+
+			foreach ( $body['legacyListIdsToIdsMapping'] as $mapping ) {
+				$legacy_id = isset( $mapping['legacyListId'] ) ? (string) $mapping['legacyListId'] : '';
+				$new_id    = isset( $mapping['listId'] ) ? (string) $mapping['listId'] : '';
+
+				if ( empty( $legacy_id ) || empty( $new_id ) || $legacy_id === $new_id ) {
+					continue;
+				}
+
+				// Skip if the legacy ID already exists as a valid v3 list.
+				// This prevents corrupting settings that reference the
+				// v3 list when a v1 list shares the same numeric ID.
+				if ( in_array( $legacy_id, $v3_list_ids, true ) ) {
+					continue;
+				}
+
+				// Only map to IDs that exist in live v3 list results.
+				if ( in_array( $new_id, $v3_list_ids, true ) ) {
+					$id_map[ $legacy_id ] = $new_id;
+				}
+			}
+		}
+
+		return $id_map;
+	}
+
+
+	/**
 	 * Loads all custom fields from CRM and merges with local list
 	 *
 	 * @access public

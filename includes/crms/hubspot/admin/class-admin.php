@@ -1125,63 +1125,10 @@ class WPF_HubSpot_Admin {
 		// The API expects string IDs.
 		$legacy_ids = array_map( 'strval', array_keys( $orphaned_ids ) );
 
-		if ( ! $this->crm->params ) {
-			$this->crm->get_params();
-		}
+		$id_map = $this->crm->get_v3_list_ids( $legacy_ids );
 
-		if ( empty( $this->crm->params ) ) {
-			return new WP_Error( 'auth', __( 'Unable to connect to HubSpot.', 'wp-fusion-lite' ) );
-		}
-
-		$v3_lists = $this->crm->sync_tags_v3();
-
-		if ( is_wp_error( $v3_lists ) ) {
-			return $v3_lists;
-		}
-
-		$v3_list_ids = array_map( 'strval', array_keys( $v3_lists ) );
-		$id_map      = array();
-
-		foreach ( array_chunk( $legacy_ids, 10000 ) as $chunk ) {
-
-			$params           = $this->crm->params;
-			$params['body']   = wp_json_encode( $chunk );
-			$params['method'] = 'POST';
-
-			$response = wp_remote_request( 'https://api.hubapi.com/crm/v3/lists/idmapping', $params );
-
-			if ( is_wp_error( $response ) ) {
-				wpf_log( 'error', 0, 'HubSpot v1→v3 ID mapping API error: ' . $response->get_error_message() );
-				return $response;
-			}
-
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
-
-			if ( empty( $body['legacyListIdsToIdsMapping'] ) || ! is_array( $body['legacyListIdsToIdsMapping'] ) ) {
-				continue;
-			}
-
-			foreach ( $body['legacyListIdsToIdsMapping'] as $mapping ) {
-				$legacy_id = (string) $mapping['legacyListId'];
-				$new_id    = (string) $mapping['listId'];
-
-				// Skip self-mappings (no change needed).
-				if ( $legacy_id === $new_id ) {
-					continue;
-				}
-
-				// Skip if the legacy ID already exists as a valid v3 list.
-				// This prevents corrupting settings that reference the
-				// v3 list when a v1 list shares the same numeric ID.
-				if ( in_array( $legacy_id, $v3_list_ids, true ) ) {
-					continue;
-				}
-
-				// Only map to IDs that exist in live v3 list results.
-				if ( in_array( $new_id, $v3_list_ids, true ) ) {
-					$id_map[ $legacy_id ] = $new_id;
-				}
-			}
+		if ( is_wp_error( $id_map ) ) {
+			return $id_map;
 		}
 
 		if ( empty( $id_map ) ) {
@@ -1281,9 +1228,9 @@ class WPF_HubSpot_Admin {
 	/**
 	 * Conditionally auto-builds the safety-net ID map after the v1 cutoff date.
 	 *
-	 * Called on admin_init. Before April 30, 2026, users must opt in. After that
-	 * date we silently build the map in the background so the runtime translation
-	 * layer always has something to fall back on.
+	 * Called on admin_init. Before May 1, 2026 00:00 UTC, users must opt in.
+	 * After that date we silently build the map in the background so the
+	 * runtime translation layer always has something to fall back on.
 	 *
 	 * @since 3.47.8
 	 *
@@ -1306,7 +1253,7 @@ class WPF_HubSpot_Admin {
 		}
 
 		// Before the cutoff, users must opt in via the migration notice.
-		$cutoff = strtotime( '2026-04-30' );
+		$cutoff = strtotime( '2026-05-01 00:00:00 UTC' );
 
 		if ( time() < $cutoff ) {
 			return;
@@ -1338,12 +1285,84 @@ class WPF_HubSpot_Admin {
 			return;
 		}
 
-		$v1_ids = array_keys( $available_tags );
+		if ( ! $this->crm->params ) {
+			$this->crm->get_params();
+		}
 
-		$id_map = $this->crm->get_v3_list_ids( $v1_ids );
+		if ( empty( $this->crm->params ) ) {
+			wpf_log( 'notice', 0, 'HubSpot safety-net map auto-build failed: unable to connect.' );
+			return;
+		}
 
-		if ( is_wp_error( $id_map ) || empty( $id_map ) ) {
-			wpf_log( 'notice', 0, 'HubSpot safety-net map auto-build failed: ' . ( is_wp_error( $id_map ) ? $id_map->get_error_message() : 'empty response' ) );
+		$v3_lists = $this->crm->sync_tags_v3();
+
+		if ( is_wp_error( $v3_lists ) ) {
+			wpf_log( 'notice', 0, 'HubSpot safety-net map auto-build failed: ' . $v3_lists->get_error_message() );
+			return;
+		}
+
+		$v3_list_ids = array_map( 'strval', array_keys( $v3_lists ) );
+		$legacy_ids  = array_map( 'strval', array_keys( $available_tags ) );
+		$id_map      = array();
+
+		foreach ( array_chunk( $legacy_ids, 10000 ) as $chunk ) {
+
+			$params           = $this->crm->params;
+			$params['body']   = wp_json_encode( $chunk );
+			$params['method'] = 'POST';
+
+			$response = wp_remote_request( 'https://api.hubapi.com/crm/v3/lists/idmapping', $params );
+
+			if ( is_wp_error( $response ) ) {
+				wpf_log( 'notice', 0, 'HubSpot safety-net map auto-build API error: ' . $response->get_error_message() );
+				return;
+			}
+
+			$response_code = wp_remote_retrieve_response_code( $response );
+
+			if ( 200 !== $response_code ) {
+				wpf_log(
+					'notice',
+					0,
+					sprintf( 'HubSpot safety-net map auto-build: ID mapping API returned HTTP %d.', $response_code )
+				);
+				return;
+			}
+
+			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( ! is_array( $body )
+				|| empty( $body['legacyListIdsToIdsMapping'] )
+				|| ! is_array( $body['legacyListIdsToIdsMapping'] ) ) {
+				continue;
+			}
+
+			foreach ( $body['legacyListIdsToIdsMapping'] as $mapping ) {
+				if ( ! isset( $mapping['legacyListId'], $mapping['listId'] ) ) {
+					continue;
+				}
+
+				$legacy_id = (string) $mapping['legacyListId'];
+				$new_id    = (string) $mapping['listId'];
+
+				if ( $legacy_id === $new_id ) {
+					continue;
+				}
+
+				// Skip if legacy ID already exists as valid v3 list.
+				if ( in_array( $legacy_id, $v3_list_ids, true ) ) {
+					continue;
+				}
+
+				// Only map to IDs that exist in live v3 list results.
+				if ( in_array( $new_id, $v3_list_ids, true ) ) {
+					$id_map[ $legacy_id ] = $new_id;
+				}
+			}
+		}
+
+		if ( empty( $id_map ) ) {
+			wpf_log( 'notice', 0, 'HubSpot safety-net map auto-build: no mappings found.' );
 			return;
 		}
 
