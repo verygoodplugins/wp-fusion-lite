@@ -1878,12 +1878,18 @@ class WPF_Access_Control {
 
 		global $post;
 
-		// Don't apply tags if restricted.
-		if ( ! wp_fusion()->access->user_can_access( $post->ID ) ) {
+		$post_id = is_a( $post, 'WP_Post' ) ? $post->ID : get_queried_object_id();
+
+		if ( empty( $post_id ) ) {
 			return;
 		}
 
-		if ( false === apply_filters( 'wpf_apply_tags_on_view', true, $post->ID ) ) {
+		// Don't apply tags if restricted.
+		if ( ! wp_fusion()->access->user_can_access( $post_id ) ) {
+			return;
+		}
+
+		if ( false === apply_filters( 'wpf_apply_tags_on_view', true, $post_id ) ) {
 			return;
 		}
 
@@ -1892,7 +1898,7 @@ class WPF_Access_Control {
 			'remove_tags' => array(),
 		);
 
-		$settings = get_post_meta( $post->ID, 'wpf-settings', true );
+		$settings = get_post_meta( $post_id, 'wpf-settings', true );
 
 		$settings = wp_parse_args( $settings, $defaults );
 
@@ -1916,7 +1922,7 @@ class WPF_Access_Control {
 
 				$term = get_term( $term_id );
 
-				if ( is_a( $term, 'WP_Term' ) && is_object_in_term( $post->ID, $term->taxonomy, $term_id ) ) {
+				if ( is_a( $term, 'WP_Term' ) && is_object_in_term( $post_id, $term->taxonomy, $term_id ) ) {
 					$settings['apply_tags'] = array_merge( $settings['apply_tags'], $term_settings['apply_tags'] );
 				}
 

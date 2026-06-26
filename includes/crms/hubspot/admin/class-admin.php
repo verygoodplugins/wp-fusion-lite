@@ -7,6 +7,14 @@ class WPF_HubSpot_Admin {
 	private $crm;
 
 	/**
+	 * Whether the HubSpot migration notice has already rendered this request.
+	 *
+	 * @since 3.47.13
+	 * @var bool
+	 */
+	private $migration_notice_rendered = false;
+
+	/**
 	 * Get things started
 	 *
 	 * @access  public
@@ -352,6 +360,12 @@ class WPF_HubSpot_Admin {
 	 */
 	public function migration_notice() {
 
+		if ( $this->migration_notice_rendered ) {
+			return;
+		}
+
+		$this->migration_notice_rendered = true;
+
 		$nonce = wp_create_nonce( 'wpf_hubspot_migrate' );
 
 		?>
@@ -368,7 +382,7 @@ class WPF_HubSpot_Admin {
 			<?php esc_html_e( 'This migration will update HubSpot list ID references stored across your posts, users, taxonomy rules, and plugin settings.', 'wp-fusion-lite' ); ?>
 		</p>
 		<p>
-			<button id="wpf-run-migration" class="button button-primary">
+			<button type="button" id="wpf-run-migration" class="button button-primary">
 				<?php esc_html_e( 'Run Migration', 'wp-fusion-lite' ); ?>
 			</button>
 				<span id="wpf-migration-status" style="margin-left:10px;"></span>
@@ -1261,6 +1275,12 @@ class WPF_HubSpot_Admin {
 
 		// After the cutoff, automatically build the safety-net map if missing.
 		if ( ! wpf_get_option( 'wpf_tag_id_map' ) ) {
+
+			if ( get_transient( 'wpf_hubspot_safety_net_attempted' ) ) {
+				return;
+			}
+
+			set_transient( 'wpf_hubspot_safety_net_attempted', true, 6 * HOUR_IN_SECONDS );
 			$this->auto_build_safety_net_map();
 		}
 	}

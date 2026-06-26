@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
-Tested up to: 6.9.4
-Stable tag: 3.47.11.1
+Tested up to: 7.0
+Stable tag: 3.47.13
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -91,6 +91,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * [Drift](https://wpfusion.com/documentation/installation-guides/how-to-connect-drift-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Drip](https://wpfusion.com/documentation/installation-guides/how-to-connect-drip-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [EmailOctopus](https://wpfusion.com/documentation/installation-guides/how-to-connect-emailoctopus-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Emercury](https://wpfusion.com/documentation/installation-guides/how-to-connect-emercury-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Encharge](https://wpfusion.com/documentation/installation-guides/how-to-connect-encharge-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Engage](https://wpfusion.com/documentation/installation-guides/how-to-connect-engage-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [EngageBay](https://wpfusion.com/documentation/installation-guides/how-to-connect-engagebay-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
@@ -106,6 +107,7 @@ For integration with WooCommerce, LearnDash, Gravity Forms, Elementor and [over 
 * [Intercom](https://wpfusion.com/documentation/installation-guides/how-to-connect-intercom-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Jetpack CRM](https://wpfusion.com/documentation/installation-guides/how-to-connect-jetpack-crm-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Kartra](https://wpfusion.com/documentation/installation-guides/how-to-connect-kartra-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
+* [Kit](https://wpfusion.com/documentation/installation-guides/how-to-connect-kit-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Klaviyo](https://wpfusion.com/documentation/installation-guides/how-to-connect-klaviyo-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Klick-Tipp](https://wpfusion.com/documentation/installation-guides/how-to-connect-klick-tipp-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
 * [Loopify](https://wpfusion.com/documentation/installation-guides/how-to-connect-loopify-to-wordpress/?utm_campaign=free-plugin&utm_source=wp-org)
@@ -212,6 +214,25 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.47.13 - 6/17/2026 =
+* Improved - Dynamics 365 now detects an expired Azure client secret (AADSTS7000222) and returns an actionable message — update WP Fusion and clear PHP OPcache, then re-authorize — instead of a raw Azure error string
+* Improved - MailerLite now honors the "Resubscribe" setting when updating existing contacts, re-subscribing previously unsubscribed contacts on update
+* Fixed HubSpot returning an "invalid or unknown list" error when WP Fusion created a new list, caused by the v3 API nesting the new list ID under a list object in the response
+* Fixed errors that could occur when refreshing the HubSpot list ID migration
+* Fixed text and multi-line text fields not being cleared in the CRM when their value was emptied — null values are now preserved through to the CRM as a clear instead of being silently dropped
+* Fixed Mailchimp rejecting contact updates that contained an empty merge fields object
+* Fixed WordPress admin page styling on the WP Fusion settings pages under WordPress 7.0
+* Fixed a PHP warning from the access control "apply tags on view" feature when the global post was unavailable during script enqueue
+* Fixed auto-login links and Customer.io syncing failing for email addresses containing a "+" character
+* Fixed Brevo double opt-in failing when the template ID was passed as a string instead of an integer
+
+= 3.47.12 - 5/8/2026 =
+* Added new "push" webhook action that lets a CRM trigger WP Fusion to push the user's WP meta to the CRM — the reverse of the existing update webhook. Supports an optional `fields` parameter (comma-separated list of WP or CRM field keys) to limit the sync, an async mode for queued processing, and lockout against concurrent update / update_tags / add webhooks for the same contact
+* Improved - HubSpot v1→v3 list ID safety net now uses the standard idmapping flow (sync_tags_v3 + /crm/v3/lists/idmapping) directly, anchors the migration cutoff to 2026-05-01 00:00 UTC so April 30 applies consistently across server timezones, and guards the mapping fetch against malformed JSON and non-200 responses
+* Improved - Autonami / FunnelKit load_contacts hardening: handle WP_Error from get_contacts(), normalize the contacts array, and guard before foreach
+* Fixed Autonami / FunnelKit Automations sync pagination — offset stayed at 0 between pages, causing sync_tags, sync_lists, and load_contacts to re-fetch page 1 endlessly on sites with 100+ tags
+* Fixed FluentCRM (REST) bulk import returning no contacts when tags are stored by numeric ID. load_contacts() now uses GET /tags/{id} for numeric tag IDs and keeps the /tags?search= endpoint for slug-based tag keys
 
 = 3.47.11.1 - 5/8/2026 =
 * Fixed fatal error on admin pages for HubSpot sites that had not yet completed the v1 to v3 list ID migration after the 4/30/2026 cutoff, caused by a missing get_v3_list_ids() method on the HubSpot CRM class
@@ -571,40 +592,3 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Developers: The get_contact_id() method now returns false if there was an API error, to allow integrations to try to create a new contact as a fallback
 * Developers: Added `wpf_disable_api_queue()` function to allow bypassing the API queue for a single request
 * Developers: Added a basic framework for unit testing, with more tests to follow. See readme.md for more information.
-
-= 3.44.14 - 11/12/2024 =
-* Added ability to [set a default Record Type](https://wpfusion.com/documentation/installation-guides/how-to-connect-salesforce-to-wordpress/#record-type) for new Salesforce contacts created by WP Fusion
-* Added option to [switch between tag IDs and slugs](https://wpfusion.com/documentation/installation-guides/how-to-connect-fluentcrm-rest-api-to-wordpress/#tag-format) in the FluentCRM (REST API) integration. Tag IDs will be used by default for new installs.
-* Added log indicator when user meta was synced due to the Push All setting
-* Improved status indicator on the background worker
-* Improved - the `wpf_phone_number_to_e164()` function will now remove leading 0s from phone numbers
-* Improved - slightly reduced the byte size required to store the CRM field mapping in the database
-* Fixed missing third parameter `$lookup_cid` in `wpf_get_tags()`
-* Fixed wildcard symbol in the Site Lockout's "Allowed URLs" setting not respecting query parameters
-
-= 3.44.13 - 11/1/2024 =
-* Added error handling when an invalid contact ID is passed to wp_fusion()->crm
-* Improved error handling for deleted or merged contacts in HubSpot
-
-= 3.44.12 - 10/28/2024 =
-* Added translations for German, Dutch, Spanish, and Portuguese
-* Improved - If the full version of WP Fusion is installed, the Lite version will now be deactivated and a notice will be displayed
-* Fixed a fatal error loading the user's tags when they weren't saved as an array in the database
-* Fixed a fatal error calling `wpf_clean_tags()` when the CRM object wasn't loaded
-* Translators: Updated .pot file, merged similar strings in the plugin, and fixed dozens of cases where strings were not translatable
-
-= 3.44.11 - 10/21/2024 =
-* Improved - Added IPv6 debugging information to the activation error message
-* Improved - Batch operations
-* Batch operations bugfixes
-
-= 3.44.10 - 10/14/2024 =
-* Added support for refunds via the Infusionsoft/Keap XMLRPC API (thanks @GBBourdages!!)
-* Added Region and Time Zone fields to the Klaviyo integration
-
-= 3.44.9 - 10/8/2024 =
-* Improved - The new Infusionsoft/Keap API
-* Fixed Account Name field not being loaded from ActiveCampaign
-
-= 3.44.8 - 9/24/2024 =
-* Improved - Numeric states or regions will no longer be synced to Infusionsoft/Keap to prevent an API error

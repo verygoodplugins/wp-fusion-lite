@@ -690,7 +690,7 @@ class WPF_CRM_Base {
 
 			// We just need to load the one once the connection has been configured.
 
-			$configured_crms[ $slug ] = $configured_crms[ $slug ];
+			$configured_crms = array( $slug => $configured_crms[ $slug ] );
 
 		}
 
@@ -1343,7 +1343,11 @@ class WPF_CRM_Base {
 			return null;
 		} elseif ( 'text' === $field_type || 'textarea' === $field_type ) {
 
-			return strval( $value );
+			// Preserve null so map_meta_fields() can erase the field. strval( null )
+			// returns '', which then fails the is_null() clear-path and the empty()
+			// check below it, dropping the field from the payload entirely — so a
+			// text field could never be cleared in the CRM with null.
+			return is_null( $value ) ? null : strval( $value );
 
 		} elseif ( 'user_pass' === $field ) {
 

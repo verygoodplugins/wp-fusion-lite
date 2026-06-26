@@ -624,9 +624,10 @@ class WPF_MailerLite {
 				'groups' => $tags,
 			);
 
-			if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
-				$data['status'] = 'active';
-			}
+		if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
+			$data['type']        = 'active';
+			$data['resubscribe'] = true;
+		}
 
 			$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
 			$params           = $this->get_params();
@@ -649,7 +650,15 @@ class WPF_MailerLite {
 				$request          = 'https://api.mailerlite.com/api/v2/groups/' . $tag . '/subscribers';
 				$params           = $this->get_params();
 				$params['method'] = 'POST';
-				$params['body']   = wp_json_encode( array( 'email' => $email ) );
+
+				$body = array( 'email' => $email );
+
+				if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
+					$body['resubscribe'] = true;
+					$body['type']        = 'active';
+				}
+
+				$params['body'] = wp_json_encode( $body );
 
 				$response = wp_safe_remote_post( $request, $params );
 
@@ -861,7 +870,19 @@ class WPF_MailerLite {
 		$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
 		$params           = $this->get_params();
 		$params['method'] = 'PUT';
-		$params['body']   = wp_json_encode( $this->format_subscriber_data( $data, $contact_id ) );
+
+		$body = $this->format_subscriber_data( $data, $contact_id );
+
+		// If resubscribe is enabled, ensure unsubscribed contacts can be updated.
+		// Endpoint is always v1, so use type + resubscribe (not status).
+		if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
+			if ( ! isset( $body['type'] ) && ! isset( $body['status'] ) ) {
+				$body['type']        = 'active';
+				$body['resubscribe'] = true;
+			}
+		}
+
+		$params['body'] = wp_json_encode( $body );
 
 		$response = wp_safe_remote_request( $url, $params );
 

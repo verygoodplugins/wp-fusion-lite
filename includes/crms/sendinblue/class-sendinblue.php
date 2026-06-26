@@ -730,9 +730,9 @@ class WPF_SendinBlue {
 
 			// Add via double optin.
 
-			$post_data['templateId']     = wpf_get_option( 'double_optin_template' );
+			$post_data['templateId']     = absint( wpf_get_option( 'double_optin_template' ) );
 			$post_data['redirectionUrl'] = wpf_get_option( 'double_optin_redirect_url' );
-			$post_data['includeListIds'] = array_map( 'intval', wpf_get_option( 'double_optin_lists' ) );
+			$post_data['includeListIds'] = array_map( 'absint', wpf_get_option( 'double_optin_lists' ) );
 
 			$url = 'https://api.brevo.com/v3/contacts/doubleOptinConfirmation';
 		} else {

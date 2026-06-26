@@ -3,7 +3,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.47.11.1
+ * Version: 3.47.13
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -32,7 +32,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.47.11.1' );
+define( 'WP_FUSION_VERSION', '3.47.13' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -257,6 +257,7 @@ final class WP_Fusion_Lite {
 
 				if ( self::$instance->is_full_version() ) {
 					add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 10 ); // This has to be 10 for Elementor.
+					add_action( 'plugins_loaded', array( self::$instance, 'integrations_includes' ), 20 ); // Second pass for late-declaring plugins (e.g. Sublium). Idempotent via require_once.
 					add_action( 'after_setup_theme', array( self::$instance, 'integrations_includes_theme' ) );
 				}
 
@@ -406,6 +407,7 @@ final class WP_Fusion_Lite {
 				'userpro'                       => 'userpro_api',
 				'acf'                           => 'acf',
 				'learndash'                     => 'SFWD_LMS',
+				'academy-lms'                   => 'Academy',
 				'wpep'                          => 'WPEP\Controller',
 				'sensei'                        => 'WooThemes_Sensei',
 				'bbpress'                       => 'bbPress',
@@ -529,6 +531,7 @@ final class WP_Fusion_Lite {
 				'wpbakery'                      => 'Vc_Manager',
 				'holler-box'                    => 'Holler_Box',
 				'subscriptions-for-woocommerce' => 'Subscriptions_For_Woocommerce',
+				'sublium-subscriptions'         => 'sublium_get_subscription',
 				'thrive-apprentice'             => 'TVA_Const',
 				'thrive-automator-trigger'      => 'Thrive\Automator\Admin',
 				'breakdance'                    => 'Breakdance\DynamicData\DynamicDataController',

@@ -204,7 +204,7 @@ class WPF_MailerLite_Admin {
 
 		$new_settings['mailerlite_resubscribe'] = array(
 			'title'   => __( 'Resubscribe', 'wp-fusion-lite' ),
-			'desc'    => __( 'When adding a subscriber to a new group, resubscribe them in case they have unsubscribed.', 'wp-fusion-lite' ),
+			'desc'    => __( 'When syncing data or adding a subscriber to a new group, resubscribe them in case they have unsubscribed.', 'wp-fusion-lite' ),
 			'type'    => 'checkbox',
 			'section' => 'main',
 		);

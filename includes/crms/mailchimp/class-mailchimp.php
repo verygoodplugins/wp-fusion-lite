@@ -707,15 +707,19 @@ class WPF_MailChimp {
 
 		// Yes, email address changes do work.
 
+		$payload = array(
+			'email_address' => $email_address,
+			'merge_fields'  => $data,
+		);
+
+		if ( empty( $payload['merge_fields'] ) ) {
+			unset( $payload['merge_fields'] );
+		}
+
 		$url              = 'https://' . $this->dc . '.api.mailchimp.com/3.0/lists/' . $this->list . '/members/' . $contact_id . '/';
 		$params           = $this->get_params();
 		$params['method'] = 'PATCH';
-		$params['body']   = wp_json_encode(
-			array(
-				'email_address' => $email_address,
-				'merge_fields'  => $data,
-			)
-		);
+		$params['body']   = wp_json_encode( $payload );
 
 		$response = wp_remote_post( $url, $params );
 

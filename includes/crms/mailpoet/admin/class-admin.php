@@ -53,7 +53,7 @@ class WPF_MailPoet_Admin {
 
 		$new_settings['mailpoet_header'] = array(
 			// translators: %s is the name of the CRM.
-			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->crm->name ),
 			'type'    => 'heading',
 			'section' => 'setup',
 		);
@@ -84,7 +84,7 @@ class WPF_MailPoet_Admin {
 
 		$new_settings['mailpoet_header_2'] = array(
 			// translators: %s is the name of the CRM.
-			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->name ),
+			'title'   => sprintf( __( '%s Configuration', 'wp-fusion-lite' ), $this->crm->name ),
 			'type'    => 'heading',
 			'section' => 'main',
 		);
@@ -135,7 +135,7 @@ class WPF_MailPoet_Admin {
 
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
-		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->crm->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 		echo '<style>#mailpoet_connect {display: none;} #tab-import { display: none; }</style>';
 	}
 

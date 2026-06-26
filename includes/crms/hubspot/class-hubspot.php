@@ -606,7 +606,6 @@ class WPF_HubSpot {
 			}
 
 			if ( 429 === $code || 503 === $code ) {
-
 				/*
 				 * HubSpot rate limit / temporary unavailability. Honor the
 				 * Retry-After header (seconds) up to a sane cap and retry once.
@@ -766,7 +765,7 @@ class WPF_HubSpot {
 	 * @param string|null $access_token  Access token to test.
 	 * @param string|null $refresh_token Refresh token to save.
 	 * @param bool        $test          Whether to test the connection.
-	 * @return  bool
+	 * @return bool|WP_Error
 	 */
 	public function connect( $access_token = null, $refresh_token = null, $test = false ) {
 
@@ -792,18 +791,26 @@ class WPF_HubSpot {
 
 
 	/**
-	 * Performs initial sync once connection is configured
+	 * Performs initial sync once connection is configured.
 	 *
 	 * @access public
-	 * @return bool
+	 * @return bool|WP_Error
 	 */
 	public function sync() {
 
-		$this->connect();
+		$result = $this->connect();
 
-		$this->sync_tags();
-		$this->sync_crm_fields();
-		$this->sync_owners();
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		foreach ( array( 'sync_tags', 'sync_crm_fields', 'sync_owners' ) as $method ) {
+			$result = $this->$method();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+		}
 
 		do_action( 'wpf_sync' );
 
@@ -1035,7 +1042,7 @@ class WPF_HubSpot {
 						$category = 'Active Lists (Read Only)';
 					}
 
-					$available_tags[ $list->listId ] = array( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+					$available_tags[ $list->{'listId'} ] = array( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 						'label'    => $list->name,
 						'category' => $category,
 					);
@@ -1105,7 +1112,7 @@ class WPF_HubSpot {
 						$category = 'Static Lists';
 					}
 
-					$list_id = isset( $list->listId ) ? $list->listId : ( isset( $list->id ) ? $list->id : false ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+					$list_id = isset( $list->{'listId'} ) ? $list->{'listId'} : ( isset( $list->id ) ? $list->id : false ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 					if ( empty( $list_id ) || empty( $list->name ) ) {
 						continue;
@@ -1132,9 +1139,9 @@ class WPF_HubSpot {
 	/**
 	 * Maps legacy HubSpot v1 list IDs to current v3 list IDs.
 	 *
-	 * @since x.x.x
+	 * @since 3.47.12
 	 *
-	 * @param array<int|string> $legacy_ids Legacy HubSpot list IDs.
+	 * @param mixed $legacy_ids Legacy HubSpot list IDs.
 	 * @return array<string, string>|WP_Error Map of legacy ID → v3 ID, or WP_Error.
 	 */
 	public function get_v3_list_ids( $legacy_ids ) {
@@ -1414,8 +1421,18 @@ class WPF_HubSpot {
 
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
-			$tag_id = isset( $response->{'listId'} ) ? $response->{'listId'} : $response->{'id'};
-			return $tag_id;
+			// The POST /crm/v3/lists response nests the new list under a `list`
+			// object, e.g. { "list": { "listId": "303", ... } }. Fall back to the
+			// top level for the v1-shaped response.
+			$list = isset( $response->list ) ? $response->list : $response;
+
+			if ( isset( $list->{'listId'} ) ) {
+				return $list->{'listId'};
+			} elseif ( isset( $list->id ) ) {
+				return $list->id;
+			}
+
+			return new WP_Error( 'error', __( 'Unexpected response when creating the HubSpot list.', 'wp-fusion-lite' ) );
 		}
 	}
 
@@ -1556,7 +1573,7 @@ class WPF_HubSpot {
 
 					if ( ! empty( $body_json->results ) ) {
 						foreach ( $body_json->results as $list ) {
-							$list_id = isset( $list->listId ) ? $list->listId : ( isset( $list->id ) ? $list->id : false ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+							$list_id = isset( $list->{'listId'} ) ? $list->{'listId'} : ( isset( $list->id ) ? $list->id : false ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 							if ( isset( $available_tags[ $list_id ] ) ) {
 								$tags[] = $list_id;

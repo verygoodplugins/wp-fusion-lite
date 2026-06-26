@@ -43,6 +43,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Capsule
 * Constant Contact
 * ConvertKit
+* ConvertFox
 * Copper
 * Customerly
 * Customer.io
@@ -65,6 +66,7 @@ For more information see [the WP Fusion User Class](https://wpfusion.com/documen
 * Intercom
 * Jetpack CRM
 * Kartra
+* Kit
 * Klaviyo
 * Klick-Tipp
 * Loopify

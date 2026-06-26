@@ -471,9 +471,9 @@ class WPF_Customer_IO {
 
 		$contact_id = $response->results[0]->email;
 
-		// Try to get custom properties:
+		// Try to get custom properties.
 
-		$request = $this->url . "customers/{$contact_id}/attributes/?id_type=email";
+		$request = $this->url . 'customers/' . rawurlencode( $contact_id ) . '/attributes?id_type=email';
 
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
@@ -509,7 +509,7 @@ class WPF_Customer_IO {
 	 */
 	public function get_tags( $contact_id ) {
 
-		$request = $this->url . "customers/{$contact_id}/segments/?id_type=email";
+		$request = $this->url . 'customers/' . rawurlencode( $contact_id ) . '/segments?id_type=email';
 
 		$response = wp_safe_remote_get( $request, $this->get_params() );
 
@@ -626,7 +626,7 @@ class WPF_Customer_IO {
 		$params           = $this->get_tracking_params();
 		$params['body']   = wp_json_encode( $contact_data );
 		$params['method'] = 'PUT';
-		$request          = $this->tracking_url . 'customers/' . $contact_data['email'];
+		$request          = $this->tracking_url . 'customers/' . rawurlencode( $contact_data['email'] );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -671,7 +671,7 @@ class WPF_Customer_IO {
 		$params           = $this->get_tracking_params();
 		$params['body']   = wp_json_encode( $contact_data );
 		$params['method'] = 'PUT';
-		$request          = $this->tracking_url . 'customers/' . $contact_id;
+		$request          = $this->tracking_url . 'customers/' . rawurlencode( $contact_id );
 
 		$response = wp_safe_remote_post( $request, $params );
 
@@ -749,7 +749,7 @@ class WPF_Customer_IO {
 	public function get_cio_id( $email ) {
 
 		$params  = $this->get_params();
-		$request = $this->url . "customers/{$email}/attributes?id_type=email";
+		$request = $this->url . 'customers/' . rawurlencode( $email ) . '/attributes?id_type=email';
 
 		$response = wp_safe_remote_get( $request, $params );
 
@@ -778,7 +778,7 @@ class WPF_Customer_IO {
 
 		$params = $this->get_params();
 
-		$request = $this->url . "customers/{$contact_id}/attributes/?id_type=email";
+		$request = $this->url . 'customers/' . rawurlencode( $contact_id ) . '/attributes?id_type=email';
 
 		$response = wp_safe_remote_get( $request, $params );
 
@@ -871,7 +871,7 @@ class WPF_Customer_IO {
 
 		$params         = $this->get_tracking_params();
 		$params['body'] = wp_json_encode( $data );
-		$request        = $this->tracking_url . "customers/{$email_address}/events";
+		$request        = $this->tracking_url . 'customers/' . rawurlencode( $email_address ) . '/events';
 		$response       = wp_safe_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {

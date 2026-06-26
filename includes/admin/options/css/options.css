@@ -960,9 +960,14 @@ a {
 
 
 .alert {
-    padding: 15px;
-    border: 1px solid transparent;
-    border-radius: 4px;
+    background-color: #fff;
+    border: none;
+    border-left: 4px solid #c3c4c7;
+    border-radius: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    margin: 5px 0 15px;
+    padding: 8px 12px;
     max-width: 975px;
 }
 
@@ -996,9 +1001,9 @@ a {
 }
 
 .alert-success {
-    background-color: #dff0d8;
-    border-color: #d6e9c6;
-    color: #468847
+    background-color: #eff9f1;
+    border-left-color: #4ab866;
+    color: #1e1e1e
 }
 
 .alert-success hr {
@@ -1010,9 +1015,9 @@ a {
 }
 
 .alert-info {
-    background-color: #d9edf7;
-    border-color: #bce8f1;
-    color: #3a87ad
+    background-color: #fff;
+    border-left-color: #3858e9;
+    color: #1e1e1e
 }
 
 .alert-info hr {
@@ -1024,9 +1029,9 @@ a {
 }
 
 .alert-warning {
-    background-color: #fcf8e3;
-    border-color: #faebcc;
-    color: #c09853
+    background-color: #fef8ee;
+    border-left-color: #f0b849;
+    color: #1e1e1e
 }
 
 .alert-warning hr {
@@ -1038,9 +1043,9 @@ a {
 }
 
 .alert-danger {
-    background-color: #f2dede;
-    border-color: #ebccd1;
-    color: #b94a48
+    background-color: #fcf0f0;
+    border-left-color: #cc1818;
+    color: #1e1e1e
 }
 
 .alert-danger hr {

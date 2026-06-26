@@ -50,7 +50,7 @@ class WPF_Auto_Login {
 	}
 
 	/**
-	 * Gets contact ID from URL
+	 * Gets contact ID from URL.
 	 *
 	 * @access public
 	 * @return string Contact ID
@@ -62,7 +62,17 @@ class WPF_Auto_Login {
 		$query_var = apply_filters( 'wpf_auto_login_query_var', 'cid' );
 
 		if ( isset( $_GET[ $query_var ] ) ) {
-			$contact_id = sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) );
+
+			// Parse raw query before sanitization so encoded plus signs are preserved.
+			// Sanitized after decoding matched parameter.
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$raw_query = isset( $_SERVER['QUERY_STRING'] ) ? wp_unslash( $_SERVER['QUERY_STRING'] ) : '';
+
+			if ( ! empty( $raw_query ) && preg_match( '/(?:^|&)' . preg_quote( $query_var, '/' ) . '=([^&]*)/', $raw_query, $matches ) ) {
+				$contact_id = sanitize_text_field( rawurldecode( $matches[1] ) );
+			} else {
+				$contact_id = sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) );
+			}
 		}
 
 		$contact_id = apply_filters( 'wpf_auto_login_contact_id', $contact_id );

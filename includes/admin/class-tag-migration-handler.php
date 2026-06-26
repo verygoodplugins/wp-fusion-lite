@@ -192,6 +192,12 @@ class WPF_Admin_Tag_Migration {
 
 		$definitions = array(
 			array(
+				'option'   => 'wpf_roles_settings',
+				'like'     => false,
+				'nested'   => true,
+				'tag_keys' => array( 'tag_link', 'apply_tags' ),
+			),
+			array(
 				'option'   => 'wpf_pmp_%',
 				'like'     => true,
 				'nested'   => false,
@@ -221,6 +227,12 @@ class WPF_Admin_Tag_Migration {
 				'like'     => true,
 				'nested'   => false,
 				'tag_keys' => array( 'apply_tags' ),
+			),
+			array(
+				'option'   => 'members_role_%_meta',
+				'like'     => true,
+				'nested'   => false,
+				'tag_keys' => array( 'tag_link' ),
 			),
 		);
 

@@ -189,17 +189,29 @@ class WPF_Autonami {
 	/**
 	 * Performs initial sync once connection is configured.
 	 *
-	 * @return bool
-	 * @since  3.37.14
+	 * @since 3.37.14
+	 *
+	 * @return bool|WP_Error
 	 */
 	public function sync() {
 
-		if ( is_wp_error( $this->connect() ) ) {
-			return false;
+		$result = $this->connect();
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		$this->sync_tags();
-		$this->sync_crm_fields();
+		$result = $this->sync_tags();
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$result = $this->sync_crm_fields();
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
 
 		do_action( 'wpf_sync' );
 
@@ -229,9 +241,9 @@ class WPF_Autonami {
 		}
 
 		if ( $this->same_site ) {
-			$response = BWFCRM_Contact::get_contacts( false, false, false );
+			$response = BWFCRM_Contact::get_contacts( false, 0, 1 );
 		} else {
-			$request  = $this->url . 'contacts';
+			$request  = $this->url . 'contacts?limit=1';
 			$response = wp_safe_remote_get( $request, $this->params );
 		}
 
@@ -309,15 +321,15 @@ class WPF_Autonami {
 				$results  = $response['result'];
 			}
 
-			if ( ! empty( $results ) ) {
-
-				foreach ( $results as $tag ) {
-
-					$available_tags[ $tag['ID'] ] = $tag['name'];
-				}
+			if ( ! is_array( $results ) || empty( $results ) ) {
+				break;
 			}
 
-			if ( empty( $results ) || count( $results ) < $limit ) {
+			foreach ( $results as $tag ) {
+				$available_tags[ $tag['ID'] ] = $tag['name'];
+			}
+
+			if ( count( $results ) < $limit ) {
 				$continue = false;
 			} else {
 				$offset += $limit;
@@ -340,9 +352,9 @@ class WPF_Autonami {
 	public function sync_lists() {
 
 		$available_lists = array();
-		$continue        = true;
-		$limit           = 100;
-		$offset          = 0;
+		$continue       = true;
+		$limit          = 100;
+		$offset         = 0;
 
 		while ( $continue ) {
 			if ( $this->same_site ) {
@@ -359,15 +371,15 @@ class WPF_Autonami {
 				$results  = $response['result'];
 			}
 
-			if ( ! empty( $results ) ) {
-
-				foreach ( $results as $list ) {
-
-					$available_lists[ $list['ID'] ] = $list['name'];
-				}
+			if ( ! is_array( $results ) || empty( $results ) ) {
+				break;
 			}
 
-			if ( empty( $results ) || count( $results ) < $limit ) {
+			foreach ( $results as $list ) {
+				$available_lists[ $list['ID'] ] = $list['name'];
+			}
+
+			if ( count( $results ) < $limit ) {
 				$continue = false;
 			} else {
 				$offset += $limit;
@@ -415,11 +427,13 @@ class WPF_Autonami {
 			$results  = $response['result'];
 		}
 
-		$extra_fields = $results['extra_fields'];
-		$groupfields  = $results['fields'];
+		$extra_fields = ! empty( $results['extra_fields'] ) ? $results['extra_fields'] : array();
+		$groupfields  = ! empty( $results['fields'] ) ? $results['fields'] : array();
 
 		foreach ( $extra_fields as $field ) {
-			$custom_fields[ $field['ID'] ] = $field['name'];
+			if ( ! empty( $field['ID'] ) && ! empty( $field['name'] ) ) {
+				$custom_fields[ $field['ID'] ] = $field['name'];
+			}
 		}
 
 		foreach ( $groupfields as $group ) {
@@ -429,7 +443,6 @@ class WPF_Autonami {
 			}
 
 			foreach ( $group['fields'] as $field ) {
-
 				if ( ! isset( $standard_fields[ $field['id'] ] ) ) {
 					$custom_fields[ $field['id'] ] = $field['name'];
 				}

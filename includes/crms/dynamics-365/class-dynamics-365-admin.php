@@ -126,8 +126,13 @@ class WPF_Dynamics_365_Admin {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $response->error ) ) {
-				wp_fusion()->admin_notices->add_notice( 'Error requesting authorization code: ' . $response->error_description );
-				wpf_log( 'error', 0, 'Error requesting authorization code: ' . $response->error_description );
+
+				$message = $this->crm->is_expired_secret_error( $response )
+					? $this->crm->get_expired_secret_message()
+					: 'Error requesting authorization code: ' . ( ! empty( $response->error_description ) ? $response->error_description : $response->error );
+
+				wp_fusion()->admin_notices->add_notice( $message );
+				wpf_log( 'error', 0, $message );
 				return false;
 			}
 
@@ -145,7 +150,14 @@ class WPF_Dynamics_365_Admin {
 			$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 			if ( isset( $response->error ) ) {
-				return new WP_Error( 'error', $response->error->message );
+
+				if ( $this->crm->is_expired_secret_error( $response ) ) {
+					$message = $this->crm->get_expired_secret_message();
+				} else {
+					$message = ! empty( $response->error_description ) ? $response->error_description : $response->error;
+				}
+
+				return new WP_Error( 'error', $message );
 			}
 
 			$options = array(

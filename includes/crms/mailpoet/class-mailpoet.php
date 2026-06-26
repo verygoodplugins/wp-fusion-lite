@@ -40,13 +40,23 @@ class WPF_MailPoet {
 	 */
 	public function __construct() {
 
-		$this->name = __( 'MailPoet', 'wp-fusion-lite' ); // lets people translate it.
+		add_action( 'init', array( $this, 'translate_name' ), 5 );
 
-		// Set up admin options
+		// Set up admin options.
 		if ( is_admin() ) {
 			require_once __DIR__ . '/admin/class-admin.php';
 			new WPF_MailPoet_Admin( $this->slug, $this->name, $this );
 		}
+	}
+
+	/**
+	 * Translates the CRM name after textdomains have loaded.
+	 *
+	 * @since x.x.x
+	 */
+	public function translate_name() {
+
+		$this->name = __( 'MailPoet', 'wp-fusion-lite' );
 	}
 
 

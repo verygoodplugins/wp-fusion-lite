@@ -130,14 +130,16 @@ input[type="checkbox"] {
 }
 
 input[type="radio"] {
-	top: -1px;
-    position: relative;
-    display: inline-block !important;
+	align-items: center;
+	display: inline-flex !important;
+	justify-content: center;
 }
 
-input[type="checkbox"]:focus, input[type="radio"]:focus {
-	box-shadow: none;
-	outline: none;
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+	border-color: #1e1e1e;
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--wp-admin-theme-color, #3858e9);
+	outline: 2px solid transparent;
 }
 
 input#app_name {
@@ -267,9 +269,9 @@ tr.import-group-row {
 }
 
 #wpf-settings input[type="radio"]+label {
-	line-height: 2;
-	position: relative;
-    top: -2px;
+	line-height: 1.6;
+	position: static;
+	vertical-align: middle;
 }
 
 /* Select 2 */
@@ -405,9 +407,11 @@ th.sync {
     width: 318px;
 }
 
-/* Test connection */
+/* Test connection. */
 
 .wpf-settings-wrap a.button span.dashicons {
+	color: currentColor !important;
+	line-height: 20px !important;
 	vertical-align: middle;
 	margin-bottom: 3px;
 	margin-right: 5px;
@@ -427,8 +431,37 @@ th.sync {
 
 .wpf-settings-wrap a.button.test-connection-button span.dashicons {
 	position: absolute;
-	top: 5px;
+	top: 50%;
 	left: 8px;
+	transform: translateY( -50% );
+}
+
+.wpf-settings-wrap a.button.test-connection-button span.dashicons.wpf-spin {
+	animation: none;
+	color: transparent !important;
+}
+
+.wpf-settings-wrap a.button.test-connection-button span.dashicons.wpf-spin:before {
+	animation: wpf-spinner-rotate 0.8s linear infinite;
+	border: 2px solid rgba(56, 88, 233, 0.25);
+	border-radius: 50%;
+	border-top-color: var(--wp-admin-theme-color, #3858e9);
+	box-sizing: border-box;
+	content: "";
+	display: block;
+	height: 18px;
+	width: 18px;
+}
+
+.wpf-settings-wrap a.button.test-connection-button.button-primary span.dashicons.wpf-spin:before {
+	border-color: rgba(255, 255, 255, 0.45);
+	border-top-color: #fff;
+}
+
+@keyframes wpf-spinner-rotate {
+	100% {
+		transform: rotate( 360deg );
+	}
 }
 
 .wpf-settings-wrap a#header-resync {

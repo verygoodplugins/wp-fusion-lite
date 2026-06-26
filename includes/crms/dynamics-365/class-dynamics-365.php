@@ -128,7 +128,11 @@ class WPF_Dynamics_365 {
 	 */
 	public function __construct() {
 
-		$this->url = rtrim( wpf_get_option( 'dynamics_365_rest_url' ), '/' ) . '/api/data/v9.0';
+		$rest_url = wpf_get_option( 'dynamics_365_rest_url' );
+
+		if ( ! empty( $rest_url ) ) {
+			$this->url = rtrim( $rest_url, '/' ) . '/api/data/v9.0';
+		}
 
 		// Set up admin options.
 		if ( is_admin() ) {
@@ -266,7 +270,7 @@ class WPF_Dynamics_365 {
 	 */
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) { // check if the request came from us.
+		if ( ! empty( $this->url ) && strpos( $url, $this->url ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) { // check if the request came from us.
 
 			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
 			$response_code = wp_remote_retrieve_response_code( $response );
@@ -333,6 +337,10 @@ class WPF_Dynamics_365 {
 
 		if ( ! $test ) {
 			return true;
+		}
+
+		if ( empty( wpf_get_option( 'dynamics_365_rest_url' ) ) ) {
+			return new WP_Error( 'error', __( 'Please enter your Dynamics 365 CRM URL (it must end with dynamics.com) before connecting.', 'wp-fusion-lite' ) );
 		}
 
 		$request  = $this->url . '/emails?$top=1';
@@ -451,13 +459,59 @@ class WPF_Dynamics_365 {
 		$response = json_decode( wp_remote_retrieve_body( $response ) );
 
 		if ( isset( $response->error ) ) {
-			return new WP_Error( 'error', $response->error->message );
+
+			// The OAuth token endpoint returns the flat error shape
+			// ( { "error": "...", "error_description": "AADSTS..." } ), not the
+			// nested data-API shape, so read error_description here.
+			$message = ! empty( $response->error_description ) ? $response->error_description : $response->error;
+
+			if ( $this->is_expired_secret_error( $response ) ) {
+				$message = $this->get_expired_secret_message();
+			}
+
+			return new WP_Error( 'error', $message );
 		}
 
 		wp_fusion()->settings->set( 'dynamics_365_access_token', $response->access_token );
 		wp_fusion()->settings->set( 'dynamics_365_refresh_token', $response->refresh_token );
 
 		return $response->access_token;
+	}
+
+	/**
+	 * Checks whether an OAuth token-endpoint error indicates that WP Fusion's
+	 * bundled Azure client secret has expired (AADSTS7000222).
+	 *
+	 * The current release always ships a valid secret, so this error means the
+	 * site is running an outdated copy of the plugin files (for example PHP
+	 * OPcache serving a cached class, or a deploy pinned to an older version).
+	 *
+	 * @since 3.47.13
+	 *
+	 * @param object $response The decoded token-endpoint response.
+	 * @return bool Whether the error is an expired-secret error.
+	 */
+	public function is_expired_secret_error( $response ) {
+
+		if ( empty( $response ) || ! isset( $response->error_description ) ) {
+			return false;
+		}
+
+		return ( false !== strpos( $response->error_description, 'AADSTS7000222' ) );
+	}
+
+	/**
+	 * Gets a customer-friendly message explaining that the bundled Azure client
+	 * secret reported as expired because the installed plugin files are out of
+	 * date.
+	 *
+	 * @since 3.47.13
+	 *
+	 * @return string The message.
+	 */
+	public function get_expired_secret_message() {
+
+		return __( 'The Microsoft Azure application credentials in your installed copy of WP Fusion are out of date. This usually means the plugin files on your site are older than the version number reported (for example due to PHP OPcache, or a deployment that did not fully update the files). Please update WP Fusion to the latest version, clear your server\'s PHP OPcache, and then re-authorize the connection.', 'wp-fusion-lite' );
 	}
 
 

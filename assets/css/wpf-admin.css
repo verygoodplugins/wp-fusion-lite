@@ -80,7 +80,7 @@ li.active i.icon-wp-fusion:before {
 
 .wrap p.wpf-notice {
 	padding: 12px 14px;
-	margin-left: -12px;
+	margin: 5px 0 15px;
 }
 
 /* Batch Operations */
@@ -88,6 +88,12 @@ li.active i.icon-wp-fusion:before {
 .dashicons.wpf-spin {
 	animation: dashicons-spin 2s infinite;
 	animation-timing-function: linear;
+	display: inline-block;
+	height: 20px;
+	line-height: 20px;
+	transform-origin: center;
+	vertical-align: middle;
+	width: 20px;
  }
 
 @keyframes dashicons-spin {
@@ -100,12 +106,13 @@ li.active i.icon-wp-fusion:before {
 }
 
 #wpf-batch-status {
+	box-sizing: border-box;
 	position: relative !important;
 	border-left: 4px solid #72aee6 !important;
-	height: 41px !important;
-	padding: initial !important;
+	min-height: 41px !important;
+	padding: 8px 96px 8px 12px !important;
 	line-height: initial !important;
-	margin: initial !important;
+	margin: 5px 0 15px !important;
 	color: #000 !important;
 }
 
@@ -122,24 +129,29 @@ li.active i.icon-wp-fusion:before {
 }
 
 #wpf-batch-status > p {
-	margin: 0.5em 0 !important;
-	padding: 4px 12px !important;
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 4px;
+	margin: 0 !important;
+	padding: 0 !important;
 }
 
 #wpf-batch-status span.title {
 	display: inline-block;
-	padding-left: 8px;
+	padding-left: 4px;
 }
 
 #wpf-batch-status a#cancel-batch {
 	position: absolute;
-	top: 5px;
-	right: 5px;
+	top: 50%;
+	right: 8px;
 	min-height: auto;
 	height: auto;
 	padding: 4px 12px !important;
 	font-size: 13px;
 	line-height: 1.5;
+	transform: translateY(-50%);
 }
 
 /* Gravity Forms compatibility - override GF notice styling */
