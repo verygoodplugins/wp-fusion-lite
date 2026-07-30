@@ -53,6 +53,11 @@ if [[ -z "${LITE_PATH:-}" ]]; then
 fi
 LITE_PATH="$(cd "$LITE_PATH" && pwd)"
 
+if [[ "$LITE_PATH" == "/" || "$LITE_PATH" == "$HOME" ]]; then
+  echo "refusing to operate on an unsafe Lite path: $LITE_PATH" >&2
+  exit 1
+fi
+
 if [[ -z "${PRO_PATH:-}" ]]; then
   PRO_PATH="$(cd "$LITE_PATH/.." && pwd)/wp-fusion"
 fi
@@ -82,6 +87,27 @@ run() {
     "$@"
   fi
 }
+
+# Lite still registers the Secure Block editor script and stylesheet, but the
+# current Pro build no longer includes those two generated files. Preserve a
+# local copy before the scoped rsync so a Lite release cannot drop its runtime
+# assets merely because Pro omitted them.
+secure_block_backup=""
+cleanup_secure_block_backup() {
+  if [[ -n "$secure_block_backup" && -d "$secure_block_backup" ]]; then
+    find "$secure_block_backup" -depth -delete
+  fi
+}
+trap cleanup_secure_block_backup EXIT
+
+if [[ -d "$LITE_PATH/build" ]]; then
+  if (( DRY_RUN )); then
+    echo "  [dry] preserve existing build/secure-block* assets"
+  else
+    secure_block_backup="$(mktemp -d)"
+    find "$LITE_PATH/build" -mindepth 1 -maxdepth 1 -name 'secure-block*' -exec cp -p {} "$secure_block_backup/" \;
+  fi
+fi
 
 # rsync needs trailing slashes to copy contents vs the dir itself.
 # -a archive, -v verbose, --delete removes stale files from the Lite copy of
@@ -117,13 +143,17 @@ if [[ -d "$integrations" ]]; then
   # Delete every entry except class-base.php (file).
   # Use find -mindepth 1 so we don't try to delete the directory itself.
   if (( DRY_RUN )); then
-    find "$integrations" -mindepth 1 -not -name 'class-base.php' -not -path "$integrations" | head -5 | sed 's/^/  [dry] rm -rf /'
+    find "$integrations" -mindepth 1 -not -name 'class-base.php' -not -path "$integrations" | head -5 | sed 's/^/  [dry] remove tree /'
     count=$(find "$integrations" -mindepth 1 -not -name 'class-base.php' | wc -l | tr -d ' ')
     echo "  [dry] (... $count items total)"
   else
-    # Collect then delete — avoids find -delete traversal races.
+    # Collect then remove each confirmed child — avoids traversal races and
+    # never permits deletion outside the known integrations directory.
     while IFS= read -r path; do
-      rm -rf -- "$path"
+      case "$path" in
+        "$integrations"/*) find "$path" -depth -delete ;;
+        *) echo "refusing to prune unexpected path: $path" >&2; exit 1 ;;
+      esac
     done < <(find "$integrations" -mindepth 1 -maxdepth 1 -not -name 'class-base.php')
     echo "  pruned."
   fi
@@ -145,7 +175,11 @@ done
 echo
 echo "==> 4. delete languages/ if present"
 if [[ -d "$LITE_PATH/languages" ]]; then
-  run rm -rf -- "$LITE_PATH/languages"
+  if (( DRY_RUN )); then
+    echo "  [dry] find $LITE_PATH/languages -depth -delete"
+  else
+    find "$LITE_PATH/languages" -depth -delete
+  fi
 else
   echo "  (no languages/ — skipped)"
 fi
@@ -155,15 +189,28 @@ echo "==> 5. prune build/ (keep only secure-block* files)"
 build_dir="$LITE_PATH/build"
 if [[ -d "$build_dir" ]]; then
   if (( DRY_RUN )); then
-    find "$build_dir" -mindepth 1 -maxdepth 1 -not -name 'secure-block*' | sed 's/^/  [dry] rm -rf /'
+    find "$build_dir" -mindepth 1 -maxdepth 1 -not -name 'secure-block*' | sed 's/^/  [dry] remove tree /'
   else
     while IFS= read -r path; do
-      rm -rf -- "$path"
+      case "$path" in
+        "$build_dir"/*) find "$path" -depth -delete ;;
+        *) echo "refusing to prune unexpected path: $path" >&2; exit 1 ;;
+      esac
     done < <(find "$build_dir" -mindepth 1 -maxdepth 1 -not -name 'secure-block*')
     echo "  pruned."
   fi
 else
   echo "  (no build/ — skipped)"
+fi
+
+if [[ -n "$secure_block_backup" ]]; then
+  while IFS= read -r asset; do
+    target="$build_dir/$(basename "$asset")"
+    if [[ ! -e "$target" ]]; then
+      cp -p "$asset" "$target"
+      echo "  restored missing $(basename "$asset") from the prior Lite build."
+    fi
+  done < <(find "$secure_block_backup" -mindepth 1 -maxdepth 1 -type f -name 'secure-block*')
 fi
 
 echo

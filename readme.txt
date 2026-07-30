@@ -4,7 +4,7 @@ Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
 Tested up to: 7.0
-Stable tag: 3.47.13
+Stable tag: 3.47.14
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -214,6 +214,13 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.47.14 - 7/30/2026 =
+* Improved - Only the active CRM is bootstrapped at load time instead of instantiating every CRM class, and MailPoet's translated name is deferred until init to avoid WordPress 6.7 textdomain notices
+* Fixed Drip failing to reactivate inactive contacts by keying updates off email and sending built-in fields like status as top-level API parameters
+* Fixed Kit (ConvertKit) v4 webhook imports failing after contact ID parsing, including missing-email and missing-name edge cases
+* Fixed Brevo phone formatting for non-US numbers, including expanded E.164 country coverage and prevention of double-prefixing
+* Fixed multiline CRM field values (e.g. HubSpot textareas) being flattened to a single line when synced into WordPress user meta
 
 = 3.47.13 - 6/17/2026 =
 * Improved - Dynamics 365 now detects an expired Azure client secret (AADSTS7000222) and returns an actionable message — update WP Fusion and clear PHP OPcache, then re-authorize — instead of a raw Azure error string
@@ -584,11 +591,3 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 = 3.44.16 - 11/26/2024 =
 * Added additional validation on phone numbers for Klaviyo to prevent invalid numbers from blocking the API request
 * Fixed HighLevel integration reading tags out of webhooks as a single comma-separated string
-
-= 3.44.15 - 11/18/2024 =
-* Improved - Added a warning when changing the FluentCRM tag format, since it requires resyncing tags for every user
-* Developers: Added `wpf_phone_number_to_e164` filter to allow overriding the default country code added to phone numbers when converting to E.164 format
-* Developers: The apply_tags(), remove_tags(), push_user_meta(), and user_register() PHP methods now return a WP_Error object if there was an error, instead of false, to aid in logging
-* Developers: The get_contact_id() method now returns false if there was an API error, to allow integrations to try to create a new contact as a fallback
-* Developers: Added `wpf_disable_api_queue()` function to allow bypassing the API queue for a single request
-* Developers: Added a basic framework for unit testing, with more tests to follow. See readme.md for more information.

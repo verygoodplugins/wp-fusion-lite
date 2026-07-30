@@ -100,9 +100,143 @@ class WPF_Kit {
 	 * @since 3.47.2
 	 */
 	public function init() {
+		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
+		add_action( 'wpf_kit_unsubscribed', array( $this, 'process_unsubscribe' ) );
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'http_response', array( $this, 'handle_http_response' ), 50, 3 );
 		add_filter( 'wpf_batch_sleep_time', array( $this, 'set_sleep_time' ) );
+	}
+
+	/**
+	 * Formats POST data received from Kit webhooks into standard format.
+	 *
+	 * Supports Kit API webhooks (`subscriber.id`) and automation Send a Webhook
+	 * payloads that may only include email / a top-level id.
+	 *
+	 * @since  3.47.14
+	 *
+	 * @param  array $post_data The post data.
+	 * @return array The formatted post data.
+	 */
+	public function format_post_data( $post_data ) {
+
+		if ( ! empty( $post_data['contact_id'] ) ) {
+			return $post_data;
+		}
+
+		// Prefer payload already merged by WPF_API (php://input may be consumed).
+		$contact_id = 0;
+
+		if ( ! empty( $post_data['subscriber']['id'] ) ) {
+			$contact_id = absint( $post_data['subscriber']['id'] );
+		} elseif ( ! empty( $post_data['subscriber_id'] ) ) {
+			$contact_id = absint( $post_data['subscriber_id'] );
+		} elseif ( ! empty( $post_data['id'] ) && is_numeric( $post_data['id'] ) ) {
+			$contact_id = absint( $post_data['id'] );
+		} else {
+			$payload = json_decode( file_get_contents( 'php://input' ) );
+
+			if ( is_object( $payload ) ) {
+				if ( ! empty( $payload->subscriber->id ) ) {
+					$contact_id = absint( $payload->subscriber->id );
+				} elseif ( ! empty( $payload->subscriber_id ) ) {
+					$contact_id = absint( $payload->subscriber_id );
+				} elseif ( ! empty( $payload->id ) && is_numeric( $payload->id ) ) {
+					$contact_id = absint( $payload->id );
+				}
+			}
+		}
+
+		// Fall back to email lookup when Kit sends profile data without an ID.
+		if ( empty( $contact_id ) ) {
+			$email = '';
+
+			if ( ! empty( $post_data['subscriber']['email_address'] ) ) {
+				$email = $post_data['subscriber']['email_address'];
+			} elseif ( ! empty( $post_data['email_address'] ) ) {
+				$email = $post_data['email_address'];
+			} elseif ( ! empty( $post_data['email'] ) ) {
+				$email = $post_data['email'];
+			}
+
+			if ( ! empty( $email ) && is_email( $email ) ) {
+				$looked_up = $this->get_contact_id( $email );
+
+				if ( ! empty( $looked_up ) && ! is_wp_error( $looked_up ) ) {
+					$contact_id = absint( $looked_up );
+				}
+			}
+		}
+
+		if ( empty( $contact_id ) ) {
+			return $post_data;
+		}
+
+		$post_data['contact_id'] = absint( $contact_id );
+
+		// Remove the update tag so it can be applied again.
+		if ( 'update' === $post_data['wpf_action'] ) {
+
+			$user_id = wpf_get_user_id( (string) $post_data['contact_id'] );
+			$tag     = wpf_get_option( 'kit_update_tag' );
+
+			if ( ! empty( $tag ) ) {
+
+				wpf_log(
+					'notice',
+					$user_id,
+					'Removing update tag <strong>' . wpf_get_tag_label( $tag[0] ) . '</strong> in Kit, so that it can be reapplied later if needed.'
+				);
+
+				$this->remove_tags( $tag, $post_data['contact_id'] );
+
+			}
+		}
+
+		return $post_data;
+	}
+
+	/**
+	 * Handles unsubscribe notifications and sends notification email.
+	 *
+	 * @since  3.47.14
+	 *
+	 * @param array $post_data The webhook post data.
+	 */
+	public function process_unsubscribe( $post_data = array() ) {
+
+		$contact_id = 0;
+
+		if ( ! empty( $post_data['contact_id'] ) ) {
+			$contact_id = absint( $post_data['contact_id'] );
+		} else {
+			$payload = json_decode( file_get_contents( 'php://input' ) );
+
+			if ( is_object( $payload ) && ! empty( $payload->subscriber->id ) ) {
+				$contact_id = absint( $payload->subscriber->id );
+			}
+		}
+
+		if ( empty( $contact_id ) ) {
+			wp_die( 'Success', 'Success', 200 );
+		}
+
+		$user_id = wp_fusion()->user->get_user_id( $contact_id );
+
+		if ( ! empty( $user_id ) ) {
+
+			$email = wpf_get_option( 'kit_notify_email' );
+			$user  = get_user_by( 'id', $user_id );
+
+			wp_mail(
+				$email,
+				'WP Fusion - Unsubscribe Notification',
+				'User with email ' . $user->user_email . ' has unsubscribed from marketing in Kit.'
+			);
+
+		}
+
+		wp_die( 'Success', 'Success', 200 );
 	}
 
 	/**
@@ -173,7 +307,7 @@ class WPF_Kit {
 				return new WP_Error( 'error', 'Invalid or expired API token. Please re-authorize with Kit: ' . $access_token->get_error_message() );
 			}
 
-			$args['headers']['Authorization']   = 'Bearer ' . $access_token;
+			$args['headers']['Authorization']  = 'Bearer ' . $access_token;
 			$args['wpf_kit_refresh_attempted'] = true;
 
 			// Retry the request with the new token.
@@ -566,7 +700,29 @@ class WPF_Kit {
 				}
 			}
 		}
-		return $contact_tags;
+
+		// Possibly remove update / import tags during webhook processing.
+		if ( isset( $_REQUEST['wpf_action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+
+			$update_tag = wpf_get_option( 'kit_update_tag' );
+			$import_tag = wpf_get_option( 'kit_add_tag' );
+
+			if ( ! empty( $update_tag[0] ) && in_array( $update_tag[0], $contact_tags, true ) ) {
+
+				$contact_tags = array_diff( $contact_tags, array( $update_tag[0] ) );
+				$this->remove_tags( array( $update_tag[0] ), $contact_id );
+
+			}
+
+			if ( ! empty( $import_tag[0] ) && in_array( $import_tag[0], $contact_tags, true ) ) {
+
+				$contact_tags = array_diff( $contact_tags, array( $import_tag[0] ) );
+				$this->remove_tags( array( $import_tag[0] ), $contact_id );
+
+			}
+		}
+
+		return array_values( $contact_tags );
 	}
 
 	/**
@@ -780,12 +936,25 @@ class WPF_Kit {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wpf_get_option( 'contact_fields' );
-		foreach ( $contact_fields as $field_id => $field_data ) {
-			if ( ! empty( $field_data['active'] ) && isset( $field_data['crm_field'] ) && isset( $returned[ $field_data['crm_field'] ] ) ) {
-				$user_meta[ $field_id ] = $returned[ $field_data['crm_field'] ];
+		$contact_fields = wpf_get_option( 'contact_fields', array() );
+
+		if ( is_array( $contact_fields ) ) {
+			foreach ( $contact_fields as $field_id => $field_data ) {
+				if ( ! empty( $field_data['active'] ) && ! empty( $field_data['crm_field'] ) && isset( $returned[ $field_data['crm_field'] ] ) ) {
+					$user_meta[ $field_id ] = $returned[ $field_data['crm_field'] ];
+				}
 			}
 		}
+
+		// Always return email when mapped fields are missing so imports still work.
+		if ( empty( $user_meta['user_email'] ) && ! empty( $returned['email_address'] ) ) {
+			$user_meta['user_email'] = $returned['email_address'];
+		}
+
+		if ( empty( $user_meta['first_name'] ) && ! empty( $returned['first_name'] ) ) {
+			$user_meta['first_name'] = $returned['first_name'];
+		}
+
 		return $user_meta;
 	}
 
@@ -854,24 +1023,25 @@ class WPF_Kit {
 			return false;
 		}
 
-		// Determine event name based on type.
-		$event_name = 'subscriber.tag_add';
-		if ( 'update' === $type ) {
-			$event_name = 'subscriber.tag_add';
-		} elseif ( 'unsubscribe' === $type ) {
-			$event_name = 'subscriber.subscriber_unsubscribe';
-		}
+		if ( 'unsubscribe' === $type ) {
 
-		$data = array(
-			'target_url' => get_home_url() . '/?wpf_action=' . $type . '&access_key=' . $access_key,
-			'event'      => array(
-				'name' => $event_name,
-			),
-		);
+			$data = array(
+				'target_url' => get_home_url( null, '/?wpf_action=kit_unsubscribed&access_key=' . $access_key ),
+				'event'      => array(
+					'name' => 'subscriber.subscriber_unsubscribe',
+				),
+			);
 
-		// Add tag_id for tag-based events.
-		if ( ! empty( $tag ) && 'unsubscribe' !== $type ) {
-			$data['event']['tag_id'] = intval( $tag );
+		} else {
+
+			$data = array(
+				'target_url' => get_home_url( null, '/?wpf_action=' . $type . '&access_key=' . $access_key . '&send_notification=false' ),
+				'event'      => array(
+					'name'   => 'subscriber.tag_add',
+					'tag_id' => intval( $tag ),
+				),
+			);
+
 		}
 
 		$params         = $this->get_params();

@@ -48,7 +48,7 @@ class WPF_Batch {
 
 		// Pull user meta.
 		add_filter( 'wpf_batch_pull_users_meta_init', array( 'WPF_User', 'get_users_with_contact_ids' ) );
-		add_action( 'wpf_batch_pull_users_meta', array( $this, 'pull_users_meta_step' ) );
+		add_action( 'wpf_batch_pull_users_meta', array( $this, 'pull_users_meta_step' ), 10, 2 );
 
 		// Sync users (just CIDs).
 		add_filter( 'wpf_batch_users_cid_sync_init', array( $this, 'users_sync_init' ) );
@@ -56,7 +56,7 @@ class WPF_Batch {
 
 		// Sync users (just tags).
 		add_filter( 'wpf_batch_users_tags_sync_init', array( 'WPF_User', 'get_users_with_contact_ids' ) );
-		add_action( 'wpf_batch_users_tags_sync', array( $this, 'users_tags_sync_step' ) );
+		add_action( 'wpf_batch_users_tags_sync', array( $this, 'users_tags_sync_step' ), 10, 2 );
 
 		// Sync users.
 		add_filter( 'wpf_batch_users_sync_init', array( $this, 'users_sync_init' ) );
@@ -599,6 +599,17 @@ class WPF_Batch {
 	 */
 	public function import_users_step( $contact_id, $args = array() ) {
 
+		if ( ! empty( $args['wpf_webhook_safe_import'] ) && class_exists( 'WPF_API' ) && WPF_API::instance() ) {
+			$args                               = WPF_API::instance()->complete_deferred_safe_import_snapshot( $args, $contact_id );
+			$GLOBALS['wpf_webhook_safe_import'] = true;
+		} elseif ( ! empty( $args['wpf_webhook_safe_import'] ) ) {
+			$GLOBALS['wpf_webhook_safe_import'] = true;
+		}
+
+		if ( ! isset( $args['notify'] ) && isset( $args['send_notification'] ) ) {
+			$args['notify'] = $args['send_notification'];
+		}
+
 		if ( ! isset( $args['notify'] ) || $args['notify'] === 'false' ) {
 			$args['notify'] = false;
 		}
@@ -608,6 +619,10 @@ class WPF_Batch {
 		}
 
 		$user_id = wp_fusion()->user->import_user( $contact_id, $args['notify'], $args['role'] );
+
+		if ( ! empty( $args['wpf_webhook_safe_import'] ) ) {
+			do_action( 'wpf_webhook_safe_import_complete', $user_id, $args );
+		}
 
 		if ( ! is_wp_error( $user_id ) && isset( $args['import_id'] ) ) {
 
@@ -650,9 +665,11 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-	public function users_tags_sync_step( $user_id ) {
+	public function users_tags_sync_step( $user_id, $args = array() ) {
 
 		wp_fusion()->user->get_tags( $user_id, true, false );
+
+		$this->maybe_complete_safe_webhook_update( $user_id, $args, 'batch tags sync' );
 	}
 
 	/**
@@ -756,8 +773,41 @@ class WPF_Batch {
 	 * @since 3.0
 	 * @return void
 	 */
-	public function pull_users_meta_step( $user_id ) {
+	public function pull_users_meta_step( $user_id, $args = array() ) {
 
 		wp_fusion()->user->pull_user_meta( $user_id );
+
+		$this->maybe_complete_safe_webhook_update( $user_id, $args, 'batch meta pull' );
+	}
+
+	/**
+	 * Runs privilege rollback after an async webhook-safe update batch step.
+	 *
+	 * @since 3.47.14
+	 *
+	 * @param int    $user_id The user ID.
+	 * @param array  $args    Optional safe-update snapshot args.
+	 * @param string $context Log context label.
+	 * @return void
+	 */
+	private function maybe_complete_safe_webhook_update( $user_id, $args = array(), $context = 'batch update' ) {
+
+		if ( empty( $args['wpf_webhook_safe_update'] ) || empty( $user_id ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'WPF_API' ) || ! WPF_API::instance() ) {
+			return;
+		}
+
+		$tags_before    = isset( $args['wpf_tags_before'] ) ? (array) $args['wpf_tags_before'] : array();
+		$previous_roles = isset( $args['wpf_previous_roles'] ) ? (array) $args['wpf_previous_roles'] : array();
+
+		WPF_API::instance()->maybe_rollback_request_privilege(
+			$user_id,
+			$tags_before,
+			$previous_roles,
+			$context
+		);
 	}
 }

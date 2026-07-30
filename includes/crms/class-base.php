@@ -68,7 +68,7 @@ class WPF_CRM_Base {
 
 		// Default field value formatting.
 		// 5 so it runs before wpf_format_field_value at priority 10 in the individual CRM integrations.
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 5, 3 );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 5, 4 );
 
 		// AJAX CRM connection and sync.
 		add_action( 'wp_ajax_wpf_sync', array( $this, 'ajax_sync' ) );
@@ -1264,9 +1264,15 @@ class WPF_CRM_Base {
 	 * Formats user entered data to match CRM field formats
 	 *
 	 * @access public
-	 * @return mixed
+	 * @param  mixed  $value       The field value.
+	 * @param  string $field_type  The field type.
+	 * @param  string $field       The CRM field ID.
+	 * @param  array  $update_data The full array of data being sent to the CRM.
+	 * @return mixed  The formatted value.
 	 */
-	public function format_field_value( $value, $field_type, $field ) {
+	public function format_field_value( $value, $field_type, $field, $update_data = array() ) {
+
+		unset( $update_data );
 
 		if ( 'date' === $field_type ) {
 

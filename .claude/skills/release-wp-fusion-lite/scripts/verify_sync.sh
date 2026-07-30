@@ -55,6 +55,8 @@ check "build/ contains only secure-block* files" bash -c '
   unexpected=$(find build -mindepth 1 -maxdepth 1 -not -name "secure-block*" -not -name .DS_Store 2>/dev/null)
   [[ -z "$unexpected" ]]
 '
+check "build/secure-block.js exists" test -f build/secure-block.js
+check "build/secure-block.css exists" test -f build/secure-block.css
 
 # 4. languages/ absent
 check "languages/ is absent" test ! -d languages

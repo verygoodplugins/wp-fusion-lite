@@ -145,6 +145,7 @@ another bullet you can keep).
 - AffiliateWP
 - Solid Affiliate
 - SliceWP
+- FluentAffiliate
 - WP Affiliate Manager
 - Thirsty Affiliates
 - Refer a Friend
@@ -172,6 +173,7 @@ another bullet you can keep).
 - FluentCommunity
 - Fluent Cart
 - FluentCart
+- ThriveCart
 - Studio Cart
 - GS Product Configurator
 - Tribe Events

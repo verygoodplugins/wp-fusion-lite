@@ -3,7 +3,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.47.13
+ * Version: 3.47.14
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -32,7 +32,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.47.13' );
+define( 'WP_FUSION_VERSION', '3.47.14' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -226,7 +226,7 @@ final class WP_Fusion_Lite {
 			self::$instance->batch    = new WPF_Batch();
 
 			if ( is_admin() ) {
-				self::$instance->admin_notices = new WPF_Admin_Notices();
+				self::$instance->admin_notices  = new WPF_Admin_Notices();
 				self::$instance->crm_disconnect = new WPF_CRM_Disconnect();
 			}
 
@@ -508,7 +508,7 @@ final class WP_Fusion_Lite {
 				'ontrapages'                    => 'ONTRApage',
 				'ld-group-registration'         => 'LdGroupRegistration\Includes\Ld_Group_Registration',
 				'woofunnels'                    => 'WFOCU_Core',
-				'tickera'                       => 'TC',
+				'tickera'                       => array( 'Tickera\\TC', 'TC' ),
 				'ws-form'                       => 'WS_Form',
 				'upsell'                        => 'upsell',
 				'restropress'                   => 'RestroPress',
@@ -524,6 +524,7 @@ final class WP_Fusion_Lite {
 				'armember'                      => 'ARMemberlite',
 				'solid-affiliate'               => 'SolidAffiliate\Main',
 				'slicewp'                       => 'SliceWP',
+				'fluent-affiliate'              => 'FluentAffiliate\App\Models\Affiliate',
 				'metabox'                       => 'RWMB_Core',
 				'acf-frontend'                  => 'Front_End_Admin',
 				'wppayform'                     => 'WPPayForm\App\App',
@@ -811,6 +812,30 @@ final class WP_Fusion_Lite {
 	}
 
 	/**
+	 * Whether an integration dependency class or function exists.
+	 *
+	 * Accepts a single class/function name or an array of fallbacks (any match
+	 * loads the integration). Used for plugins that renamed/namespaced a class.
+	 *
+	 * @since  3.47.14
+	 * @access private
+	 *
+	 * @param  string|array $dependency Class name, function name, or list of either.
+	 * @return bool True if any dependency is present.
+	 */
+	private function integration_dependency_exists( $dependency ) {
+
+		foreach ( (array) $dependency as $name ) {
+
+			if ( class_exists( $name ) || function_exists( $name ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Includes plugin integrations after all plugins have loaded
 	 *
 	 * @access private
@@ -827,7 +852,7 @@ final class WP_Fusion_Lite {
 
 			$filename = sanitize_file_name( $filename );
 
-			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
+			if ( $this->integration_dependency_exists( $dependency_class ) ) {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
 					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';
@@ -854,7 +879,7 @@ final class WP_Fusion_Lite {
 
 			$filename = sanitize_file_name( $filename );
 
-			if ( class_exists( $dependency_class ) || function_exists( $dependency_class ) ) {
+			if ( $this->integration_dependency_exists( $dependency_class ) ) {
 
 				if ( file_exists( WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php' ) ) {
 					require_once WPF_DIR_PATH . 'includes/integrations/class-' . $filename . '.php';

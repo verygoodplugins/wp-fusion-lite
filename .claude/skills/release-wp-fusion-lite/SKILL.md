@@ -1,6 +1,40 @@
 ---
 name: release-wp-fusion-lite
 description: Use this skill whenever cutting, building, syncing, or deploying a new WP Fusion Lite release — pulling the latest code from the WP Fusion (Pro) plugin, stripping it down to the Lite feature set, curating the readme changelog, and shipping the release to wordpress.org via the SVN deploy workflow. Trigger on phrases like "release lite", "deploy wp-fusion-lite", "cut a lite release", "sync lite from pro", "push a new lite version", "update lite to match pro", "ship lite", or any task that involves copying Pro → Lite and publishing to the WordPress.org plugin directory.
+license: MIT
+tags: [wordpress, wp-fusion, lite, release, changelog, deployment]
+agents: [claude-code, codex]
+category: workflow
+metadata:
+  version: "1.1.1"
+capabilities:
+  network: true
+  filesystem: readwrite
+  tools: [Bash, Read, Edit, Grep, Python]
+requires-secrets: []
+resources:
+  - path: .gitignore
+    type: file
+  - path: evals/evals.json
+    type: file
+  - path: references/deploy-pipeline.md
+    type: file
+  - path: references/integration-keywords.md
+    type: file
+  - path: references/textdomain-context.md
+    type: file
+  - path: scripts/bump_version.py
+    type: file
+  - path: scripts/filter_changelog.py
+    type: file
+  - path: scripts/patch_main_file.py
+    type: file
+  - path: scripts/replace_textdomain.py
+    type: file
+  - path: scripts/sync_from_pro.sh
+    type: file
+  - path: scripts/verify_sync.sh
+    type: file
 ---
 
 # release-wp-fusion-lite
@@ -57,7 +91,7 @@ Run `scripts/sync_from_pro.sh`. It:
 2. Deletes all of `includes/integrations/` except `class-base.php`.
 3. Deletes `includes/class-api.php` and `includes/admin/class-updater.php`.
 4. Deletes `languages/` if present.
-5. In `build/`, deletes everything that isn't `secure-block*` (keeps only the Secure Block assets that Lite actually uses).
+5. In `build/`, deletes everything that isn't `secure-block*` (keeps only the Secure Block assets that Lite actually uses). If Pro no longer supplies a required Secure Block asset, the script preserves the previous Lite copy instead of dropping the editor runtime file.
 6. Renames `wp-fusion.php` → `wp-fusion-lite.php`.
 
 Everything outside those four top-level items is preserved: `.git`, `.github`, `.claude`, `readme.txt`, `README.md`, `.distignore`, `package.json`, `composer.json`, etc.
@@ -129,7 +163,7 @@ If any of the three files don't match the expected pattern, the script aborts ra
 Run `scripts/verify_sync.sh`. It checks:
 
 - `includes/integrations/` contains only `class-base.php`.
-- `build/` contains only `secure-block*` files.
+- `build/` contains only `secure-block*` files, including the required `secure-block.js` and `secure-block.css` editor assets.
 - `wp-fusion.php` does not exist.
 - `class WP_Fusion_Lite` is defined in `wp-fusion-lite.php`; bare `class WP_Fusion` (not followed by `_Lite`) is not.
 - `'wp-fusion'` literal does not appear in any `.php` file outside `vendor/` and `node_modules/`.

@@ -282,7 +282,20 @@ class WPF_MailerLite {
 
 			foreach ( $contact_ids as $contact_id ) {
 
-				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $post_data ) ) );
+				$args = $post_data;
+
+				if ( WPF_API::instance() ) {
+					$args = WPF_API::instance()->prepare_webhook_safe_import_args(
+						$args,
+						$contact_id,
+						array(
+							'role_fallback'   => true,
+							'lookup_existing' => false,
+						)
+					);
+				}
+
+				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $args ) ) );
 
 			}
 
@@ -624,10 +637,10 @@ class WPF_MailerLite {
 				'groups' => $tags,
 			);
 
-		if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
-			$data['type']        = 'active';
-			$data['resubscribe'] = true;
-		}
+			if ( wpf_get_option( 'mailerlite_resubscribe' ) ) {
+				$data['type']        = 'active';
+				$data['resubscribe'] = true;
+			}
 
 			$url              = 'https://api.mailerlite.com/api/v2/subscribers/' . $contact_id;
 			$params           = $this->get_params();
