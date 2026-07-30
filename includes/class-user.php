@@ -1091,6 +1091,21 @@ class WPF_User {
 						$value = $slug;
 					}
 
+					// Never apply a privileged role from a webhook-driven CRM pull.
+					if ( ( doing_wpf_webhook() || ! empty( $GLOBALS['wpf_webhook_safe_import'] ) )
+						&& class_exists( 'WPF_API' )
+						&& WPF_API::instance()
+						&& WPF_API::instance()->is_privileged_role( $value )
+					) {
+						wpf_log(
+							'notice',
+							$user_id,
+							'CRM role <strong>' . esc_html( $value ) . '</strong> was ignored because it is privileged.',
+							array( 'source' => 'api' )
+						);
+						continue;
+					}
+
 					if ( wp_roles()->is_role( $value ) && ! in_array( $value, (array) $user->roles ) ) {
 
 						// Don't send it back again
@@ -2228,8 +2243,22 @@ class WPF_User {
 			$this->pull_user_meta( $user_id );
 			$this->get_tags( $user_id, true, false );
 
-			// Maybe change role (but not for admins).
-			if ( ! empty( $role ) && ! user_can( $user_id, 'manage_options' ) && wp_roles()->is_role( $role ) ) {
+			// Maybe change role (but not for admins / privileged accounts).
+			$role = apply_filters( 'wpf_import_user_role', $role, $user_id );
+
+			$is_privileged = user_can( $user_id, 'manage_options' );
+
+			// Broader denied-role checks only apply on webhook-safe imports so
+			// admin/batch imports can still reassign roles on non-admin users.
+			if ( ! $is_privileged
+				&& ( doing_wpf_webhook() || ! empty( $GLOBALS['wpf_webhook_safe_import'] ) )
+				&& class_exists( 'WPF_API' )
+				&& WPF_API::instance()
+			) {
+				$is_privileged = WPF_API::instance()->user_has_privileged_capabilities( $user_id );
+			}
+
+			if ( ! empty( $role ) && ! $is_privileged && wp_roles()->is_role( $role ) ) {
 
 				$user = new WP_User( $user_id );
 				$user->set_role( $role );
@@ -2294,8 +2323,22 @@ class WPF_User {
 			$this->set_user_meta( $user->ID, $user_meta );
 			$this->get_tags( $user->ID, true, false );
 
-			// Maybe change role (but not for admins).
-			if ( ! empty( $role ) && ! user_can( $user->ID, 'manage_options' ) && wp_roles()->is_role( $role ) ) {
+			// Maybe change role (but not for admins / privileged accounts).
+			$role = apply_filters( 'wpf_import_user_role', $role, $user->ID );
+
+			$is_privileged = user_can( $user->ID, 'manage_options' );
+
+			// Broader denied-role checks only apply on webhook-safe imports so
+			// admin/batch imports can still reassign roles on non-admin users.
+			if ( ! $is_privileged
+				&& ( doing_wpf_webhook() || ! empty( $GLOBALS['wpf_webhook_safe_import'] ) )
+				&& class_exists( 'WPF_API' )
+				&& WPF_API::instance()
+			) {
+				$is_privileged = WPF_API::instance()->user_has_privileged_capabilities( $user->ID );
+			}
+
+			if ( ! empty( $role ) && ! $is_privileged && wp_roles()->is_role( $role ) ) {
 
 				$user = new WP_User( $user->ID );
 				$user->set_role( $role );
@@ -2335,9 +2378,9 @@ class WPF_User {
 			if ( 'email' === $format ) {
 				$user_meta['user_login'] = $user_meta['user_email'];
 			} elseif ( 'flname' === $format ) {
-				$user_meta['user_login'] = $user_meta['first_name'] . $user_meta['last_name'];
+				$user_meta['user_login'] = ( $user_meta['first_name'] ?? '' ) . ( $user_meta['last_name'] ?? '' );
 			} elseif ( 'fnamenum' === $format ) {
-				$user_meta['user_login'] = $user_meta['first_name'] . wp_rand( 1, 99999 );
+				$user_meta['user_login'] = ( $user_meta['first_name'] ?? '' ) . wp_rand( 1, 99999 );
 			}
 
 			// Randomize it further if needed.

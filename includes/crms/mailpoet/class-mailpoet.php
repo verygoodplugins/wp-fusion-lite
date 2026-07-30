@@ -52,7 +52,7 @@ class WPF_MailPoet {
 	/**
 	 * Translates the CRM name after textdomains have loaded.
 	 *
-	 * @since x.x.x
+	 * @since 3.47.14
 	 */
 	public function translate_name() {
 

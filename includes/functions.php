@@ -489,9 +489,13 @@ function wpf_get_datetime_format() {
  * @since 3.42.14
  *
  * @param string $phone_number The input number.
+ * @param string $country      The ISO alpha-2 country code.
  * @return string The E.164 formatted number.
  */
 function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
+
+	$phone_number     = trim( (string) $phone_number );
+	$country_code_key = strtoupper( trim( (string) $country ) );
 
 	// If the number already has a country code, clean it and return it.
 	if ( 0 === strpos( $phone_number, '+' ) ) {
@@ -499,66 +503,292 @@ function wpf_phone_number_to_e164( $phone_number, $country = 'US' ) {
 		return '+' . $clean_number;
 	}
 
+	// Treat 00 as an international dialing prefix.
+	if ( 0 === strpos( $phone_number, '00' ) ) {
+		$clean_number = preg_replace( '/\D/', '', substr( $phone_number, 2 ) );
+		return '+' . $clean_number;
+	}
+
 	$country_codes = array(
-		'CN' => '86',  // China.
-		'IN' => '91',  // India.
-		'US' => '1',   // United States.
-		'GB' => '44',  // United Kingdom.
-		'AU' => '61',  // Australia.
-		'CA' => '1',   // Canada.
-		'ID' => '62',  // Indonesia.
-		'PK' => '92',  // Pakistan.
-		'BR' => '55',  // Brazil.
-		'NG' => '234', // Nigeria.
-		'BD' => '880', // Bangladesh.
-		'RU' => '7',   // Russia.
-		'MX' => '52',  // Mexico.
-		'JP' => '81',  // Japan.
-		'ET' => '251', // Ethiopia.
-		'PH' => '63',  // Philippines.
-		'EG' => '20',  // Egypt.
-		'VN' => '84',  // Vietnam.
-		'CD' => '243', // Democratic Republic of the Congo.
-		'TR' => '90',  // Turkey.
-		'IR' => '98',  // Iran.
-		'DE' => '49',  // Germany.
-		'TH' => '66',  // Thailand.
-		'FR' => '33',  // France.
-		'IT' => '39',  // Italy.
-		'ES' => '34',  // Spain.
-		'PL' => '48',  // Poland.
-		'NL' => '31',  // Netherlands.
-		'BE' => '32',  // Belgium.
-		'GR' => '30',  // Greece.
-		'PT' => '351', // Portugal.
-		'SE' => '46',  // Sweden.
-		'CH' => '41',  // Switzerland.
-		'AT' => '43',  // Austria.
-		'NO' => '47',  // Norway.
-		'DK' => '45',  // Denmark.
-		'FI' => '358', // Finland.
-		'IE' => '353', // Ireland.
-		'NZ' => '64',  // New Zealand.
-		'ZA' => '27',  // South Africa.
+		'AC' => '247',
+		'AD' => '376',
+		'AE' => '971',
+		'AF' => '93',
+		'AG' => '1',
+		'AI' => '1',
+		'AL' => '355',
+		'AM' => '374',
+		'AO' => '244',
+		'AQ' => '672',
+		'AR' => '54',
+		'AS' => '1',
+		'AT' => '43',
+		'AU' => '61',
+		'AW' => '297',
+		'AX' => '358',
+		'AZ' => '994',
+		'BA' => '387',
+		'BB' => '1',
+		'BD' => '880',
+		'BE' => '32',
+		'BF' => '226',
+		'BG' => '359',
+		'BH' => '973',
+		'BI' => '257',
+		'BJ' => '229',
+		'BL' => '590',
+		'BM' => '1',
+		'BN' => '673',
+		'BO' => '591',
+		'BQ' => '599',
+		'BR' => '55',
+		'BS' => '1',
+		'BT' => '975',
+		'BW' => '267',
+		'BY' => '375',
+		'BZ' => '501',
+		'CA' => '1',
+		'CC' => '61',
+		'CD' => '243',
+		'CF' => '236',
+		'CG' => '242',
+		'CH' => '41',
+		'CI' => '225',
+		'CK' => '682',
+		'CL' => '56',
+		'CM' => '237',
+		'CN' => '86',
+		'CO' => '57',
+		'CR' => '506',
+		'CU' => '53',
+		'CV' => '238',
+		'CW' => '599',
+		'CX' => '61',
+		'CY' => '357',
+		'CZ' => '420',
+		'DE' => '49',
+		'DJ' => '253',
+		'DK' => '45',
+		'DM' => '1',
+		'DO' => '1',
+		'DZ' => '213',
+		'EC' => '593',
+		'EE' => '372',
+		'EG' => '20',
+		'EH' => '212',
+		'ER' => '291',
+		'ES' => '34',
+		'ET' => '251',
+		'FI' => '358',
+		'FJ' => '679',
+		'FK' => '500',
+		'FM' => '691',
+		'FO' => '298',
+		'FR' => '33',
+		'GA' => '241',
+		'GB' => '44',
+		'GD' => '1',
+		'GE' => '995',
+		'GF' => '594',
+		'GG' => '44',
+		'GH' => '233',
+		'GI' => '350',
+		'GL' => '299',
+		'GM' => '220',
+		'GN' => '224',
+		'GP' => '590',
+		'GQ' => '240',
+		'GR' => '30',
+		'GT' => '502',
+		'GU' => '1',
+		'GW' => '245',
+		'GY' => '592',
+		'HK' => '852',
+		'HN' => '504',
+		'HR' => '385',
+		'HT' => '509',
+		'HU' => '36',
+		'ID' => '62',
+		'IE' => '353',
+		'IL' => '972',
+		'IM' => '44',
+		'IN' => '91',
+		'IO' => '246',
+		'IQ' => '964',
+		'IR' => '98',
+		'IS' => '354',
+		'IT' => '39',
+		'JE' => '44',
+		'JM' => '1',
+		'JO' => '962',
+		'JP' => '81',
+		'KE' => '254',
+		'KG' => '996',
+		'KH' => '855',
+		'KI' => '686',
+		'KM' => '269',
+		'KN' => '1',
+		'KP' => '850',
+		'KR' => '82',
+		'KW' => '965',
+		'KY' => '1',
+		'KZ' => '7',
+		'LA' => '856',
+		'LB' => '961',
+		'LC' => '1',
+		'LI' => '423',
+		'LK' => '94',
+		'LR' => '231',
+		'LS' => '266',
+		'LT' => '370',
+		'LU' => '352',
+		'LV' => '371',
+		'LY' => '218',
+		'MA' => '212',
+		'MC' => '377',
+		'MD' => '373',
+		'ME' => '382',
+		'MF' => '590',
+		'MG' => '261',
+		'MH' => '692',
+		'MK' => '389',
+		'ML' => '223',
+		'MM' => '95',
+		'MN' => '976',
+		'MO' => '853',
+		'MP' => '1',
+		'MQ' => '596',
+		'MR' => '222',
+		'MS' => '1',
+		'MT' => '356',
+		'MU' => '230',
+		'MV' => '960',
+		'MW' => '265',
+		'MX' => '52',
+		'MY' => '60',
+		'MZ' => '258',
+		'NA' => '264',
+		'NC' => '687',
+		'NE' => '227',
+		'NF' => '672',
+		'NG' => '234',
+		'NI' => '505',
+		'NL' => '31',
+		'NO' => '47',
+		'NP' => '977',
+		'NR' => '674',
+		'NU' => '683',
+		'NZ' => '64',
+		'OM' => '968',
+		'PA' => '507',
+		'PE' => '51',
+		'PF' => '689',
+		'PG' => '675',
+		'PH' => '63',
+		'PK' => '92',
+		'PL' => '48',
+		'PM' => '508',
+		'PR' => '1',
+		'PS' => '970',
+		'PT' => '351',
+		'PW' => '680',
+		'PY' => '595',
+		'QA' => '974',
+		'RE' => '262',
+		'RO' => '40',
+		'RS' => '381',
+		'RU' => '7',
+		'RW' => '250',
+		'SA' => '966',
+		'SB' => '677',
+		'SC' => '248',
+		'SD' => '249',
+		'SE' => '46',
+		'SG' => '65',
+		'SH' => '290',
+		'SI' => '386',
+		'SJ' => '47',
+		'SK' => '421',
+		'SL' => '232',
+		'SM' => '378',
+		'SN' => '221',
+		'SO' => '252',
+		'SR' => '597',
+		'SS' => '211',
+		'ST' => '239',
+		'SV' => '503',
+		'SX' => '1',
+		'SY' => '963',
+		'SZ' => '268',
+		'TA' => '290',
+		'TC' => '1',
+		'TD' => '235',
+		'TG' => '228',
+		'TH' => '66',
+		'TJ' => '992',
+		'TK' => '690',
+		'TL' => '670',
+		'TM' => '993',
+		'TN' => '216',
+		'TO' => '676',
+		'TR' => '90',
+		'TT' => '1',
+		'TV' => '688',
+		'TW' => '886',
+		'TZ' => '255',
+		'UA' => '380',
+		'UG' => '256',
+		'UM' => '1',
+		'US' => '1',
+		'UY' => '598',
+		'UZ' => '998',
+		'VA' => '39',
+		'VC' => '1',
+		'VE' => '58',
+		'VG' => '1',
+		'VI' => '1',
+		'VN' => '84',
+		'VU' => '678',
+		'WF' => '681',
+		'WS' => '685',
+		'XK' => '383',
+		'YE' => '967',
+		'YT' => '262',
+		'ZA' => '27',
+		'ZM' => '260',
+		'ZW' => '263',
 	);
 
-	// Remove any non-numeric characters from the phone number
+	// Remove any non-numeric characters from the phone number.
 	$clean_number = preg_replace( '/\D/', '', $phone_number );
 
 	$clean_number = ltrim( $clean_number, '0' ); // remove leading 0s.
 
-	// Check if a country code is already present
-	$has_country_code = strlen( $clean_number ) > 10 || ( strlen( $clean_number ) === 10 && ! isset( $country_codes[ strtoupper( $country ) ] ) );
+	// Check if a country code is already present.
+	$dialing_code        = $country_codes[ $country_code_key ] ?? '';
+	$clean_number_length = strlen( $clean_number );
+	$has_country_code    = false;
 
-	if ( ! $has_country_code ) {
-		// Prepend the country code based on the provided country
-		$country_code = isset( $country_codes[ strtoupper( $country ) ] ) ? $country_codes[ strtoupper( $country ) ] : '';
-		if ( ! empty( $country_code ) ) {
-			$clean_number = $country_code . $clean_number;
+	// If the number already starts with the expected dialing prefix and the
+	// remaining local part is a plausible length, assume it's included.
+	if ( ! empty( $dialing_code ) && 0 === strpos( $clean_number, $dialing_code ) ) {
+		$local_length = $clean_number_length - strlen( $dialing_code );
+		if ( $local_length >= 5 && $local_length <= 12 ) {
+			$has_country_code = true;
 		}
 	}
 
-	// Ensure the number starts with a '+'
+	// Fallback: numbers longer than 10 digits likely include some country code.
+	if ( ! $has_country_code ) {
+		$has_country_code = 10 < $clean_number_length
+			|| ( 10 === $clean_number_length && empty( $dialing_code ) );
+	}
+
+	if ( ! $has_country_code && ! empty( $dialing_code ) ) {
+		$clean_number = $dialing_code . $clean_number;
+	}
+
+	// Ensure the number starts with a '+'.
 	if ( ! empty( $clean_number ) && false === strpos( $clean_number, '+' ) ) {
 		$clean_number = '+' . $clean_number;
 	}
@@ -614,8 +844,11 @@ function wpf_update_option( $key, $value ) {
 }
 
 /**
- * Clean variables using sanitize_text_field. Arrays are cleaned
+ * Clean variables using sanitize_textarea_field. Arrays are cleaned
  * recursively. Non-scalar values are ignored.
+ *
+ * Uses sanitize_textarea_field() (not sanitize_text_field()) so multiline
+ * CRM field values keep their newlines when syncing back to WordPress.
  *
  * @since  3.38.0
  *
@@ -632,9 +865,9 @@ function wpf_clean( $var ) {
 		if ( is_scalar( $var ) ) {
 			// If the value doesn't contain any HTML tags, use simple sanitization to avoid triggering expensive filters early in the loading process.
 			if ( false === strpos( $var, '<' ) && false === strpos( $var, '>' ) ) {
-				// Decode %40 to @ to preserve email addresses, since sanitize_text_field() strips percent-encoded characters.
+				// Decode %40 to @ to preserve email addresses, since sanitize_textarea_field() strips percent-encoded characters.
 				$var = str_ireplace( '%40', '@', $var );
-				return sanitize_text_field( $var );
+				return sanitize_textarea_field( $var );
 			}
 
 			$allowed_html = apply_filters( 'wpf_wp_kses_allowed_html', wp_kses_allowed_html( 'post' ) );

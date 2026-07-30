@@ -83,7 +83,7 @@ class WPF_SendinBlue {
 	public function init() {
 
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
-		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
+		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 4 );
 
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
@@ -218,8 +218,8 @@ class WPF_SendinBlue {
 			// Try to get country code from available fields in priority order.
 			$country = 'US'; // Default to US.
 
-			if ( ! empty( $update_data['country'] ) ) {
-				$country = $update_data['country'];
+			if ( ! empty( $update_data['country'] ) && preg_match( '/^[A-Z]{2}$/', strtoupper( $update_data['country'] ) ) ) {
+				$country = strtoupper( $update_data['country'] );
 			} elseif ( function_exists( 'wc_get_base_location' ) ) {
 				// Use WooCommerce store base location as fallback.
 				$base_location = wc_get_base_location();
@@ -242,8 +242,8 @@ class WPF_SendinBlue {
 			// Try to get country code from available fields in priority order.
 			$country = 'US'; // Default to US.
 
-			if ( ! empty( $update_data['country'] ) ) {
-				$country = $update_data['country'];
+			if ( ! empty( $update_data['country'] ) && preg_match( '/^[A-Z]{2}$/', strtoupper( $update_data['country'] ) ) ) {
+				$country = strtoupper( $update_data['country'] );
 			} elseif ( function_exists( 'wc_get_base_location' ) ) {
 				// Use WooCommerce store base location as fallback.
 				$base_location = wc_get_base_location();

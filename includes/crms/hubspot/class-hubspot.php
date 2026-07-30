@@ -322,12 +322,29 @@ class WPF_HubSpot {
 				wp_fusion()->batch->includes();
 				wp_fusion()->batch->init();
 
+				$webhook_action = isset( $post_data['wpf_action'] ) ? $post_data['wpf_action'] : '';
+
 				// Not needed for batch ops. This will preserve "role" and "send_notification".
 				unset( $post_data['wpf_action'] );
 				unset( $post_data['access_key'] );
 
 				foreach ( $contact_ids as $contact_id ) {
-					wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $post_data ) ) );
+					$args = $post_data;
+
+					if ( WPF_API::instance() ) {
+						// Defer CRM email lookup to the batch worker so HubSpot
+						// gets a fast response; only fall back to a default role on add.
+						$args = WPF_API::instance()->prepare_webhook_safe_import_args(
+							$args,
+							$contact_id,
+							array(
+								'role_fallback'   => ( 'add' === $webhook_action ),
+								'lookup_existing' => false,
+							)
+						);
+					}
+
+					wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $args ) ) );
 				}
 
 				wp_fusion()->batch->process->save()->dispatch();

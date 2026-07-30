@@ -16,9 +16,12 @@
  * tag operations, and event tracking.
  *
  * Note: When someone unsubscribes from Drip:
- * - get_contact_id() will return Not Found unless the person has been reactivated
- * - update_contact() will work but will return the "status" indicating they're unsubscribed
- * - apply_tags() does work
+ * - get_contact_id() still finds them (fetch by email works)
+ * - update_contact() must key off email — stale/deleted WordPress-cached
+ *   contact IDs return HTTP 422 and never update the live subscriber
+ * - Status must be a top-level API param (`active` / `unsubscribed`), not
+ *   a custom field, to reactivate inactive people
+ * - apply_tags() does work (via email)
  *
  * @since 3.46.10
  */
@@ -727,10 +730,271 @@ class WPF_Drip {
 
 
 	/**
+	 * Built-in Drip subscriber fields that must be top-level API params.
+	 *
+	 * Anything else belongs in `custom_fields`. Burying `status` (or
+	 * `first_name`, etc.) in custom_fields creates a custom field instead
+	 * of updating the real subscriber property — inactive people stay
+	 * Inactive even when Status is mapped to "active".
+	 *
+	 * @since 3.47.14
+	 * @access private
+	 *
+	 * @return array Field keys.
+	 */
+	private function get_built_in_subscriber_fields() {
+
+		return array(
+			'email',
+			'new_email',
+			'first_name',
+			'last_name',
+			'address1',
+			'address2',
+			'city',
+			'state',
+			'zip',
+			'country',
+			'phone',
+			'sms_number',
+			'sms_consent',
+			'user_id',
+			'time_zone',
+			'lifetime_value',
+			'ip_address',
+			'eu_consent',
+			'eu_consent_message',
+			'status',
+			'initial_status',
+			'tags',
+			'remove_tags',
+			'prospect',
+			'base_lead_score',
+		);
+	}
+
+	/**
+	 * Split mapped contact data into top-level Drip params + custom_fields.
+	 *
+	 * @since 3.47.14
+	 * @access private
+	 *
+	 * @param array $data Mapped contact data (CRM field keys).
+	 * @return array Subscriber params ready for create_or_update (no account_id).
+	 */
+	private function prepare_subscriber_params( $data ) {
+
+		$built_in = array_fill_keys( $this->get_built_in_subscriber_fields(), true );
+		$params   = array(
+			'custom_fields' => array(),
+		);
+
+		foreach ( $data as $key => $value ) {
+
+			if ( isset( $built_in[ $key ] ) ) {
+				$params[ $key ] = $value;
+			} else {
+				$params['custom_fields'][ $key ] = $value;
+			}
+		}
+
+		if ( empty( $params['custom_fields'] ) ) {
+			unset( $params['custom_fields'] );
+		}
+
+		return $this->normalize_subscriber_status( $params );
+	}
+
+	/**
+	 * Normalize Status onto the subscriber payload.
+	 *
+	 * Drip expects `status` as a top-level parameter (`active` or
+	 * `unsubscribed`), not as a custom field.
+	 *
+	 * @since 3.47.14
+	 * @access private
+	 *
+	 * @param array $params Subscriber request params.
+	 * @return array Params with status normalized when present.
+	 */
+	private function normalize_subscriber_status( $params ) {
+
+		if ( ! isset( $params['status'] ) ) {
+			return $params;
+		}
+
+		$status = $params['status'];
+
+		if ( true === $status ) {
+			$status = 'active';
+		} elseif ( null === $status ) {
+			$status = 'unsubscribed';
+		} elseif ( is_string( $status ) ) {
+			$status = strtolower( trim( $status ) );
+		}
+
+		if ( 'active' === $status || 'unsubscribed' === $status ) {
+
+			$params['status'] = $status;
+
+			wpf_log(
+				'info',
+				0,
+				sprintf(
+					/* translators: %s is the Drip status value. */
+					__( 'Setting Drip subscriber status to <strong>%s</strong>.', 'wp-fusion-lite' ),
+					$status
+				),
+				array( 'source' => 'drip' )
+			);
+
+		} else {
+
+			wpf_log(
+				'notice',
+				0,
+				$status . ' is not a valid status. Status must be either <strong>active</strong> or <strong>unsubscribed</strong>.',
+				array( 'source' => 'drip' )
+			);
+
+			unset( $params['status'] );
+
+		}
+
+		return $params;
+	}
+
+	/**
+	 * Prefer email over contact ID for create-or-update calls.
+	 *
+	 * Drip's create-or-update matches on `id` when present. A stale/deleted
+	 * WordPress-cached contact ID returns HTTP 422 and never touches the live
+	 * email subscriber (address syncs, status reactivation, etc). Keying off
+	 * email targets the current person.
+	 *
+	 * When `$provided_email` is a pending address change, prefer the existing
+	 * subscriber email from the contact ID so `new_email` can rename correctly.
+	 *
+	 * @since 3.47.14
+	 * @access private
+	 *
+	 * @param array       $params         Subscriber request params.
+	 * @param string      $contact_id     Drip contact ID.
+	 * @param string|null $provided_email Email from the update payload, if any.
+	 * @return array Params keyed by email when an address can be resolved.
+	 */
+	private function maybe_key_update_by_email( $params, $contact_id, $provided_email = null ) {
+
+		$existing_email = wp_fusion()->crm->get_email_from_cid( $contact_id );
+
+		if ( ! empty( $existing_email ) && ! is_wp_error( $existing_email ) ) {
+			$email = $existing_email;
+		} elseif ( ! empty( $provided_email ) ) {
+			$email = $provided_email;
+		} else {
+			return $params;
+		}
+
+		$params['email'] = $email;
+		unset( $params['id'] );
+
+		return $params;
+	}
+
+	/**
+	 * Refresh the locally cached Drip contact ID when the API returns a new one.
+	 *
+	 * @since 3.47.14
+	 * @access private
+	 *
+	 * @param string $old_contact_id Previously cached contact ID.
+	 * @param array  $result         Subscriber data returned by the Drip API.
+	 * @return string Contact ID to use for subsequent lookups.
+	 */
+	private function maybe_refresh_contact_id( $old_contact_id, $result ) {
+
+		if ( empty( $result['id'] ) || $result['id'] === $old_contact_id ) {
+			return $old_contact_id;
+		}
+
+		$user_id = wp_fusion()->user->get_user_id( $old_contact_id );
+
+		if ( empty( $user_id ) && ! empty( $result['email'] ) ) {
+			$user = get_user_by( 'email', $result['email'] );
+			if ( $user ) {
+				$user_id = $user->ID;
+			}
+		}
+
+		if ( ! empty( $user_id ) ) {
+			update_user_meta( $user_id, WPF_CONTACT_ID_META_KEY, $result['id'] );
+
+			wpf_log(
+				'notice',
+				$user_id,
+				sprintf(
+					/* translators: 1: old contact ID, 2: new contact ID. */
+					__( 'Updated cached Drip contact ID from %1$s to %2$s.', 'wp-fusion-lite' ),
+					$old_contact_id,
+					$result['id']
+				),
+				array( 'source' => 'drip' )
+			);
+		}
+
+		return $result['id'];
+	}
+
+	/**
+	 * Track whether a subscriber is inactive in WordPress usermeta.
+	 *
+	 * @since 3.47.14
+	 * @access private
+	 *
+	 * @param array       $result    Subscriber data returned by the Drip API.
+	 * @param int|false   $user_id   WordPress user ID when known.
+	 * @param string|null $email     Optional email for user lookup.
+	 */
+	private function maybe_mark_inactive( $result, $user_id = false, $email = null ) {
+
+		if ( empty( $user_id ) && ! empty( $email ) ) {
+			$user = get_user_by( 'email', $email );
+			if ( $user ) {
+				$user_id = $user->ID;
+			}
+		}
+
+		if ( ! empty( $result['status'] ) && 'active' !== $result['status'] ) {
+
+			wpf_log(
+				'notice',
+				$user_id,
+				sprintf(
+					/* translators: %s is the documentation URL. */
+					__( 'Person has unsubscribed from marketing. Updates may not have been saved. For more information, see <a href="%s" target="_blank">our documentation</a>.', 'wp-fusion-lite' ),
+					'https://wpfusion.com/documentation/crm-specific-docs/inactive-people-in-drip/'
+				),
+				array( 'source' => 'drip' )
+			);
+
+			if ( ! empty( $user_id ) ) {
+				update_user_meta( $user_id, 'drip_inactive', true );
+			}
+		} elseif ( ! empty( $user_id ) ) {
+
+			// Clear inactive flag after a successful reactivation.
+			delete_user_meta( $user_id, 'drip_inactive' );
+		}
+	}
+
+	/**
 	 * Adds a new contact to Drip.
 	 *
 	 * Creates a new subscriber in Drip with the provided contact data.
 	 * Email is required and is handled separately from custom fields.
+	 *
+	 * Status must be a top-level API parameter (not a custom field) so
+	 * form integrations can reactivate unsubscribed people on upsert.
 	 *
 	 * @since  3.46.10
 	 *
@@ -740,9 +1004,6 @@ class WPF_Drip {
 	public function add_contact( $data ) {
 
 		$this->connect();
-
-		$email = $data['email'];
-		unset( $data['email'] );
 
 		// Fixes user entered field key formats to avoid 422 errors.
 		foreach ( $data as $key => $value ) {
@@ -755,17 +1016,20 @@ class WPF_Drip {
 			}
 		}
 
-		$params = array(
-			'account_id'    => $this->account_id,
-			'email'         => $email,
-			'custom_fields' => $data,
-		);
+		$params               = $this->prepare_subscriber_params( $data );
+		$params['account_id'] = $this->account_id;
+
+		if ( empty( $params['email'] ) ) {
+			return new WP_Error( 'error', __( 'No email address provided.', 'wp-fusion-lite' ) );
+		}
 
 		$result = $this->app->create_or_update_subscriber( $params );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
+
+		$this->maybe_mark_inactive( $result, false, $params['email'] );
 
 		return $result['id'];
 	}
@@ -779,6 +1043,8 @@ class WPF_Drip {
 	public function update_contact( $contact_id, $data ) {
 
 		$this->connect();
+
+		$provided_email = null;
 
 		if ( isset( $data['email'] ) ) {
 			$provided_email = $data['email'];
@@ -797,33 +1063,12 @@ class WPF_Drip {
 			}
 		}
 
-		$params = array(
-			'account_id'    => $this->account_id,
-			'id'            => $contact_id,
-			'custom_fields' => $data,
-		);
+		$params               = $this->prepare_subscriber_params( $data );
+		$params['account_id'] = $this->account_id;
+		$params['id']         = $contact_id;
 
-		if ( isset( $data['status'] ) ) {
-
-			if ( true === $data['status'] ) {
-				$data['status'] = 'active';
-			} elseif ( null === $data['status'] ) {
-				$data['status'] = 'unsubscribed';
-			}
-
-			if ( 'active' == $data['status'] || 'unsubscribed' == $data['status'] ) {
-
-				$params['status'] = $data['status'];
-				unset( $params['custom_fields']['status'] );
-
-			} else {
-
-				wpf_log( 'notice', 0, $data['status'] . ' is not a valid status. Status must be either <strong>active</strong> or <strong>unsubscribed</strong>.', array( 'source' => 'drip' ) );
-
-			}
-		}
-
-		// Maybe update optin status
+		// Prefer email over a possibly-stale/deleted contact ID.
+		$params = $this->maybe_key_update_by_email( $params, $contact_id, $provided_email );
 
 		$result = $this->app->create_or_update_subscriber( $params );
 
@@ -831,23 +1076,14 @@ class WPF_Drip {
 			return $result;
 		}
 
+		$contact_id = $this->maybe_refresh_contact_id( $contact_id, $result );
+
 		$user_id = wp_fusion()->user->get_user_id( $contact_id );
 
-		if ( ! empty( $result['status'] ) && 'active' !== $result['status'] ) {
-			// translators: %s is the documentation URL
-			wpf_log( 'notice', $user_id, sprintf( __( 'Person has unsubscribed from marketing. Updates may not have been saved. For more information, see <a href="%s" target="_blank">our documentation</a>.', 'wp-fusion-lite' ), 'https://wpfusion.com/documentation/crm-specific-docs/inactive-people-in-drip/' ), array( 'source' => 'drip' ) );
+		$this->maybe_mark_inactive( $result, $user_id );
 
-			if ( ! empty( $user_id ) ) {
-				update_user_meta( $user_id, 'drip_inactive', true );
-			}
-		} elseif ( ! empty( $user_id ) ) {
-
-			// If they were inactive.
-			delete_user_meta( $user_id, 'drip_inactive' );
-		}
-
-		// Check if we need to change the email address
-		if ( isset( $provided_email ) && strtolower( $result['email'] ) != strtolower( $provided_email ) ) {
+		// Check if we need to change the email address.
+		if ( isset( $provided_email ) && strtolower( $result['email'] ) !== strtolower( $provided_email ) ) {
 
 			$old_email           = $result['email'];
 			$params['new_email'] = $provided_email;
@@ -865,7 +1101,7 @@ class WPF_Drip {
 				return new WP_Error( 'error', 'Failed to update subscriber email address from ' . $old_email . ' to ' . $params['new_email'] . ': ' . $result->get_error_message() );
 			}
 
-			if ( wpf_get_option( 'email_change_event' ) == true ) {
+			if ( true === wpf_get_option( 'email_change_event' ) ) {
 
 				$params = array(
 					'account_id' => $this->account_id,

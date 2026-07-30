@@ -193,7 +193,7 @@ class WPF_Salesforce {
 			}
 
 			if ( isset( $post_data['send_notification'] ) && 'true' == $post_data['send_notification'] ) {
-				$args['notify'] = true;
+				$args['send_notification'] = true;
 			}
 
 			while ( $key !== $notifications_count ) {
@@ -213,13 +213,13 @@ class WPF_Salesforce {
 
 				if ( 'update' == $post_data['wpf_action'] ) {
 
-					$args = array(
+					$user_query_args = array(
 						'meta_key'   => WPF_CONTACT_ID_META_KEY,
 						'meta_value' => $contact_id,
 						'fields'     => array( 'ID' ),
 					);
 
-					$users = get_users( $args );
+					$users = get_users( $user_query_args );
 
 					if ( empty( $users ) ) {
 						wpf_log( 'notice', 0, 'Update webhook received but no matching user found for contact ID <strong>' . $contact_id . '</strong>', array( 'source' => 'api' ) );
@@ -229,7 +229,20 @@ class WPF_Salesforce {
 
 				wpf_log( 'info', 0, 'Adding contact ID <strong>' . $contact_id . '</strong> to import queue (' . $key . ' of ' . $notifications_count . ').', array( 'source' => 'api' ) );
 
-				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $args ) ) );
+				$import_args = $args;
+
+				if ( WPF_API::instance() ) {
+					$import_args = WPF_API::instance()->prepare_webhook_safe_import_args(
+						$import_args,
+						$contact_id,
+						array(
+							'role_fallback'   => ( 'add' === $post_data['wpf_action'] ),
+							'lookup_existing' => false,
+						)
+					);
+				}
+
+				wp_fusion()->batch->process->push_to_queue( array( 'wpf_batch_import_users', array( $contact_id, $import_args ) ) );
 
 			}
 
