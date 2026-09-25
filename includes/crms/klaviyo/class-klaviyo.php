@@ -310,7 +310,7 @@ class WPF_Klaviyo {
 			'headers'    => array(
 				'Accept'       => 'application/json',
 				'Content-Type' => 'application/json',
-				'Revision'     => '2025-07-15',
+				'Revision'     => '2026-07-15',
 			),
 		);
 
@@ -593,10 +593,14 @@ class WPF_Klaviyo {
 	 *
 	 * @since 3.42.12
 	 *
-	 * @param array $customer_data The customer data.
-	 * @return array The customer data.
+	 * @param array|false|null $customer_data The customer data.
+	 * @return array|false|null The customer data.
 	 */
 	public function format_phone_numbers( $customer_data ) {
+
+		if ( ! is_array( $customer_data ) ) {
+			return $customer_data;
+		}
 
 		if ( ! empty( $customer_data['billing_phone'] ) ) {
 			$customer_data['billing_phone'] = wpf_phone_number_to_e164( $customer_data['billing_phone'], $customer_data['billing_country'] );
@@ -1088,16 +1092,16 @@ class WPF_Klaviyo {
 			}
 		}
 
-        // Set the attributes in the body.
-        $body['data']['attributes'] = $attributes;
+		// Set the attributes in the body.
+		$body['data']['attributes'] = $attributes;
 
-        // Custom properties must be nested under attributes.properties per Klaviyo JSON:API.
-        if ( ! empty( $properties ) ) {
-            if ( ! isset( $body['data']['attributes']['properties'] ) || ! is_array( $body['data']['attributes']['properties'] ) ) {
-                $body['data']['attributes']['properties'] = array();
-            }
-            $body['data']['attributes']['properties'] = array_merge( $body['data']['attributes']['properties'], $properties );
-        }
+		// Custom properties must be nested under attributes.properties per Klaviyo JSON:API.
+		if ( ! empty( $properties ) ) {
+			if ( ! isset( $body['data']['attributes']['properties'] ) || ! is_array( $body['data']['attributes']['properties'] ) ) {
+				$body['data']['attributes']['properties'] = array();
+			}
+			$body['data']['attributes']['properties'] = array_merge( $body['data']['attributes']['properties'], $properties );
+		}
 
 		return $body;
 	}

@@ -1,5 +1,18 @@
 <?php
+/**
+ * WP Fusion - Groundhogg REST admin.
+ *
+ * @package   WP Fusion
+ * @copyright Copyright (c) 2026, Very Good Plugins, https://verygoodplugins.com
+ * @license   GPL-3.0+
+ * @since     3.48.0
+ */
 
+/**
+ * Groundhogg REST settings and application-password callback.
+ *
+ * @since 3.48.0
+ */
 class WPF_Groundhogg_REST_Admin {
 
 	/**
@@ -30,28 +43,36 @@ class WPF_Groundhogg_REST_Admin {
 	private $crm;
 
 	/**
-	 * Get things started
+	 * Get things started.
 	 *
 	 * @since 3.38.10
+	 *
+	 * @param string $slug CRM slug.
+	 * @param string $name CRM name.
+	 * @param object $crm  CRM instance.
 	 */
 	public function __construct( $slug, $name, $crm ) {
+
+		require_once dirname( __DIR__ ) . '/class-rest-auth.php';
+		WPF_CRM_REST_Auth::register();
 
 		$this->slug = $slug;
 		$this->name = $name;
 		$this->crm  = $crm;
 
-		// Settings
+		// Settings.
 		add_filter( 'wpf_configure_settings', array( $this, 'register_connection_settings' ), 15, 2 );
 		add_action( 'show_field_groundhogg_rest_header_begin', array( $this, 'show_field_groundhogg_rest_header_begin' ), 10, 2 );
 
-		// AJAX
+		// AJAX.
 		add_action( 'wp_ajax_wpf_test_connection_' . $this->slug, array( $this, 'test_connection' ) );
 
-		if ( wpf_get_option( 'crm' ) == $this->slug ) {
+		if ( wpf_get_option( 'crm' ) === $this->slug ) {
 			$this->init();
 		}
 
-		// OAuth
+		// The callback must run before this CRM is the saved crm value.
+		// admin-post.php is ignored because it is not the settings screen.
 		add_action( 'admin_init', array( $this, 'handle_rest_authentication' ) );
 	}
 
@@ -74,21 +95,19 @@ class WPF_Groundhogg_REST_Admin {
 	 */
 	public function handle_rest_authentication() {
 
-		if ( isset( $_GET['site_url'] ) && isset( $_GET['crm'] ) && $this->slug == $_GET['crm'] ) {
+		$credentials = WPF_CRM_REST_Auth::authorize( $this->slug, 'esc_url_raw' );
 
-			$url      = esc_url_raw( urldecode( $_GET['site_url'] ) );
-			$username = sanitize_text_field( urldecode( $_GET['user_login'] ) );
-			$password = sanitize_text_field( urldecode( $_GET['password'] ) );
-
-			wp_fusion()->settings->set( 'groundhogg_rest_url', $url );
-			wp_fusion()->settings->set( 'groundhogg_rest_username', $username );
-			wp_fusion()->settings->set( 'groundhogg_rest_password', $password );
-			wp_fusion()->settings->set( 'crm', $this->slug );
-
-			wp_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
-			exit;
-
+		if ( false === $credentials ) {
+			return;
 		}
+
+		wp_fusion()->settings->set( 'groundhogg_rest_url', $credentials['site_url'] );
+		wp_fusion()->settings->set( 'groundhogg_rest_username', $credentials['user_login'] );
+		wp_fusion()->settings->set( 'groundhogg_rest_password', $credentials['password'] );
+		wp_fusion()->settings->set( 'crm', $this->slug );
+
+		wp_safe_redirect( admin_url( 'options-general.php?page=wpf-settings#setup' ) );
+		exit;
 	}
 
 
@@ -121,15 +140,23 @@ class WPF_Groundhogg_REST_Admin {
 			'desc'    => __( 'Enter the URL to your website where Groundhogg is installed (must be https://)', 'wp-fusion-lite' ),
 		);
 
+		$success_url = WPF_CRM_REST_Auth::get_success_url( $this->slug );
+
 		if ( empty( $options['groundhogg_rest_url'] ) ) {
 			$href  = '#';
 			$class = 'button button-disabled rest-auth-btn';
 		} else {
-			$href  = trailingslashit( $options['groundhogg_rest_url'] ) . 'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' . urlencode( get_bloginfo( 'name' ) ) . '&success_url=' . admin_url( 'options-general.php?page=wpf-settings' ) . '%26crm=' . $this->slug;
+			$href  = WPF_CRM_REST_Auth::get_authorize_url( $this->slug, $options['groundhogg_rest_url'] );
 			$class = 'button rest-auth-btn';
 		}
 
-		$new_settings['groundhogg_rest_url']['desc'] .= '<br /><br /><a id="groundhogg_rest-auth-btn" class="' . esc_attr( $class ) . '" href="' . esc_url( $href ) . '">' . __( 'Authorize with Groundhogg', 'wp-fusion-lite' ) . '</a>';
+		$link  = '<a id="groundhogg_rest-auth-btn" class="' . esc_attr( $class ) . '"';
+		$link .= ' href="' . esc_url( $href ) . '"';
+		$link .= ' data-success-url="' . esc_attr( $success_url ) . '">';
+		$link .= __( 'Authorize with Groundhogg', 'wp-fusion-lite' );
+		$link .= '</a>';
+
+		$new_settings['groundhogg_rest_url']['desc'] .= '<br /><br />' . $link;
 		$new_settings['groundhogg_rest_url']['desc'] .= '<span class="description">' . __( 'You can click the Authorize button to be taken to the Groundhogg site and generate an application password automatically, or enter your application credentials manually below.', 'wp-fusion-lite' ) . '</span>';
 
 		$new_settings['groundhogg_rest_username'] = array(
@@ -293,7 +320,7 @@ class WPF_Groundhogg_REST_Admin {
 	 */
 	public function add_default_fields( $options ) {
 
-		if ( true == $options['connection_configured'] ) {
+		if ( ! empty( $options['connection_configured'] ) ) {
 
 			$standard_fields = $this->get_default_fields();
 
@@ -320,6 +347,9 @@ class WPF_Groundhogg_REST_Admin {
 	 * @return array The settings.
 	 */
 	public function register_settings( $settings, $options ) {
+
+		// The settings hook passes $options. This screen does not read it.
+		unset( $options );
 
 		$new_settings = array(
 			'gh_default_status' => array(
@@ -354,10 +384,24 @@ class WPF_Groundhogg_REST_Admin {
 	 */
 	public function show_field_groundhogg_rest_header_begin( $id, $field ) {
 
+		// The show_field hook requires the field ID and config.
+		unset( $id, $field );
+
 		echo '</table>';
 		$crm = wpf_get_option( 'crm' );
 
-		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm == false || $crm != $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
+		if ( empty( $crm ) || $this->slug !== $crm ) {
+			$config_class = 'hidden';
+		} else {
+			$config_class = 'crm-active';
+		}
+
+		printf(
+			'<div id="%1$s" class="crm-config %2$s" data-name="%3$s" data-crm="%1$s">',
+			esc_attr( $this->slug ),
+			esc_attr( $config_class ),
+			esc_attr( $this->name )
+		);
 	}
 
 
@@ -372,9 +416,9 @@ class WPF_Groundhogg_REST_Admin {
 
 		check_ajax_referer( 'wpf_settings_nonce' );
 
-		$url      = esc_url_raw( wp_unslash( $_POST['groundhogg_rest_url'] ) );
-		$username = sanitize_text_field( wp_unslash( $_POST['groundhogg_rest_username'] ) );
-		$password = sanitize_text_field( wp_unslash( $_POST['groundhogg_rest_password'] ) );
+		$url      = isset( $_POST['groundhogg_rest_url'] ) ? esc_url_raw( wp_unslash( $_POST['groundhogg_rest_url'] ) ) : '';
+		$username = isset( $_POST['groundhogg_rest_username'] ) ? sanitize_text_field( wp_unslash( $_POST['groundhogg_rest_username'] ) ) : '';
+		$password = isset( $_POST['groundhogg_rest_password'] ) ? sanitize_text_field( wp_unslash( $_POST['groundhogg_rest_password'] ) ) : '';
 
 		$connection = $this->crm->connect( $url, $username, $password, true );
 

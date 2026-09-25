@@ -3,7 +3,7 @@
  * Plugin Name: WP Fusion Lite
  * Description: WP Fusion Lite synchronizes your WordPress users with your CRM or marketing automation system.
  * Plugin URI: https://wpfusion.com/
- * Version: 3.47.14
+ * Version: 3.48.0
  * Author: Very Good Plugins
  * Author URI: https://verygoodplugins.com/
  * Text Domain: wp-fusion-lite
@@ -32,7 +32,7 @@
  * **********************************************************************
  */
 
-define( 'WP_FUSION_VERSION', '3.47.14' );
+define( 'WP_FUSION_VERSION', '3.48.0' );
 
 // deny direct access.
 if ( ! function_exists( 'add_action' ) ) {
@@ -573,6 +573,7 @@ final class WP_Fusion_Lite {
 				'miniorange-jwt-login'          => 'MoJWT\Base\BaseStructure',
 				'suredash'                      => 'SureDashboard\Portals_Loader',
 				'document-library-pro'          => 'Barn2\Plugin\Document_Library_Advanced\Plugin',
+				'qsm'                           => 'MLWQuizMasterNext',
 			)
 		);
 	}

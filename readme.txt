@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
-Tested up to: 7.0
-Stable tag: 3.47.14
+Tested up to: 7.1.2
+Stable tag: 3.48.0
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -214,6 +214,14 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.48.0 - 9/23/2026 =
+* Improved - Updated Klaviyo integration to the 2026-07-15 API
+* Improved - FunnelKit Automations now uses the v3 REST API, and falls back to the older unversioned routes on sites that still have them
+* Fixed Keap company sync by looking up or creating the company and linking the contact by ID, since Keap no longer accepts company_name on contact updates
+* Fixed MailerLite deactivating webhooks that took longer than 3 seconds to respond. Webhooks are acknowledged immediately and processed in the background, and async imports still ignore privileged roles sent from the CRM
+* Fixed an unauthenticated change of the FluentCRM REST, FunnelKit Automations, and Groundhogg REST connection. The application-password return could replace the CRM URL, username, and password before WordPress checked for a logged-in user. Saving those credentials now requires an administrator on the WP Fusion settings screen, with a nonce
+* Fixed subscribers listing every user's email from the activity log search, and re-syncing another user's CRM contact, with the admin nonce from their own profile. Log search requires an administrator. Re-sync requires the ability to edit users. The tag and redirect pickers stay available to anyone who can edit content
 
 = 3.47.14 - 7/30/2026 =
 * Improved - Only the active CRM is bootstrapped at load time instead of instantiating every CRM class, and MailPoet's translated name is deferred until init to avoid WordPress 6.7 textdomain notices
@@ -571,23 +579,3 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 
 = 3.44.20 - 12/31/2024 =
 * Fixed "Type to add new" message being appended each time you clicked on the Select Tag(s) dropdown in the WP Fusion settings
-
-= 3.44.19 - 12/17/2024 =
-* Improved - When exporting the activity logs to .csv, any current filters will now be applied to the export
-* Improved - Settings from non-active CRMs will no longer be saved to the database to reduce the size in the options table
-* Improved - When linking to a single entry in the logs, the page will now scroll to the correct entry
-* Improved - Infusionsoft will log a more descriptive error message when a 500 error is returned
-* Fixed fatal errors in the MailerLite integration
-
-= 3.44.18 - 12/10/2024 =
-* Improved - If an invalid attribute is passed to Klaviyo, the request will now be retried without the invalid attribute
-* Fixed: PHP classes and objects stored to usermeta will be excluded from sync to fix errors with sanitization via `stripslashes_deep()`
-
-= 3.44.17 - 12/2/2024 =
-* Added option to apply tags when a user accepts a retention offer, and sync the offer title to the CRM, with the [WooCommerce Cancellation Surveys plugin](https://wpfusion.com/documentation/ecommerce/cancellation-survey-for-woocommerce-subscriptions/)
-* Added support for connecting to Agency HighLevel accounts and switching between locations
-* Improved - Updated language in the taxonomy term settings to better indicate that users must be logged in to access content when the "Restrict access" checkboxes are checked
-
-= 3.44.16 - 11/26/2024 =
-* Added additional validation on phone numbers for Klaviyo to prevent invalid numbers from blocking the API request
-* Fixed HighLevel integration reading tags out of webhooks as a single comma-separated string

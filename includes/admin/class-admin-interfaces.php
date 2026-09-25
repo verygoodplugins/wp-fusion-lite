@@ -188,12 +188,57 @@ class WPF_Admin_Interfaces {
 	}
 
 	/**
+	 * Whether the current user may use WP Fusion admin UI scripts and tag AJAX.
+	 *
+	 * A logged-in nonce is not authorization. Subscribers can open profile.php,
+	 * so the script is limited to administrators, user editors, and anyone who
+	 * can edit posts of a registered post type. That last case keeps editors
+	 * and shop managers (edit_products / edit_shop_orders) on the tag dropdown.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @return bool
+	 */
+	public static function current_user_can_use_admin_ui() {
+
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_users' ) ) {
+			return true;
+		}
+
+		foreach ( get_post_types() as $post_type ) {
+			$post_type_object = get_post_type_object( $post_type );
+
+			if ( ! is_object( $post_type_object ) ) {
+				continue;
+			}
+
+			$edit_posts = $post_type_object->cap->edit_posts;
+
+			if ( ! is_string( $edit_posts ) || '' === $edit_posts ) {
+				continue;
+			}
+
+			// Cap comes from the post type object, for example edit_products.
+			if ( current_user_can( $edit_posts ) ) { // phpcs:ignore WordPress.WP.Capabilities.Undetermined
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Enqueue meta box scripts
 	 *
 	 * @access public
 	 * @return void
 	 */
 	public function admin_scripts() {
+
+		// Do not hand subscribers the admin nonce. The nonce is not a capability.
+		if ( ! self::current_user_can_use_admin_ui() ) {
+			return;
+		}
 
 		wp_enqueue_style( 'select4', WPF_DIR_URL . 'includes/admin/options/lib/select2/select4.min.css', array(), '4.0.1' );
 		wp_enqueue_script( 'select4', WPF_DIR_URL . 'includes/admin/options/lib/select2/select4.min.js', array( 'jquery' ), '4.0.1', true );
@@ -1349,6 +1394,13 @@ class WPF_Admin_Interfaces {
 	 */
 	public function search_available_tags() {
 
+		check_ajax_referer( 'wpf_admin_nonce' );
+
+		// Tag IDs are used for access control. Same gate as the tag dropdown.
+		if ( ! self::current_user_can_use_admin_ui() ) {
+			wp_send_json_error( null, 403 );
+		}
+
 		if ( empty( $_POST['search'] ) ) {
 			wp_die();
 		}
@@ -1384,6 +1436,13 @@ class WPF_Admin_Interfaces {
 	 * @return array The redirect options.
 	 */
 	public function get_redirect_options() {
+
+		check_ajax_referer( 'wpf_admin_nonce' );
+
+		// The redirect picker lives on the meta box, same gate as the tag dropdown.
+		if ( ! self::current_user_can_use_admin_ui() ) {
+			wp_send_json_error( null, 403 );
+		}
 
 		if ( empty( $_REQUEST['search'] ) ) {
 			wp_die();
@@ -1454,6 +1513,11 @@ class WPF_Admin_Interfaces {
 	public function get_log_users() {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
+
+		// The logs screen is manage_options. Results include every user's email.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( null, 403 );
+		}
 
 		if ( empty( $_POST['search'] ) ) {
 			wp_die();

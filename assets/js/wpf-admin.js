@@ -455,6 +455,7 @@ jQuery( document ).ready( function ( $ ) {
 					const query = {
 						search: params.term,
 						action: 'wpf_get_redirect_options',
+						_ajax_nonce: wpf_admin.nonce,
 					};
 
 					return query;

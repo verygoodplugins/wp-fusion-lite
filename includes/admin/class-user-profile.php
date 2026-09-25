@@ -301,6 +301,29 @@ class WPF_User_Profile {
 
 
 	/**
+	 * Whether the current user may resync a user's CRM contact.
+	 *
+	 * Subscribers pass edit_user on their own profile, so edit_users is
+	 * required as well. The edit_user check still blocks resyncing an
+	 * account the actor is not allowed to edit.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param int $user_id Target user ID.
+	 * @return bool
+	 */
+	public static function current_user_can_resync_contact( $user_id ) {
+
+		$user_id = absint( $user_id );
+
+		if ( ! current_user_can( 'edit_users' ) ) {
+			return false;
+		}
+
+		return current_user_can( 'edit_user', $user_id );
+	}
+
+	/**
 	 * Resynchronize local user ID with IS contact record
 	 *
 	 * @access public
@@ -315,6 +338,11 @@ class WPF_User_Profile {
 		}
 
 		$user_id = absint( $_POST['user_id'] );
+
+		// Forbidden requests must not clear the target user's CRM contact ID.
+		if ( ! self::current_user_can_resync_contact( $user_id ) ) {
+			wp_send_json_error( null, 403 );
+		}
 
 		// Force reset contact ID and search for new match.
 		$contact_id = wp_fusion()->user->get_contact_id( $user_id, true );

@@ -775,7 +775,20 @@ class WPF_Batch {
 	 */
 	public function pull_users_meta_step( $user_id, $args = array() ) {
 
-		wp_fusion()->user->pull_user_meta( $user_id );
+		$enable_safe_import_context = ! empty( $args['wpf_webhook_safe_update'] )
+			&& empty( $GLOBALS['wpf_webhook_safe_import'] );
+
+		if ( $enable_safe_import_context ) {
+			$GLOBALS['wpf_webhook_safe_import'] = true;
+		}
+
+		try {
+			wp_fusion()->user->pull_user_meta( $user_id );
+		} finally {
+			if ( $enable_safe_import_context ) {
+				unset( $GLOBALS['wpf_webhook_safe_import'] );
+			}
+		}
 
 		$this->maybe_complete_safe_webhook_update( $user_id, $args, 'batch meta pull' );
 	}

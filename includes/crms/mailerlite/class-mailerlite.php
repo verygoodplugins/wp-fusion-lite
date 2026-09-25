@@ -169,16 +169,22 @@ class WPF_MailerLite {
 	 * @since 3.10.0
 	 * @since 3.40.55 Updated and refactored to support v2 API webhooks.
 	 *
-	 * @param array $post_data The data POSTed to the endpoint.
+	 * @param array       $post_data The data POSTed to the endpoint.
+	 * @param object|null $payload   Optional decoded payload. When omitted, reads php://input.
 	 * @return array|bool The data to import or false if the webhook payload is invalid.
 	 */
-	public function format_post_data( $post_data ) {
+	public function format_post_data( $post_data, $payload = null ) {
 
-		$payload = json_decode( file_get_contents( 'php://input' ) );
+		if ( null === $payload ) {
+			$payload = json_decode( file_get_contents( 'php://input' ) );
+		}
 
 		if ( ! is_object( $payload ) ) {
 			return false;
 		}
+
+		// ACK MailerLite immediately; process the contact in the background.
+		$post_data = $this->maybe_force_async( $post_data );
 
 		$contact_ids = array();
 
@@ -324,6 +330,50 @@ class WPF_MailerLite {
 			return $post_data;
 
 		}
+	}
+
+	/**
+	 * Default MailerLite webhooks to async so MailerLite gets a 200 in under 3s.
+	 *
+	 * MailerLite retries (10s / 100s / 1000s) then deactivates webhooks that take
+	 * longer than 3 seconds. Update (and real Add imports) call load_contact and
+	 * get_tags synchronously, which routinely exceeds that. Queue the work and
+	 * ACK first.
+	 *
+	 * Existing webhook URLs pick this up without re-registration. Opt out via
+	 * &async=false on the webhook URL or the wpf_mailerlite_webhook_async filter.
+	 *
+	 * @since 3.48.0
+	 * @access private
+	 *
+	 * @param array $post_data The webhook post data.
+	 * @return array
+	 */
+	private function maybe_force_async( $post_data ) {
+
+		if ( ! isset( $post_data['async'] ) ) {
+			$post_data['async'] = true;
+		} elseif ( in_array( $post_data['async'], array( 'false', '0', 0, false ), true ) ) {
+			$post_data['async'] = false;
+		} else {
+			$post_data['async'] = (bool) $post_data['async'];
+		}
+
+		/**
+		 * Whether MailerLite webhooks should be processed asynchronously.
+		 *
+		 * @since 3.48.0
+		 *
+		 * @param bool  $async     Whether to process asynchronously.
+		 * @param array $post_data The webhook post data.
+		 */
+		$post_data['async'] = (bool) apply_filters(
+			'wpf_mailerlite_webhook_async',
+			$post_data['async'],
+			$post_data
+		);
+
+		return $post_data;
 	}
 
 	/**

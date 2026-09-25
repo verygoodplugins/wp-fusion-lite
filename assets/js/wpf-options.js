@@ -504,36 +504,39 @@ jQuery( document ).ready( function ( $ ) {
 		} );
 
 		//
-		// Fill URL into link (FluentCRM, Groundhogg)
+		// Fill URL into link (FluentCRM, FunnelKit Automations, Groundhogg).
+		// The success URL already includes the settings-screen nonce.
 		//
 
 		$( 'input.wp-rest-url' ).on( 'input', function ( event ) {
 			const crmContainer = $( this ).closest( '.crm-config' );
-			const crm = crmContainer.attr( 'data-crm' );
+			const button = crmContainer.find( 'a.rest-auth-btn' );
+			const successUrl = button.attr( 'data-success-url' );
 
-			if ( $( this ).val().length && $( this ).val().includes( 'https://' ) ) {
+			if (
+				$( this ).val().length &&
+				$( this ).val().includes( 'https://' ) &&
+				successUrl
+			) {
 				let url = $( this ).val().trim().replace( /\/?$/, '/' );
+				const appName = encodeURIComponent(
+					'WP Fusion - ' + decodeURIComponent( wpf_ajax.sitetitle )
+				);
 
 				url =
 					url +
-					'wp-admin/authorize-application.php?app_name=WP+Fusion+-+' +
-					wpf_ajax.sitetitle +
+					'wp-admin/authorize-application.php?app_name=' +
+					appName +
 					'&success_url=' +
-					wpf_ajax.optionsurl +
-					'%26crm=' +
-					crm;
+					encodeURIComponent( successUrl );
 
-				crmContainer.find( 'a.rest-auth-btn' ).attr( 'href', url );
+				button.attr( 'href', url );
 
-				crmContainer
-					.find( 'a.rest-auth-btn' )
+				button
 					.removeClass( 'button-disabled' )
 					.addClass( 'button-primary' );
 			} else {
-				crmContainer
-					.find( 'a.rest-auth-btn' )
-					.removeClass( 'button-primary' )
-					.addClass( 'button-disabled' );
+				button.removeClass( 'button-primary' ).addClass( 'button-disabled' );
 			}
 		} );
 

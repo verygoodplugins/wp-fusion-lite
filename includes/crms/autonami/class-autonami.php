@@ -60,6 +60,14 @@ class WPF_Autonami {
 	public $url;
 
 	/**
+	 * REST path prefix. 'v3/' on FunnelKit Automations 3.0+, empty on older installs.
+	 *
+	 * @since 3.48.0
+	 * @var string|null
+	 */
+	public $rest_prefix = null;
+
+	/**
 	 * Lets us link directly to editing a contact record.
 	 *
 	 * @since 3.37.14
@@ -145,7 +153,13 @@ class WPF_Autonami {
 
 					if ( 'rest_no_route' == $body->code ) {
 
-						$body->message .= ' <strong>' . __( 'This could mean the FunnelKit Automations Pro plugin isn\'t active.', 'wp-fusion-lite' ) . '</strong>';
+						$retried = $this->maybe_retry_rest_version( $args, $url );
+
+						if ( null !== $retried ) {
+							return $retried;
+						}
+
+						$body->message .= ' <strong>' . __( 'This could mean FunnelKit Automations is not active.', 'wp-fusion-lite' ) . '</strong>';
 						$body->message .= ' ' . __( 'Try again or <a href="http://wpfusion.com/contact">contact support</a>.', 'wp-fusion-lite' ) . ' (URL: ' . $url . ')';
 
 					}
@@ -243,12 +257,18 @@ class WPF_Autonami {
 		if ( $this->same_site ) {
 			$response = BWFCRM_Contact::get_contacts( false, 0, 1 );
 		} else {
-			$request  = $this->url . 'contacts?limit=1';
-			$response = wp_safe_remote_get( $request, $this->params );
+			// Probe v3 first. handle_http_response falls back to unversioned routes.
+			$this->rest_prefix = 'v3/';
+			$request           = $this->get_request_url( 'contacts?limit=1' );
+			$response          = wp_safe_remote_get( $request, $this->params );
 		}
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
+		}
+
+		if ( ! $this->same_site ) {
+			$this->set_rest_prefix( $this->get_rest_prefix() );
 		}
 
 		return true;
@@ -294,6 +314,148 @@ class WPF_Autonami {
 	}
 
 	/**
+	 * Get the REST path prefix for this FunnelKit install.
+	 *
+	 * FunnelKit Automations 3.0+ serves versioned routes under v3/. Older
+	 * installs (and the Pro unversioned fallback) use the unversioned paths.
+	 *
+	 * Stored as autonami_rest_version: 'v3' or 'legacy'. Empty string cannot
+	 * be saved via wpf_get_option() because empty values return the default.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @return string 'v3/' or an empty string.
+	 */
+	public function get_rest_prefix() {
+
+		if ( null !== $this->rest_prefix ) {
+			return $this->rest_prefix;
+		}
+
+		$saved = wpf_get_option( 'autonami_rest_version' );
+
+		$this->rest_prefix = ( 'legacy' === $saved ) ? '' : 'v3/';
+
+		return $this->rest_prefix;
+	}
+
+	/**
+	 * Persist the working REST path prefix.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param string $prefix 'v3/' or an empty string.
+	 */
+	public function set_rest_prefix( $prefix ) {
+
+		$this->rest_prefix = $prefix;
+
+		wp_fusion()->settings->set(
+			'autonami_rest_version',
+			( 'v3/' === $prefix ) ? 'v3' : 'legacy'
+		);
+	}
+
+	/**
+	 * Build a FunnelKit REST URL using the detected API version.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param string $path Endpoint path, including query string.
+	 * @return string
+	 */
+	public function get_request_url( $path = '' ) {
+
+		return $this->url . $this->get_rest_prefix() . ltrim( $path, '/' );
+	}
+
+	/**
+	 * Swap a REST URL between v3 and unversioned paths.
+	 *
+	 * @since 3.48.0
+	 * @access private
+	 *
+	 * @param string $url The request URL.
+	 * @return string Alternate URL, or empty if none.
+	 */
+	private function get_alternate_rest_url( $url ) {
+
+		if ( false !== strpos( $url, '/autonami-app/v3/' ) ) {
+			return str_replace( '/autonami-app/v3/', '/autonami-app/', $url );
+		}
+
+		if ( false !== strpos( $url, '/autonami-app/' ) ) {
+			return str_replace( '/autonami-app/', '/autonami-app/v3/', $url );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Get the REST prefix encoded in a request URL.
+	 *
+	 * @since 3.48.0
+	 * @access private
+	 *
+	 * @param string $url The request URL.
+	 * @return string 'v3/' or an empty string.
+	 */
+	private function get_rest_prefix_from_url( $url ) {
+
+		if ( false !== strpos( $url, '/autonami-app/v3/' ) ) {
+			return 'v3/';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Retry a rest_no_route response against the other API version.
+	 *
+	 * @since 3.48.0
+	 * @access private
+	 *
+	 * @param array  $args The HTTP request arguments.
+	 * @param string $url  The original request URL.
+	 * @return mixed|null The retry response on success, or null to keep the error.
+	 */
+	private function maybe_retry_rest_version( $args, $url ) {
+
+		if ( ! empty( $args['wpf_autonami_rest_retry'] ) ) {
+			return null;
+		}
+
+		$alternate = $this->get_alternate_rest_url( $url );
+
+		if ( empty( $alternate ) ) {
+			return null;
+		}
+
+		$args['wpf_autonami_rest_retry'] = true;
+
+		$retried = wp_remote_request( $alternate, $args );
+
+		if ( is_wp_error( $retried ) ) {
+			return $retried;
+		}
+
+		if ( wp_remote_retrieve_response_code( $retried ) > 204 ) {
+			return null;
+		}
+
+		$this->set_rest_prefix( $this->get_rest_prefix_from_url( $alternate ) );
+
+		wpf_log(
+			'notice',
+			0,
+			'FunnelKit REST route not found. Retried with the alternate API version.',
+			array( 'source' => 'autonami' )
+		);
+
+		return $retried;
+	}
+
+	/**
 	 * Gets all available tags and saves them to options.
 	 *
 	 * @return array|WP_Error Either the available tags in the CRM, or a WP_Error.
@@ -310,7 +472,7 @@ class WPF_Autonami {
 			if ( $this->same_site ) {
 				$results = BWFCRM_Tag::get_tags( array(), false, $offset, $limit );
 			} else {
-				$request  = $this->url . 'tags?limit=' . $limit . '&offset=' . $offset;
+				$request  = $this->get_request_url( 'tags?limit=' . $limit . '&offset=' . $offset );
 				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
@@ -352,15 +514,15 @@ class WPF_Autonami {
 	public function sync_lists() {
 
 		$available_lists = array();
-		$continue       = true;
-		$limit          = 100;
-		$offset         = 0;
+		$continue        = true;
+		$limit           = 100;
+		$offset          = 0;
 
 		while ( $continue ) {
 			if ( $this->same_site ) {
 				$results = BWFCRM_Lists::get_lists( array(), false, $offset, $limit );
 			} else {
-				$request  = $this->url . 'lists?limit=' . $limit . '&offset=' . $offset;
+				$request  = $this->get_request_url( 'lists?limit=' . $limit . '&offset=' . $offset );
 				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
@@ -416,7 +578,7 @@ class WPF_Autonami {
 			$results['fields']       = BWFCRM_Fields::get_groups_with_fields( false, true, true );
 			$results['extra_fields'] = BWFCRM_Fields::get_address_fields_from_db();
 		} else {
-			$request  = $this->url . 'groupfields';
+			$request  = $this->get_request_url( 'groupfields' );
 			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
@@ -486,7 +648,7 @@ class WPF_Autonami {
 			}
 			$results = $contact->get_array( false, true, true, true, true );
 		} else {
-			$request  = $this->url . 'contacts?search=' . urlencode( $email_address );
+			$request  = $this->get_request_url( 'contacts?search=' . urlencode( $email_address ) );
 			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
@@ -527,7 +689,7 @@ class WPF_Autonami {
 
 			$results = $contact->get_array( false, true, true, true, true );
 		} else {
-			$request  = $this->url . 'contacts/' . $contact_id;
+			$request  = $this->get_request_url( 'contacts/' . $contact_id );
 			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
@@ -588,7 +750,7 @@ class WPF_Autonami {
 			$params         = $this->get_params();
 			$params['body'] = wp_json_encode( $body );
 
-			$request  = $this->url . 'contacts/' . $contact_id . '/tags';
+			$request  = $this->get_request_url( 'contacts/' . $contact_id . '/tags' );
 			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
@@ -636,7 +798,7 @@ class WPF_Autonami {
 			$params['method'] = 'DELETE';
 			$params['body']   = wp_json_encode( $body );
 
-			$request  = $this->url . 'contacts/' . $contact_id . '/tags';
+			$request  = $this->get_request_url( 'contacts/' . $contact_id . '/tags' );
 			$response = wp_remote_request( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
@@ -688,7 +850,7 @@ class WPF_Autonami {
 			$params         = $this->get_params();
 			$params['body'] = wp_json_encode( $contact_data );
 
-			$request  = $this->url . 'contacts';
+			$request  = $this->get_request_url( 'contacts' );
 			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
@@ -737,7 +899,7 @@ class WPF_Autonami {
 			$params         = $this->get_params();
 			$params['body'] = wp_json_encode( $contact_data );
 
-			$request  = $this->url . 'contacts/' . $contact_id . '/fields';
+			$request  = $this->get_request_url( 'contacts/' . $contact_id . '/fields' );
 			$response = wp_remote_post( $request, $params );
 
 			if ( is_wp_error( $response ) ) {
@@ -768,7 +930,7 @@ class WPF_Autonami {
 
 			$results = $contact->get_array( false, true, true, true, true );
 		} else {
-			$request  = $this->url . 'contacts/' . $contact_id;
+			$request  = $this->get_request_url( 'contacts/' . $contact_id );
 			$response = wp_remote_get( $request, $this->get_params() );
 
 			if ( is_wp_error( $response ) ) {
@@ -779,7 +941,7 @@ class WPF_Autonami {
 		}
 
 		$user_meta      = array();
-		$contact_fields = wpf_get_option( 'contact_fields' );
+		$contact_fields = wpf_get_option( 'contact_fields', array() );
 
 		foreach ( $contact_fields as $field_id => $field_data ) {
 
@@ -823,7 +985,7 @@ class WPF_Autonami {
 				$results = BWFCRM_Tag::get_tags( array(), $tag, 0, 1 );
 
 			} else {
-				$request  = $this->url . 'tags?search=' . $tag . '&limit=1';
+				$request  = $this->get_request_url( 'tags?search=' . $tag . '&limit=1' );
 				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {
@@ -861,7 +1023,7 @@ class WPF_Autonami {
 
 				$results = isset( $results['contacts'] ) ? $results['contacts'] : array();
 			} else {
-				$request  = $this->url . 'contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset;
+				$request  = $this->get_request_url( 'contacts?limit=' . $limit . '&filters[tags_any][0]=' . $tag_id . '&offset=' . $offset );
 				$response = wp_remote_get( $request, $this->get_params() );
 
 				if ( is_wp_error( $response ) ) {

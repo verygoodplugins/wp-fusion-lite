@@ -64,6 +64,14 @@ class WPF_Infusionsoft_iSDK {
 	private $error;
 
 	/**
+	 * Request-level cache of resolved company IDs by lowercase name.
+	 *
+	 * @since 3.48.0
+	 * @var array
+	 */
+	private $company_id_cache = array();
+
+	/**
 	 * Lets us link directly to editing a contact record.
 	 *
 	 * @since 3.36.10
@@ -1311,6 +1319,190 @@ class WPF_Infusionsoft_iSDK {
 
 
 	/**
+	 * Resolve company name/ID into a contact company relationship by ID.
+	 *
+	 * Keap no longer accepts company_name on the contact payload. When only a
+	 * company name is supplied, look up or create the company record first,
+	 * then attach the contact using company.id only.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param array $data Formatted contact data.
+	 * @return array Contact data with company resolved or omitted.
+	 */
+	public function resolve_company_relationship( $data ) {
+
+		if ( empty( $data['company'] ) || ! is_array( $data['company'] ) ) {
+			return $data;
+		}
+
+		$company = $data['company'];
+
+		// Prefer an explicit CompanyID mapping when present.
+		if ( ! empty( $company['id'] ) ) {
+			$data['company'] = array(
+				'id' => (string) $company['id'],
+			);
+			return $data;
+		}
+
+		$company_name = '';
+
+		if ( ! empty( $company['company_name'] ) ) {
+			$company_name = html_entity_decode(
+				trim( (string) $company['company_name'] ),
+				ENT_QUOTES | ENT_HTML5,
+				'UTF-8'
+			);
+		}
+
+		if ( '' === $company_name ) {
+			unset( $data['company'] );
+			return $data;
+		}
+
+		$company_id = $this->get_or_create_company_id( $company_name );
+
+		if ( is_wp_error( $company_id ) || empty( $company_id ) ) {
+			$message = is_wp_error( $company_id )
+				? $company_id->get_error_message()
+				: __( 'Unknown company resolution error.', 'wp-fusion-lite' );
+
+			wpf_log(
+				'warning',
+				wpf_get_current_user_id(),
+				sprintf(
+					/* translators: 1: company name, 2: error message */
+					__( 'Unable to link company "%1$s" on contact. Continuing without company. %2$s', 'wp-fusion-lite' ),
+					$company_name,
+					$message
+				),
+				array( 'source' => $this->slug )
+			);
+
+			unset( $data['company'] );
+			return $data;
+		}
+
+		$data['company'] = array(
+			'id' => (string) $company_id,
+		);
+
+		return $data;
+	}
+
+	/**
+	 * Get an existing company ID by name, or create the company.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param string $company_name Company name.
+	 * @return string|WP_Error Company ID or error.
+	 */
+	public function get_or_create_company_id( $company_name ) {
+
+		$cache_key = strtolower( $company_name );
+
+		if ( isset( $this->company_id_cache[ $cache_key ] ) ) {
+			return $this->company_id_cache[ $cache_key ];
+		}
+
+		$company_id = $this->get_company_id_by_name( $company_name );
+
+		if ( is_wp_error( $company_id ) ) {
+			return $company_id;
+		}
+
+		if ( ! empty( $company_id ) ) {
+			$this->company_id_cache[ $cache_key ] = (string) $company_id;
+			return $this->company_id_cache[ $cache_key ];
+		}
+
+		$company_id = $this->create_company( $company_name );
+
+		if ( is_wp_error( $company_id ) ) {
+
+			// Keap rejects duplicate company names; look up again and reuse.
+			$existing_id = $this->get_company_id_by_name( $company_name );
+
+			if ( ! is_wp_error( $existing_id ) && ! empty( $existing_id ) ) {
+				$this->company_id_cache[ $cache_key ] = (string) $existing_id;
+				return $this->company_id_cache[ $cache_key ];
+			}
+
+			return $company_id;
+		}
+
+		$this->company_id_cache[ $cache_key ] = (string) $company_id;
+
+		return $this->company_id_cache[ $cache_key ];
+	}
+
+	/**
+	 * Look up a company ID by exact company name.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param string $company_name Company name.
+	 * @return string|false|WP_Error Company ID, false if not found, or error.
+	 */
+	public function get_company_id_by_name( $company_name ) {
+
+		$query_args = array(
+			'filter' => 'company_name' . rawurlencode( '==' . $company_name ),
+		);
+
+		$query_args = apply_filters( 'wpf_infusionsoft_query_args', $query_args, 'get_company_id_by_name', $company_name );
+
+		$request  = add_query_arg( $query_args, $this->url . 'companies' );
+		$response = wp_remote_get( $request, $this->get_params() );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $body->companies ) ) {
+			return false;
+		}
+
+		return (string) $body->companies[0]->id;
+	}
+
+	/**
+	 * Create a company record by name.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @param string $company_name Company name.
+	 * @return string|WP_Error Company ID or error.
+	 */
+	public function create_company( $company_name ) {
+
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode(
+			array(
+				'company_name' => $company_name,
+			)
+		);
+
+		$response = wp_remote_post( $this->url . 'companies', $params );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ) );
+
+		if ( empty( $body->id ) ) {
+			return new WP_Error( 'error', __( 'Company was created but no ID was returned.', 'wp-fusion-lite' ) );
+		}
+
+		return (string) $body->id;
+	}
+
+	/**
 	 * Adds a new contact
 	 *
 	 * @since 1.0.0
@@ -1322,6 +1514,7 @@ class WPF_Infusionsoft_iSDK {
 	public function add_contact( $data ) {
 
 		$data = $this->format_contact_data( $data );
+		$data = $this->resolve_company_relationship( $data );
 
 		if ( isset( $data['OptinStatus'] ) ) {
 			// This isn't a real field and can't be synced.
@@ -1356,6 +1549,7 @@ class WPF_Infusionsoft_iSDK {
 	public function update_contact( $contact_id, $data ) {
 
 		$data = $this->format_contact_data( $data );
+		$data = $this->resolve_company_relationship( $data );
 
 		if ( isset( $data['OptinStatus'] ) ) {
 			// This isn't a real field and can't be synced.

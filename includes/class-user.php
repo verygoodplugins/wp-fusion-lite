@@ -1908,25 +1908,25 @@ class WPF_User {
 
 		}
 
-		// We're using $wpdb here rather then WP_User_Query to get around some
-		// performance issues resulting from using JOINs on large usermeta tables.
+		// Use $wpdb rather than WP_User_Query to avoid expensive JOINs on
+		// large usermeta tables. Join wp_users so auto-login sessions
+		// (temporary IDs in usermeta that are not real users) are skipped.
+		// Do not cap user_id: some sites have real users above 100 million.
 
 		global $wpdb;
 
-		$query = $wpdb->prepare(
-			"SELECT user_id
-				FROM {$wpdb->usermeta}
-				WHERE meta_key = %s
-				AND meta_value = %s
-				AND user_id < 100000000
-				ORDER BY user_id ASC",
-			WPF_CONTACT_ID_META_KEY,
-			$contact_id
+		$user_id = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT um.user_id
+					FROM {$wpdb->usermeta} um
+					INNER JOIN {$wpdb->users} u ON u.ID = um.user_id
+					WHERE um.meta_key = %s
+					AND um.meta_value = %s
+					ORDER BY um.user_id ASC",
+				WPF_CONTACT_ID_META_KEY,
+				$contact_id
+			)
 		);
-
-		// ^ If the user ID is greater than 100 million, it's an auto-login user ID, not a real user.
-
-		$user_id = $wpdb->get_var( $query );
 
 		if ( is_null( $user_id ) ) {
 			$user_id = false;

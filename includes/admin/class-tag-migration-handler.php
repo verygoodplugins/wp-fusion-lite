@@ -101,6 +101,7 @@ class WPF_Admin_Tag_Migration {
 				'apply_tags_refunded',
 				'tag_link',
 				'remove_tags',
+				'apply_tags_corporate_expired',
 			),
 			'wpf-settings-edd'          => array(
 				'apply_tags',
@@ -111,6 +112,10 @@ class WPF_Admin_Tag_Migration {
 			),
 			'wpf-settings-um'           => array(
 				'apply_tags',
+			),
+			'wpf-settings-qsm'          => array(
+				'apply_tags_passed',
+				'apply_tags_failed',
 			),
 			'wpf_settings_llms_voucher' => array(
 				'apply_tags_voucher',

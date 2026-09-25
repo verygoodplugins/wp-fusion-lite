@@ -829,6 +829,49 @@ class WPF_Settings {
 	}
 
 	/**
+	 * Whether the current user may run tag and field admin AJAX.
+	 *
+	 * Editors and shop managers call these from the tag dropdown, so this is
+	 * not limited to manage_options. Uses the shared admin UI rule when that
+	 * class is loaded, and repeats it when the CRM is not connected yet.
+	 *
+	 * @since 3.48.0
+	 *
+	 * @return bool
+	 */
+	private function current_user_can_use_admin_ui() {
+
+		if ( class_exists( 'WPF_Admin_Interfaces' ) ) {
+			return WPF_Admin_Interfaces::current_user_can_use_admin_ui();
+		}
+
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_users' ) ) {
+			return true;
+		}
+
+		foreach ( get_post_types() as $post_type ) {
+			$post_type_object = get_post_type_object( $post_type );
+
+			if ( ! is_object( $post_type_object ) ) {
+				continue;
+			}
+
+			$edit_posts = $post_type_object->cap->edit_posts;
+
+			if ( ! is_string( $edit_posts ) || '' === $edit_posts ) {
+				continue;
+			}
+
+			// Cap comes from the post type object, for example edit_products.
+			if ( current_user_can( $edit_posts ) ) { // phpcs:ignore WordPress.WP.Capabilities.Undetermined
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Add a new tag via AJAX.
 	 *
 	 * @since 3.38.40
@@ -836,6 +879,10 @@ class WPF_Settings {
 	public function add_tag() {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
+
+		if ( ! $this->current_user_can_use_admin_ui() ) {
+			wp_send_json_error( null, 403 );
+		}
 
 		if ( empty( $_POST['tag'] ) || empty( $_POST['tag']['id'] ) ) {
 			wp_send_json_error( new WP_Error( 'error', __( 'Tag name is empty!.', 'wp-fusion-lite' ) ) );
@@ -867,6 +914,11 @@ class WPF_Settings {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
 
+		// Shared with the post editor tag dropdown, not only the settings screen.
+		if ( ! $this->current_user_can_use_admin_ui() ) {
+			wp_send_json_error( null, 403 );
+		}
+
 		$available_tags = wpf_get_option( 'available_tags' );
 		$new_tags       = wp_fusion()->crm->sync_tags();
 
@@ -890,6 +942,10 @@ class WPF_Settings {
 	public function sync_custom_fields() {
 
 		check_ajax_referer( 'wpf_admin_nonce' );
+
+		if ( ! $this->current_user_can_use_admin_ui() ) {
+			wp_send_json_error( null, 403 );
+		}
 
 		$crm_fields = wpf_get_option( 'crm_fields' );
 		$new_fields = wp_fusion()->crm->sync_crm_fields();
