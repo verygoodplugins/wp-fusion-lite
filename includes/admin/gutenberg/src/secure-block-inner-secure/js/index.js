@@ -10,28 +10,26 @@ const Edit = ( { clientId } ) => {
 	const [ selectedTags, setSelectedTags ] = useState( [] );
 	const blockProps = useBlockProps();
 
-	const parentBlock = useSelect(
+	const tag = useSelect(
 		( select ) => {
-			const { getBlockParents, getBlock } = select( 'core/block-editor' );
-			const parentIds = getBlockParents( clientId );
-			const parent = parentIds.filter(
-				( id ) => getBlock( id ).name === 'wp-fusion/secure-block'
+			const { getBlockRootClientId, getBlockAttributes } = select(
+				'core/block-editor'
 			);
-
-			return parent.length ? getBlock( parent[ 0 ] ) : null;
+			const parentId = getBlockRootClientId( clientId );
+			if ( ! parentId ) {
+				return null;
+			}
+			const parentAttributes = getBlockAttributes( parentId );
+			return parentAttributes ? parentAttributes.tag : null;
 		},
 		[ clientId ]
 	);
-	const parentAttributes = parentBlock ? parentBlock.attributes : {};
 
 	const { className } = blockProps;
-	const { tag } = parentAttributes;
 
 	useEffect( () => {
-		if ( tag ) {
-			setSelectedTags( JSON.parse( tag ) );
-		}
-	}, [ tag, setSelectedTags ] );
+		setSelectedTags( tag ? JSON.parse( tag ) : [] );
+	}, [ tag ] );
 
 	return (
 		<div { ...blockProps }>

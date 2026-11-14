@@ -1011,6 +1011,24 @@ class WPF_Log_Handler {
 	}
 
 	/**
+	 * Formats a stored log message for CSV export.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param string $message Stored log message.
+	 * @return string Plain-text message.
+	 */
+	public static function format_export_message( $message ) {
+
+		$message = htmlspecialchars_decode( (string) $message );
+		$message = apply_filters( 'wpf_log_display_message', $message );
+
+		// The display filter escapes the order number for HTML. Decode again
+		// after the tags are gone so the CSV shows the number itself.
+		return htmlspecialchars_decode( wp_strip_all_tags( $message ) );
+	}
+
+	/**
 	 * Export all db data to csv file.
 	 *
 	 * @since 3.38.23
@@ -1061,6 +1079,8 @@ class WPF_Log_Handler {
 		$results = $wpdb->get_results( $wpdb->prepare( $query, $where_values ) );
 
 		if ( ! empty( $results ) ) {
+			do_action( 'wpf_log_items_loaded', $results );
+
 			$filename = 'wp-fusion-activity-logs-' . gmdate( 'Y-m-d' ) . '.csv';
 
 			header( 'Pragma: public' );
@@ -1083,7 +1103,7 @@ class WPF_Log_Handler {
 					self::get_severity_level( $result->level ),
 					$result->user,
 					print_r( maybe_unserialize( $result->source ), true ),
-					wp_strip_all_tags( htmlspecialchars_decode( $result->message ) ),
+					self::format_export_message( $result->message ),
 					print_r( maybe_unserialize( $result->context ), true ),
 				);
 

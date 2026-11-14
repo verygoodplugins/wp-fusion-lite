@@ -261,6 +261,7 @@ class WPF_Settings {
 	 *
 	 * @param string $key    The settings key.
 	 * @param mixed  $value  The settings value.
+	 * @return bool|mixed False when the save is refused, otherwise the update_option() result.
 	 */
 	public function set( $key, $value ) {
 
@@ -269,23 +270,83 @@ class WPF_Settings {
 		// Sanitize.
 		$value = wpf_clean( $value );
 
-		$this->options[ $key ] = $value;
-		$options_to_save       = $this->options;
-
 		// Special fields get saved to their own keys to reduce memory usage.
 
 		if ( 'available_tags' === $key ) {
+			$this->options[ $key ] = $value;
 			return update_option( 'wpf_available_tags', $value, false );
 		} elseif ( 'crm_fields' === $key ) {
+			$this->options[ $key ] = $value;
 			return update_option( 'wpf_crm_fields', $value, false );
 		}
 
 		if ( ! empty( $GLOBALS['_wp_switched_stack'] ) && ! is_multisite() ) {
 			// Don't save the main settings if we've switched to another blog.
 			// This fixes the settings getting overwritten.
+			$this->options[ $key ] = $value;
 			wpf_log( 'notice', wpf_get_current_user_id(), "WP Fusion tried to save the settings key <strong>{$key}</strong> while switched to another blog. This is not allowed and the setting was not saved." );
 			return false;
 		}
+
+		// A failed get_option() leaves memory empty. Saving that would replace
+		// the stored configuration with this one key.
+		if ( ! $this->has_main_options() ) {
+
+			$stored = $this->get_stored_options_from_db();
+
+			if ( false === $stored ) {
+
+				wpf_log(
+					'error',
+					wpf_get_current_user_id(),
+					sprintf(
+						/* translators: %s: settings key that was not saved. */
+						__( 'Could not read stored settings, so %s was not saved.', 'wp-fusion-lite' ),
+						'<strong>' . esc_html( $key ) . '</strong>'
+					)
+				);
+
+				return false;
+			}
+
+			// A row was found. Drop the negative cache even when that row is an
+			// empty array, or update_option() treats it as missing.
+			if ( is_array( $stored ) ) {
+				$notoptions = wp_cache_get( 'notoptions', 'options' );
+
+				if ( is_array( $notoptions ) && isset( $notoptions['wpf_options'] ) ) {
+					unset( $notoptions['wpf_options'] );
+					wp_cache_set( 'notoptions', $notoptions, 'options' );
+				}
+			}
+
+			if ( ! empty( $stored ) ) {
+
+				if ( ! is_array( $this->options ) ) {
+					$this->options = array();
+				}
+
+				// Keep tags loaded in memory, fill in the stored settings, then apply the new value.
+				$this->options = array_merge( $this->options, $stored );
+
+				wpf_log(
+					'notice',
+					wpf_get_current_user_id(),
+					sprintf(
+						/* translators: %s: settings key being saved. */
+						__( 'Reloaded stored settings before saving %s.', 'wp-fusion-lite' ),
+						'<strong>' . esc_html( $key ) . '</strong>'
+					)
+				);
+			}
+		}
+
+		if ( ! is_array( $this->options ) ) {
+			$this->options = array();
+		}
+
+		$this->options[ $key ] = $value;
+		$options_to_save       = $this->options;
 
 		if ( 'contact_fields' === $key && wp_fusion()->crm ) {
 			// Copy it over to the CRM as well (this is a little sloppy).
@@ -302,6 +363,65 @@ class WPF_Settings {
 		}
 
 		return update_option( 'wpf_options', $options_to_save );
+	}
+
+	/**
+	 * Whether the in-memory settings include the main configuration.
+	 *
+	 * @since 3.48.1
+	 *
+	 * @return bool
+	 */
+	private function has_main_options() {
+
+		if ( empty( $this->options ) || ! is_array( $this->options ) ) {
+			return false;
+		}
+
+		$main = $this->options;
+		unset( $main['available_tags'], $main['crm_fields'] );
+
+		return ! empty( $main );
+	}
+
+	/**
+	 * Read wpf_options directly from the database, bypassing the options cache.
+	 *
+	 * @since 3.48.1
+	 *
+	 * @return array|false|null Stored settings when the row exists, null when
+	 *                          it does not, or false when the read fails.
+	 */
+	private function get_stored_options_from_db() {
+
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.NoCaching
+		$raw = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
+				'wpf_options'
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		if ( ! empty( $wpdb->last_error ) ) {
+			return false;
+		}
+
+		if ( null === $raw ) {
+			return null;
+		}
+
+		$stored = maybe_unserialize( $raw );
+
+		if ( ! is_array( $stored ) ) {
+			return array();
+		}
+
+		return $stored;
 	}
 
 	/**
@@ -1684,6 +1804,7 @@ class WPF_Settings {
 				'return_after_login_priority',
 				'default_not_logged_in_redirect',
 				'default_redirect',
+				'default_redirect_404',
 				'restricted_message',
 				'per_post_messages',
 				'site_lockout_header',
@@ -1763,6 +1884,13 @@ class WPF_Settings {
 			'title'   => __( 'Default Generic Redirect', 'wp-fusion-lite' ),
 			'desc'    => __( 'Default redirect URL for when access is denied to a piece of content. This can be overridden on a per-page basis. Leave blank to display error message below.', 'wp-fusion-lite' ),
 			'type'    => 'text',
+			'section' => 'main',
+		);
+
+		$settings['default_redirect_404'] = array(
+			'title'   => __( 'Default to 404 Not Found', 'wp-fusion-lite' ),
+			'desc'    => __( 'When access is denied and no redirect is set on the content, return a 404 Not Found page instead of the Default Generic Redirect. Visitors without access won\'t be able to tell the content exists.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
 			'section' => 'main',
 		);
 

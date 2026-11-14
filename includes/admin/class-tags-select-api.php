@@ -73,7 +73,7 @@ if ( ! class_exists( 'WPF_Tags_Select_API' ) ) {
 
 			if ( ! empty( $grouped_tags ) ) {
 				foreach ( $grouped_tags as $label => $group ) {
-					if ( str_contains( strtolower( $label ), '(read only)' ) ) {
+					if ( false !== strpos( strtolower( $label ), '(read only)' ) ) {
 						foreach ( $group as $key => $option ) {
 							$group[ $key ]['label'] = $option['label'] . ' (Read Only)';
 						}

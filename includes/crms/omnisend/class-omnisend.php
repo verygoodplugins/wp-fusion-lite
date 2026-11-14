@@ -32,13 +32,44 @@ class WPF_Omnisend {
 	public $slug = 'omnisend';
 
 	/**
+	 * Omnisend API version sent in the Omnisend-Version header.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 */
+	const API_VERSION = '2026-03-15';
+
+	/**
+	 * Base URL for the current Omnisend API.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 */
+	const API_URL = 'https://api.omnisend.com/api/';
+
+	/**
+	 * Base URL for the deprecated Omnisend v3 API.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 */
+	const LEGACY_API_URL = 'https://api.omnisend.com/v3/';
+
+	/**
+	 * Maximum number of tags per request to the contact tags endpoints.
+	 *
+	 * @since 3.48.2
+	 * @var int
+	 */
+	const TAGS_PER_REQUEST = 100;
+
+	/**
 	 * Contains API url
 	 *
 	 * @var string
 	 * @since 3.42.8
 	 */
-
-	public $url = 'https://api.omnisend.com/v3/';
+	public $url = self::API_URL;
 
 	/**
 	 * API Key.
@@ -106,6 +137,11 @@ class WPF_Omnisend {
 	 */
 	public function init() {
 
+		if ( $this->is_legacy_api() ) {
+			$this->url    = self::LEGACY_API_URL;
+			$this->params = array();
+		}
+
 		add_filter( 'wpf_format_field_value', array( $this, 'format_field_value' ), 10, 3 );
 		add_filter( 'wpf_crm_post_data', array( $this, 'format_post_data' ) );
 
@@ -115,6 +151,28 @@ class WPF_Omnisend {
 		// Guest site tracking.
 		add_action( 'wpf_guest_contact_created', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
 		add_action( 'wpf_guest_contact_updated', array( $this, 'set_tracking_cookie_guest' ), 10, 2 );
+	}
+
+	/**
+	 * Whether to use the deprecated Omnisend v3 API.
+	 *
+	 * Temporary fallback for sites that run into problems with the
+	 * v2026-03-15 API. Omnisend shuts off v3 on December 31, 2027.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @return bool Whether the legacy v3 API is in use.
+	 */
+	public function is_legacy_api() {
+
+		/**
+		 * Filters whether WP Fusion uses the legacy Omnisend v3 API.
+		 *
+		 * @since 3.48.2
+		 *
+		 * @param bool $use_legacy_api Whether to use the v3 API.
+		 */
+		return (bool) apply_filters( 'wpf_omnisend_use_legacy_api', (bool) wpf_get_option( 'omnisend_legacy_api' ) );
 	}
 
 	/**
@@ -219,68 +277,198 @@ class WPF_Omnisend {
 	 * Gets params for API calls.
 	 *
 	 * @since  3.42.8
+	 * @since  3.48.2 Sends the v2026-03-15 auth and version headers unless the legacy API is in use.
 	 *
+	 * @param  string $api_key The API key. Defaults to the saved key.
 	 * @return array  $params The API parameters.
 	 */
 	public function get_params( $api_key = null ) {
 
-		// Get saved data from DB.
+		// A key passed in (connection test) always rebuilds the params.
+		if ( $this->params && empty( $api_key ) ) {
+			return $this->params;
+		}
+
 		if ( empty( $api_key ) ) {
 			$api_key = wpf_get_option( 'omnisend_api_key' );
 		}
 
-		// If it's already been set up.
-		if ( $this->params ) {
-			return $this->params;
+		if ( $this->is_legacy_api() ) {
+			$auth_headers = array(
+				'X-API-KEY' => $api_key,
+			);
+		} else {
+			$auth_headers = array(
+				'Authorization'    => 'Omnisend-API-Key ' . $api_key,
+				'Omnisend-Version' => self::API_VERSION,
+			);
 		}
 
-		$params = array(
+		$this->params = array(
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'timeout'    => 15,
-			'headers'    => array(
-				'Content-Type' => 'application/json',
-				'accept'       => 'application/json',
-				'X-API-KEY'    => $api_key,
+			'headers'    => array_merge(
+				array(
+					'Content-Type' => 'application/json',
+					'accept'       => 'application/json',
+				),
+				$auth_headers
 			),
 		);
 
-		return $params;
+		return $this->params;
 	}
 
 
 	/**
 	 * Check HTTP Response for errors and return WP_Error if found.
 	 *
-	 * @since  3.42.8
+	 * Handles both the v2026-03-15 (RFC 9457) and the legacy v3 error formats.
 	 *
-	 * @param  object $response The HTTP response.
-	 * @param  array  $args     The HTTP request arguments.
-	 * @param  string $url      The HTTP request URL.
-	 * @return object $response The response.
+	 * @since  3.42.8
+	 * @since  3.48.2 Added RFC 9457 errors, 401/403/410 handling and a single 429 retry.
+	 *
+	 * @param  array|WP_Error $response The HTTP response.
+	 * @param  array          $args     The HTTP request arguments.
+	 * @param  string         $url      The HTTP request URL.
+	 * @return array|WP_Error The response, or a WP_Error on failure.
 	 */
 	public function handle_http_response( $response, $args, $url ) {
 
-		if ( strpos( $url, 'https://api.omnisend.com/v3/' ) !== false && 'WP Fusion; ' . home_url() === $args['user-agent'] ) { // check if the request came from us.
-
-			$body_json     = json_decode( wp_remote_retrieve_body( $response ) );
-			$response_code = wp_remote_retrieve_response_code( $response );
-
-			if ( 404 === $response_code ) {
-
-				$response = new WP_Error( 'not_found', $body_json->error );
-
-			} elseif ( isset( $body_json->error ) ) {
-
-				$response = new WP_Error( 'error', '<pre>' . print_r( $body_json, true ) . '</pre>' );
-
-			} elseif ( 500 === $response_code ) {
-
-				$response = new WP_Error( 'error', __( 'An error has occurred in API server. [error 500]', 'wp-fusion-lite' ) );
-
-			}
+		if ( 0 !== strpos( $url, 'https://api.omnisend.com/' ) || 'WP Fusion; ' . home_url() !== $args['user-agent'] ) {
+			return $response;
 		}
 
-		return $response;
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$body          = json_decode( wp_remote_retrieve_body( $response ) );
+		$response_code = (int) wp_remote_retrieve_response_code( $response );
+
+		if ( 429 === $response_code ) {
+			return $this->retry_rate_limited_request( $response, $args, $url, $body );
+		}
+
+		if ( 400 > $response_code && ! isset( $body->error ) ) {
+			return $response;
+		}
+
+		$message = $this->get_error_message( $body, $response_code );
+
+		if ( 404 === $response_code ) {
+			return new WP_Error( 'not_found', $message );
+		}
+
+		if ( 401 === $response_code || 403 === $response_code ) {
+			return new WP_Error( 'unauthorized', $message );
+		}
+
+		if ( 410 === $response_code ) {
+			return new WP_Error(
+				'error',
+				__( 'This version of the Omnisend API has been retired. Please update WP Fusion, and turn off the Legacy API setting if it is enabled.', 'wp-fusion-lite' )
+			);
+		}
+
+		return new WP_Error( 'error', $message );
+	}
+
+	/**
+	 * Builds a readable error message from an Omnisend error response.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param object|null $body          The decoded response body.
+	 * @param int         $response_code The HTTP response code.
+	 * @return string The error message.
+	 */
+	private function get_error_message( $body, $response_code ) {
+
+		if ( ! empty( $body->detail ) ) {
+			$message = $body->detail;
+		} elseif ( ! empty( $body->title ) ) {
+			$message = $body->title;
+		} elseif ( ! empty( $body->error ) && is_string( $body->error ) ) {
+			$message = $body->error;
+		} else {
+			// translators: %d is the HTTP response code.
+			$message = sprintf( __( 'Unknown Omnisend API error. [error %d]', 'wp-fusion-lite' ), $response_code );
+		}
+
+		if ( ! empty( $body->errors ) && is_array( $body->errors ) ) {
+
+			$field_errors = array();
+
+			foreach ( $body->errors as $error ) {
+				if ( ! empty( $error->field ) && ! empty( $error->message ) ) {
+					$field_errors[] = $error->field . ': ' . $error->message;
+				}
+			}
+
+			if ( ! empty( $field_errors ) ) {
+				$message .= ' (' . implode( '; ', $field_errors ) . ')';
+			}
+		} elseif ( ! empty( $body->fields ) ) {
+			$message .= ' ' . wp_json_encode( $body->fields );
+		}
+
+		if ( ! empty( $body->instance ) ) {
+			$message .= ' [' . $body->instance . ']';
+		}
+
+		return $message;
+	}
+
+	/**
+	 * Waits and retries a rate limited request once.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param array       $response The 429 HTTP response.
+	 * @param array       $args     The HTTP request arguments.
+	 * @param string      $url      The HTTP request URL.
+	 * @param object|null $body     The decoded response body.
+	 * @return array|WP_Error The retried response, or a WP_Error if still rate limited.
+	 */
+	private function retry_rate_limited_request( $response, $args, $url, $body ) {
+
+		if ( ! empty( $args['wpf_omnisend_429_retry'] ) ) {
+			return new WP_Error( 'rate_limited', __( 'Omnisend is rate limiting requests (HTTP 429). Please try again later.', 'wp-fusion-lite' ) );
+		}
+
+		if ( ! empty( $body->{'retryAfter'} ) ) {
+			$retry_after = (int) $body->{'retryAfter'};
+		} else {
+			$retry_after = (int) wp_remote_retrieve_header( $response, 'retry-after' );
+		}
+
+		if ( 0 >= $retry_after ) {
+			$retry_after = 2;
+		}
+
+		/**
+		 * Filters the longest wait, in seconds, before retrying a rate limited Omnisend request.
+		 *
+		 * @since 3.48.2
+		 *
+		 * @param int $max_retry_after The maximum wait in seconds.
+		 */
+		$max_retry_after = (int) apply_filters( 'wpf_omnisend_max_retry_after', 10 );
+		$retry_after     = min( $retry_after, max( 1, $max_retry_after ) );
+
+		wpf_log(
+			'notice',
+			0,
+			sprintf( 'Omnisend returned 429 (rate limited). Waiting %ds and retrying.', $retry_after ),
+			array( 'source' => 'omnisend' )
+		);
+
+		sleep( $retry_after );
+
+		$args['wpf_omnisend_429_retry'] = true;
+
+		return wp_remote_request( $url, $args );
 	}
 
 	/**
@@ -369,7 +557,7 @@ class WPF_Omnisend {
 		}
 
 		$params   = $this->get_params( $api_key );
-		$request  = 'https://api.omnisend.com/v3/contacts';
+		$request  = $this->url . 'contacts?limit=1';
 		$response = wp_remote_get( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
@@ -464,8 +652,8 @@ class WPF_Omnisend {
 
 		$available_tags = array();
 
-		// Load 100 contacts and see what tags they have.
-		$response = wp_remote_get( 'https://api.omnisend.com/v3/contacts', $this->get_params() );
+		// Load 250 contacts and see what tags they have.
+		$response = wp_remote_get( $this->url . 'contacts?limit=250', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -504,8 +692,8 @@ class WPF_Omnisend {
 			$crm_fields[ $field['crm_field'] ] = $field['crm_label'];
 		}
 
-		// Now load 100 contacts and see what properties they have.
-		$response = wp_remote_get( 'https://api.omnisend.com/v3/contacts', $this->get_params() );
+		// Now load 250 contacts and see what properties they have.
+		$response = wp_remote_get( $this->url . 'contacts?limit=250', $this->get_params() );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -544,7 +732,7 @@ class WPF_Omnisend {
 	public function get_contact_id( $email_address ) {
 
 		$params  = $this->get_params();
-		$request = 'https://api.omnisend.com/v3/contacts?email=' . rawurlencode( $email_address );
+		$request = $this->url . 'contacts?email=' . rawurlencode( $email_address );
 
 		$response = wp_remote_get( $request, $params );
 
@@ -558,7 +746,26 @@ class WPF_Omnisend {
 			return false;
 		}
 
-		return $response->contacts[0]->{'contactID'};
+		return $this->get_record_id( $response->contacts[0] );
+	}
+
+	/**
+	 * Gets the contact ID from a contact record.
+	 *
+	 * The field is "id" since v2026-03-15 and "contactID" in v3.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param object $contact The contact record from the API.
+	 * @return string|false The contact ID, or false if missing.
+	 */
+	private function get_record_id( $contact ) {
+
+		if ( ! empty( $contact->id ) ) {
+			return $contact->id;
+		}
+
+		return $contact->{'contactID'} ?? false;
 	}
 
 
@@ -573,7 +780,7 @@ class WPF_Omnisend {
 	public function get_tags( $contact_id ) {
 
 		$params  = $this->get_params();
-		$request = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
+		$request = $this->url . 'contacts/' . $contact_id;
 
 		$response = wp_remote_get( $request, $params );
 
@@ -606,7 +813,11 @@ class WPF_Omnisend {
 	/**
 	 * Applies tags to a contact.
 	 *
+	 * Also clears any removal markers left on the contact by the v3
+	 * integration, so re-applied tags aren't hidden by get_tags().
+	 *
 	 * @since 3.42.8
+	 * @since 3.48.2 Uses the contact tags endpoint unless the legacy API is in use.
 	 *
 	 * @param array $tags       A numeric array of tags to apply to the contact.
 	 * @param int   $contact_id The contact ID to apply the tags to.
@@ -614,44 +825,61 @@ class WPF_Omnisend {
 	 */
 	public function apply_tags( $tags, $contact_id ) {
 
-		$params  = $this->get_params();
-		$request = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
+		if ( empty( $tags ) ) {
+			return true;
+		}
 
 		$data = array(
-			'tags' => $tags,
+			'customProperties' => array(),
 		);
 
 		foreach ( $tags as $tag ) {
-
-			$tag = $this->format_tag_for_property( $tag );
-
-			$data['customProperties'][ $tag ] = null;
+			$data['customProperties'][ $this->format_tag_for_property( $tag ) ] = null;
 		}
 
+		// v3 merges contact tags. Since v2026-03-15 they replace the full tag set.
+		if ( $this->is_legacy_api() ) {
+			$data['tags'] = $tags;
+		}
+
+		$params           = $this->get_params();
 		$params['body']   = wp_json_encode( $data );
 		$params['method'] = 'PATCH';
-		$response         = wp_remote_post( $request, $params );
+		$response         = wp_remote_post( $this->url . 'contacts/' . $contact_id, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		return true;
+		if ( $this->is_legacy_api() ) {
+			return true;
+		}
+
+		return $this->send_contact_tags( 'POST', $tags, $contact_id );
 	}
 
 	/**
 	 * Removes tags from a contact.
 	 *
-	 * Omnisend doesn't currently have an API method for removing tags, so we will store
-	 * the removed tags as custom properties, and compare them when loading the tags.
+	 * The v3 API can't remove tags, so in legacy mode the removed tags are
+	 * stored as custom properties and filtered out when loading the tags.
 	 *
 	 * @since  3.42.8
+	 * @since  3.48.2 Uses the contact tags endpoint unless the legacy API is in use.
 	 *
 	 * @param  array $tags       A numeric array of tags to remove from the contact.
 	 * @param  int   $contact_id The contact ID to remove the tags from.
 	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
 	 */
 	public function remove_tags( $tags, $contact_id ) {
+
+		if ( empty( $tags ) ) {
+			return true;
+		}
+
+		if ( ! $this->is_legacy_api() ) {
+			return $this->send_contact_tags( 'DELETE', $tags, $contact_id );
+		}
 
 		$update_data = array();
 
@@ -661,6 +889,42 @@ class WPF_Omnisend {
 		}
 
 		return $this->update_contact( $contact_id, $update_data );
+	}
+
+	/**
+	 * Adds or removes tags with the contact tags endpoint.
+	 *
+	 * The endpoint processes requests asynchronously and returns 202.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param string     $method     POST to add the tags, DELETE to remove them.
+	 * @param array      $tags       The tags.
+	 * @param int|string $contact_id The contact ID.
+	 * @return bool|WP_Error Either true, or a WP_Error if the API call failed.
+	 */
+	private function send_contact_tags( $method, $tags, $contact_id ) {
+
+		$params           = $this->get_params();
+		$params['method'] = $method;
+
+		foreach ( array_chunk( array_map( 'strval', array_values( $tags ) ), self::TAGS_PER_REQUEST ) as $tags_chunk ) {
+
+			$params['body'] = wp_json_encode(
+				array(
+					'contactIDs' => array( (string) $contact_id ),
+					'tags'       => $tags_chunk,
+				)
+			);
+
+			$response = wp_remote_request( $this->url . 'contacts/tags', $params );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -690,7 +954,10 @@ class WPF_Omnisend {
 			);
 
 			if ( ! empty( $update_data['emailStatusDate'] ) ) {
-				$update_data['identifiers'][0]['channels']['email']['statusDate'] = $update_data['emailStatusDate'];
+				// v2026-03-15 renamed the channel field from statusDate to statusChangedAt.
+				$date_field = $this->is_legacy_api() ? 'statusDate' : 'statusChangedAt';
+
+				$update_data['identifiers'][0]['channels']['email'][ $date_field ] = $update_data['emailStatusDate'];
 			}
 		}
 
@@ -715,12 +982,53 @@ class WPF_Omnisend {
 	}
 
 	/**
+	 * Drops contact fields the v2026-03-15 API no longer accepts.
+	 *
+	 * Email stays on the email identifier. The legacy v3 API still accepts the top-level field.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param array $contact_data The contact payload.
+	 * @return array The payload safe to send.
+	 */
+	private function normalize_contact_request( $contact_data ) {
+
+		if ( $this->is_legacy_api() || ! isset( $contact_data['email'] ) ) {
+			return $contact_data;
+		}
+
+		$email = $contact_data['email'];
+		unset( $contact_data['email'] );
+
+		if ( ! is_string( $email ) || '' === $email ) {
+			return $contact_data;
+		}
+
+		if ( empty( $contact_data['identifiers'] ) || ! is_array( $contact_data['identifiers'] ) ) {
+			$contact_data['identifiers'] = array();
+		}
+
+		foreach ( $contact_data['identifiers'] as $identifier ) {
+			if ( is_array( $identifier ) && isset( $identifier['type'] ) && 'email' === $identifier['type'] ) {
+				return $contact_data;
+			}
+		}
+
+		$contact_data['identifiers'][] = array(
+			'type' => 'email',
+			'id'   => $email,
+		);
+
+		return $contact_data;
+	}
+
+	/**
 	 * Adds a new contact.
 	 *
 	 * @since 3.42.8
 	 *
 	 * @param array $contact_data An associative array of contact fields and field values.
-	 * @return int|WP_Error Contact ID on success, or WP Error.
+	 * @return string|false|WP_Error Contact ID on success, or WP Error.
 	 */
 	public function add_contact( $contact_data ) {
 
@@ -728,7 +1036,7 @@ class WPF_Omnisend {
 		$contact_data = $this->format_contact_payload( $contact_data );
 
 		// If identifiers weren't set by format_contact_payload(), default to subscribed.
-		if ( empty( $contact_data['identifiers'] ) ) {
+		if ( empty( $contact_data['identifiers'] ) && ! empty( $contact_data['email'] ) ) {
 			$contact_data['identifiers'] = array(
 				array(
 					'id'       => $contact_data['email'],
@@ -742,9 +1050,11 @@ class WPF_Omnisend {
 			);
 		}
 
+		$contact_data = $this->normalize_contact_request( $contact_data );
+
 		$params         = $this->get_params();
 		$params['body'] = wp_json_encode( $contact_data );
-		$request        = 'https://api.omnisend.com/v3/contacts';
+		$request        = $this->url . 'contacts';
 
 		$response = wp_remote_post( $request, $params );
 
@@ -754,7 +1064,7 @@ class WPF_Omnisend {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-		return $body->{'contactID'};
+		return $this->get_record_id( $body );
 	}
 
 	/**
@@ -770,19 +1080,18 @@ class WPF_Omnisend {
 
 		// Format contact data (handles identifiers if emailStatus is set).
 		$contact_data = $this->format_contact_payload( $contact_data );
+		$contact_data = $this->normalize_contact_request( $contact_data );
 
 		$params           = $this->get_params();
 		$params['body']   = wp_json_encode( $contact_data );
 		$params['method'] = 'PATCH';
-		$request          = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
+		$request          = $this->url . 'contacts/' . $contact_id;
 
 		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
-
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
 
 		return true;
 	}
@@ -798,7 +1107,7 @@ class WPF_Omnisend {
 	public function load_contact( $contact_id ) {
 
 		$params  = $this->get_params();
-		$request = 'https://api.omnisend.com/v3/contacts/' . $contact_id;
+		$request = $this->url . 'contacts/' . $contact_id;
 
 		$response = wp_remote_get( $request, $params );
 
@@ -828,7 +1137,10 @@ class WPF_Omnisend {
 						$response['emailStatus'] = $email_channel['status'];
 					}
 
-					if ( ! empty( $email_channel['statusDate'] ) ) {
+					// The response field is "statusChangedAt" since v2026-03-15.
+					if ( ! empty( $email_channel['statusChangedAt'] ) ) {
+						$response['emailStatusDate'] = $email_channel['statusChangedAt'];
+					} elseif ( ! empty( $email_channel['statusDate'] ) ) {
 						$response['emailStatusDate'] = $email_channel['statusDate'];
 					}
 
@@ -852,18 +1164,19 @@ class WPF_Omnisend {
 	 * Gets a list of contact IDs based on tag
 	 *
 	 * @since 3.42.8
+	 * @since 3.48.2 Follows v2026-03-15 cursor pagination.
 	 *
 	 * @param string $tag The tag ID or name to search for.
-	 * @return array Contact IDs returned.
+	 * @return array|WP_Error Contact IDs returned, or a WP_Error if the API call failed.
 	 */
 	public function load_contacts( $tag ) {
 
 		$contact_ids = array();
 
-		$request  = 'https://api.omnisend.com/v3/contacts?limit=250&tag=' . rawurlencode( strtolower( $tag ) );
-		$continue = true;
+		$first_page = $this->url . 'contacts?limit=250&tag=' . rawurlencode( strtolower( $tag ) );
+		$request    = $first_page;
 
-		while ( $continue ) {
+		while ( $request ) {
 
 			$response = wp_remote_get( $request, $this->get_params() );
 
@@ -873,16 +1186,46 @@ class WPF_Omnisend {
 
 			$body = json_decode( wp_remote_retrieve_body( $response ) );
 
-			$contact_ids = array_merge( $contact_ids, wp_list_pluck( $body->contacts, 'contactID' ) );
-
-			if ( ! empty( $body->links->next ) ) {
-				$request = $body->links->next;
-			} else {
-				$continue = false;
+			if ( empty( $body->contacts ) ) {
+				break;
 			}
+
+			foreach ( $body->contacts as $contact ) {
+				$contact_ids[] = $this->get_record_id( $contact );
+			}
+
+			$request = $this->get_next_page_url( $body, $first_page );
 		}
 
-		return $contact_ids;
+		return array_filter( $contact_ids );
+	}
+
+	/**
+	 * Gets the URL of the next page of a contacts list response.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param object $body       The decoded list response.
+	 * @param string $first_page The URL of the first page, including filters.
+	 * @return string|false The next page URL, or false on the last page.
+	 */
+	private function get_next_page_url( $body, $first_page ) {
+
+		// v2026-03-15 uses an opaque cursor. The filters are encoded in it, so they must not change.
+		if ( ! empty( $body->paging->{'hasMore'} ) && ! empty( $body->paging->cursors->after ) ) {
+			return $first_page . '&after=' . rawurlencode( $body->paging->cursors->after );
+		}
+
+		// v3 returns the full URL of the next page.
+		if ( ! empty( $body->paging->next ) && is_string( $body->paging->next ) ) {
+			return $body->paging->next;
+		}
+
+		if ( ! empty( $body->links->next ) ) {
+			return $body->links->next;
+		}
+
+		return false;
 	}
 
 
@@ -932,7 +1275,7 @@ class WPF_Omnisend {
 		$params             = $this->get_params();
 		$params['body']     = wp_json_encode( $data );
 		$params['blocking'] = false;
-		$request            = 'https://api.omnisend.com/v3/customer-events';
+		$request            = $this->url . ( $this->is_legacy_api() ? 'customer-events' : 'events' );
 		$response           = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {

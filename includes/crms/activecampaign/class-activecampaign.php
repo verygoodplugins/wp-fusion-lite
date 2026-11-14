@@ -94,15 +94,24 @@ class WPF_ActiveCampaign {
 
 
 	/**
-	 * Formats POST data received from HTTP Posts into standard format
+	 * Formats POST data received from HTTP Posts into standard format.
+	 *
+	 * ActiveCampaign nests contact fields. Core webhook lookup uses top-level
+	 * `contact_id` first, then `email`. Flatten email so a missed ID can still
+	 * recover the WordPress user.
 	 *
 	 * @access public
+	 * @param array $post_data The data POSTed to the webhook.
 	 * @return array
 	 */
 	public function format_post_data( $post_data ) {
 
 		if ( isset( $post_data['contact']['id'] ) ) {
 			$post_data['contact_id'] = $post_data['contact']['id'];
+		}
+
+		if ( ! empty( $post_data['contact']['email'] ) ) {
+			$post_data['email'] = sanitize_email( $post_data['contact']['email'] );
 		}
 
 		if ( ! empty( $post_data['contact']['tags'] ) ) {

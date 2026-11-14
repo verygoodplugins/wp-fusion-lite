@@ -712,7 +712,11 @@ class WPF_Admin_Interfaces {
 
 			$content .= '<br /><br />';
 
-			if ( ! empty( $settings['redirect'] ) ) {
+			if ( WPF_Access_Control::is_404_redirect( $settings['redirect'] ?? false ) ) {
+
+				$content .= __( 'If access is denied, users will see a 404 Not Found page.', 'wp-fusion-lite' );
+
+			} elseif ( ! empty( $settings['redirect'] ) ) {
 
 				$content .= sprintf( __( 'If access is denied, users will be redirected to %s.', 'wp-fusion-lite' ), '<strong>' . get_the_title( $settings['redirect'] ) . '</strong>' );
 
@@ -923,6 +927,20 @@ class WPF_Admin_Interfaces {
 
 		// If we have post IDs.
 		if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
+
+			// edit_posts is not ownership. Skip IDs the user cannot edit.
+			$post_ids = array_values(
+				array_filter(
+					$post_ids,
+					static function ( $post_id ) {
+						return current_user_can( 'edit_post', $post_id );
+					}
+				)
+			);
+
+			if ( empty( $post_ids ) ) {
+				return;
+			}
 
 			// If it has a value, doesn't update if empty on bulk.
 			if ( ! empty( $_REQUEST['wpf-settings'] ) ) {
@@ -1269,7 +1287,7 @@ class WPF_Admin_Interfaces {
 
 		echo '<span class="dashicons dashicons-editor-help wpf-tip wpf-tip-bottom" data-tip="' . esc_attr__( 'Select a page on your site, or enter an external URL. If you do not specify a redirect WP Fusion will try to replace the content area of the post with the restricted content message configured in the WP Fusion settings.', 'wp-fusion-lite' ) . '"></span></label>';
 
-		echo '<select ' . ( $disabled ? 'disabled' : '' ) . ' id="wpf-redirect" class="select4-select-page" style="width: 100%;" data-placeholder="' . __( 'Show restricted content message', 'wp-fusion-lite' ) . '" name="wpf-settings[redirect]">';
+		echo '<select ' . ( $disabled ? 'disabled' : '' ) . ' id="wpf-redirect" class="select4-select-page" style="width: 100%;" data-allow-404="1" data-placeholder="' . __( 'Show restricted content message', 'wp-fusion-lite' ) . '" name="wpf-settings[redirect]">';
 
 		echo '<option></option>';
 
@@ -1277,7 +1295,9 @@ class WPF_Admin_Interfaces {
 			$settings['redirect'] = $settings['redirect_url']; // pre 3.41.0 data storage.
 		}
 
-		if ( is_numeric( $settings['redirect'] ) ) {
+		if ( WPF_Access_Control::is_404_redirect( $settings['redirect'] ) ) {
+			$title = __( '404 Not Found', 'wp-fusion-lite' );
+		} elseif ( is_numeric( $settings['redirect'] ) ) {
 			$title = get_the_title( $settings['redirect'] ); // posts.
 		} else {
 			$title = $settings['redirect']; // URLs.
@@ -1477,6 +1497,14 @@ class WPF_Admin_Interfaces {
 		$return = array(
 			'results' => array(),
 		);
+
+		// Fields that support it offer a 404 Not Found response at the top of every search.
+		if ( ! empty( $_REQUEST['allow_404'] ) ) {
+			$return['results'][] = array(
+				'id'   => WPF_Access_Control::REDIRECT_404,
+				'text' => __( '404 Not Found', 'wp-fusion-lite' ),
+			);
+		}
 
 		foreach ( $temp_data as $post_type => $posts ) {
 

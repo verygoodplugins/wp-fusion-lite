@@ -463,7 +463,21 @@ jQuery( document ).ready( function ( $ ) {
 			},
 		};
 
-		$( 'select.select4-select-page' ).select4( select_page_options );
+		$( 'select.select4-select-page' ).each( function () {
+			const $select = $( this );
+			const options = $.extend( true, {}, select_page_options );
+
+			// Fields with data-allow-404 offer "404 Not Found" in the results.
+			if ( $select.data( 'allow-404' ) ) {
+				const data = options.ajax.data;
+
+				options.ajax.data = function ( params ) {
+					return $.extend( data.call( this, params ), { allow_404: 1 } );
+				};
+			}
+
+			$select.select4( options );
+		} );
 	}
 
 	// Tooltips

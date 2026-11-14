@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
-Tested up to: 7.1.2
-Stable tag: 3.48.0
+Tested up to: 7.1.4
+Stable tag: 3.48.2
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -214,6 +214,19 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.48.2 - 11/13/2026 =
+* Added a [404 Not Found option](https://wpfusion.com/documentation/getting-started/access-control/#404-not-found) to Redirect if access is denied, plus a Default to 404 Not Found setting. Visitors without access get a real 404 and the theme's 404 template instead of a redirect, so they can't tell the content exists. Works on posts, archives, and post type rules
+* Improved - Omnisend now uses the v2026-03-15 API. Omnisend shuts off the v3 API on December 31, 2027. Removing a tag in WP Fusion now removes it from the contact in Omnisend, instead of setting a tag_ custom property to false. A [Legacy API setting](https://wpfusion.com/documentation/installation-guides/how-to-connect-omnisend-to-wordpress/) switches back to v3 if needed
+* Improved - HighLevel tags are now added and removed one by one instead of replacing the contact's full tag list, and contact updates no longer send tags. A HighLevel workflow that adds a tag no longer loses it to the next WP Fusion update
+* Fixed HighLevel token refresh retrying until PHP ran out of memory when a contact belonged to another location. A slow or overlapping refresh no longer saves a refresh token that has already been used
+
+= 3.48.1 - 10/13/2026 =
+* Fixed subscribers saving WP Fusion restriction settings onto posts they cannot edit, from the WordPress bulk editor. Each post is checked before it is saved. Reported by Patchstack
+* Fixed logged-out visitors applying and removing tags through admin-ajax.php. The request now needs a logged-in user or a valid auto-login session, and it only accepts tags that already exist in WP Fusion. Removed the unused update_user AJAX action, which let a subscriber push contact fields to the CRM
+* Fixed nested WP Fusion blocks in the editor showing the outer block's required tags on the inner block's header
+* Fixed ActiveCampaign webhooks failing to find a user when the stored contact ID was out of date and the email still matched
+* Fixed a failed read of the WP Fusion settings overwriting the saved configuration with a single option
 
 = 3.48.0 - 9/23/2026 =
 * Improved - Updated Klaviyo integration to the 2026-07-15 API
@@ -564,18 +577,3 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Fixed PHP warning in the logs when filtering by an invalid user ID
 * Fixed infinite loop handling HighLevel 401 errors related to missing scopes
 * Developers: cleaned up and standardized build processes for React integrations via webpack.config.js
-
-= 3.44.22 - 1/13/2025 =
-* Improved - Status icons in entries and orders lists now link to the contact record in the CRM
-* Improved error handling for HighLevel authorization
-* Fixed HighLevel integration not saving the location ID during initial setup when using the older [API-key based setup method](https://wpfusion.com/documentation/crm-specific-docs/highlevel-white-labelled-accounts/)
-* Developers: Added `wpf_status_icon()` function for outputting a status icon in the admin
-
-= 3.44.21 - 1/6/2025 =
-* Added support for [creating and updating Accounts along with contacts in ActiveCampaign](https://wpfusion.com/documentation/crm-specific-docs/activecampaign-accounts/)
-* Added "Unsubscribed" as a default status option for new FluentCRM contacts (same site and REST API)
-* Added option to set new contacts to either Subscribed or Pending in FluentCRM (same site and REST API) when they check the opt-in checkbox on the WooCommerce checkout (default is Subscribed)
-* Fixed JavaScript error when clicking the Test Connection button during the initial setup with Mailchimp
-
-= 3.44.20 - 12/31/2024 =
-* Fixed "Type to add new" message being appended each time you clicked on the Select Tag(s) dropdown in the WP Fusion settings

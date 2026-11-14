@@ -54,7 +54,7 @@ class WPF_Upgrades {
 
 		} elseif ( empty( $version ) ) {
 
-			// First install.
+			// First install. set() will not overwrite stored settings that failed to load.
 			wp_fusion()->settings->set( 'wp_fusion_version', WP_FUSION_VERSION );
 
 		}

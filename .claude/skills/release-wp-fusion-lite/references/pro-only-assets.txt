@@ -1,0 +1,15 @@
+# Pro-only integration assets to prune after the assets/ rsync.
+# Paths are relative to the Lite repo root and must start with assets/.
+# These files exist only to support paid-plugin integrations that Lite
+# does not ship (the PHP classes under includes/integrations/ are deleted).
+# Add new Pro integration CSS/JS here when they appear in Pro's assets/.
+
+assets/css/wpf-buddyboss-groups.css
+assets/js/wpf-buddyboss-groups.js
+assets/js/wpf-elementor.js
+assets/js/wpf-elementor-forms.js
+assets/js/wpf-bb-themer.js
+assets/js/wpf-holler-box.js
+assets/js/wpf-thrive-api-connection.js
+assets/css/wpf-gforms.css
+assets/js/wpf-async-checkout.js

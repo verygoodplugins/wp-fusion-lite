@@ -61,6 +61,31 @@ check "build/secure-block.css exists" test -f build/secure-block.css
 # 4. languages/ absent
 check "languages/ is absent" test ! -d languages
 
+# 4b. Pro-only integration assets must not leak through the assets/ rsync.
+# Shared list: references/pro-only-assets.txt (same as sync_from_pro.sh).
+check "no Pro-only integration assets from the shared prune list" bash -c '
+  list="'"$script_dir"'/../references/pro-only-assets.txt"
+  if [[ ! -f "$list" ]]; then
+    echo "  (missing $list)" >&2
+    exit 1
+  fi
+  unexpected=""
+  while IFS= read -r victim || [[ -n "$victim" ]]; do
+    victim="${victim%%#*}"
+    victim="${victim#"${victim%%[![:space:]]*}"}"
+    victim="${victim%"${victim##*[![:space:]]}"}"
+    [[ -z "$victim" ]] && continue
+    if [[ -e "$victim" ]]; then
+      unexpected="$unexpected$victim"$'"'"'\n'"'"'
+    fi
+  done < "$list"
+  leftover=$(find assets -type f \( -iname "*buddyboss*" -o -iname "*buddy-boss*" \) 2>/dev/null)
+  if [[ -n "$leftover" ]]; then
+    unexpected="$unexpected$leftover"
+  fi
+  [[ -z "${unexpected//[[:space:]]/}" ]]
+'
+
 # 5. deleted files
 check "includes/class-api.php deleted" test ! -f includes/class-api.php
 check "includes/admin/class-updater.php deleted" test ! -f includes/admin/class-updater.php

@@ -7,6 +7,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPF_Access_Control {
 
 	/**
+	 * Redirect setting that returns a 404 Not Found response instead of redirecting.
+	 *
+	 * Non-numeric, since get_redirect() treats numeric values as post IDs.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 */
+	const REDIRECT_404 = 'wpf-404';
+
+	/**
 	 * Cache of post IDs the user can or can't access
 	 *
 	 * @since 3.37.4
@@ -487,7 +497,7 @@ class WPF_Access_Control {
 			return $redirect;
 		}
 
-		$default_redirect = wpf_get_option( 'default_redirect' );
+		$default_redirect = $this->get_default_redirect();
 
 		// Get redirect URL if one is set. (old data storage, pre 3.41.0)
 		if ( ! empty( $post_restrictions['redirect_url'] ) ) {
@@ -501,7 +511,9 @@ class WPF_Access_Control {
 				return false;
 			}
 
-			if ( 'home' === $post_restrictions['redirect'] ) {
+			if ( self::is_404_redirect( $post_restrictions['redirect'] ) ) {
+				$redirect = self::REDIRECT_404;
+			} elseif ( 'home' === $post_restrictions['redirect'] ) {
 				$redirect = home_url();
 			} elseif ( 'login' === $post_restrictions['redirect'] ) {
 				$redirect = wp_login_url();
@@ -521,6 +533,111 @@ class WPF_Access_Control {
 		}
 
 		return apply_filters( 'wpf_redirect_url', $redirect, $post_id );
+	}
+
+	/**
+	 * Whether a redirect setting means "return a 404 Not Found".
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param mixed $redirect The redirect setting or URL.
+	 * @return bool Whether the redirect is the 404 option.
+	 */
+	public static function is_404_redirect( $redirect ) {
+		return self::REDIRECT_404 === $redirect;
+	}
+
+	/**
+	 * Gets the default redirect for when access is denied.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @return string|false The 404 sentinel, the Default Generic Redirect URL, or false.
+	 */
+	public function get_default_redirect() {
+
+		if ( wpf_get_option( 'default_redirect_404' ) ) {
+			return self::REDIRECT_404;
+		}
+
+		return wpf_get_option( 'default_redirect' );
+	}
+
+	/**
+	 * Turns the current front-end request into a 404 Not Found.
+	 *
+	 * Empties the main query so nothing about the protected content is
+	 * rendered, and leaves template loading to WordPress so the theme's 404
+	 * template (or a page builder's 404 location) is used.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param int|false $post_id The protected post ID, if there is one.
+	 */
+	public function set_404( $post_id = false ) {
+
+		global $wp_query;
+
+		if ( $wp_query instanceof WP_Query ) {
+			$wp_query->set_404();
+
+			$wp_query->posts             = array();
+			$wp_query->post              = null;
+			$wp_query->post_count        = 0;
+			$wp_query->found_posts       = 0;
+			$wp_query->max_num_pages     = 0;
+			$wp_query->queried_object    = null;
+			$wp_query->queried_object_id = 0;
+		}
+
+		// wp_reset_postdata() would put the protected post back, so clear the global too.
+		$GLOBALS['post'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		if ( ! headers_sent() ) {
+			status_header( 404 );
+			nocache_headers();
+
+			// Core's REST and shortlink Link headers name the post ID.
+			header_remove( 'Link' );
+		}
+
+		/**
+		 * Fires when access is denied with a 404 Not Found response.
+		 *
+		 * @since 3.48.2
+		 *
+		 * @param int|false $post_id The protected post ID, or false for archives.
+		 */
+		do_action( 'wpf_access_denied_404', $post_id );
+	}
+
+	/**
+	 * Sends a 404 Not Found page and ends the request.
+	 *
+	 * For requests that don't reach the template loader, such as file downloads.
+	 *
+	 * @since 3.48.2
+	 *
+	 * @param int|false $post_id The protected post ID, if there is one.
+	 */
+	public function render_404( $post_id = false ) {
+
+		$this->set_404( $post_id );
+
+		$template = get_404_template();
+
+		if ( empty( $template ) ) {
+			$template = get_index_template();
+		}
+
+		/** This filter is documented in wp-includes/template-loader.php */
+		$template = apply_filters( 'template_include', $template ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+
+		if ( $template ) {
+			include $template;
+		}
+
+		exit();
 	}
 
 	/**
@@ -605,17 +722,25 @@ class WPF_Access_Control {
 
 			if ( ! empty( $settings[ $queried_object->name ] ) && ! empty( $settings[ $queried_object->name ]['redirect'] ) ) {
 
-				$redirect = get_permalink( $settings[ $queried_object->name ]['redirect'] );
+				$redirect = $settings[ $queried_object->name ]['redirect'];
 
-			} elseif ( ! empty( wpf_get_option( 'default_redirect' ) ) ) {
+				if ( ! self::is_404_redirect( $redirect ) ) {
+					$redirect = get_permalink( $redirect );
+				}
+			} elseif ( ! empty( $this->get_default_redirect() ) ) {
 
-				$redirect = wpf_get_option( 'default_redirect' );
+				$redirect = $this->get_default_redirect();
 
 			}
 
 			$redirect = apply_filters( 'wpf_redirect_url', $redirect, false );
 
-			if ( ! empty( $redirect ) ) {
+			if ( self::is_404_redirect( $redirect ) ) {
+
+				$this->set_404();
+				return true;
+
+			} elseif ( ! empty( $redirect ) ) {
 
 				wp_redirect( $redirect, 302, 'WP Fusion; Post Type ' . $queried_object->name );
 				exit();
@@ -642,12 +767,16 @@ class WPF_Access_Control {
 			$archive_restrictions = $taxonomy_rules[ $queried_object->term_id ];
 
 			$redirect         = false;
-			$default_redirect = wpf_get_option( 'default_redirect' );
+			$default_redirect = $this->get_default_redirect();
 
 			// Get redirect URL if one is set
 			if ( ! empty( $archive_restrictions['redirect_url'] ) ) {
 
 				$redirect = $archive_restrictions['redirect_url'];
+
+			} elseif ( self::is_404_redirect( $archive_restrictions['redirect'] ?? false ) ) {
+
+				$redirect = self::REDIRECT_404;
 
 			} elseif ( ! empty( $archive_restrictions['redirect'] ) ) {
 
@@ -661,7 +790,12 @@ class WPF_Access_Control {
 
 			$redirect = apply_filters( 'wpf_redirect_url', $redirect, false );
 
-			if ( ! empty( $redirect ) ) {
+			if ( self::is_404_redirect( $redirect ) ) {
+
+				$this->set_404();
+				return true;
+
+			} elseif ( ! empty( $redirect ) ) {
 
 				wp_redirect( $redirect, 302, 'WP Fusion; Term ID ' . $queried_object->term_id );
 				exit();
@@ -715,7 +849,12 @@ class WPF_Access_Control {
 			// Get redirect URL for the post.
 			$redirect = $this->get_redirect( $post_id );
 
-			if ( ! empty( $redirect ) ) {
+			if ( self::is_404_redirect( $redirect ) ) {
+
+				$this->set_404( $post_id );
+				return true;
+
+			} elseif ( ! empty( $redirect ) ) {
 
 				wp_redirect( $redirect, 302, 'WP Fusion; Post ID ' . $post_id );
 				exit();
@@ -1735,6 +1874,12 @@ class WPF_Access_Control {
 				$url = get_permalink( $post_id );
 			} else {
 				$url = $this->get_redirect( $post_id );
+
+				// There's no page to send them to. Let the normal login redirect run.
+				if ( self::is_404_redirect( $url ) ) {
+					setcookie( 'wpf_return_to', '', time() - ( 15 * 60 ) );
+					return;
+				}
 			}
 
 			if ( ! empty( $url ) ) {
@@ -2086,7 +2231,7 @@ class WPF_Access_Control {
 
 		$redirect = $this->get_redirect( $post );
 
-		if ( ! empty( $redirect ) ) {
+		if ( ! empty( $redirect ) && ! self::is_404_redirect( $redirect ) ) {
 
 			return $redirect;
 

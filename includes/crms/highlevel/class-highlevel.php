@@ -71,6 +71,39 @@ class WPF_HighLevel {
 	 */
 	public $location_id;
 
+	/**
+	 * Access token from a refresh that already succeeded in this request.
+	 *
+	 * HighLevel refresh tokens are single-use, so a second API call in the
+	 * same request has to reuse this instead of rotating again.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 * @access private
+	 */
+	private $refreshed_access_token = '';
+
+	/**
+	 * Option row that allows one HighLevel refresh at a time.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 * @access private
+	 */
+	private const OAUTH_LOCK_OPTION = 'wpf_highlevel_oauth_lock';
+
+	/**
+	 * HighLevel uses this for a record that belongs to another sub-account.
+	 *
+	 * The same text is returned when the token itself lacks location access.
+	 * Contact and opportunity records skip the refresh. Collection URLs still refresh.
+	 *
+	 * @since 3.48.2
+	 * @var string
+	 * @access private
+	 */
+	private const LOCATION_MISMATCH_MESSAGE = 'The token does not have access to this location.';
+
 
 	/**
 	 * Lets us link directly to editing a contact record.
@@ -218,7 +251,14 @@ class WPF_HighLevel {
 
 				$body_json = json_decode( wp_remote_retrieve_body( $response ) );
 
-				if ( 400 === $response_code && isset( $body_json->error ) && 0 === strpos( $body_json->error, 'Contact with id' ) ) {
+				$foreign_error = $this->foreign_record_error( $response_code, $body_json, $url, $args );
+
+				if ( is_wp_error( $foreign_error ) ) {
+
+					// Refreshing cannot fix a record from another sub-account, and it burns the refresh token.
+					$response = $foreign_error;
+
+				} elseif ( 400 === $response_code && isset( $body_json->error ) && 0 === strpos( $body_json->error, 'Contact with id' ) ) {
 
 					// Try to look up the contact again by email address.
 					$response = new WP_Error( 'not_found', $body_json->error );
@@ -245,6 +285,10 @@ class WPF_HighLevel {
 						unset( $contact_data['locationId'] ); // this will cause an error when updating the contact.
 					}
 
+					if ( isset( $contact_data['tags'] ) ) {
+						unset( $contact_data['tags'] ); // PUT replaces the whole tag list.
+					}
+
 					wpf_log(
 						'notice',
 						wpf_get_user_id_by_email( $contact_data['email'] ),
@@ -262,28 +306,38 @@ class WPF_HighLevel {
 
 				} elseif ( ( 403 === $response_code || 401 === $response_code ) && isset( $body_json->message ) && false === strpos( $url, 'token' ) ) {
 
-					if (
-						'The token does not have access to this location.' === $body_json->message ||
-						strpos( $body_json->message, 'access token' ) !== false ||
-						strpos( $body_json->message, 'refresh token' ) !== false ||
-						'Invalid JWT' === $body_json->message ||
-						( isset( $body_json->error_description ) && false !== strpos( $body_json->error_description, 'expired' ) )
-					) {
-						// Try to refresh the access token.
-						$access_token = $this->refresh_token();
+					if ( ! empty( $args['wpf_highlevel_token_retry'] ) ) {
+
+						// Already retried with a new token. Another refresh loops until PHP runs out of memory.
+						$response = new WP_Error( 'error', $body_json->message );
+
 					} else {
-						$access_token = false;
+
+						if (
+							self::LOCATION_MISMATCH_MESSAGE === $body_json->message ||
+							strpos( $body_json->message, 'access token' ) !== false ||
+							strpos( $body_json->message, 'refresh token' ) !== false ||
+							'Invalid JWT' === $body_json->message ||
+							( isset( $body_json->error_description ) && false !== strpos( $body_json->error_description, 'expired' ) )
+						) {
+							// Try to refresh the access token.
+							$access_token = $this->refresh_token();
+						} else {
+							$access_token = false;
+						}
+
+						if ( is_wp_error( $access_token ) || empty( $access_token ) ) {
+							// translators: %s is the error message.
+							return new WP_Error( 'error', sprintf( __( 'Error refreshing access token: %s.', 'wp-fusion-lite' ), $body_json->message ) );
+						}
+
+						$args['headers']['Authorization'] = 'Bearer ' . $access_token;
+
+						// Stop a failed retry from refreshing and requesting again.
+						$args['wpf_highlevel_token_retry'] = true;
+
+						$response = wp_remote_request( $url, $args );
 					}
-
-					if ( is_wp_error( $access_token ) || empty( $access_token ) ) {
-						// translators: %s is the error message.
-						return new WP_Error( 'error', sprintf( __( 'Error refreshing access token: %s.', 'wp-fusion-lite' ), $body_json->message ) );
-					}
-
-					$args['headers']['Authorization'] = 'Bearer ' . $access_token;
-
-					$response = wp_remote_request( $url, $args );
-
 				} elseif ( isset( $body_json->error_description ) ) {
 
 					$response = new WP_Error( 'error', $body_json->error_description );
@@ -312,6 +366,120 @@ class WPF_HighLevel {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Map a location-mismatch on one record to a contact or record error.
+	 *
+	 * HighLevel returns "The token does not have access to this location."
+	 * both when the token is wrong and when the contact or opportunity
+	 * belongs to another sub-account. Refreshing in the second case rotates
+	 * the single-use refresh token until the connection dies.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param int    $response_code HTTP status.
+	 * @param mixed  $body_json     Decoded response body.
+	 * @param string $url           Request URL.
+	 * @param array  $args          Request arguments.
+	 * @return WP_Error|null Error to return, or null to keep the normal handler.
+	 */
+	private function foreign_record_error( $response_code, $body_json, $url, $args ) {
+
+		if ( 403 !== (int) $response_code && 401 !== (int) $response_code ) {
+			return null;
+		}
+
+		if ( ! is_object( $body_json ) || ! isset( $body_json->message ) || ! is_string( $body_json->message ) ) {
+			return null;
+		}
+
+		if ( self::LOCATION_MISMATCH_MESSAGE !== $body_json->message ) {
+			return null;
+		}
+
+		if ( $this->is_contact_record_url( $url ) ) {
+			return new WP_Error(
+				'not_found',
+				sprintf(
+					/* translators: %s is the HighLevel error message. */
+					__( 'HighLevel contact is in another location. Token was not refreshed. %s', 'wp-fusion-lite' ),
+					$body_json->message
+				)
+			);
+		}
+
+		if ( $this->is_foreign_opportunity_request( $url, $args ) ) {
+			return new WP_Error(
+				'error',
+				sprintf(
+					/* translators: %s is the HighLevel error message. */
+					__( 'HighLevel record is in another location. Token was not refreshed. %s', 'wp-fusion-lite' ),
+					$body_json->message
+				)
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Whether the URL addresses one contact, not the contact collection.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param string $url Request URL.
+	 * @return bool
+	 */
+	private function is_contact_record_url( $url ) {
+
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+
+		if ( ! is_string( $path ) ) {
+			return false;
+		}
+
+		return 1 === preg_match( '#/contacts/(?!lookup(?:/|$)|search(?:/|$))[^/?]+#', $path );
+	}
+
+	/**
+	 * Whether this opportunity call targets one record or a contact ID.
+	 *
+	 * Pipeline sync stays on the refresh path. Creating or updating an
+	 * opportunity for a contact in another sub-account does not.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param string $url  Request URL.
+	 * @param array  $args Request arguments.
+	 * @return bool
+	 */
+	private function is_foreign_opportunity_request( $url, $args ) {
+
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+
+		if ( ! is_string( $path ) ) {
+			return false;
+		}
+
+		if ( preg_match( '#/opportunities/([^/?]+)#', $path, $matches ) ) {
+			return 'pipelines' !== $matches[1];
+		}
+
+		if ( ! preg_match( '#/opportunities/?$#', $path ) ) {
+			return false;
+		}
+
+		if ( empty( $args['body'] ) || ! is_string( $args['body'] ) ) {
+			return false;
+		}
+
+		$data = json_decode( $args['body'], true );
+
+		return is_array( $data ) && ! empty( $data['contactId'] );
 	}
 
 	/**
@@ -437,7 +605,7 @@ class WPF_HighLevel {
 			array(
 				'headers' => array( 'Content-Type' => 'application/json' ),
 				'body'    => wp_json_encode( $body ),
-				'timeout' => 15,
+				'timeout' => 30,
 			)
 		);
 
@@ -492,7 +660,11 @@ class WPF_HighLevel {
 	}
 
 	/**
-	 * Refresh an access token from a refresh token
+	 * Refresh an access token from a refresh token.
+	 *
+	 * HighLevel invalidates a refresh token as soon as it accepts the grant.
+	 * One request may post a given token. A transport failure is not retried,
+	 * because the server may already have rotated the token.
 	 *
 	 * @since 3.34.11
 	 *
@@ -500,49 +672,440 @@ class WPF_HighLevel {
 	 */
 	public function refresh_token() {
 
-		$refresh_token = wpf_get_option( 'highlevel_refresh_token' );
+		if ( '' !== $this->refreshed_access_token ) {
+			return $this->refreshed_access_token;
+		}
 
-		if ( empty( $refresh_token ) ) {
+		$original = $this->get_stored_oauth_token( 'highlevel_refresh_token' );
+
+		if ( '' === $original ) {
 			return new WP_Error( 'error', 'Authorization failed and no refresh token found.' );
 		}
 
+		$waited = 0;
+
+		while ( ! $this->acquire_oauth_lock() ) {
+
+			$current = $this->get_stored_oauth_token( 'highlevel_refresh_token' );
+
+			// The other request finished and released the lock.
+			if ( '' !== $current && $current !== $original && ! $this->oauth_lock_is_held() ) {
+				return $this->saved_access_token();
+			}
+
+			if ( $waited >= 35 ) {
+
+				if ( '' !== $current && $current !== $original ) {
+					return $this->saved_access_token();
+				}
+
+				return new WP_Error( 'error', 'HighLevel token refresh is already in progress. Please try again.' );
+			}
+
+			sleep( 1 );
+			++$waited;
+		}
+
+		try {
+
+			$refresh_token = $this->get_stored_oauth_token( 'highlevel_refresh_token' );
+
+			if ( '' === $refresh_token ) {
+				return new WP_Error( 'error', 'Authorization failed and no refresh token found.' );
+			}
+
+			// Lost the race before this process took the lock.
+			if ( $refresh_token !== $original ) {
+				return $this->saved_access_token();
+			}
+
+			$params = array(
+				'timeout'    => 30,
+				'user-agent' => 'WP Fusion; ' . home_url(),
+				'headers'    => array(
+					'Content-Type' => 'application/x-www-form-urlencoded',
+				),
+				'body'       => array(
+					'grant_type'    => 'refresh_token',
+					'client_id'     => $this->client_id,
+					'client_secret' => $this->client_secret,
+					'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=highlevel' ),
+					'refresh_token' => $refresh_token,
+				),
+			);
+
+			$response = wp_remote_post( $this->url . 'oauth/token', $params );
+
+			// Do not replay this grant. HighLevel may already have rotated it.
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+
+			$body_json    = json_decode( wp_remote_retrieve_body( $response ) );
+			$new_refresh  = '';
+			$access_token = '';
+
+			if ( is_object( $body_json ) && isset( $body_json->refresh_token ) && is_string( $body_json->refresh_token ) ) {
+				$new_refresh = $body_json->refresh_token;
+			}
+
+			if ( is_object( $body_json ) && isset( $body_json->access_token ) && is_string( $body_json->access_token ) ) {
+				$access_token = $body_json->access_token;
+			}
+
+			if ( '' === $new_refresh || '' === $access_token ) {
+
+				$current = $this->get_stored_oauth_token( 'highlevel_refresh_token' );
+
+				if ( '' !== $current && $current !== $refresh_token ) {
+					return $this->saved_access_token();
+				}
+
+				if ( $this->is_invalid_refresh_grant( $body_json ) ) {
+					return $this->recover_invalid_refresh_token();
+				}
+
+				return new WP_Error( 'error', 'Unexpected response from HighLevel while refreshing access token. Please try again.' );
+			}
+
+			wp_fusion()->settings->set( 'highlevel_token', $access_token );
+			wp_fusion()->settings->set( 'highlevel_refresh_token', $new_refresh );
+
+			return $this->finish_refresh( $access_token );
+
+		} finally {
+
+			$this->release_oauth_lock();
+		}
+	}
+
+	/**
+	 * Read one OAuth value from the options row, bypassing the memory cache.
+	 *
+	 * In-memory settings stay stale after another process saves a rotated token.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param string $key Settings key.
+	 * @return string Stored value, or an empty string.
+	 */
+	private function get_stored_oauth_token( $key ) {
+
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$raw = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
+				'wpf_options'
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		if ( ! empty( $wpdb->last_error ) || ! is_string( $raw ) ) {
+
+			$value = wpf_get_option( $key );
+
+			return is_string( $value ) ? $value : '';
+		}
+
+		$stored = maybe_unserialize( $raw );
+
+		if ( ! is_array( $stored ) || ! isset( $stored[ $key ] ) || ! is_string( $stored[ $key ] ) ) {
+			return '';
+		}
+
+		return $stored[ $key ];
+	}
+
+	/**
+	 * Take the refresh lock, stealing it when the holder has gone away.
+	 *
+	 * Current WordPress implements add_option() as an insert that updates on
+	 * a duplicate key, so a second caller would overwrite the row and both
+	 * requests would refresh.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @return bool True when this request holds the lock.
+	 */
+	private function acquire_oauth_lock() {
+
+		global $wpdb;
+
+		$this->steal_stale_oauth_lock();
+		$this->clear_oauth_lock_cache();
+
+		$now      = (string) time();
+		$suppress = $wpdb->suppress_errors( true );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$inserted = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, %s)",
+				self::OAUTH_LOCK_OPTION,
+				$now,
+				'no'
+			)
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		$wpdb->suppress_errors( $suppress );
+
+		if ( 1 !== (int) $inserted ) {
+			return false;
+		}
+
+		wp_cache_set( self::OAUTH_LOCK_OPTION, $now, 'options' );
+
+		$notoptions = wp_cache_get( 'notoptions', 'options' );
+
+		if ( is_array( $notoptions ) && isset( $notoptions[ self::OAUTH_LOCK_OPTION ] ) ) {
+			unset( $notoptions[ self::OAUTH_LOCK_OPTION ] );
+			wp_cache_set( 'notoptions', $notoptions, 'options' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Drop a lock left by a process that died during the token request.
+	 *
+	 * The holder needs the 30 second token timeout plus the location-token
+	 * request, so a live lock is kept for 60 seconds.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 */
+	private function steal_stale_oauth_lock() {
+
+		$this->clear_oauth_lock_cache();
+
+		$started = get_option( self::OAUTH_LOCK_OPTION, false );
+
+		if ( ! is_numeric( $started ) ) {
+			return;
+		}
+
+		if ( ( time() - (int) $started ) > 60 ) {
+			delete_option( self::OAUTH_LOCK_OPTION );
+			$this->clear_oauth_lock_cache();
+		}
+	}
+
+	/**
+	 * Whether another request still holds the refresh lock.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @return bool
+	 */
+	private function oauth_lock_is_held() {
+
+		$this->clear_oauth_lock_cache();
+
+		$started = get_option( self::OAUTH_LOCK_OPTION, false );
+
+		return false !== $started && '' !== $started;
+	}
+
+	/**
+	 * Forget the cached lock row so the next read hits the database.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 */
+	private function clear_oauth_lock_cache() {
+
+		wp_cache_delete( self::OAUTH_LOCK_OPTION, 'options' );
+
+		$notoptions = wp_cache_get( 'notoptions', 'options' );
+
+		if ( is_array( $notoptions ) && isset( $notoptions[ self::OAUTH_LOCK_OPTION ] ) ) {
+			unset( $notoptions[ self::OAUTH_LOCK_OPTION ] );
+			wp_cache_set( 'notoptions', $notoptions, 'options' );
+		}
+	}
+
+	/**
+	 * Release the refresh lock.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 */
+	private function release_oauth_lock() {
+
+		delete_option( self::OAUTH_LOCK_OPTION );
+		$this->clear_oauth_lock_cache();
+	}
+
+	/**
+	 * Use the access token another request just saved.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @return string|WP_Error
+	 */
+	private function saved_access_token() {
+
+		if ( wpf_get_option( 'highlevel_locations' ) ) {
+			$access_token = $this->get_stored_oauth_token( 'highlevel_token_' . $this->location_id );
+		} else {
+			$access_token = $this->get_stored_oauth_token( 'highlevel_token' );
+		}
+
+		if ( '' === $access_token ) {
+			return new WP_Error( 'error', 'HighLevel refreshed the connection, but the new access token was not saved.' );
+		}
+
+		$this->get_params( $access_token );
+		$this->refreshed_access_token = $access_token;
+
+		return $access_token;
+	}
+
+	/**
+	 * Whether HighLevel rejected the refresh token as already used.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param mixed $body Decoded token response.
+	 * @return bool
+	 */
+	private function is_invalid_refresh_grant( $body ) {
+
+		if ( ! is_object( $body ) ) {
+			return false;
+		}
+
+		if ( isset( $body->error ) && 'invalid_grant' === $body->error ) {
+			return true;
+		}
+
+		if ( ! isset( $body->error_description ) || ! is_string( $body->error_description ) ) {
+			return false;
+		}
+
+		if ( false !== strpos( $body->error_description, 'This refresh token is invalid' ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Mint a new token pair after HighLevel has burned the stored refresh token.
+	 *
+	 * Does not call authorize(), which resets the selected location on company installs.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @return string|WP_Error
+	 */
+	private function recover_invalid_refresh_token() {
+
+		$auth_code = $this->reconnect_api();
+
+		if ( is_wp_error( $auth_code ) ) {
+			return $auth_code;
+		}
+
+		if ( '' === $auth_code ) {
+			return new WP_Error( 'error', 'Failed to get authorization code from HighLevel reconnect.' );
+		}
+
+		return $this->exchange_reconnect_code( $auth_code );
+	}
+
+	/**
+	 * Exchange a reconnect code and save only the access and refresh tokens.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param string $code Authorization code.
+	 * @return string|WP_Error Access token, or error. Stored tokens stay as they are on failure.
+	 */
+	private function exchange_reconnect_code( $code ) {
+
+		$body = array(
+			'grant_type'    => 'authorization_code',
+			'code'          => $code,
+			'client_id'     => $this->client_id,
+			'client_secret' => $this->client_secret,
+			'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=highlevel' ),
+		);
+
 		$params = array(
+			'timeout'    => 30,
 			'user-agent' => 'WP Fusion; ' . home_url(),
 			'headers'    => array(
 				'Content-Type' => 'application/x-www-form-urlencoded',
 			),
-			'body'       => array(
-				'grant_type'    => 'refresh_token',
-				'client_id'     => $this->client_id,
-				'client_secret' => $this->client_secret,
-				'redirect_uri'  => admin_url( 'options-general.php?page=wpf-settings&crm=highlevel' ),
-				'refresh_token' => $refresh_token,
-			),
+			'body'       => $body,
 		);
 
-		$response = wp_remote_post( $this->url . 'oauth/token', $params );
+		$response = wp_safe_remote_post( 'https://services.leadconnectorhq.com/oauth/token', $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
 
-		$body_json = json_decode( wp_remote_retrieve_body( $response ) );
+		$data = json_decode( wp_remote_retrieve_body( $response ) );
 
-		if ( ! is_string( $body_json->refresh_token ) ) {
-			return new WP_Error( 'error', 'Unexpected response from HighLevel while refreshing access token. Please try again.' );
+		$refresh_token = '';
+		$access_token  = '';
+
+		if ( is_object( $data ) && isset( $data->refresh_token ) && is_string( $data->refresh_token ) ) {
+			$refresh_token = $data->refresh_token;
 		}
 
-		wp_fusion()->settings->set( 'highlevel_token', $body_json->access_token );
-		wp_fusion()->settings->set( 'highlevel_refresh_token', $body_json->refresh_token );
+		if ( is_object( $data ) && isset( $data->access_token ) && is_string( $data->access_token ) ) {
+			$access_token = $data->access_token;
+		}
+
+		if ( 200 !== (int) wp_remote_retrieve_response_code( $response ) || '' === $refresh_token || '' === $access_token ) {
+			return new WP_Error( 'error', 'Failed to exchange the HighLevel reconnect code.' );
+		}
+
+		wp_fusion()->settings->set( 'highlevel_token', $access_token );
+		wp_fusion()->settings->set( 'highlevel_refresh_token', $refresh_token );
+
+		return $this->finish_refresh( $access_token );
+	}
+
+	/**
+	 * Remember the access token and refresh the location token for agency installs.
+	 *
+	 * @since 3.48.2
+	 * @access private
+	 *
+	 * @param string $access_token Access token from the token response.
+	 * @return string|WP_Error
+	 */
+	private function finish_refresh( $access_token ) {
 
 		if ( wpf_get_option( 'highlevel_locations' ) ) {
-			// If we need to refresh the location token, do it now.
+			// Company token cannot call location APIs. Exchange it while the lock is held.
 			$access_token = $this->refresh_location_token();
-		} else {
-			$access_token = $body_json->access_token;
+		}
+
+		if ( is_wp_error( $access_token ) ) {
+			return $access_token;
+		}
+
+		if ( '' === $access_token ) {
+			return new WP_Error( 'error', 'HighLevel token refresh did not return an access token.' );
 		}
 
 		$this->get_params( $access_token );
+		$this->refreshed_access_token = $access_token;
 
 		return $access_token;
 	}
@@ -812,6 +1375,8 @@ class WPF_HighLevel {
 	/**
 	 * Applies tags to a contact.
 	 *
+	 * Sends only the new tags. HighLevel adds them without replacing the rest.
+	 *
 	 * @since 3.36.0
 	 *
 	 * @param array $tags       A numeric array of tags to apply to the contact.
@@ -820,33 +1385,11 @@ class WPF_HighLevel {
 	 */
 	public function apply_tags( $tags, $contact_id ) {
 
-		$params = $this->get_params();
+		$params         = $this->get_params();
+		$params['body'] = wp_json_encode( array( 'tags' => array_values( $tags ) ) );
 
-		if ( $this->is_v2() ) {
-
-			$user_tags = $this->get_tags( $contact_id );
-
-			if ( is_wp_error( $user_tags ) ) {
-				return $user_tags;
-			}
-
-			$tags             = array_merge( $user_tags, $tags );
-			$data             = array( 'tags' => $tags );
-			$params['method'] = 'PUT';
-			$params['body']   = wp_json_encode( $data );
-
-			$request  = $this->url . 'contacts/' . $contact_id;
-			$response = wp_remote_request( $request, $params );
-
-		} else {
-
-			$request = $this->url . 'contacts/' . $contact_id . '/tags/';
-			$data    = (object) array( 'tags' => $tags );
-
-		}
-
-		$params['body'] = wp_json_encode( $data );
-		$response       = wp_remote_post( $request, $params );
+		$request  = $this->url . 'contacts/' . $contact_id . '/tags/';
+		$response = wp_remote_post( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -858,6 +1401,8 @@ class WPF_HighLevel {
 
 	/**
 	 * Removes tags from a contact.
+	 *
+	 * Sends only the tags to remove. HighLevel leaves every other tag in place.
 	 *
 	 * @since 3.36.0
 	 *
@@ -871,41 +1416,10 @@ class WPF_HighLevel {
 
 		$tags = array_map( 'strtolower', $tags ); // GHL tags are lowercase.
 
-		if ( $this->is_v2() ) {
+		$params['body']   = wp_json_encode( array( 'tags' => array_values( $tags ) ) );
+		$params['method'] = 'DELETE';
 
-			$user_tags = $this->get_tags( $contact_id );
-
-			if ( is_wp_error( $user_tags ) ) {
-				return $user_tags;
-			}
-
-			if ( empty( $user_tags ) ) {
-				return true;
-			}
-
-			foreach ( $tags as $tag ) {
-				$key = array_search( $tag, $user_tags );
-				if ( $key !== false ) {
-					unset( $user_tags[ $key ] );
-				}
-			}
-
-			$user_tags = array_values( $user_tags );
-
-			$data             = array( 'tags' => $user_tags );
-			$params['method'] = 'PUT';
-			$params['body']   = wp_json_encode( $data );
-			$request          = $this->url . 'contacts/' . $contact_id;
-
-		} else {
-			$request = $this->url . 'contacts/' . $contact_id . '/tags/';
-
-			$data = (object) array( 'tags' => $tags );
-
-			$params['body']   = wp_json_encode( $data );
-			$params['method'] = 'DELETE';
-		}
-
+		$request  = $this->url . 'contacts/' . $contact_id . '/tags/';
 		$response = wp_remote_request( $request, $params );
 
 		if ( is_wp_error( $response ) ) {
@@ -988,6 +1502,8 @@ class WPF_HighLevel {
 	/**
 	 * Updates an existing contact record.
 	 *
+	 * The tags list is left off the request so HighLevel does not replace it.
+	 *
 	 * @since 3.36.0
 	 *
 	 * @param int   $contact_id      The ID of the contact to update.
@@ -995,6 +1511,9 @@ class WPF_HighLevel {
 	 * @return bool|WP_Error Error if the API call failed.
 	 */
 	public function update_contact( $contact_id, $contact_data ) {
+
+		// PUT replaces the whole tag list. Tag changes use the tag endpoints.
+		unset( $contact_data['tags'] );
 
 		$contact_data = $this->format_contact_data( $contact_data );
 

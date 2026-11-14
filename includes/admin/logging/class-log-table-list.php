@@ -380,6 +380,8 @@ class WPF_Log_Table_List extends WP_List_Table {
 			}
 		}
 
+		$output = apply_filters( 'wpf_log_display_message', $output, $log );
+
 		$allowed_tags = array(
 			'ul'     => array(),
 			'li'     => array(),
@@ -642,6 +644,10 @@ class WPF_Log_Table_List extends WP_List_Table {
 		";
 
 		$this->items = $wpdb->get_results( $query_items, ARRAY_A );
+
+		if ( ! empty( $this->items ) ) {
+			do_action( 'wpf_log_items_loaded', $this->items );
+		}
 
 		$query_count = "SELECT COUNT(log_id) FROM {$wpdb->prefix}wpf_logging {$where}";
 		$total_items = $wpdb->get_var( $query_count );

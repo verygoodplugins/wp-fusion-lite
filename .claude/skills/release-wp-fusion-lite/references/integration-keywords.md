@@ -21,6 +21,8 @@ another bullet you can keep).
 - WooFunnels
 - CartFlows
 - SureCart
+- Sublium
+- Sublium Subscriptions
 - GiveWP
 - Give
 - WP Crowdfunding
@@ -44,6 +46,8 @@ another bullet you can keep).
 - MasterStudy
 - WPLMS
 - CoursePress
+- Academy LMS
+- Academy
 - Uncanny Groups
 - LD Group Registration
 
@@ -175,6 +179,9 @@ another bullet you can keep).
 - FluentCart
 - ThriveCart
 - Studio Cart
+- Studiocart
+- StudioCart
+- PublishPress Cart
 - GS Product Configurator
 - Tribe Events
 - MEC

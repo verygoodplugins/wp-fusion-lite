@@ -1,5 +1,18 @@
 <?php
+/**
+ * WP Fusion - Omnisend CRM Admin
+ *
+ * @package   WP Fusion
+ * @copyright Copyright (c) 2024, Very Good Plugins, https://verygoodplugins.com
+ * @license   GPL-3.0+
+ * @since     3.48.2
+ */
 
+/**
+ * Omnisend CRM admin settings and connection handling.
+ *
+ * @since 3.48.2
+ */
 class WPF_Omnisend_Admin {
 
 	/**
@@ -30,6 +43,10 @@ class WPF_Omnisend_Admin {
 	 * Get things started.
 	 *
 	 * @since 3.42.8
+	 *
+	 * @param string       $slug The CRM slug.
+	 * @param string       $name The CRM name.
+	 * @param WPF_Omnisend $crm  The CRM object.
 	 */
 	public function __construct( $slug, $name, $crm ) {
 
@@ -62,14 +79,17 @@ class WPF_Omnisend_Admin {
 
 
 	/**
-	 * Loads Bento specific settings fields
+	 * Loads Omnisend specific settings fields.
 	 *
-	 * @access  public
 	 * @since 3.42.8
+	 *
+	 * @param array $settings The registered settings on the options page.
+	 * @param array $options  The options saved in the database.
+	 * @return array $settings The settings.
 	 */
 	public function register_settings( $settings, $options ) {
 
-		// Add site tracking option
+		// Add site tracking option.
 		$site_tracking = array();
 
 		$site_tracking['site_tracking_header'] = array(
@@ -91,6 +111,14 @@ class WPF_Omnisend_Admin {
 			'title'   => __( 'Brand ID', 'wp-fusion-lite' ),
 			'desc'    => __( '<a target="_blank" href="https://support.omnisend.com/en/articles/2854729-omnisend-account-and-store-settings#connected-store">Find Your Brand ID</a>.', 'wp-fusion-lite' ),
 			'type'    => 'text',
+			'section' => 'main',
+		);
+
+		$site_tracking['omnisend_legacy_api'] = array(
+			'title'   => __( 'Legacy API', 'wp-fusion-lite' ),
+			'desc'    => __( 'Use the deprecated Omnisend v3 API. Only enable this if WP Fusion support asks you to. Omnisend will shut down the v3 API on December 31, 2027.', 'wp-fusion-lite' ),
+			'type'    => 'checkbox',
+			'std'     => false,
 			'section' => 'main',
 		);
 
@@ -173,7 +201,7 @@ class WPF_Omnisend_Admin {
 
 		echo '</table>';
 		$crm = wp_fusion()->settings->get( 'crm' );
-		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( $crm === false || $crm !== $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
+		echo '<div id="' . esc_attr( $this->slug ) . '" class="crm-config ' . ( false === $crm || $crm !== $this->slug ? 'hidden' : 'crm-active' ) . '" data-name="' . esc_attr( $this->name ) . '" data-crm="' . esc_attr( $this->slug ) . '">';
 	}
 
 

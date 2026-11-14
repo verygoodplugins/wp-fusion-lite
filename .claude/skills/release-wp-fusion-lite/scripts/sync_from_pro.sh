@@ -162,7 +162,34 @@ else
 fi
 
 echo
-echo "==> 3. delete includes/class-api.php and includes/admin/class-updater.php"
+echo "==> 3. prune Pro-only integration assets"
+# assets/ is rsynced wholesale from Pro, but Lite does not ship paid-plugin
+# integrations (those PHP classes are deleted in step 2). Read the shared
+# list in references/pro-only-assets.txt so sync and verify stay in sync.
+pro_only_assets_list="$script_dir/../references/pro-only-assets.txt"
+if [[ ! -f "$pro_only_assets_list" ]]; then
+  echo "missing Pro-only asset list: $pro_only_assets_list" >&2
+  exit 1
+fi
+while IFS= read -r victim || [[ -n "$victim" ]]; do
+  victim="${victim%%#*}"
+  victim="${victim#"${victim%%[![:space:]]*}"}"
+  victim="${victim%"${victim##*[![:space:]]}"}"
+  [[ -z "$victim" ]] && continue
+  case "$victim" in
+    assets/*) ;;
+    *) echo "refusing to prune unexpected path: $victim" >&2; exit 1 ;;
+  esac
+  target="$LITE_PATH/$victim"
+  if [[ -e "$target" ]]; then
+    run rm -f -- "$target"
+  else
+    echo "  (not present: $victim)"
+  fi
+done < "$pro_only_assets_list"
+
+echo
+echo "==> 4. delete includes/class-api.php and includes/admin/class-updater.php"
 for victim in "includes/class-api.php" "includes/admin/class-updater.php"; do
   target="$LITE_PATH/$victim"
   if [[ -e "$target" ]]; then
@@ -173,7 +200,7 @@ for victim in "includes/class-api.php" "includes/admin/class-updater.php"; do
 done
 
 echo
-echo "==> 4. delete languages/ if present"
+echo "==> 5. delete languages/ if present"
 if [[ -d "$LITE_PATH/languages" ]]; then
   if (( DRY_RUN )); then
     echo "  [dry] find $LITE_PATH/languages -depth -delete"
@@ -185,7 +212,7 @@ else
 fi
 
 echo
-echo "==> 5. prune build/ (keep only secure-block* files)"
+echo "==> 6. prune build/ (keep only secure-block* files)"
 build_dir="$LITE_PATH/build"
 if [[ -d "$build_dir" ]]; then
   if (( DRY_RUN )); then
@@ -214,7 +241,7 @@ if [[ -n "$secure_block_backup" ]]; then
 fi
 
 echo
-echo "==> 6. rename wp-fusion.php -> wp-fusion-lite.php"
+echo "==> 7. rename wp-fusion.php -> wp-fusion-lite.php"
 if [[ -f "$LITE_PATH/wp-fusion.php" ]]; then
   if [[ -f "$LITE_PATH/wp-fusion-lite.php" ]]; then
     # After a fresh rsync the old Lite main file gets overwritten by Pro's
