@@ -948,9 +948,11 @@ class WPF_Access_Control {
 
 			$settings = get_post_meta( $post_id, 'wpf-settings', true );
 
-			if ( ! empty( $settings['message'] ) ) {
+			if ( ! empty( $settings['message'] ) && is_string( $settings['message'] ) ) {
 
+				// Decode legacy esc_textarea() storage, then strip disallowed HTML.
 				$message = wp_specialchars_decode( $settings['message'], ENT_QUOTES );
+				$message = wp_kses_post( $message );
 
 			}
 		}

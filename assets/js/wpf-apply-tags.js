@@ -4,6 +4,7 @@ jQuery( document ).ready( function ( $ ) {
 			if ( wpf_ajax.hasOwnProperty( 'tags' ) ) {
 				var data = {
 					action: 'apply_tags',
+					_ajax_nonce: wpf_ajax.nonce,
 					tags: wpf_ajax.tags,
 				};
 
@@ -13,6 +14,7 @@ jQuery( document ).ready( function ( $ ) {
 			if ( wpf_ajax.hasOwnProperty( 'remove' ) ) {
 				var data = {
 					action: 'remove_tags',
+					_ajax_nonce: wpf_ajax.nonce,
 					tags: wpf_ajax.remove,
 				};
 
@@ -27,6 +29,7 @@ jQuery( document ).ready( function ( $ ) {
 
 			const data = {
 				action: 'apply_tags',
+				_ajax_nonce: wpf_ajax.nonce,
 				tags: tags.split( ',' ),
 			};
 
@@ -40,6 +43,7 @@ jQuery( document ).ready( function ( $ ) {
 
 			const data = {
 				action: 'remove_tags',
+				_ajax_nonce: wpf_ajax.nonce,
 				tags: tags.split( ',' ),
 			};
 

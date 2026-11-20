@@ -3,8 +3,8 @@ Contributors: verygoodplugins
 Tags: crm, marketing automation, sync, integration, membership
 Requires at least: 4.6
 Requires PHP: 7.4
-Tested up to: 7.1.4
-Stable tag: 3.48.2
+Tested up to: 7.1.5
+Stable tag: 3.48.3
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 Source Code: https://github.com/verygoodplugins/wp-fusion-lite
@@ -214,6 +214,11 @@ The source code and build files for WP Fusion Lite are available on [GitHub](htt
 Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentation/).
 
 == Changelog ==
+
+= 3.48.3 - 11/19/2026 =
+* Fixed a cross-site request on the apply tags and remove tags endpoints (CVE-2026-27356). A request now needs the WP Fusion nonce, or an Origin or Referer header from this site. A posted referer field is ignored. Existing on-site JavaScript snippets keep working, including on cached pages. Reported by Patchstack
+* Fixed a stored cross-site scripting issue in the per-post restricted content message (CVE-2026-131586). The message is filtered with the same HTML rules as the site-wide message, and the editor field is escaped. Reported by Wordfence
+* Fixed Groundhogg webhooks that send contact_id without id saving a contact ID of 0. Tags on the contact are replaced only when the webhook includes them
 
 = 3.48.2 - 11/13/2026 =
 * Added a [404 Not Found option](https://wpfusion.com/documentation/getting-started/access-control/#404-not-found) to Redirect if access is denied, plus a Default to 404 Not Found setting. Visitors without access get a real 404 and the theme's 404 template instead of a redirect, so they can't tell the content exists. Works on posts, archives, and post type rules
@@ -567,13 +572,3 @@ Of course, see our [Frequently Asked Questions](https://wpfusion.com/documentati
 * Updated EngageBay integration to new API endpoint at https://api.engagebay.com/
 * Developers: Removed the deprecation notice for the `wp_fusion\secure_blocks_for_gutenberg\API` class until we've had time to update all our addons to the new API endpoint
 * Developers: Tested for WordPress 6.8
-
-= 3.44.23 - 1/20/2025 =
-* Improved - If an HTTP API error is encountered while logging an error-level message to the log, the HTTP API error will be logged as well
-* Improved - The `wc_total_spent` and `wc_order_count` fields can now be exported to the CRM for existing users
-* Improved - With CRMs that support creating custom properties or attributes via the API, the placeholder text in the CRM field select dropdowns will now show "type to add new" when the field is opened
-* Improved - With Customer.io, when looking up a contact ID by email address, any custom properties will be saved into the WP Fusion CRM fields settings
-* Improved performance when using the React based tags select component, the tags will be passed to the component rather than loaded over the REST API
-* Fixed PHP warning in the logs when filtering by an invalid user ID
-* Fixed infinite loop handling HighLevel 401 errors related to missing scopes
-* Developers: cleaned up and standardized build processes for React integrations via webpack.config.js

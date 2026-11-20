@@ -158,8 +158,8 @@ class WPF_Admin_Interfaces {
 			$settings['apply_delay'] = absint( $settings['apply_delay'] );
 		}
 
-		if ( isset( $settings['message'] ) ) {
-			$settings['message'] = esc_textarea( $settings['message'] );
+		if ( isset( $settings['message'] ) && is_string( $settings['message'] ) ) {
+			$settings['message'] = wp_kses_post( $settings['message'] );
 		}
 
 		return $settings;
@@ -1690,7 +1690,15 @@ class WPF_Admin_Interfaces {
 			$settings = array_merge( $settings, (array) get_post_meta( $post->ID, 'wpf-settings', true ) );
 		}
 
-		echo '<textarea name="wpf-settings[message]" id="wpf-settings-message" rows="6">' . wp_kses_post( $settings['message'] ) . '</textarea>';
+		$message = '';
+
+		if ( ! empty( $settings['message'] ) && is_string( $settings['message'] ) ) {
+			$message = wp_specialchars_decode( $settings['message'], ENT_QUOTES );
+		}
+
+		echo '<textarea name="wpf-settings[message]" id="wpf-settings-message" rows="6">';
+		echo esc_textarea( $message );
+		echo '</textarea>';
 
 		echo '<span class="description">You can enter a message here that will be displayed in place of the post content if the post is restricted and no redirect is specified. Leave blank to use the <a href="' . esc_url( get_admin_url() ) . '/options-general.php?page=wpf-settings">site default</a>.</span>';
 	}

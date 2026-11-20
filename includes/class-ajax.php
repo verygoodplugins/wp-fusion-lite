@@ -51,6 +51,10 @@ class WPF_AJAX {
 			$this->send_unauthorized();
 		}
 
+		if ( ! $this->is_same_site_request() ) {
+			$this->send_forbidden();
+		}
+
 		$tags = array();
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Unsigned so existing JavaScript snippets keep working.
@@ -110,6 +114,10 @@ class WPF_AJAX {
 		// nopriv stays registered because auto-login has no WordPress auth cookie.
 		if ( ! $this->has_tag_session() ) {
 			$this->send_unauthorized();
+		}
+
+		if ( ! $this->is_same_site_request() ) {
+			$this->send_forbidden();
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Unsigned so existing JavaScript snippets keep working.
@@ -203,6 +211,124 @@ class WPF_AJAX {
 	}
 
 	/**
+	 * Whether a tag request came from this site.
+	 *
+	 * Blocks cross-site request forgery without breaking the documented
+	 * JavaScript API. A valid wpf_ajax_nonce passes. Requests without one,
+	 * like custom snippets or cached pages with an expired nonce, pass only
+	 * when the browser's Origin header, or failing that the Referer header, is
+	 * this site. A posted _wp_http_referer field is ignored. Extra origins can
+	 * be allowed with the core allowed_http_origins filter.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @return bool
+	 */
+	private function is_same_site_request() {
+
+		$allowed = false;
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is the nonce check.
+		$nonce = isset( $_REQUEST['_ajax_nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['_ajax_nonce'] ) ) : '';
+
+		if ( '' !== $nonce && false !== wp_verify_nonce( $nonce, 'wpf_ajax_nonce' ) ) {
+
+			$allowed = true;
+
+		} else {
+
+			$origin = get_http_origin();
+
+			if ( '' !== $origin ) {
+
+				// Browsers send Origin on cross-site POSTs, including "null" from sandboxed frames.
+				$allowed = (bool) is_allowed_http_origin( $origin );
+
+			} else {
+
+				// The header only. wp_get_raw_referer() prefers a posted field.
+				$referer = $this->get_referer_header();
+
+				if ( '' !== $referer ) {
+					$allowed = $this->is_allowed_referer( $referer );
+				}
+			}
+		}
+
+		/**
+		 * Filters whether a tag AJAX request is treated as coming from this site.
+		 *
+		 * @since 3.48.3
+		 *
+		 * @param bool $allowed Whether the request passed the nonce or same-origin check.
+		 */
+		return (bool) apply_filters( 'wpf_tags_ajax_request_allowed', $allowed );
+	}
+
+	/**
+	 * Referer header for this request.
+	 *
+	 * Not wp_get_raw_referer(). That helper returns a posted _wp_http_referer
+	 * value first, and a cross-site form can set that field.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @return string
+	 */
+	private function get_referer_header() {
+
+		if ( empty( $_SERVER['HTTP_REFERER'] ) || ! is_string( $_SERVER['HTTP_REFERER'] ) ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Parsed for scheme and host, not output.
+		return wp_unslash( $_SERVER['HTTP_REFERER'] );
+	}
+
+	/**
+	 * Whether a Referer URL is this site.
+	 *
+	 * Scheme and host are checked against the core origin allow-list. The
+	 * port is not part of that list.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @param string $referer Referer URL.
+	 * @return bool
+	 */
+	private function is_allowed_referer( $referer ) {
+
+		$parts = wp_parse_url( $referer );
+
+		if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return false;
+		}
+
+		$scheme = strtolower( (string) $parts['scheme'] );
+
+		if ( 'http' !== $scheme && 'https' !== $scheme ) {
+			return false;
+		}
+
+		return (bool) is_allowed_http_origin( $scheme . '://' . $parts['host'] );
+	}
+
+	/**
+	 * Reject a tag request that did not come from this site.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 */
+	private function send_forbidden() {
+
+		status_header( 403 );
+		wp_send_json_error();
+	}
+
+	/**
 	 * Resolve a request tag to an ID that already exists locally.
 	 *
 	 * CRMs that support add_tags make get_tag_id() return an unknown label,
@@ -246,6 +372,7 @@ class WPF_AJAX {
 
 			$localize_data = array(
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'wpf_ajax_nonce' ),
 			);
 
 			wp_localize_script( 'wpf-apply-tags', 'wpf_ajax', $localize_data );

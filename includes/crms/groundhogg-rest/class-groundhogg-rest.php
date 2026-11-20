@@ -139,23 +139,210 @@ class WPF_Groundhogg_REST {
 	}
 
 	/**
-	 * Formats POST data received from HTTP Posts into standard format
+	 * Formats a Groundhogg webhook body into the standard webhook shape.
 	 *
-	 * @access public
+	 * Uses `id` or Groundhogg's `ID` when that value is present. A body that
+	 * only sends `contact_id` keeps that value. Tags are replaced only when
+	 * the payload includes them.
+	 *
+	 * @since 3.48.3 Preserves contact_id and tags when the JSON body omits them.
+	 *
+	 * @param array             $post_data The webhook data already parsed by WPF_API.
+	 * @param object|array|null $payload   Optional decoded body. Null reads php://input.
 	 * @return array
 	 */
-	public function format_post_data( $post_data ) {
+	public function format_post_data( $post_data, $payload = null ) {
 
-		$payload = json_decode( stripslashes( file_get_contents( 'php://input' ) ) );
+		if ( null === $payload ) {
+			$payload = $this->read_json_payload();
+		}
 
-		if ( ! is_object( $payload ) ) {
+		if ( ! is_object( $payload ) && ! is_array( $payload ) ) {
 			return $post_data;
 		}
 
-		$post_data['contact_id'] = absint( $payload->id );
-		$post_data['tags']       = wp_list_pluck( (array) $payload->tags, 'slug' );
+		$contact_id = $this->get_payload_contact_id( $payload );
+
+		if ( ! empty( $contact_id ) ) {
+			$post_data['contact_id'] = $contact_id;
+		}
+
+		$tags = $this->get_payload_value( $payload, 'tags' );
+
+		if ( is_array( $tags ) || is_object( $tags ) ) {
+			$post_data['tags'] = $this->get_payload_tag_slugs( $tags );
+		}
 
 		return $post_data;
+	}
+
+	/**
+	 * Reads the raw JSON request body.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @return object|array|null The decoded body, or null when it is not JSON.
+	 */
+	private function read_json_payload() {
+
+		$raw = file_get_contents( 'php://input' );
+
+		if ( ! is_string( $raw ) || '' === $raw ) {
+			return null;
+		}
+
+		$payload = json_decode( stripslashes( $raw ) );
+
+		if ( ! is_object( $payload ) && ! is_array( $payload ) ) {
+			return null;
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Contact ID from a Groundhogg payload.
+	 *
+	 * Prefers a numeric `id`. Falls back to Groundhogg's `ID`. Zero is ignored
+	 * so a missing or empty id cannot wipe a posted contact_id.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @param object|array $payload The decoded webhook body.
+	 * @return int
+	 */
+	private function get_payload_contact_id( $payload ) {
+
+		$id = $this->get_payload_value( $payload, 'id' );
+
+		if ( ! is_numeric( $id ) || 0 === absint( $id ) ) {
+			$id = $this->get_payload_value( $payload, 'ID' );
+		}
+
+		if ( ! is_numeric( $id ) ) {
+			return 0;
+		}
+
+		return absint( $id );
+	}
+
+	/**
+	 * Reads one key from an object or array payload.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @param object|array $payload The decoded webhook body.
+	 * @param string       $key     The property name.
+	 * @return mixed|null Null when the key is absent.
+	 */
+	private function get_payload_value( $payload, $key ) {
+
+		if ( is_object( $payload ) && property_exists( $payload, $key ) ) {
+			return $payload->$key;
+		}
+
+		if ( is_array( $payload ) && array_key_exists( $key, $payload ) ) {
+			return $payload[ $key ];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Collects tag slugs from a Groundhogg tags value.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @param array|object $tags The tags value from the payload.
+	 * @return array
+	 */
+	private function get_payload_tag_slugs( $tags ) {
+
+		$slugs = array();
+
+		foreach ( (array) $tags as $tag ) {
+			$slug = $this->get_tag_slug( $tag );
+
+			if ( '' !== $slug ) {
+				$slugs[] = $slug;
+			}
+		}
+
+		return $slugs;
+	}
+
+	/**
+	 * Slug from one tag value.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @param mixed $tag One tag from the payload.
+	 * @return string
+	 */
+	private function get_tag_slug( $tag ) {
+
+		if ( is_string( $tag ) || is_numeric( $tag ) ) {
+			return (string) $tag;
+		}
+
+		if ( is_object( $tag ) ) {
+			if ( isset( $tag->slug ) && '' !== (string) $tag->slug ) {
+				return (string) $tag->slug;
+			}
+
+			if ( isset( $tag->tag_slug ) && '' !== (string) $tag->tag_slug ) {
+				return (string) $tag->tag_slug;
+			}
+
+			$data = isset( $tag->data ) ? $tag->data : null;
+
+			return $this->get_tag_slug_from_data( $data );
+		}
+
+		if ( ! is_array( $tag ) ) {
+			return '';
+		}
+
+		if ( isset( $tag['slug'] ) && '' !== (string) $tag['slug'] ) {
+			return (string) $tag['slug'];
+		}
+
+		if ( isset( $tag['tag_slug'] ) && '' !== (string) $tag['tag_slug'] ) {
+			return (string) $tag['tag_slug'];
+		}
+
+		if ( isset( $tag['data'] ) ) {
+			return $this->get_tag_slug_from_data( $tag['data'] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Slug nested under a tag's data property.
+	 *
+	 * @since 3.48.3
+	 * @access private
+	 *
+	 * @param mixed $data The tag data property.
+	 * @return string
+	 */
+	private function get_tag_slug_from_data( $data ) {
+
+		if ( is_object( $data ) && isset( $data->tag_slug ) && '' !== (string) $data->tag_slug ) {
+			return (string) $data->tag_slug;
+		}
+
+		if ( is_array( $data ) && isset( $data['tag_slug'] ) && '' !== (string) $data['tag_slug'] ) {
+			return (string) $data['tag_slug'];
+		}
+
+		return '';
 	}
 
 	/**
@@ -170,28 +357,28 @@ class WPF_Groundhogg_REST {
 	 */
 	public function format_field_value( $value, $field_type, $field ) {
 
-	if ( 'birthday' === $field ) {
-		if ( ! empty( $value ) ) {
+		if ( 'birthday' === $field ) {
+			if ( ! empty( $value ) ) {
+				if ( ! is_numeric( $value ) ) {
+					$timestamp = strtotime( $value );
+					if ( false !== $timestamp ) {
+						$value = gmdate( 'Y-m-d', $timestamp );
+					}
+				} else {
+					$value = gmdate( 'Y-m-d', $value );
+				}
+			}
+		} elseif ( 'date' === $field_type && ! empty( $value ) ) {
+			// Groundhogg expects 'Y-m-d H:i:s' format for date fields.
 			if ( ! is_numeric( $value ) ) {
 				$timestamp = strtotime( $value );
 				if ( false !== $timestamp ) {
-					$value = gmdate( 'Y-m-d', $timestamp );
+					$value = gmdate( 'Y-m-d H:i:s', $timestamp );
 				}
 			} else {
-				$value = gmdate( 'Y-m-d', $value );
+				$value = gmdate( 'Y-m-d H:i:s', $value );
 			}
 		}
-	} elseif ( 'date' === $field_type && ! empty( $value ) ) {
-		// Groundhogg expects 'Y-m-d H:i:s' format for date fields.
-		if ( ! is_numeric( $value ) ) {
-			$timestamp = strtotime( $value );
-			if ( false !== $timestamp ) {
-				$value = gmdate( 'Y-m-d H:i:s', $timestamp );
-			}
-		} else {
-			$value = gmdate( 'Y-m-d H:i:s', $value );
-		}
-	}
 
 		return $value;
 	}
